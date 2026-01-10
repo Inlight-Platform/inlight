@@ -8,8 +8,8 @@ import ProfilePage from "./pages/ProfilePage";
 import DirectoryPage from "./pages/DirectoryPage";
 import MutualsPage from "./pages/MutualsPage";
 import NetworkPage from "./pages/NetworkPage";
+import StoriesPage from "./pages/StoriesPage";
 import { 
-  StoriesPage, 
   InsightsPage, 
   EventsPage, 
   OpportunitiesPage, 

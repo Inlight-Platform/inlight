@@ -4,6 +4,18 @@ import { persist } from 'zustand/middleware';
 export type UserRole = 'Actor' | 'Producer' | 'Director' | 'Musician';
 export type ConnectionStatus = 'pending' | 'accepted';
 export type Visibility = 'public' | 'connections' | 'private';
+export type StoryType = 'image' | 'video';
+
+export interface Story {
+  id: string;
+  userId: string;
+  type: StoryType;
+  url: string;
+  caption?: string;
+  createdAt: string;
+  expiresAt: string;
+  viewedBy: string[];
+}
 
 export interface User {
   id: string;
@@ -57,6 +69,7 @@ interface AppState {
   materials: Material[];
   credits: Credit[];
   connections: Connection[];
+  stories: Story[];
   
   // Actions
   setCurrentUser: (id: string) => void;
@@ -92,6 +105,13 @@ interface AppState {
   // Streak
   getStreak: (userId: string) => number;
   addPostDate: (userId: string, date: string) => void;
+  
+  // Story actions
+  addStory: (story: Omit<Story, 'id' | 'createdAt'>) => void;
+  getActiveStories: (userId: string) => Story[];
+  getAllActiveStories: () => Story[];
+  markStoryViewed: (storyId: string, viewerId: string) => void;
+  cleanupExpiredStories: () => void;
 }
 
 export const useStore = create<AppState>()(
@@ -102,6 +122,7 @@ export const useStore = create<AppState>()(
       materials: [],
       credits: [],
       connections: [],
+      stories: [],
       
       setCurrentUser: (id) => set({ currentUserId: id }),
       
@@ -316,6 +337,48 @@ export const useStore = create<AppState>()(
               ? { ...u, lastPostDates: [...u.lastPostDates, date].slice(-7) }
               : u
           )
+        }));
+      },
+      
+      // Story actions
+      addStory: (story) => {
+        set(state => ({
+          stories: [...state.stories, {
+            ...story,
+            id: `story-${Date.now()}`,
+            createdAt: new Date().toISOString()
+          }]
+        }));
+      },
+      
+      getActiveStories: (userId) => {
+        const now = Date.now();
+        return get().stories
+          .filter(s => s.userId === userId && new Date(s.expiresAt).getTime() > now)
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      },
+      
+      getAllActiveStories: () => {
+        const now = Date.now();
+        return get().stories
+          .filter(s => new Date(s.expiresAt).getTime() > now)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      },
+      
+      markStoryViewed: (storyId, viewerId) => {
+        set(state => ({
+          stories: state.stories.map(s =>
+            s.id === storyId && !s.viewedBy.includes(viewerId)
+              ? { ...s, viewedBy: [...s.viewedBy, viewerId] }
+              : s
+          )
+        }));
+      },
+      
+      cleanupExpiredStories: () => {
+        const now = Date.now();
+        set(state => ({
+          stories: state.stories.filter(s => new Date(s.expiresAt).getTime() > now)
         }));
       },
     }),
