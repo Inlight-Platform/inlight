@@ -6,6 +6,22 @@ export type ConnectionStatus = 'pending' | 'accepted';
 export type Visibility = 'public' | 'connections' | 'private';
 export type StoryType = 'image' | 'video';
 
+export interface Message {
+  id: string;
+  threadId: string;
+  senderId: string;
+  content: string;
+  createdAt: string;
+  readAt?: string;
+}
+
+export interface Thread {
+  id: string;
+  participants: string[];
+  lastMessageAt: string;
+  typingUserId?: string;
+}
+
 export interface Story {
   id: string;
   userId: string;
@@ -70,6 +86,8 @@ interface AppState {
   credits: Credit[];
   connections: Connection[];
   stories: Story[];
+  messages: Message[];
+  threads: Thread[];
   
   // Actions
   setCurrentUser: (id: string) => void;
@@ -112,6 +130,15 @@ interface AppState {
   getAllActiveStories: () => Story[];
   markStoryViewed: (storyId: string, viewerId: string) => void;
   cleanupExpiredStories: () => void;
+  
+  // Message actions
+  getOrCreateThread: (userAId: string, userBId: string) => Thread;
+  getThread: (threadId: string) => Thread | undefined;
+  getUserThreads: (userId: string) => Thread[];
+  sendMessage: (threadId: string, senderId: string, content: string) => void;
+  getMessages: (threadId: string) => Message[];
+  markMessagesRead: (threadId: string, readerId: string) => void;
+  setTyping: (threadId: string, userId: string | undefined) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -123,6 +150,8 @@ export const useStore = create<AppState>()(
       credits: [],
       connections: [],
       stories: [],
+      messages: [],
+      threads: [],
       
       setCurrentUser: (id) => set({ currentUserId: id }),
       
@@ -379,6 +408,79 @@ export const useStore = create<AppState>()(
         const now = Date.now();
         set(state => ({
           stories: state.stories.filter(s => new Date(s.expiresAt).getTime() > now)
+        }));
+      },
+      
+      // Message actions
+      getOrCreateThread: (userAId, userBId) => {
+        const state = get();
+        const existingThread = state.threads.find(t => 
+          t.participants.includes(userAId) && t.participants.includes(userBId)
+        );
+        
+        if (existingThread) return existingThread;
+        
+        const newThread: Thread = {
+          id: `thread-${Date.now()}`,
+          participants: [userAId, userBId],
+          lastMessageAt: new Date().toISOString()
+        };
+        
+        set(state => ({ threads: [...state.threads, newThread] }));
+        return newThread;
+      },
+      
+      getThread: (threadId) => {
+        return get().threads.find(t => t.id === threadId);
+      },
+      
+      getUserThreads: (userId) => {
+        return get().threads
+          .filter(t => t.participants.includes(userId))
+          .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+      },
+      
+      sendMessage: (threadId, senderId, content) => {
+        const newMessage: Message = {
+          id: `msg-${Date.now()}`,
+          threadId,
+          senderId,
+          content,
+          createdAt: new Date().toISOString()
+        };
+        
+        set(state => ({
+          messages: [...state.messages, newMessage],
+          threads: state.threads.map(t => 
+            t.id === threadId 
+              ? { ...t, lastMessageAt: newMessage.createdAt, typingUserId: undefined }
+              : t
+          )
+        }));
+      },
+      
+      getMessages: (threadId) => {
+        return get().messages
+          .filter(m => m.threadId === threadId)
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      },
+      
+      markMessagesRead: (threadId, readerId) => {
+        const now = new Date().toISOString();
+        set(state => ({
+          messages: state.messages.map(m =>
+            m.threadId === threadId && m.senderId !== readerId && !m.readAt
+              ? { ...m, readAt: now }
+              : m
+          )
+        }));
+      },
+      
+      setTyping: (threadId, userId) => {
+        set(state => ({
+          threads: state.threads.map(t =>
+            t.id === threadId ? { ...t, typingUserId: userId } : t
+          )
         }));
       },
     }),

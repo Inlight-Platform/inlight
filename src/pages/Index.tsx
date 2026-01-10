@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import NavigationWheel from '../components/NavigationWheel';
 import { useStore } from '../store/useStore';
-import { stubUsers, stubConnections, stubMaterials, stubCredits } from '../data/stubData';
+import { stubUsers, stubConnections, stubMaterials, stubCredits, stubStories, stubMessages, stubThreads } from '../data/stubData';
 
 const Index: React.FC = () => {
   const users = useStore((s) => s.users);
@@ -14,6 +14,9 @@ const Index: React.FC = () => {
         connections: stubConnections,
         materials: stubMaterials,
         credits: stubCredits,
+        stories: stubStories,
+        messages: stubMessages,
+        threads: stubThreads,
       });
     }
   }, [users.length]);

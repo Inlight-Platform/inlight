@@ -1,4 +1,4 @@
-import { User, Material, Credit, Connection, Story } from '../store/useStore';
+import { User, Material, Credit, Connection, Story, Message, Thread } from '../store/useStore';
 
 // 20+ users with varied badges, credits, materials
 export const stubUsers: User[] = [
@@ -484,6 +484,127 @@ export const stubStories: Story[] = [
   },
 ];
 
+// Stub threads and messages for user-1's connections
+export const stubThreads: Thread[] = [
+  {
+    id: 'thread-1',
+    participants: ['user-1', 'user-2'],
+    lastMessageAt: new Date(Date.now() - 1000 * 60 * 5).toISOString() // 5 mins ago
+  },
+  {
+    id: 'thread-2',
+    participants: ['user-1', 'user-3'],
+    lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() // 2 hours ago
+  },
+  {
+    id: 'thread-3',
+    participants: ['user-1', 'user-4'],
+    lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() // 1 day ago
+  }
+];
+
+export const stubMessages: Message[] = [
+  // Thread 1: user-1 and user-2
+  {
+    id: 'msg-1',
+    threadId: 'thread-1',
+    senderId: 'user-2',
+    content: 'Hey Alex! Saw your latest short film - absolutely stunning cinematography!',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    readAt: new Date(Date.now() - 1000 * 60 * 60 * 23).toISOString()
+  },
+  {
+    id: 'msg-2',
+    threadId: 'thread-1',
+    senderId: 'user-1',
+    content: 'Thanks Jordan! That means a lot coming from you. How\'s the Broadway run going?',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 23).toISOString(),
+    readAt: new Date(Date.now() - 1000 * 60 * 60 * 22).toISOString()
+  },
+  {
+    id: 'msg-3',
+    threadId: 'thread-1',
+    senderId: 'user-2',
+    content: 'It\'s been amazing! We just extended the run through March. Would love to have you come see it!',
+    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    readAt: new Date(Date.now() - 1000 * 60 * 25).toISOString()
+  },
+  {
+    id: 'msg-4',
+    threadId: 'thread-1',
+    senderId: 'user-1',
+    content: 'I\'d love that! I\'ll be in NYC next month for a meeting with A24.',
+    createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+    readAt: new Date(Date.now() - 1000 * 60 * 8).toISOString()
+  },
+  {
+    id: 'msg-5',
+    threadId: 'thread-1',
+    senderId: 'user-2',
+    content: 'Perfect timing! Let\'s grab dinner after the show 🎭',
+    createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString()
+  },
+  
+  // Thread 2: user-1 and user-3
+  {
+    id: 'msg-6',
+    threadId: 'thread-2',
+    senderId: 'user-1',
+    content: 'Marcus! I need a composer for my next project. Are you available in March?',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+    readAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString()
+  },
+  {
+    id: 'msg-7',
+    threadId: 'thread-2',
+    senderId: 'user-3',
+    content: 'Alex! Great to hear from you. March is looking good actually. What\'s the project?',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
+    readAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString()
+  },
+  {
+    id: 'msg-8',
+    threadId: 'thread-2',
+    senderId: 'user-1',
+    content: 'It\'s a psychological thriller with some horror elements. Think Ari Aster meets Denis Villeneuve.',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
+    readAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
+  },
+  {
+    id: 'msg-9',
+    threadId: 'thread-2',
+    senderId: 'user-3',
+    content: 'That sounds right up my alley! I\'ve been experimenting with some dark ambient textures. Let\'s set up a call to discuss.',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
+  },
+  
+  // Thread 3: user-1 and user-4
+  {
+    id: 'msg-10',
+    threadId: 'thread-3',
+    senderId: 'user-4',
+    content: 'Just got funding approved for our project! 🎉',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+    readAt: new Date(Date.now() - 1000 * 60 * 60 * 47).toISOString()
+  },
+  {
+    id: 'msg-11',
+    threadId: 'thread-3',
+    senderId: 'user-1',
+    content: 'That\'s incredible news Sofia! Congratulations! When do we start pre-production?',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 47).toISOString(),
+    readAt: new Date(Date.now() - 1000 * 60 * 60 * 46).toISOString()
+  },
+  {
+    id: 'msg-12',
+    threadId: 'thread-3',
+    senderId: 'user-4',
+    content: 'I\'m thinking we kick off in February. I\'ll send over the updated timeline tomorrow.',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    readAt: new Date(Date.now() - 1000 * 60 * 60 * 23).toISOString()
+  }
+];
+
 // Initialize store with stub data
 export function initializeStubData(set: (partial: Partial<{
   users: User[];
@@ -491,6 +612,8 @@ export function initializeStubData(set: (partial: Partial<{
   credits: Credit[];
   connections: Connection[];
   stories: Story[];
+  messages: Message[];
+  threads: Thread[];
 }>) => void) {
   set({
     users: stubUsers,
@@ -498,5 +621,7 @@ export function initializeStubData(set: (partial: Partial<{
     credits: stubCredits,
     connections: stubConnections,
     stories: stubStories,
+    messages: stubMessages,
+    threads: stubThreads,
   });
 }

@@ -13,9 +13,9 @@ import {
   InsightsPage, 
   EventsPage, 
   OpportunitiesPage, 
-  MessagesPage, 
   ResourcesPage 
 } from "./pages/SpokePlaceholders";
+import MessagesPage from "./pages/MessagesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
