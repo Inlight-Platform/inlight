@@ -1,4 +1,4 @@
-import { User, Material, Credit, Connection } from '../store/useStore';
+import { User, Material, Credit, Connection, Story } from '../store/useStore';
 
 // 20+ users with varied badges, credits, materials
 export const stubUsers: User[] = [
@@ -393,17 +393,110 @@ export const stubCredits: Credit[] = [
   { id: 'cred-9', userId: 'user-3', project: 'Blade Runner 2099', role: 'Composer', year: 2024, company: 'Amazon Studios', verified: false },
 ];
 
+// Sample stories - expires 24 hours from a recent time
+const getExpiryTime = (hoursFromNow: number) => {
+  const date = new Date();
+  date.setHours(date.getHours() + hoursFromNow);
+  return date.toISOString();
+};
+
+const getCreatedTime = (hoursAgo: number) => {
+  const date = new Date();
+  date.setHours(date.getHours() - hoursAgo);
+  return date.toISOString();
+};
+
+export const stubStories: Story[] = [
+  // User-2 stories (Jordan Chen - Actor)
+  {
+    id: 'story-1',
+    userId: 'user-2',
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1514306191717-452ec28c7814?w=540&h=960&fit=crop',
+    caption: 'Backstage vibes 🎭',
+    createdAt: getCreatedTime(2),
+    expiresAt: getExpiryTime(22),
+    viewedBy: []
+  },
+  {
+    id: 'story-2',
+    userId: 'user-2',
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?w=540&h=960&fit=crop',
+    caption: 'Opening night! ✨',
+    createdAt: getCreatedTime(1),
+    expiresAt: getExpiryTime(23),
+    viewedBy: []
+  },
+  // User-3 stories (Marcus Thompson - Musician)
+  {
+    id: 'story-3',
+    userId: 'user-3',
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=540&h=960&fit=crop',
+    caption: 'New track cooking 🎹',
+    createdAt: getCreatedTime(4),
+    expiresAt: getExpiryTime(20),
+    viewedBy: []
+  },
+  // User-4 stories (Sofia Martinez - Producer)
+  {
+    id: 'story-4',
+    userId: 'user-4',
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=540&h=960&fit=crop',
+    caption: 'On set with the crew',
+    createdAt: getCreatedTime(6),
+    expiresAt: getExpiryTime(18),
+    viewedBy: []
+  },
+  {
+    id: 'story-5',
+    userId: 'user-4',
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=540&h=960&fit=crop',
+    caption: 'Wrap day! 🎬',
+    createdAt: getCreatedTime(3),
+    expiresAt: getExpiryTime(21),
+    viewedBy: []
+  },
+  // User-6 stories (Emma Williams - Actor)
+  {
+    id: 'story-6',
+    userId: 'user-6',
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=540&h=960&fit=crop',
+    caption: 'London calling 🇬🇧',
+    createdAt: getCreatedTime(5),
+    expiresAt: getExpiryTime(19),
+    viewedBy: []
+  },
+  // User-10 stories (Mia Anderson - Musician)
+  {
+    id: 'story-7',
+    userId: 'user-10',
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=540&h=960&fit=crop',
+    caption: 'Studio session 🎤',
+    createdAt: getCreatedTime(1),
+    expiresAt: getExpiryTime(23),
+    viewedBy: []
+  },
+];
+
 // Initialize store with stub data
 export function initializeStubData(set: (partial: Partial<{
   users: User[];
   materials: Material[];
   credits: Credit[];
   connections: Connection[];
+  stories: Story[];
 }>) => void) {
   set({
     users: stubUsers,
     materials: stubMaterials,
     credits: stubCredits,
     connections: stubConnections,
+    stories: stubStories,
   });
 }
