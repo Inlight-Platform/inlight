@@ -50,6 +50,42 @@ export type Database = {
         }
         Relationships: []
       }
+      credits: {
+        Row: {
+          company: string | null
+          created_at: string
+          id: string
+          project: string
+          role: string
+          updated_at: string
+          user_id: string
+          verified: boolean
+          year: number
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          id?: string
+          project: string
+          role: string
+          updated_at?: string
+          user_id: string
+          verified?: boolean
+          year: number
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          id?: string
+          project?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+          verified?: boolean
+          year?: number
+        }
+        Relationships: []
+      }
       film_metrics: {
         Row: {
           created_at: string
@@ -138,42 +174,54 @@ export type Database = {
         Row: {
           avatar_url: string | null
           badges: string[] | null
+          bio: string | null
           created_at: string
           display_name: string | null
           email: string
+          gear_list: string[] | null
           headline: string | null
           id: string
           location: string | null
           pronouns: string | null
+          representation: string | null
           role: string | null
+          union_status: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
           badges?: string[] | null
+          bio?: string | null
           created_at?: string
           display_name?: string | null
           email: string
+          gear_list?: string[] | null
           headline?: string | null
           id?: string
           location?: string | null
           pronouns?: string | null
+          representation?: string | null
           role?: string | null
+          union_status?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
           badges?: string[] | null
+          bio?: string | null
           created_at?: string
           display_name?: string | null
           email?: string
+          gear_list?: string[] | null
           headline?: string | null
           id?: string
           location?: string | null
           pronouns?: string | null
+          representation?: string | null
           role?: string | null
+          union_status?: string | null
           updated_at?: string
           user_id?: string
         }
