@@ -57,7 +57,7 @@ const ProfilePage: React.FC = () => {
   const connectionStatus = resolvedUserId ? getConnectionStatus(resolvedUserId) : null;
   
   // Track profile view when visiting someone else's profile
-  useTrackProfileView(currentUserId, resolvedUserId || '');
+  useTrackProfileView(resolvedUserId || '');
   const { updateEngagement } = useUpdateEngagement();
   
   const materials = resolvedUserId ? getMaterials(resolvedUserId) : [];
