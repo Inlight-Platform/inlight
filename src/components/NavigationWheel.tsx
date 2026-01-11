@@ -1,51 +1,53 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
+import inlightLogo from '@/assets/inlight-logo.png';
 
 /*
- * TARGET-NODE TO SPOKE MAPPING (REPEAT IN CODE COMMENTS)
- * Stories       #FF4FA4 - 0°
- * Mutuals       #00F5FF - 45°
- * Insights      #FFD400 - 90°
- * Events        #FF6B2D - 135°
- * Opportunities #00FF87 - 180°
- * Messages      #AE6DFF - 225°
- * My Network    #FF4D4D - 270°
- * Resources     #39FFDC - 315°
+ * REDESIGNED WHEEL - Apple-style sleek, minimal, monochrome + cyan accent
+ * 12 ultra-thin matte-black spokes (2px) on near-white background
+ * Outer rim: 4px gun-metal ring with #00D4FF inner glow (12px blur)
+ * Hub: 40px brushed-aluminum circle with 0.5px shadow, cyan glow
+ * Radial gradient background (#F9FBFD → #FFFFFF)
  */
 
 interface SpokeConfig {
   name: string;
   route: string;
-  color: string;
   angle: number;
 }
 
+// 12 spokes at 30° intervals
 const spokes: SpokeConfig[] = [
-  { name: 'Stories', route: '/stories', color: '#FF4FA4', angle: 0 },
-  { name: 'Mutuals', route: '/mutuals', color: '#00F5FF', angle: 45 },
-  { name: 'Insights', route: '/insights', color: '#FFD400', angle: 90 },
-  { name: 'Events', route: '/events', color: '#FF6B2D', angle: 135 },
-  { name: 'Opportunities', route: '/opportunities', color: '#00FF87', angle: 180 },
-  { name: 'Messages', route: '/messages', color: '#AE6DFF', angle: 225 },
-  { name: 'My Network', route: '/network', color: '#FF4D4D', angle: 270 },
-  { name: 'Resources', route: '/resources', color: '#39FFDC', angle: 315 },
+  { name: 'Stories', route: '/stories', angle: 0 },
+  { name: '', route: '', angle: 30 }, // decorative spoke
+  { name: 'Mutuals', route: '/mutuals', angle: 60 },
+  { name: 'Insights', route: '/insights', angle: 90 },
+  { name: '', route: '', angle: 120 }, // decorative spoke
+  { name: 'Events', route: '/events', angle: 150 },
+  { name: 'Opportunities', route: '/opportunities', angle: 180 },
+  { name: '', route: '', angle: 210 }, // decorative spoke
+  { name: 'Messages', route: '/messages', angle: 240 },
+  { name: 'My Network', route: '/network', angle: 270 },
+  { name: '', route: '', angle: 300 }, // decorative spoke
+  { name: 'Resources', route: '/resources', angle: 330 },
 ];
 
-/*
- * WHEEL GEOMETRY (MANDATORY)
- * View-box: 600 × 600.
- * Center hub: cx=300, cy=300, r=90.
- * Eight spokes: 45° each.
- * Each spoke is a line (stroke-width 10 px) that starts at hub edge (r=90) and ends at target-node center (r=250).
- * Target-node: circle r=24 px (48 px diameter) centered at the end of the spoke line.
- */
+const navigableSpokes = spokes.filter(s => s.name && s.route);
 
 const VIEWBOX_SIZE = 600;
-const CENTER = VIEWBOX_SIZE / 2; // 300
-const HUB_RADIUS = 90;
-const SPOKE_END_RADIUS = 250;
-const TARGET_NODE_RADIUS = 24;
+const CENTER = VIEWBOX_SIZE / 2;
+const HUB_RADIUS = 40;
+const RIM_RADIUS = 260;
+const SPOKE_END_RADIUS = 240;
+const TARGET_NODE_RADIUS = 20;
+
+const ACCENT_COLOR = '#00D4FF';
+const ACCENT_GLOW = '#00FFFF';
+const GUNMETAL = '#2C3539';
+const MATTE_BLACK = '#1A1A1A';
+const ALUMINUM = '#D4D4D8';
+const ALUMINUM_DARK = '#A1A1AA';
 
 function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number) {
   const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
@@ -55,9 +57,7 @@ function polarToCartesian(centerX: number, centerY: number, radius: number, angl
   };
 }
 
-// Get angle in degrees from center to a point
 function getAngleFromCenter(clientX: number, clientY: number, svgRect: DOMRect, svgElement: SVGSVGElement): number {
-  // Convert client coordinates to SVG coordinates
   const point = svgElement.createSVGPoint();
   point.x = clientX;
   point.y = clientY;
@@ -73,7 +73,6 @@ function getAngleFromCenter(clientX: number, clientY: number, svgRect: DOMRect, 
 export const NavigationWheel: React.FC = () => {
   const navigate = useNavigate();
   const currentUser = useStore((s) => s.getCurrentUser());
-  const streak = useStore((s) => s.getStreak(currentUser?.id || ''));
   
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [hoveredIndex, setHoveredIndex] = useState<number>(-1);
@@ -100,7 +99,7 @@ export const NavigationWheel: React.FC = () => {
     return () => mediaQuery.removeEventListener('change', handler);
   }, []);
   
-  // Inertia animation
+  // 60fps hardware-accelerated inertia
   const animateInertia = useCallback(() => {
     if (prefersReducedMotion) return;
     
@@ -114,7 +113,6 @@ export const NavigationWheel: React.FC = () => {
     }
   }, [prefersReducedMotion]);
   
-  // Stop any ongoing animation
   const stopAnimation = useCallback(() => {
     if (animationFrameId.current) {
       cancelAnimationFrame(animationFrameId.current);
@@ -123,7 +121,6 @@ export const NavigationWheel: React.FC = () => {
     velocity.current = 0;
   }, []);
   
-  // Handle drag start
   const handleDragStart = useCallback((clientX: number, clientY: number) => {
     if (!svgRef.current) return;
     
@@ -141,21 +138,16 @@ export const NavigationWheel: React.FC = () => {
     setIsDragging(true);
   }, [rotation, stopAnimation]);
   
-  // Handle drag move
   const handleDragMove = useCallback((clientX: number, clientY: number) => {
     if (!isDragging || !svgRef.current) return;
     
     const rect = svgRef.current.getBoundingClientRect();
     const currentAngle = getAngleFromCenter(clientX, clientY, rect, svgRef.current);
     
-    // Calculate delta from start
     let deltaAngle = currentAngle - dragStartAngle.current;
-    
-    // Handle wrapping around ±180°
     if (deltaAngle > 180) deltaAngle -= 360;
     if (deltaAngle < -180) deltaAngle += 360;
     
-    // Calculate velocity for inertia
     const angleDiff = currentAngle - lastDragAngle.current;
     let normalizedDiff = angleDiff;
     if (normalizedDiff > 180) normalizedDiff -= 360;
@@ -166,33 +158,27 @@ export const NavigationWheel: React.FC = () => {
     setRotation(rotationAtDragStart.current + deltaAngle);
   }, [isDragging]);
   
-  // Handle drag end
   const handleDragEnd = useCallback((clientX: number, clientY: number) => {
     if (!isDragging) return;
     
     setIsDragging(false);
     
-    // Check if this was a click (minimal movement and short duration)
     const duration = Date.now() - dragStartTime.current;
     const dx = clientX - dragStartPos.current.x;
     const dy = clientY - dragStartPos.current.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    // If it was a quick tap with minimal movement, don't apply inertia
     if (duration < 200 && distance < 5) {
       velocity.current = 0;
       return;
     }
     
-    // Apply inertia
     if (!prefersReducedMotion && Math.abs(velocity.current) > 0.1) {
       animationFrameId.current = requestAnimationFrame(animateInertia);
     }
   }, [isDragging, prefersReducedMotion, animateInertia]);
   
-  // Mouse event handlers
   const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    // Only start drag on SVG background, not on clickable elements
     const target = e.target as SVGElement;
     if (target.closest('[role="button"]')) return;
     
@@ -208,7 +194,6 @@ export const NavigationWheel: React.FC = () => {
     handleDragEnd(e.clientX, e.clientY);
   }, [handleDragEnd]);
   
-  // Touch event handlers
   const handleTouchStart = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
     const target = e.target as SVGElement;
     if (target.closest('[role="button"]')) return;
@@ -229,7 +214,6 @@ export const NavigationWheel: React.FC = () => {
     handleDragEnd(touch.clientX, touch.clientY);
   }, [handleDragEnd]);
   
-  // Add/remove global event listeners for drag
   useEffect(() => {
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
@@ -246,7 +230,6 @@ export const NavigationWheel: React.FC = () => {
     };
   }, [isDragging, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
   
-  // Cleanup animation on unmount
   useEffect(() => {
     return () => {
       if (animationFrameId.current) {
@@ -258,16 +241,16 @@ export const NavigationWheel: React.FC = () => {
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'ArrowRight') {
       e.preventDefault();
-      setFocusedIndex((prev) => (prev + 1) % spokes.length);
+      setFocusedIndex((prev) => (prev + 1) % navigableSpokes.length);
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      setFocusedIndex((prev) => (prev - 1 + spokes.length) % spokes.length);
+      setFocusedIndex((prev) => (prev - 1 + navigableSpokes.length) % navigableSpokes.length);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setFocusedIndex(-1);
     } else if (e.key === 'Enter' && focusedIndex >= 0) {
       e.preventDefault();
-      navigate(spokes[focusedIndex].route);
+      navigate(navigableSpokes[focusedIndex].route);
     }
   }, [focusedIndex, navigate]);
   
@@ -281,71 +264,130 @@ export const NavigationWheel: React.FC = () => {
     navigate('/profile/me');
   };
   
-  const handleSpokeClick = (index: number) => {
-    navigate(spokes[index].route);
+  const handleSpokeClick = (route: string) => {
+    if (route) navigate(route);
   };
-  
-  const streakPercentage = (streak / 7) * 100;
-  const streakDasharray = `${(streakPercentage / 100) * (2 * Math.PI * 85)} ${2 * Math.PI * 85}`;
+
+  // Spoke opacity based on drag state
+  const spokeOpacity = isDragging ? 0.4 : 1;
   
   return (
     <div 
-      className="flex items-center justify-center w-full h-full p-4"
+      className="relative flex flex-col items-center justify-center w-full h-full min-h-screen"
+      style={{ 
+        background: 'radial-gradient(circle at center, #F9FBFD 0%, #FFFFFF 100%)'
+      }}
       onKeyDown={handleKeyDown}
     >
+      {/* Inlight Branding */}
+      <div className="absolute top-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-10">
+        <img 
+          src={inlightLogo} 
+          alt="Inlight" 
+          className="h-16 w-auto object-contain"
+        />
+        <span 
+          className="text-2xl font-light tracking-[0.3em] uppercase"
+          style={{ color: GUNMETAL }}
+        >
+          Inlight
+        </span>
+      </div>
+
+      {/* Navigation Wheel */}
       <svg
         ref={svgRef}
         viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}
-        className={`w-full h-full max-w-[600px] max-h-[600px] ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className={`w-full h-full max-w-[500px] max-h-[500px] ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
         role="navigation"
         aria-label="Main navigation wheel"
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
-        style={{ touchAction: 'none' }}
+        style={{ 
+          touchAction: 'none',
+          willChange: 'transform',
+        }}
       >
         <defs>
-          {/* Gradients for each spoke */}
-          {spokes.map((spoke, index) => (
-            <linearGradient
-              key={`gradient-${index}`}
-              id={`gradient-${index}`}
-              x1="0%"
-              y1="0%"
-              x2="100%"
-              y2="100%"
-            >
-              <stop offset="0%" stopColor={spoke.color} />
-              <stop offset="100%" stopColor={spoke.color} stopOpacity="0.8" />
-            </linearGradient>
-          ))}
-          
-          {/* Glow filter */}
-          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+          {/* Cyan glow filter for rim */}
+          <filter id="rim-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="12" result="blur" />
+            <feFlood floodColor={isDragging ? ACCENT_GLOW : ACCENT_COLOR} floodOpacity="0.6" />
+            <feComposite in2="blur" operator="in" />
             <feMerge>
-              <feMergeNode in="coloredBlur" />
+              <feMergeNode />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          
+          {/* Hub glow filter */}
+          <filter id="hub-glow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="8" result="blur" />
+            <feFlood floodColor={ACCENT_COLOR} floodOpacity="0.4" />
+            <feComposite in2="blur" operator="in" />
+            <feMerge>
+              <feMergeNode />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          
+          {/* Hub shadow */}
+          <filter id="hub-shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="1" stdDeviation="0.5" floodColor="#000" floodOpacity="0.15" />
+          </filter>
+          
+          {/* Brushed aluminum gradient */}
+          <linearGradient id="aluminum-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#E4E4E7" />
+            <stop offset="25%" stopColor="#FAFAFA" />
+            <stop offset="50%" stopColor="#D4D4D8" />
+            <stop offset="75%" stopColor="#F4F4F5" />
+            <stop offset="100%" stopColor="#A1A1AA" />
+          </linearGradient>
+          
+          {/* Node glow on hover */}
+          <filter id="node-glow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feFlood floodColor={ACCENT_COLOR} floodOpacity="0.8" />
+            <feComposite in2="blur" operator="in" />
+            <feMerge>
+              <feMergeNode />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
           
           {/* Avatar clip path */}
           <clipPath id="avatarClip">
-            <circle cx={CENTER} cy={CENTER} r={70} />
+            <circle cx={CENTER} cy={CENTER} r={HUB_RADIUS - 4} />
           </clipPath>
         </defs>
         
+        {/* Outer rim with glow */}
+        <circle
+          cx={CENTER}
+          cy={CENTER}
+          r={RIM_RADIUS}
+          fill="none"
+          stroke={GUNMETAL}
+          strokeWidth={4}
+          filter="url(#rim-glow)"
+          style={{
+            transition: isDragging ? 'none' : 'filter 0.3s ease',
+          }}
+        />
+        
         {/* Rotatable wheel group */}
         <g 
-          transform={`rotate(${rotation} ${CENTER} ${CENTER})`}
           style={{ 
-            transition: isDragging ? 'none' : (prefersReducedMotion ? 'none' : undefined),
+            transform: `rotate(${rotation}deg)`,
+            transformOrigin: `${CENTER}px ${CENTER}px`,
+            willChange: 'transform',
           }}
         >
-          {/* Spoke lines */}
+          {/* 12 ultra-thin spokes */}
           {spokes.map((spoke, index) => {
-            const startPoint = polarToCartesian(CENTER, CENTER, HUB_RADIUS, spoke.angle);
-            const endPoint = polarToCartesian(CENTER, CENTER, SPOKE_END_RADIUS, spoke.angle);
-            const isHovered = hoveredIndex === index;
+            const startPoint = polarToCartesian(CENTER, CENTER, HUB_RADIUS + 10, spoke.angle);
+            const endPoint = polarToCartesian(CENTER, CENTER, RIM_RADIUS - 30, spoke.angle);
             
             return (
               <line
@@ -354,48 +396,48 @@ export const NavigationWheel: React.FC = () => {
                 y1={startPoint.y}
                 x2={endPoint.x}
                 y2={endPoint.y}
-                className="spoke-line"
-                strokeWidth={isHovered ? 14 : 10}
+                stroke={MATTE_BLACK}
+                strokeWidth={2}
                 strokeLinecap="round"
                 style={{
-                  transition: prefersReducedMotion ? 'opacity 0.2s' : 'stroke-width 0.2s',
+                  opacity: spokeOpacity,
+                  transition: 'opacity 0.2s ease',
                 }}
               />
             );
           })}
           
-          {/* Target nodes */}
+          {/* Target nodes for navigable spokes */}
           {spokes.map((spoke, index) => {
+            if (!spoke.name || !spoke.route) return null;
+            
             const position = polarToCartesian(CENTER, CENTER, SPOKE_END_RADIUS, spoke.angle);
-            const isHovered = hoveredIndex === index;
-            const isFocused = focusedIndex === index;
+            const navIndex = navigableSpokes.findIndex(s => s.name === spoke.name);
+            const isHovered = hoveredIndex === navIndex;
+            const isFocused = focusedIndex === navIndex;
             
             return (
               <g
                 key={`target-${index}`}
-                ref={(el) => (targetRefs.current[index] = el)}
+                ref={(el) => (targetRefs.current[navIndex] = el)}
                 role="button"
                 aria-label={`Open ${spoke.name}`}
                 tabIndex={0}
-                onClick={() => handleSpokeClick(index)}
-                onMouseEnter={() => setHoveredIndex(index)}
+                onClick={() => handleSpokeClick(spoke.route)}
+                onMouseEnter={() => setHoveredIndex(navIndex)}
                 onMouseLeave={() => setHoveredIndex(-1)}
-                onFocus={() => setFocusedIndex(index)}
+                onFocus={() => setFocusedIndex(navIndex)}
                 onBlur={() => setFocusedIndex(-1)}
                 style={{
                   cursor: 'pointer',
                   outline: 'none',
-                  transform: isHovered && !prefersReducedMotion ? 'scale(1.15)' : 'scale(1)',
-                  transformOrigin: `${position.x}px ${position.y}px`,
-                  transition: prefersReducedMotion ? 'opacity 0.2s' : 'transform 0.2s ease-out',
-                  opacity: prefersReducedMotion && isHovered ? 0.8 : 1,
                 }}
               >
-                {/* Hit area (invisible, 80px total) */}
+                {/* Hit area */}
                 <circle
                   cx={position.x}
                   cy={position.y}
-                  r={TARGET_NODE_RADIUS + 16}
+                  r={TARGET_NODE_RADIUS + 12}
                   fill="transparent"
                 />
                 
@@ -404,33 +446,40 @@ export const NavigationWheel: React.FC = () => {
                   <circle
                     cx={position.x}
                     cy={position.y}
-                    r={TARGET_NODE_RADIUS + 6}
+                    r={TARGET_NODE_RADIUS + 4}
                     fill="none"
-                    stroke="#00F5FF"
+                    stroke={ACCENT_COLOR}
                     strokeWidth={2}
-                    style={{ borderRadius: '50%' }}
                   />
                 )}
                 
-                {/* Target node */}
+                {/* Target node - minimal style */}
                 <circle
                   cx={position.x}
                   cy={position.y}
                   r={TARGET_NODE_RADIUS}
-                  fill={`url(#gradient-${index})`}
-                  filter={isHovered ? 'url(#glow)' : undefined}
+                  fill={isHovered ? ACCENT_COLOR : GUNMETAL}
+                  filter={isHovered ? 'url(#node-glow)' : undefined}
                   style={{
-                    filter: isHovered ? `drop-shadow(0 0 14px ${spoke.color})` : undefined,
+                    transition: prefersReducedMotion ? 'none' : 'fill 0.2s ease, transform 0.2s ease',
+                    transformOrigin: `${position.x}px ${position.y}px`,
+                    transform: isHovered && !prefersReducedMotion ? 'scale(1.1)' : 'scale(1)',
                   }}
                 />
                 
-                {/* Label - counter-rotate to keep text upright */}
-                <g transform={`rotate(${-rotation} ${position.x} ${position.y})`}>
+                {/* Label - counter-rotate to keep upright */}
+                <g style={{ 
+                  transform: `rotate(${-rotation}deg)`,
+                  transformOrigin: `${position.x}px ${position.y}px`,
+                }}>
                   <text
                     x={position.x}
-                    y={position.y + TARGET_NODE_RADIUS + 20}
+                    y={position.y + TARGET_NODE_RADIUS + 18}
                     textAnchor="middle"
-                    className="fill-foreground text-xs font-medium"
+                    fill={GUNMETAL}
+                    fontSize="11"
+                    fontWeight="500"
+                    letterSpacing="0.05em"
                     style={{ pointerEvents: 'none' }}
                   >
                     {spoke.name}
@@ -441,7 +490,7 @@ export const NavigationWheel: React.FC = () => {
           })}
         </g>
         
-        {/* Center hub (not rotated) */}
+        {/* Center hub - brushed aluminum with cyan glow */}
         <g
           role="button"
           aria-label="Open your profile"
@@ -451,58 +500,39 @@ export const NavigationWheel: React.FC = () => {
           style={{ cursor: 'pointer', outline: 'none' }}
           className="group"
         >
-          {/* Hub background */}
+          {/* Hub background - brushed aluminum */}
           <circle
             cx={CENTER}
             cy={CENTER}
             r={HUB_RADIUS}
-            className="fill-card stroke-border"
-            strokeWidth={2}
+            fill="url(#aluminum-gradient)"
+            filter="url(#hub-shadow)"
           />
           
-          {/* Streak ring */}
-          {streak > 0 && (
-            <circle
-              cx={CENTER}
-              cy={CENTER}
-              r={85}
-              fill="none"
-              stroke="#00FF87"
-              strokeWidth={4}
-              strokeDasharray={streakDasharray}
-              strokeLinecap="round"
-              transform={`rotate(-90 ${CENTER} ${CENTER})`}
-              className={prefersReducedMotion ? '' : 'streak-ring'}
-            />
-          )}
+          {/* Hub glow ring */}
+          <circle
+            cx={CENTER}
+            cy={CENTER}
+            r={HUB_RADIUS + 2}
+            fill="none"
+            stroke={ACCENT_COLOR}
+            strokeWidth={1}
+            opacity={0.6}
+            filter="url(#hub-glow)"
+          />
           
           {/* Avatar */}
           {currentUser?.avatar && (
             <image
               href={currentUser.avatar}
-              x={CENTER - 70}
-              y={CENTER - 70}
-              width={140}
-              height={140}
+              x={CENTER - (HUB_RADIUS - 4)}
+              y={CENTER - (HUB_RADIUS - 4)}
+              width={(HUB_RADIUS - 4) * 2}
+              height={(HUB_RADIUS - 4) * 2}
               clipPath="url(#avatarClip)"
               preserveAspectRatio="xMidYMid slice"
             />
           )}
-          
-          {/* Edit icon */}
-          <g transform={`translate(${CENTER + 50}, ${CENTER - 60})`}>
-            <circle
-              r={16}
-              className="fill-primary"
-            />
-            <path
-              d="M-5 3L5 -7M-7 5L-5 3M5 -7L7 -5"
-              fill="none"
-              className="stroke-primary-foreground"
-              strokeWidth={2}
-              strokeLinecap="round"
-            />
-          </g>
           
           {/* Hover effect */}
           <circle
@@ -510,7 +540,10 @@ export const NavigationWheel: React.FC = () => {
             cy={CENTER}
             r={HUB_RADIUS}
             fill="transparent"
-            className="group-hover:fill-foreground/5 transition-colors"
+            className="transition-colors duration-200"
+            style={{
+              fill: 'transparent',
+            }}
           />
         </g>
       </svg>
