@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   DropdownMenu,
@@ -38,7 +39,8 @@ import {
   Camera,
   Loader2,
   X,
-  Save
+  Save,
+  Trash2
 } from 'lucide-react';
 import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
 import { MediaUploader } from '@/components/profile/MediaUploader';
@@ -59,20 +61,29 @@ interface MediaItem {
   url: string;
 }
 
+interface Credit {
+  id: string;
+  user_id: string;
+  project: string;
+  role: string;
+  year: number;
+  company: string | null;
+  verified: boolean;
+}
+
 const ProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   
   const currentUserId = useStore((s) => s.currentUserId);
   const getUser = useStore((s) => s.getUser);
   const getConnectionStatus = useStore((s) => s.getConnectionStatus);
   const sendConnectionRequest = useStore((s) => s.sendConnectionRequest);
-  const addBadge = useStore((s) => s.addBadge);
   const getMaterials = useStore((s) => s.getMaterials);
-  const getCredits = useStore((s) => s.getCredits);
   const updateMaterialVisibility = useStore((s) => s.updateMaterialVisibility);
   
   const [newBadge, setNewBadge] = useState('');
@@ -80,6 +91,7 @@ const ProfilePage: React.FC = () => {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [announced, setAnnounced] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
   const [cropperImageSrc, setCropperImageSrc] = useState('');
   
@@ -88,10 +100,25 @@ const ProfilePage: React.FC = () => {
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [isEditingRole, setIsEditingRole] = useState(false);
   const [isEditingPronouns, setIsEditingPronouns] = useState(false);
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [isEditingUnionStatus, setIsEditingUnionStatus] = useState(false);
+  const [isEditingRepresentation, setIsEditingRepresentation] = useState(false);
   const [editName, setEditName] = useState('');
   const [editLocation, setEditLocation] = useState('');
   const [editRole, setEditRole] = useState('');
   const [editPronouns, setEditPronouns] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [editUnionStatus, setEditUnionStatus] = useState('');
+  const [editRepresentation, setEditRepresentation] = useState('');
+  const [newGear, setNewGear] = useState('');
+  
+  // Credit form states
+  const [creditProject, setCreditProject] = useState('');
+  const [creditRole, setCreditRole] = useState('');
+  const [creditYear, setCreditYear] = useState('');
+  const [creditCompany, setCreditCompany] = useState('');
+  const [editingCreditId, setEditingCreditId] = useState<string | null>(null);
+  
   const resolvedUserId = userId === 'me' ? currentUserId : userId;
   const user = getUser(resolvedUserId || '');
   const isOwnProfile = resolvedUserId === currentUserId;
@@ -101,18 +128,34 @@ const ProfilePage: React.FC = () => {
   const { deleteFile, updateVisibility } = useMediaUpload();
   const { fetchMedia } = useUserMedia(authUser?.id);
   
-  // Fetch profile from database to get current data
+  // Fetch profile from database
   const { data: dbProfile, refetch: refetchProfile } = useQuery({
     queryKey: ['profile', authUser?.id],
     queryFn: async () => {
       if (!authUser?.id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('display_name, avatar_url, location, pronouns, role, badges')
+        .select('display_name, avatar_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline')
         .eq('user_id', authUser.id)
         .single();
       if (error) return null;
       return data;
+    },
+    enabled: !!authUser?.id && isOwnProfile,
+  });
+  
+  // Fetch credits from database
+  const { data: dbCredits = [], refetch: refetchCredits } = useQuery({
+    queryKey: ['credits', authUser?.id],
+    queryFn: async () => {
+      if (!authUser?.id) return [];
+      const { data, error } = await supabase
+        .from('credits')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .order('year', { ascending: false });
+      if (error) return [];
+      return data as Credit[];
     },
     enabled: !!authUser?.id && isOwnProfile,
   });
@@ -124,6 +167,11 @@ const ProfilePage: React.FC = () => {
   const displayRole = (isOwnProfile && dbProfile?.role) || user?.role || '';
   const displayPronouns = (isOwnProfile && dbProfile?.pronouns) || user?.pronouns || '';
   const displayBadges = (isOwnProfile && dbProfile?.badges) || user?.badges || [];
+  const displayBio = (isOwnProfile && dbProfile?.bio) || user?.bio || '';
+  const displayUnionStatus = (isOwnProfile && dbProfile?.union_status) || user?.unionStatus || '';
+  const displayRepresentation = (isOwnProfile && dbProfile?.representation) || user?.representation || '';
+  const displayGearList = (isOwnProfile && dbProfile?.gear_list) || user?.gearList || [];
+  const displayCredits = isOwnProfile ? dbCredits : [];
   
   // Fetch user media from database
   const { data: userMedia = [], refetch: refetchMedia } = useQuery({
@@ -143,16 +191,9 @@ const ProfilePage: React.FC = () => {
   const { updateEngagement } = useUpdateEngagement();
   
   const materials = resolvedUserId ? getMaterials(resolvedUserId) : [];
-  const credits = resolvedUserId ? getCredits(resolvedUserId) : [];
-  
-  const photos = materials.filter(m => m.type === 'photo');
-  const reels = materials.filter(m => m.type === 'reel');
-  const resumes = materials.filter(m => m.type === 'resume');
-  const audio = materials.filter(m => m.type === 'audio');
   
   useEffect(() => {
     setAnnounced(false);
-    // Update engagement for profile views
     if (!isOwnProfile && resolvedUserId) {
       updateEngagement(resolvedUserId, 'profile_views');
     }
@@ -202,14 +243,46 @@ const ProfilePage: React.FC = () => {
         .update({ avatar_url: newAvatarUrl })
         .eq('user_id', authUser.id);
 
-      // Invalidate profile query to show new avatar immediately
       await queryClient.invalidateQueries({ queryKey: ['profile', authUser.id] });
-
       toast.success('Avatar updated!');
     } catch (error: any) {
       toast.error(error.message || 'Failed to upload avatar');
     } finally {
       setUploadingAvatar(false);
+    }
+  };
+
+  // Cover image upload handler
+  const handleCoverSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !authUser?.id) return;
+
+    setUploadingCover(true);
+    try {
+      const fileName = `${authUser.id}/cover.jpg`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-media')
+        .upload(fileName, file, { 
+          upsert: true,
+          contentType: file.type
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('profile-media')
+        .getPublicUrl(fileName);
+
+      // For now we store cover in a custom way - could add cover_url column later
+      toast.success('Cover image updated!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to upload cover');
+    } finally {
+      setUploadingCover(false);
+      if (coverInputRef.current) {
+        coverInputRef.current.value = '';
+      }
     }
   };
 
@@ -224,8 +297,8 @@ const ProfilePage: React.FC = () => {
   };
 
   // Profile field save handlers
-  const saveProfileField = async (field: string, value: string | string[]) => {
-    if (!authUser?.id) return;
+  const saveProfileField = async (field: string, value: string | string[] | null) => {
+    if (!authUser?.id) return false;
     try {
       const { error } = await supabase
         .from('profiles')
@@ -235,30 +308,47 @@ const ProfilePage: React.FC = () => {
       if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: ['profile', authUser.id] });
       toast.success('Profile updated!');
+      return true;
     } catch (error: any) {
       toast.error(error.message || 'Failed to update profile');
+      return false;
     }
   };
 
   const handleSaveName = async () => {
     if (!editName.trim()) return;
-    await saveProfileField('display_name', editName.trim());
-    setIsEditingName(false);
+    const success = await saveProfileField('display_name', editName.trim());
+    if (success) setIsEditingName(false);
   };
 
   const handleSaveLocation = async () => {
-    await saveProfileField('location', editLocation.trim());
-    setIsEditingLocation(false);
+    const success = await saveProfileField('location', editLocation.trim() || null);
+    if (success) setIsEditingLocation(false);
   };
 
   const handleSaveRole = async () => {
-    await saveProfileField('role', editRole.trim());
-    setIsEditingRole(false);
+    const success = await saveProfileField('role', editRole.trim() || null);
+    if (success) setIsEditingRole(false);
   };
 
   const handleSavePronouns = async () => {
-    await saveProfileField('pronouns', editPronouns.trim());
-    setIsEditingPronouns(false);
+    const success = await saveProfileField('pronouns', editPronouns.trim() || null);
+    if (success) setIsEditingPronouns(false);
+  };
+
+  const handleSaveBio = async () => {
+    const success = await saveProfileField('bio', editBio.trim() || null);
+    if (success) setIsEditingBio(false);
+  };
+
+  const handleSaveUnionStatus = async () => {
+    const success = await saveProfileField('union_status', editUnionStatus.trim() || null);
+    if (success) setIsEditingUnionStatus(false);
+  };
+
+  const handleSaveRepresentation = async () => {
+    const success = await saveProfileField('representation', editRepresentation.trim() || null);
+    if (success) setIsEditingRepresentation(false);
   };
 
   const handleAddBadgeToDb = async () => {
@@ -283,6 +373,96 @@ const ProfilePage: React.FC = () => {
     await saveProfileField('badges', updatedBadges);
   };
 
+  const handleAddGear = async () => {
+    if (!newGear.trim() || !authUser?.id) return;
+    const currentGear = displayGearList || [];
+    if (currentGear.includes(newGear.trim())) {
+      toast.error('Gear already exists');
+      return;
+    }
+    await saveProfileField('gear_list', [...currentGear, newGear.trim()]);
+    setNewGear('');
+  };
+
+  const handleRemoveGear = async (gearToRemove: string) => {
+    if (!authUser?.id) return;
+    const currentGear = displayGearList || [];
+    const updatedGear = currentGear.filter(g => g !== gearToRemove);
+    await saveProfileField('gear_list', updatedGear);
+  };
+
+  // Credit handlers
+  const handleAddCredit = async () => {
+    if (!creditProject.trim() || !creditRole.trim() || !creditYear || !authUser?.id) {
+      toast.error('Please fill in required fields');
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('credits')
+        .insert({
+          user_id: authUser.id,
+          project: creditProject.trim(),
+          role: creditRole.trim(),
+          year: parseInt(creditYear),
+          company: creditCompany.trim() || null,
+          verified: false
+        });
+      
+      if (error) throw error;
+      
+      await queryClient.invalidateQueries({ queryKey: ['credits', authUser.id] });
+      toast.success('Credit added!');
+      setCreditProject('');
+      setCreditRole('');
+      setCreditYear('');
+      setCreditCompany('');
+      setAddCreditOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add credit');
+    }
+  };
+
+  const handleUpdateCredit = async (creditId: string, updates: Partial<Credit>) => {
+    if (!authUser?.id) return;
+    
+    try {
+      const { error } = await supabase
+        .from('credits')
+        .update(updates)
+        .eq('id', creditId)
+        .eq('user_id', authUser.id);
+      
+      if (error) throw error;
+      
+      await queryClient.invalidateQueries({ queryKey: ['credits', authUser.id] });
+      toast.success('Credit updated!');
+      setEditingCreditId(null);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update credit');
+    }
+  };
+
+  const handleDeleteCredit = async (creditId: string) => {
+    if (!authUser?.id) return;
+    
+    try {
+      const { error } = await supabase
+        .from('credits')
+        .delete()
+        .eq('id', creditId)
+        .eq('user_id', authUser.id);
+      
+      if (error) throw error;
+      
+      await queryClient.invalidateQueries({ queryKey: ['credits', authUser.id] });
+      toast.success('Credit deleted!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete credit');
+    }
+  };
+
   const startEditingName = () => {
     setEditName(displayName);
     setIsEditingName(true);
@@ -302,6 +482,21 @@ const ProfilePage: React.FC = () => {
     setEditPronouns(displayPronouns);
     setIsEditingPronouns(true);
   };
+
+  const startEditingBio = () => {
+    setEditBio(displayBio);
+    setIsEditingBio(true);
+  };
+
+  const startEditingUnionStatus = () => {
+    setEditUnionStatus(displayUnionStatus);
+    setIsEditingUnionStatus(true);
+  };
+
+  const startEditingRepresentation = () => {
+    setEditRepresentation(displayRepresentation);
+    setIsEditingRepresentation(true);
+  };
   
   if (!user) {
     return (
@@ -318,7 +513,6 @@ const ProfilePage: React.FC = () => {
     if (!resolvedUserId || isOwnProfile) return;
     sendConnectionRequest(resolvedUserId);
     setAnnounced(true);
-    // Screen reader announcement
     const announcement = document.createElement('div');
     announcement.setAttribute('role', 'status');
     announcement.setAttribute('aria-live', 'polite');
@@ -330,15 +524,6 @@ const ProfilePage: React.FC = () => {
   
   const handleMessage = () => {
     navigate('/messages');
-  };
-  
-  const handleAddBadge = () => {
-    if (!newBadge.trim() || !isOwnProfile) return;
-    const normalized = newBadge.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 25);
-    if (normalized) {
-      addBadge(currentUserId, normalized);
-      setNewBadge('');
-    }
   };
   
   const handleBadgeClick = (badge: string) => {
@@ -387,6 +572,31 @@ const ProfilePage: React.FC = () => {
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+          
+          {/* Cover edit button */}
+          {isOwnProfile && (
+            <>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleCoverSelect}
+                className="hidden"
+              />
+              <button
+                onClick={() => coverInputRef.current?.click()}
+                disabled={uploadingCover}
+                className="absolute top-4 right-4 p-2 rounded-full bg-card/80 backdrop-blur-sm shadow-lg hover:bg-card transition-colors disabled:opacity-50"
+                aria-label="Change cover image"
+              >
+                {uploadingCover ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Camera className="w-5 h-5" />
+                )}
+              </button>
+            </>
+          )}
         </div>
         
         {/* Profile info */}
@@ -719,11 +929,28 @@ const ProfilePage: React.FC = () => {
                   <DialogTitle>Add Credit</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <Input placeholder="Project title" />
-                  <Input placeholder="Role" />
-                  <Input placeholder="Year" type="number" />
-                  <Input placeholder="Company" />
-                  <Button className="w-full" onClick={() => setAddCreditOpen(false)}>
+                  <Input 
+                    placeholder="Project title *" 
+                    value={creditProject}
+                    onChange={(e) => setCreditProject(e.target.value)}
+                  />
+                  <Input 
+                    placeholder="Role *" 
+                    value={creditRole}
+                    onChange={(e) => setCreditRole(e.target.value)}
+                  />
+                  <Input 
+                    placeholder="Year *" 
+                    type="number" 
+                    value={creditYear}
+                    onChange={(e) => setCreditYear(e.target.value)}
+                  />
+                  <Input 
+                    placeholder="Company" 
+                    value={creditCompany}
+                    onChange={(e) => setCreditCompany(e.target.value)}
+                  />
+                  <Button className="w-full" onClick={handleAddCredit}>
                     Add Credit
                   </Button>
                 </div>
@@ -741,15 +968,16 @@ const ProfilePage: React.FC = () => {
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Year</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Company</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Verified</th>
+                {isOwnProfile && <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>}
               </tr>
             </thead>
             <tbody>
-              {credits.map((credit) => (
-                <tr key={credit.id} className="border-b border-border/50 hover:bg-muted/50">
+              {displayCredits.map((credit) => (
+                <tr key={credit.id} className="border-b border-border/50 hover:bg-muted/50 group">
                   <td className="py-3 px-4 font-medium">{credit.project}</td>
                   <td className="py-3 px-4">{credit.role}</td>
                   <td className="py-3 px-4">{credit.year}</td>
-                  <td className="py-3 px-4">{credit.company}</td>
+                  <td className="py-3 px-4">{credit.company || '-'}</td>
                   <td className="py-3 px-4">
                     {credit.verified ? (
                       <span className="verified-badge">
@@ -761,8 +989,27 @@ const ProfilePage: React.FC = () => {
                       </button>
                     )}
                   </td>
+                  {isOwnProfile && (
+                    <td className="py-3 px-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleDeleteCredit(credit.id)}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </td>
+                  )}
                 </tr>
               ))}
+              {displayCredits.length === 0 && (
+                <tr>
+                  <td colSpan={isOwnProfile ? 6 : 5} className="py-8 text-center text-muted-foreground">
+                    {isOwnProfile ? 'No credits yet. Add your first credit!' : 'No credits listed.'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -773,31 +1020,137 @@ const ProfilePage: React.FC = () => {
         <h2 className="text-xl font-display font-semibold mb-4">About</h2>
         
         <div className="space-y-6">
+          {/* Bio */}
           <div>
             <h3 className="text-sm font-medium text-muted-foreground mb-2">Bio</h3>
-            <p className="text-foreground">{user.bio}</p>
+            {isOwnProfile && isEditingBio ? (
+              <div className="space-y-2">
+                <Textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  className="min-h-[100px]"
+                  placeholder="Tell us about yourself..."
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleSaveBio}>
+                    <Save className="w-4 h-4 mr-1" /> Save
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setIsEditingBio(false)}>
+                    <X className="w-4 h-4 mr-1" /> Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p 
+                className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
+                onClick={isOwnProfile ? startEditingBio : undefined}
+              >
+                {displayBio || (isOwnProfile ? 'Click to add your bio...' : 'No bio provided.')}
+                {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
+              </p>
+            )}
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Union Status */}
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Union Status</h3>
-              <p className="text-foreground">{user.unionStatus || 'Not specified'}</p>
+              {isOwnProfile && isEditingUnionStatus ? (
+                <div className="space-y-2">
+                  <Input
+                    value={editUnionStatus}
+                    onChange={(e) => setEditUnionStatus(e.target.value)}
+                    placeholder="e.g., SAG-AFTRA, AEA, Non-Union"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSaveUnionStatus}>
+                      <Save className="w-4 h-4 mr-1" /> Save
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setIsEditingUnionStatus(false)}>
+                      <X className="w-4 h-4 mr-1" /> Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p 
+                  className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
+                  onClick={isOwnProfile ? startEditingUnionStatus : undefined}
+                >
+                  {displayUnionStatus || (isOwnProfile ? 'Click to add...' : 'Not specified')}
+                  {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
+                </p>
+              )}
             </div>
             
+            {/* Representation */}
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Representation</h3>
-              <p className="text-foreground">{user.representation || 'Not specified'}</p>
+              {isOwnProfile && isEditingRepresentation ? (
+                <div className="space-y-2">
+                  <Input
+                    value={editRepresentation}
+                    onChange={(e) => setEditRepresentation(e.target.value)}
+                    placeholder="e.g., Agency name"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSaveRepresentation}>
+                      <Save className="w-4 h-4 mr-1" /> Save
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setIsEditingRepresentation(false)}>
+                      <X className="w-4 h-4 mr-1" /> Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p 
+                  className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
+                  onClick={isOwnProfile ? startEditingRepresentation : undefined}
+                >
+                  {displayRepresentation || (isOwnProfile ? 'Click to add...' : 'Not specified')}
+                  {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
+                </p>
+              )}
             </div>
             
+            {/* Gear */}
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Gear</h3>
               <div className="flex flex-wrap gap-2">
-                {user.gearList.length > 0 ? (
-                  user.gearList.map((gear, i) => (
-                    <Badge key={i} variant="secondary">{gear}</Badge>
+                {displayGearList.length > 0 ? (
+                  displayGearList.map((gear, i) => (
+                    <div key={i} className="relative group">
+                      <Badge variant="secondary">{gear}</Badge>
+                      {isOwnProfile && (
+                        <button
+                          onClick={() => handleRemoveGear(gear)}
+                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label={`Remove ${gear}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                   ))
                 ) : (
-                  <span className="text-muted-foreground">None listed</span>
+                  <span className="text-muted-foreground">{isOwnProfile ? 'Add your gear...' : 'None listed'}</span>
+                )}
+                
+                {isOwnProfile && (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={newGear}
+                      onChange={(e) => setNewGear(e.target.value)}
+                      placeholder="Add gear"
+                      className="w-24 h-7 text-sm"
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddGear()}
+                    />
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleAddGear}>
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
