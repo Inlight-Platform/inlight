@@ -36,5 +36,4 @@ const SpokePlaceholder: React.FC<SpokePlaceholderProps> = ({ title, color }) => 
 export const InsightsPage = () => <SpokePlaceholder title="Insights" color="#FFD400" />;
 export const EventsPage = () => <SpokePlaceholder title="Events" color="#FF6B2D" />;
 export const OpportunitiesPage = () => <SpokePlaceholder title="Opportunities" color="#00FF87" />;
-export const MessagesPage = () => <SpokePlaceholder title="Messages" color="#AE6DFF" />;
 export const ResourcesPage = () => <SpokePlaceholder title="Resources" color="#39FFDC" />;
