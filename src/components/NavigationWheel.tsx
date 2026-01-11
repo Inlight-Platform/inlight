@@ -17,23 +17,19 @@ interface SpokeConfig {
   angle: number;
 }
 
-// 12 spokes at 30° intervals
+// 8 spokes at 45° intervals (equidistant)
 const spokes: SpokeConfig[] = [
   { name: 'Stories', route: '/stories', angle: 0 },
-  { name: '', route: '', angle: 30 }, // decorative spoke
-  { name: 'Mutuals', route: '/mutuals', angle: 60 },
+  { name: 'Mutuals', route: '/mutuals', angle: 45 },
   { name: 'Insights', route: '/insights', angle: 90 },
-  { name: '', route: '', angle: 120 }, // decorative spoke
-  { name: 'Events', route: '/events', angle: 150 },
+  { name: 'Events', route: '/events', angle: 135 },
   { name: 'Opportunities', route: '/opportunities', angle: 180 },
-  { name: '', route: '', angle: 210 }, // decorative spoke
-  { name: 'Messages', route: '/messages', angle: 240 },
+  { name: 'Messages', route: '/messages', angle: 225 },
   { name: 'My Network', route: '/network', angle: 270 },
-  { name: '', route: '', angle: 300 }, // decorative spoke
-  { name: 'Resources', route: '/resources', angle: 330 },
+  { name: 'Resources', route: '/resources', angle: 315 },
 ];
 
-const navigableSpokes = spokes.filter(s => s.name && s.route);
+
 
 const VIEWBOX_SIZE = 600;
 const CENTER = VIEWBOX_SIZE / 2;
@@ -241,16 +237,16 @@ export const NavigationWheel: React.FC = () => {
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'ArrowRight') {
       e.preventDefault();
-      setFocusedIndex((prev) => (prev + 1) % navigableSpokes.length);
+      setFocusedIndex((prev) => (prev + 1) % spokes.length);
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      setFocusedIndex((prev) => (prev - 1 + navigableSpokes.length) % navigableSpokes.length);
+      setFocusedIndex((prev) => (prev - 1 + spokes.length) % spokes.length);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setFocusedIndex(-1);
     } else if (e.key === 'Enter' && focusedIndex >= 0) {
       e.preventDefault();
-      navigate(navigableSpokes[focusedIndex].route);
+      navigate(spokes[focusedIndex].route);
     }
   }, [focusedIndex, navigate]);
   
@@ -407,26 +403,23 @@ export const NavigationWheel: React.FC = () => {
             );
           })}
           
-          {/* Target nodes for navigable spokes */}
+          {/* Target nodes */}
           {spokes.map((spoke, index) => {
-            if (!spoke.name || !spoke.route) return null;
-            
             const position = polarToCartesian(CENTER, CENTER, SPOKE_END_RADIUS, spoke.angle);
-            const navIndex = navigableSpokes.findIndex(s => s.name === spoke.name);
-            const isHovered = hoveredIndex === navIndex;
-            const isFocused = focusedIndex === navIndex;
+            const isHovered = hoveredIndex === index;
+            const isFocused = focusedIndex === index;
             
             return (
               <g
                 key={`target-${index}`}
-                ref={(el) => (targetRefs.current[navIndex] = el)}
+                ref={(el) => (targetRefs.current[index] = el)}
                 role="button"
                 aria-label={`Open ${spoke.name}`}
                 tabIndex={0}
                 onClick={() => handleSpokeClick(spoke.route)}
-                onMouseEnter={() => setHoveredIndex(navIndex)}
+                onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(-1)}
-                onFocus={() => setFocusedIndex(navIndex)}
+                onFocus={() => setFocusedIndex(index)}
                 onBlur={() => setFocusedIndex(-1)}
                 style={{
                   cursor: 'pointer',
