@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, User, Visibility } from '../store/useStore';
+import { useTrackProfileView, useUpdateEngagement } from '@/hooks/useAnalytics';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -55,6 +56,10 @@ const ProfilePage: React.FC = () => {
   const isOwnProfile = resolvedUserId === currentUserId;
   const connectionStatus = resolvedUserId ? getConnectionStatus(resolvedUserId) : null;
   
+  // Track profile view when visiting someone else's profile
+  useTrackProfileView(currentUserId, resolvedUserId || '');
+  const { updateEngagement } = useUpdateEngagement();
+  
   const materials = resolvedUserId ? getMaterials(resolvedUserId) : [];
   const credits = resolvedUserId ? getCredits(resolvedUserId) : [];
   
@@ -65,7 +70,11 @@ const ProfilePage: React.FC = () => {
   
   useEffect(() => {
     setAnnounced(false);
-  }, [userId]);
+    // Update engagement for profile views
+    if (!isOwnProfile && resolvedUserId) {
+      updateEngagement(resolvedUserId, 'profile_views');
+    }
+  }, [userId, isOwnProfile, resolvedUserId]);
   
   if (!user) {
     return (
