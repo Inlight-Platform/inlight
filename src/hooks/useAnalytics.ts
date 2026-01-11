@@ -1,25 +1,40 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export const useTrackProfileView = (viewerId: string, profileId: string) => {
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+export const useTrackProfileView = (profileId: string) => {
   useEffect(() => {
-    if (!viewerId || !profileId || viewerId === profileId) return;
+    if (!profileId) return;
 
     const trackView = async () => {
       try {
-        await supabase
-          .from('profile_views')
-          .insert({
-            viewer_id: viewerId,
-            viewed_profile_id: profileId,
-          });
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        // Only track if user is authenticated
+        if (!session?.access_token) {
+          return;
+        }
+
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/track-profile-view`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ profileId }),
+        });
+
+        if (!response.ok && response.status !== 200 && response.status !== 204) {
+          console.error('Failed to track profile view:', response.status);
+        }
       } catch (error) {
         console.error('Error tracking profile view:', error);
       }
     };
 
     trackView();
-  }, [viewerId, profileId]);
+  }, [profileId]);
 };
 
 export const useUpdateEngagement = () => {

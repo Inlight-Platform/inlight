@@ -1,1 +1,4 @@
 project_id = "gbiostpdhvfxpppfqskw"
+
+[functions.track-profile-view]
+verify_jwt = false
