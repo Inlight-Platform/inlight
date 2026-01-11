@@ -14,7 +14,165 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      broadway_metrics: {
+        Row: {
+          attendance: number
+          capacity_percentage: number
+          created_at: string
+          date: string
+          id: string
+          show_type: string
+          theater: string
+          title: string
+          weekly_gross: number
+        }
+        Insert: {
+          attendance?: number
+          capacity_percentage?: number
+          created_at?: string
+          date?: string
+          id?: string
+          show_type: string
+          theater: string
+          title: string
+          weekly_gross: number
+        }
+        Update: {
+          attendance?: number
+          capacity_percentage?: number
+          created_at?: string
+          date?: string
+          id?: string
+          show_type?: string
+          theater?: string
+          title?: string
+          weekly_gross?: number
+        }
+        Relationships: []
+      }
+      film_metrics: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          rating: number
+          studio: string
+          title: string
+          total_gross: number
+          week_change: number
+          weekend_gross: number
+          weeks_in_release: number
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          rating?: number
+          studio: string
+          title: string
+          total_gross: number
+          week_change?: number
+          weekend_gross: number
+          weeks_in_release?: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          rating?: number
+          studio?: string
+          title?: string
+          total_gross?: number
+          week_change?: number
+          weekend_gross?: number
+          weeks_in_release?: number
+        }
+        Relationships: []
+      }
+      industry_highlights: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          date: string
+          id: string
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string
+          date?: string
+          id?: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          date?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      profile_views: {
+        Row: {
+          id: string
+          viewed_at: string
+          viewed_profile_id: string
+          viewer_id: string
+        }
+        Insert: {
+          id?: string
+          viewed_at?: string
+          viewed_profile_id: string
+          viewer_id: string
+        }
+        Update: {
+          id?: string
+          viewed_at?: string
+          viewed_profile_id?: string
+          viewer_id?: string
+        }
+        Relationships: []
+      }
+      user_engagement: {
+        Row: {
+          connections_made: number
+          created_at: string
+          date: string
+          id: string
+          messages_received: number
+          messages_sent: number
+          profile_views: number
+          story_views: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connections_made?: number
+          created_at?: string
+          date?: string
+          id?: string
+          messages_received?: number
+          messages_sent?: number
+          profile_views?: number
+          story_views?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connections_made?: number
+          created_at?: string
+          date?: string
+          id?: string
+          messages_received?: number
+          messages_sent?: number
+          profile_views?: number
+          story_views?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
