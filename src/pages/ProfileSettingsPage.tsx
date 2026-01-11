@@ -13,8 +13,8 @@ import { toast } from 'sonner';
 import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MediaUploader } from '@/components/profile/MediaUploader';
+import { AvatarCropper } from '@/components/profile/AvatarCropper';
 import { useMediaUpload, useUserMedia } from '@/hooks/useMediaUpload';
-
 interface Profile {
   id: string;
   user_id: string;
@@ -47,6 +47,8 @@ const ProfileSettingsPage: React.FC = () => {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [headline, setHeadline] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [cropperImageSrc, setCropperImageSrc] = useState('');
 
   const { deleteFile, updateVisibility } = useMediaUpload();
   const { fetchMedia } = useUserMedia(user?.id);
@@ -121,19 +123,38 @@ const ProfileSettingsPage: React.FC = () => {
     }
   }, [user, authLoading, navigate]);
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user?.id) return;
+    if (!file) return;
+
+    // Create a URL for the cropper
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropperImageSrc(reader.result as string);
+      setCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleCroppedAvatarUpload = async (blob: Blob) => {
+    if (!user?.id) return;
 
     setUploadingAvatar(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/avatar.${fileExt}`;
+      const fileName = `${user.id}/avatar.jpg`;
 
-      // Upload to storage
+      // Upload cropped image to storage
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, blob, { 
+          upsert: true,
+          contentType: 'image/jpeg'
+        });
 
       if (uploadError) throw uploadError;
 
@@ -157,9 +178,6 @@ const ProfileSettingsPage: React.FC = () => {
       toast.error(error.message || 'Failed to upload avatar');
     } finally {
       setUploadingAvatar(false);
-      if (avatarInputRef.current) {
-        avatarInputRef.current.value = '';
-      }
     }
   };
 
@@ -226,7 +244,7 @@ const ProfileSettingsPage: React.FC = () => {
                 ref={avatarInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/gif,image/webp"
-                onChange={handleAvatarUpload}
+                onChange={handleAvatarSelect}
                 className="hidden"
               />
               <button
@@ -241,6 +259,14 @@ const ProfileSettingsPage: React.FC = () => {
                 )}
               </button>
             </div>
+
+            {/* Avatar Cropper Modal */}
+            <AvatarCropper
+              open={cropperOpen}
+              onClose={() => setCropperOpen(false)}
+              imageSrc={cropperImageSrc}
+              onCropComplete={handleCroppedAvatarUpload}
+            />
             <div className="space-y-1">
               <p className="font-semibold text-lg">
                 {displayName || user?.email?.split('@')[0] || 'Anonymous'}

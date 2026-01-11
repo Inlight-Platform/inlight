@@ -33,6 +33,7 @@ import {
   ChevronLeft,
   Pencil
 } from 'lucide-react';
+import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
 
 const ProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -381,6 +382,14 @@ const ProfilePage: React.FC = () => {
             </TabsContent>
           </Tabs>
         </section>
+      )}
+
+      {/* Public Media Gallery (for other users' profiles) */}
+      {!isOwnProfile && resolvedUserId && (
+        <PublicMediaGallery 
+          userId={resolvedUserId} 
+          isConnected={connectionStatus === 'accepted'}
+        />
       )}
       
       {/* D. Credits */}
