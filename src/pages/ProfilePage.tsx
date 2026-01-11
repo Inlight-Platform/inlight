@@ -4,7 +4,7 @@ import { useStore, User, Visibility } from '../store/useStore';
 import { useTrackProfileView, useUpdateEngagement } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
 import { useMediaUpload, useUserMedia } from '@/hooks/useMediaUpload';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -62,6 +62,7 @@ const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
   
   const currentUserId = useStore((s) => s.currentUserId);
   const getUser = useStore((s) => s.getUser);
@@ -88,6 +89,25 @@ const ProfilePage: React.FC = () => {
   // Media upload hooks
   const { deleteFile, updateVisibility } = useMediaUpload();
   const { fetchMedia } = useUserMedia(authUser?.id);
+  
+  // Fetch profile from database to get current avatar
+  const { data: dbProfile } = useQuery({
+    queryKey: ['profile', authUser?.id],
+    queryFn: async () => {
+      if (!authUser?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('user_id', authUser.id)
+        .single();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!authUser?.id && isOwnProfile,
+  });
+  
+  // Use database avatar if available, otherwise fall back to store
+  const displayAvatar = (isOwnProfile && dbProfile?.avatar_url) || user?.avatar;
   
   // Fetch user media from database
   const { data: userMedia = [], refetch: refetchMedia } = useQuery({
@@ -165,6 +185,9 @@ const ProfilePage: React.FC = () => {
         .from('profiles')
         .update({ avatar_url: newAvatarUrl })
         .eq('user_id', authUser.id);
+
+      // Invalidate profile query to show new avatar immediately
+      await queryClient.invalidateQueries({ queryKey: ['profile', authUser.id] });
 
       toast.success('Avatar updated!');
     } catch (error: any) {
@@ -276,7 +299,7 @@ const ProfilePage: React.FC = () => {
           <div className="absolute -top-16 sm:-top-20 left-4 sm:left-6 lg:left-8">
             <div className="relative">
               <img
-                src={user.avatar}
+                src={displayAvatar}
                 alt={user.name}
                 className="w-24 h-24 sm:w-32 sm:h-32 lg:w-[120px] lg:h-[120px] rounded-full border-4 border-background object-cover shadow-card"
               />
