@@ -9,10 +9,8 @@ import DirectoryPage from "./pages/DirectoryPage";
 import MutualsPage from "./pages/MutualsPage";
 import NetworkPage from "./pages/NetworkPage";
 import StoriesPage from "./pages/StoriesPage";
-import { 
-  InsightsPage, 
-  ResourcesPage 
-} from "./pages/SpokePlaceholders";
+import { ResourcesPage } from "./pages/SpokePlaceholders";
+import InsightsPage from "./pages/InsightsPage";
 import OpportunitiesPage from "./pages/OpportunitiesPage";
 import EventsPage from "./pages/EventsPage";
 import MessagesPage from "./pages/MessagesPage";
