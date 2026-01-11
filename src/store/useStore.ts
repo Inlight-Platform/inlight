@@ -82,6 +82,34 @@ export interface Connection {
 export type EventType = 'networking' | 'workshop' | 'screening' | 'audition' | 'meetup' | 'conference';
 export type RSVPStatus = 'going' | 'interested' | 'not-going';
 
+// Opportunity types
+export type OpportunityType = 'job' | 'casting' | 'gig' | 'collaboration';
+export type OpportunityStatus = 'open' | 'closed' | 'filled';
+export type ExperienceLevel = 'entry' | 'intermediate' | 'senior' | 'any';
+
+export interface Opportunity {
+  id: string;
+  title: string;
+  description: string;
+  type: OpportunityType;
+  status: OpportunityStatus;
+  postedBy: string;
+  company?: string;
+  location: string;
+  isRemote: boolean;
+  compensation?: string;
+  experienceLevel: ExperienceLevel;
+  roles: string[]; // UserRole types needed
+  requirements: string[];
+  deadline?: string;
+  startDate?: string;
+  duration?: string;
+  applicants: { userId: string; appliedAt: string; status: 'pending' | 'reviewed' | 'accepted' | 'rejected' }[];
+  tags: string[];
+  createdAt: string;
+  isFeatured: boolean;
+}
+
 export interface Event {
   id: string;
   title: string;
@@ -110,6 +138,7 @@ interface AppState {
   messages: Message[];
   threads: Thread[];
   events: Event[];
+  opportunities: Opportunity[];
   
   // Actions
   setCurrentUser: (id: string) => void;
@@ -165,6 +194,11 @@ interface AppState {
   // Event actions
   getEvents: () => Event[];
   rsvpToEvent: (eventId: string, userId: string, status: RSVPStatus) => void;
+  
+  // Opportunity actions
+  getOpportunities: () => Opportunity[];
+  addOpportunity: (opportunity: Omit<Opportunity, 'id' | 'createdAt' | 'applicants'>) => void;
+  applyToOpportunity: (opportunityId: string, userId: string) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -179,6 +213,7 @@ export const useStore = create<AppState>()(
       messages: [],
       threads: [],
       events: [],
+      opportunities: [],
       
       setCurrentUser: (id) => set({ currentUserId: id }),
       
@@ -536,6 +571,40 @@ export const useStore = create<AppState>()(
             }
             
             return { ...e, attendees: newAttendees };
+          })
+        }));
+      },
+      
+      // Opportunity actions
+      getOpportunities: () => {
+        return get().opportunities;
+      },
+      
+      addOpportunity: (opportunity) => {
+        const newOpportunity: Opportunity = {
+          ...opportunity,
+          id: `opp-${Date.now()}`,
+          createdAt: new Date().toISOString(),
+          applicants: [],
+        };
+        set(state => ({
+          opportunities: [...state.opportunities, newOpportunity]
+        }));
+      },
+      
+      applyToOpportunity: (opportunityId, userId) => {
+        set(state => ({
+          opportunities: state.opportunities.map(o => {
+            if (o.id !== opportunityId) return o;
+            if (o.applicants.some(a => a.userId === userId)) return o;
+            return {
+              ...o,
+              applicants: [...o.applicants, {
+                userId,
+                appliedAt: new Date().toISOString(),
+                status: 'pending' as const
+              }]
+            };
           })
         }));
       },
