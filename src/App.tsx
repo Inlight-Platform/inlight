@@ -15,6 +15,7 @@ import OpportunitiesPage from "./pages/OpportunitiesPage";
 import EventsPage from "./pages/EventsPage";
 import MessagesPage from "./pages/MessagesPage";
 import AuthPage from "./pages/AuthPage";
+import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/settings" element={<ProfileSettingsPage />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
           <Route path="/directory/:badgeSlug" element={<DirectoryPage />} />
           <Route path="/stories" element={<StoriesPage />} />

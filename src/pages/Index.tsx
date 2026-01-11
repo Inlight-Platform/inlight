@@ -5,7 +5,7 @@ import { useStore } from '../store/useStore';
 import { useAuth } from '../hooks/useAuth';
 import { stubUsers, stubConnections, stubMaterials, stubCredits, stubStories, stubMessages, stubThreads } from '../data/stubData';
 import { Button } from '@/components/ui/button';
-import { LogIn, LogOut, User } from 'lucide-react';
+import { LogIn, LogOut, Settings } from 'lucide-react';
 
 const Index: React.FC = () => {
   const users = useStore((s) => s.users);
@@ -37,10 +37,14 @@ const Index: React.FC = () => {
         {!loading && (
           user ? (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
-                <User className="h-4 w-4" />
+              <span className="text-sm text-muted-foreground">
                 {user.email}
               </span>
+              <Link to="/settings">
+                <Button variant="ghost" size="sm">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
               <Button variant="outline" size="sm" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-1" />
                 Sign out
