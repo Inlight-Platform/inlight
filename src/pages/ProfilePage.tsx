@@ -36,7 +36,9 @@ import {
   ChevronLeft,
   Pencil,
   Camera,
-  Loader2
+  Loader2,
+  X,
+  Save
 } from 'lucide-react';
 import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
 import { MediaUploader } from '@/components/profile/MediaUploader';
@@ -81,6 +83,15 @@ const ProfilePage: React.FC = () => {
   const [cropperOpen, setCropperOpen] = useState(false);
   const [cropperImageSrc, setCropperImageSrc] = useState('');
   
+  // Editing states
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [isEditingRole, setIsEditingRole] = useState(false);
+  const [isEditingPronouns, setIsEditingPronouns] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editRole, setEditRole] = useState('');
+  const [editPronouns, setEditPronouns] = useState('');
   const resolvedUserId = userId === 'me' ? currentUserId : userId;
   const user = getUser(resolvedUserId || '');
   const isOwnProfile = resolvedUserId === currentUserId;
@@ -90,14 +101,14 @@ const ProfilePage: React.FC = () => {
   const { deleteFile, updateVisibility } = useMediaUpload();
   const { fetchMedia } = useUserMedia(authUser?.id);
   
-  // Fetch profile from database to get current avatar
-  const { data: dbProfile } = useQuery({
+  // Fetch profile from database to get current data
+  const { data: dbProfile, refetch: refetchProfile } = useQuery({
     queryKey: ['profile', authUser?.id],
     queryFn: async () => {
       if (!authUser?.id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('avatar_url')
+        .select('display_name, avatar_url, location, pronouns, role, badges')
         .eq('user_id', authUser.id)
         .single();
       if (error) return null;
@@ -106,8 +117,13 @@ const ProfilePage: React.FC = () => {
     enabled: !!authUser?.id && isOwnProfile,
   });
   
-  // Use database avatar if available, otherwise fall back to store
+  // Use database values if available, otherwise fall back to store
   const displayAvatar = (isOwnProfile && dbProfile?.avatar_url) || user?.avatar;
+  const displayName = (isOwnProfile && dbProfile?.display_name) || user?.name || '';
+  const displayLocation = (isOwnProfile && dbProfile?.location) || user?.location || '';
+  const displayRole = (isOwnProfile && dbProfile?.role) || user?.role || '';
+  const displayPronouns = (isOwnProfile && dbProfile?.pronouns) || user?.pronouns || '';
+  const displayBadges = (isOwnProfile && dbProfile?.badges) || user?.badges || [];
   
   // Fetch user media from database
   const { data: userMedia = [], refetch: refetchMedia } = useQuery({
@@ -205,6 +221,86 @@ const ProfilePage: React.FC = () => {
   const handleVisibilityChange = async (id: string, visibility: MediaVisibility) => {
     await updateVisibility(id, visibility);
     refetchMedia();
+  };
+
+  // Profile field save handlers
+  const saveProfileField = async (field: string, value: string | string[]) => {
+    if (!authUser?.id) return;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ [field]: value })
+        .eq('user_id', authUser.id);
+      
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ['profile', authUser.id] });
+      toast.success('Profile updated!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update profile');
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (!editName.trim()) return;
+    await saveProfileField('display_name', editName.trim());
+    setIsEditingName(false);
+  };
+
+  const handleSaveLocation = async () => {
+    await saveProfileField('location', editLocation.trim());
+    setIsEditingLocation(false);
+  };
+
+  const handleSaveRole = async () => {
+    await saveProfileField('role', editRole.trim());
+    setIsEditingRole(false);
+  };
+
+  const handleSavePronouns = async () => {
+    await saveProfileField('pronouns', editPronouns.trim());
+    setIsEditingPronouns(false);
+  };
+
+  const handleAddBadgeToDb = async () => {
+    if (!newBadge.trim() || !authUser?.id) return;
+    const normalized = newBadge.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 25);
+    if (!normalized) return;
+    
+    const currentBadges = displayBadges || [];
+    if (currentBadges.includes(normalized)) {
+      toast.error('Badge already exists');
+      return;
+    }
+    
+    await saveProfileField('badges', [...currentBadges, normalized]);
+    setNewBadge('');
+  };
+
+  const handleRemoveBadge = async (badgeToRemove: string) => {
+    if (!authUser?.id) return;
+    const currentBadges = displayBadges || [];
+    const updatedBadges = currentBadges.filter(b => b !== badgeToRemove);
+    await saveProfileField('badges', updatedBadges);
+  };
+
+  const startEditingName = () => {
+    setEditName(displayName);
+    setIsEditingName(true);
+  };
+
+  const startEditingLocation = () => {
+    setEditLocation(displayLocation);
+    setIsEditingLocation(true);
+  };
+
+  const startEditingRole = () => {
+    setEditRole(displayRole);
+    setIsEditingRole(true);
+  };
+
+  const startEditingPronouns = () => {
+    setEditPronouns(displayPronouns);
+    setIsEditingPronouns(true);
   };
   
   if (!user) {
@@ -338,13 +434,119 @@ const ProfilePage: React.FC = () => {
           {/* Name and info */}
           <div className="pt-12 sm:pt-16 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl font-display font-bold">{user.name}</h1>
+              {/* Editable Name */}
+              {isOwnProfile && isEditingName ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="text-2xl sm:text-3xl font-display font-bold h-auto py-1"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                    autoFocus
+                  />
+                  <Button size="icon" variant="ghost" onClick={handleSaveName}>
+                    <Save className="w-4 h-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => setIsEditingName(false)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <h1 
+                  className={`text-2xl sm:text-3xl font-display font-bold ${isOwnProfile ? 'cursor-pointer hover:text-primary transition-colors group' : ''}`}
+                  onClick={isOwnProfile ? startEditingName : undefined}
+                >
+                  {displayName || 'Add your name'}
+                  {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                </h1>
+              )}
+              
+              {/* Editable Role, Location, Pronouns */}
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                <Badge variant="secondary" className="text-sm font-medium">
-                  {user.role}
-                </Badge>
-                <span className="text-muted-foreground text-sm">{user.location}</span>
-                <span className="text-muted-foreground text-sm">({user.pronouns})</span>
+                {/* Role Badge */}
+                {isOwnProfile && isEditingRole ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value)}
+                      className="w-24 h-7 text-sm"
+                      placeholder="Role"
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveRole()}
+                      autoFocus
+                    />
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSaveRole}>
+                      <Save className="w-3 h-3" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setIsEditingRole(false)}>
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Badge 
+                    variant="secondary" 
+                    className={`text-sm font-medium ${isOwnProfile ? 'cursor-pointer hover:bg-secondary/80' : ''}`}
+                    onClick={isOwnProfile ? startEditingRole : undefined}
+                  >
+                    {displayRole || 'Add role'}
+                    {isOwnProfile && <Pencil className="w-3 h-3 ml-1 inline" />}
+                  </Badge>
+                )}
+
+                {/* Location */}
+                {isOwnProfile && isEditingLocation ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={editLocation}
+                      onChange={(e) => setEditLocation(e.target.value)}
+                      className="w-32 h-7 text-sm"
+                      placeholder="Location"
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveLocation()}
+                      autoFocus
+                    />
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSaveLocation}>
+                      <Save className="w-3 h-3" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setIsEditingLocation(false)}>
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <span 
+                    className={`text-muted-foreground text-sm ${isOwnProfile ? 'cursor-pointer hover:text-foreground transition-colors' : ''}`}
+                    onClick={isOwnProfile ? startEditingLocation : undefined}
+                  >
+                    {displayLocation || (isOwnProfile ? 'Add location' : '')}
+                    {isOwnProfile && <Pencil className="w-3 h-3 ml-1 inline" />}
+                  </span>
+                )}
+
+                {/* Pronouns */}
+                {isOwnProfile && isEditingPronouns ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={editPronouns}
+                      onChange={(e) => setEditPronouns(e.target.value)}
+                      className="w-24 h-7 text-sm"
+                      placeholder="Pronouns"
+                      onKeyDown={(e) => e.key === 'Enter' && handleSavePronouns()}
+                      autoFocus
+                    />
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSavePronouns}>
+                      <Save className="w-3 h-3" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setIsEditingPronouns(false)}>
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <span 
+                    className={`text-muted-foreground text-sm ${isOwnProfile ? 'cursor-pointer hover:text-foreground transition-colors' : ''}`}
+                    onClick={isOwnProfile ? startEditingPronouns : undefined}
+                  >
+                    ({displayPronouns || (isOwnProfile ? 'Add pronouns' : '')})
+                    {isOwnProfile && <Pencil className="w-3 h-3 ml-1 inline" />}
+                  </span>
+                )}
               </div>
             </div>
             
@@ -391,14 +593,24 @@ const ProfilePage: React.FC = () => {
       {/* B. Badges */}
       <section className="px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
         <div className="flex items-center gap-3 overflow-x-auto scrollbar-thin pb-2">
-          {user.badges.map((badge) => (
-            <button
-              key={badge}
-              onClick={() => handleBadgeClick(badge)}
-              className="badge-pill flex-shrink-0"
-            >
-              #{badge}
-            </button>
+          {displayBadges.map((badge) => (
+            <div key={badge} className="relative group flex-shrink-0">
+              <button
+                onClick={() => handleBadgeClick(badge)}
+                className="badge-pill"
+              >
+                #{badge}
+              </button>
+              {isOwnProfile && (
+                <button
+                  onClick={() => handleRemoveBadge(badge)}
+                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label={`Remove ${badge} badge`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           ))}
           
           {isOwnProfile && (
@@ -408,13 +620,13 @@ const ProfilePage: React.FC = () => {
                 placeholder="Add badge..."
                 value={newBadge}
                 onChange={(e) => setNewBadge(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddBadge()}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddBadgeToDb()}
                 className="w-32 h-8 text-sm"
                 maxLength={25}
               />
               <Button 
                 size="sm" 
-                onClick={handleAddBadge}
+                onClick={handleAddBadgeToDb}
                 className="h-8 px-3"
               >
                 <Plus className="w-4 h-4" />
