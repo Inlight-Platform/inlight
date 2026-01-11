@@ -1,29 +1,11 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, Users, Eye, MessageSquare, Calendar, Briefcase, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-
-// Simulated analytics data
-const networkGrowthData = [
-  { week: 'W1', connections: 12, views: 45 },
-  { week: 'W2', connections: 18, views: 62 },
-  { week: 'W3', connections: 15, views: 58 },
-  { week: 'W4', connections: 24, views: 89 },
-  { week: 'W5', connections: 31, views: 112 },
-  { week: 'W6', connections: 28, views: 98 },
-  { week: 'W7', connections: 35, views: 134 },
-];
-
-const engagementData = [
-  { day: 'Mon', messages: 8, profileViews: 23 },
-  { day: 'Tue', messages: 12, profileViews: 31 },
-  { day: 'Wed', messages: 6, profileViews: 19 },
-  { day: 'Thu', messages: 15, profileViews: 42 },
-  { day: 'Fri', messages: 20, profileViews: 56 },
-  { day: 'Sat', messages: 9, profileViews: 28 },
-  { day: 'Sun', messages: 5, profileViews: 17 },
-];
 
 interface StatCardProps {
   title: string;
@@ -31,9 +13,10 @@ interface StatCardProps {
   change: number;
   icon: React.ReactNode;
   color: string;
+  isLoading?: boolean;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, color }) => {
+const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, color, isLoading }) => {
   const isPositive = change >= 0;
   
   return (
@@ -42,7 +25,11 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, color }
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold mt-1">{value}</p>
+            {isLoading ? (
+              <Skeleton className="h-9 w-16 mt-1" />
+            ) : (
+              <p className="text-3xl font-bold mt-1">{value}</p>
+            )}
             <div className={`flex items-center gap-1 mt-2 text-sm ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
               {isPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
               <span>{Math.abs(change)}% vs last week</span>
@@ -63,13 +50,80 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, color }
 };
 
 const PersonalAnalytics: React.FC = () => {
-  const { currentUserId, get1stDegree, getMaterials, getCredits, threads, messages } = useStore();
+  const { currentUserId, get1stDegree, getMaterials, threads, messages } = useStore();
   
   const connections = get1stDegree(currentUserId);
   const materials = getMaterials(currentUserId);
-  const credits = getCredits(currentUserId);
-  const userThreads = threads.filter(t => t.participants.includes(currentUserId));
   const userMessages = messages.filter(m => m.senderId === currentUserId);
+
+  // Fetch user engagement data from database
+  const { data: engagementData, isLoading: engagementLoading } = useQuery({
+    queryKey: ['user-engagement', currentUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_engagement')
+        .select('*')
+        .eq('user_id', currentUserId)
+        .order('date', { ascending: true })
+        .limit(7);
+      
+      if (error) {
+        console.error('Error fetching engagement:', error);
+        return [];
+      }
+      return data || [];
+    }
+  });
+
+  // Fetch profile views count
+  const { data: profileViews, isLoading: viewsLoading } = useQuery({
+    queryKey: ['profile-views', currentUserId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('profile_views')
+        .select('*', { count: 'exact', head: true })
+        .eq('viewed_profile_id', currentUserId);
+      
+      if (error) {
+        console.error('Error fetching views:', error);
+        return 0;
+      }
+      return count || 0;
+    }
+  });
+
+  // Generate chart data from engagement or fallback to simulated data
+  const networkGrowthData = engagementData && engagementData.length > 0
+    ? engagementData.map((e, i) => ({
+        week: `W${i + 1}`,
+        connections: e.connections_made || 0,
+        views: e.profile_views || 0
+      }))
+    : [
+        { week: 'W1', connections: 12, views: 45 },
+        { week: 'W2', connections: 18, views: 62 },
+        { week: 'W3', connections: 15, views: 58 },
+        { week: 'W4', connections: 24, views: 89 },
+        { week: 'W5', connections: 31, views: 112 },
+        { week: 'W6', connections: 28, views: 98 },
+        { week: 'W7', connections: 35, views: 134 },
+      ];
+
+  const weeklyEngagementData = engagementData && engagementData.length > 0
+    ? engagementData.map((e, i) => ({
+        day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i % 7],
+        messages: e.messages_sent || 0,
+        profileViews: e.profile_views || 0
+      }))
+    : [
+        { day: 'Mon', messages: 8, profileViews: 23 },
+        { day: 'Tue', messages: 12, profileViews: 31 },
+        { day: 'Wed', messages: 6, profileViews: 19 },
+        { day: 'Thu', messages: 15, profileViews: 42 },
+        { day: 'Fri', messages: 20, profileViews: 56 },
+        { day: 'Sat', messages: 9, profileViews: 28 },
+        { day: 'Sun', messages: 5, profileViews: 17 },
+      ];
   
   return (
     <div className="space-y-6">
@@ -95,14 +149,15 @@ const PersonalAnalytics: React.FC = () => {
         />
         <StatCard
           title="Profile Views"
-          value="1,247"
+          value={profileViews || 0}
           change={23}
           icon={<Eye className="w-6 h-6" />}
           color="48 100% 50%"
+          isLoading={viewsLoading}
         />
         <StatCard
           title="Messages Sent"
-          value={userMessages.length || 47}
+          value={userMessages.length || 0}
           change={-5}
           icon={<MessageSquare className="w-6 h-6" />}
           color="264 100% 71%"
@@ -127,56 +182,62 @@ const PersonalAnalytics: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={networkGrowthData}>
-                  <defs>
-                    <linearGradient id="colorConnections" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(186, 100%, 50%)" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="hsl(186, 100%, 50%)" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(48, 100%, 50%)" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="hsl(48, 100%, 50%)" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="week" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
-                    }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="connections" 
-                    stroke="hsl(186, 100%, 50%)" 
-                    fillOpacity={1} 
-                    fill="url(#colorConnections)" 
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="views" 
-                    stroke="hsl(48, 100%, 50%)" 
-                    fillOpacity={1} 
-                    fill="url(#colorViews)" 
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex items-center justify-center gap-6 mt-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(186, 100%, 50%)' }} />
-                <span className="text-sm text-muted-foreground">Connections</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(48, 100%, 50%)' }} />
-                <span className="text-sm text-muted-foreground">Profile Views</span>
-              </div>
-            </div>
+            {engagementLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : (
+              <>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={networkGrowthData}>
+                      <defs>
+                        <linearGradient id="colorConnections" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(186, 100%, 50%)" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="hsl(186, 100%, 50%)" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(48, 100%, 50%)" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="hsl(48, 100%, 50%)" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="week" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="connections" 
+                        stroke="hsl(186, 100%, 50%)" 
+                        fillOpacity={1} 
+                        fill="url(#colorConnections)" 
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="views" 
+                        stroke="hsl(48, 100%, 50%)" 
+                        fillOpacity={1} 
+                        fill="url(#colorViews)" 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex items-center justify-center gap-6 mt-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(186, 100%, 50%)' }} />
+                    <span className="text-sm text-muted-foreground">Connections</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(48, 100%, 50%)' }} />
+                    <span className="text-sm text-muted-foreground">Profile Views</span>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -189,34 +250,40 @@ const PersonalAnalytics: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={engagementData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
-                    }}
-                  />
-                  <Bar dataKey="messages" fill="hsl(264, 100%, 71%)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="profileViews" fill="hsl(147, 100%, 50%)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex items-center justify-center gap-6 mt-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(264, 100%, 71%)' }} />
-                <span className="text-sm text-muted-foreground">Messages</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(147, 100%, 50%)' }} />
-                <span className="text-sm text-muted-foreground">Profile Views</span>
-              </div>
-            </div>
+            {engagementLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : (
+              <>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={weeklyEngagementData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <Bar dataKey="messages" fill="hsl(264, 100%, 71%)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="profileViews" fill="hsl(147, 100%, 50%)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex items-center justify-center gap-6 mt-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(264, 100%, 71%)' }} />
+                    <span className="text-sm text-muted-foreground">Messages</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(147, 100%, 50%)' }} />
+                    <span className="text-sm text-muted-foreground">Profile Views</span>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
