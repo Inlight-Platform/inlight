@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
+import { useAuth } from '../hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import inlightLogo from '@/assets/inlight-logo.png';
 
 /*
@@ -70,6 +72,8 @@ function getAngleFromCenter(clientX: number, clientY: number, svgRect: DOMRect, 
 export const NavigationWheel: React.FC = () => {
   const navigate = useNavigate();
   const currentUser = useStore((s) => s.getCurrentUser());
+  const { user } = useAuth();
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [hoveredIndex, setHoveredIndex] = useState<number>(-1);
@@ -87,6 +91,28 @@ export const NavigationWheel: React.FC = () => {
   const dragStartTime = useRef<number>(0);
   const dragStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   
+  // Fetch profile avatar from database
+  useEffect(() => {
+    const fetchProfileAvatar = async () => {
+      if (!user?.id) {
+        setProfileAvatarUrl(null);
+        return;
+      }
+      
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (data?.avatar_url) {
+        setProfileAvatarUrl(data.avatar_url);
+      }
+    };
+    
+    fetchProfileAvatar();
+  }, [user?.id]);
+
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     setPrefersReducedMotion(mediaQuery.matches);
@@ -526,10 +552,10 @@ export const NavigationWheel: React.FC = () => {
             filter="url(#hub-glow)"
           />
           
-          {/* Avatar */}
-          {currentUser?.avatar && (
+          {/* Avatar - prioritize database avatar, fallback to store */}
+          {(profileAvatarUrl || currentUser?.avatar) && (
             <image
-              href={currentUser.avatar}
+              href={profileAvatarUrl || currentUser?.avatar}
               x={CENTER - (HUB_RADIUS - 4)}
               y={CENTER - (HUB_RADIUS - 4)}
               width={(HUB_RADIUS - 4) * 2}
