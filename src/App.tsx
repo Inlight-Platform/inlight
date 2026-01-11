@@ -9,7 +9,7 @@ import DirectoryPage from "./pages/DirectoryPage";
 import MutualsPage from "./pages/MutualsPage";
 import NetworkPage from "./pages/NetworkPage";
 import StoriesPage from "./pages/StoriesPage";
-import { ResourcesPage } from "./pages/SpokePlaceholders";
+import ResourcesPage from "./pages/ResourcesPage";
 import InsightsPage from "./pages/InsightsPage";
 import OpportunitiesPage from "./pages/OpportunitiesPage";
 import EventsPage from "./pages/EventsPage";
