@@ -1,4 +1,4 @@
-import { User, Material, Credit, Connection, Story, Message, Thread } from '../store/useStore';
+import { User, Material, Credit, Connection, Story, Message, Thread, Event } from '../store/useStore';
 
 // 20+ users with varied badges, credits, materials
 export const stubUsers: User[] = [
@@ -605,6 +605,184 @@ export const stubMessages: Message[] = [
   }
 ];
 
+// Stub events
+const getEventDate = (daysFromNow: number, hour: number = 18) => {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromNow);
+  date.setHours(hour, 0, 0, 0);
+  return date.toISOString();
+};
+
+export const stubEvents: Event[] = [
+  {
+    id: 'event-1',
+    title: 'Indie Filmmakers Networking Night',
+    description: 'Connect with fellow indie filmmakers, share your latest projects, and find potential collaborators for your next production.',
+    type: 'networking',
+    location: 'Los Angeles, CA',
+    address: 'The Writers Room, 6777 Hollywood Blvd',
+    date: getEventDate(3, 19),
+    hostId: 'user-1',
+    coverImage: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=800&h=400&fit=crop',
+    attendees: [
+      { userId: 'user-2', status: 'going' },
+      { userId: 'user-4', status: 'going' },
+      { userId: 'user-5', status: 'interested' },
+      { userId: 'user-7', status: 'going' },
+    ],
+    tags: ['indie', 'networking', 'filmmakers', 'la'],
+    isVirtual: false,
+  },
+  {
+    id: 'event-2',
+    title: 'Acting Workshop: Method Techniques',
+    description: 'Deep dive into method acting techniques with acclaimed acting coach Sarah Mitchell. Limited spots available.',
+    type: 'workshop',
+    location: 'New York, NY',
+    address: 'Actors Studio, 432 W 44th St',
+    date: getEventDate(5, 14),
+    endDate: getEventDate(5, 18),
+    hostId: 'user-2',
+    coverImage: 'https://images.unsplash.com/photo-1598387993441-a364f854c3e1?w=800&h=400&fit=crop',
+    attendees: [
+      { userId: 'user-6', status: 'going' },
+      { userId: 'user-9', status: 'going' },
+      { userId: 'user-12', status: 'going' },
+      { userId: 'user-16', status: 'interested' },
+      { userId: 'user-19', status: 'going' },
+    ],
+    tags: ['acting', 'workshop', 'method', 'technique'],
+    isVirtual: false,
+    capacity: 20,
+  },
+  {
+    id: 'event-3',
+    title: 'Documentary Film Screening: "Voices Unheard"',
+    description: 'Special screening of the award-winning documentary followed by Q&A with the director.',
+    type: 'screening',
+    location: 'Chicago, IL',
+    address: 'Music Box Theatre, 3733 N Southport Ave',
+    date: getEventDate(7, 20),
+    hostId: 'user-8',
+    coverImage: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&h=400&fit=crop',
+    attendees: [
+      { userId: 'user-1', status: 'interested' },
+      { userId: 'user-4', status: 'going' },
+      { userId: 'user-13', status: 'going' },
+      { userId: 'user-20', status: 'going' },
+    ],
+    tags: ['documentary', 'screening', 'chicago', 'socialimpact'],
+    isVirtual: false,
+  },
+  {
+    id: 'event-4',
+    title: 'Virtual Open Audition: Sci-Fi Feature',
+    description: 'Casting call for supporting roles in upcoming sci-fi feature. Self-tape submissions welcome.',
+    type: 'audition',
+    location: 'Virtual',
+    address: '',
+    date: getEventDate(2, 10),
+    endDate: getEventDate(2, 16),
+    hostId: 'user-13',
+    coverImage: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&h=400&fit=crop',
+    attendees: [
+      { userId: 'user-2', status: 'going' },
+      { userId: 'user-6', status: 'going' },
+      { userId: 'user-9', status: 'interested' },
+      { userId: 'user-12', status: 'going' },
+      { userId: 'user-16', status: 'going' },
+      { userId: 'user-19', status: 'going' },
+    ],
+    tags: ['audition', 'scifi', 'casting', 'virtual'],
+    isVirtual: true,
+    virtualLink: 'https://zoom.us/j/example',
+  },
+  {
+    id: 'event-5',
+    title: 'Film Composers Meetup',
+    description: 'Monthly gathering for film composers to share work, discuss techniques, and network.',
+    type: 'meetup',
+    location: 'Nashville, TN',
+    address: 'Sound Stage Studios, 10 Music Circle S',
+    date: getEventDate(10, 18),
+    hostId: 'user-3',
+    coverImage: 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=800&h=400&fit=crop',
+    attendees: [
+      { userId: 'user-7', status: 'going' },
+      { userId: 'user-10', status: 'going' },
+      { userId: 'user-14', status: 'interested' },
+      { userId: 'user-17', status: 'going' },
+    ],
+    tags: ['music', 'composers', 'film', 'nashville'],
+    isVirtual: false,
+  },
+  {
+    id: 'event-6',
+    title: 'Entertainment Industry Conference 2024',
+    description: 'Annual conference featuring panels, workshops, and networking with industry leaders.',
+    type: 'conference',
+    location: 'Los Angeles, CA',
+    address: 'LA Convention Center, 1201 S Figueroa St',
+    date: getEventDate(14, 9),
+    endDate: getEventDate(16, 18),
+    hostId: 'user-4',
+    coverImage: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=400&fit=crop',
+    attendees: [
+      { userId: 'user-1', status: 'going' },
+      { userId: 'user-2', status: 'interested' },
+      { userId: 'user-3', status: 'going' },
+      { userId: 'user-5', status: 'going' },
+      { userId: 'user-8', status: 'going' },
+      { userId: 'user-11', status: 'interested' },
+      { userId: 'user-13', status: 'going' },
+      { userId: 'user-18', status: 'going' },
+    ],
+    tags: ['conference', 'industry', 'networking', 'panels'],
+    isVirtual: false,
+  },
+  {
+    id: 'event-7',
+    title: 'Virtual Screenwriting Workshop',
+    description: 'Learn the fundamentals of screenwriting from WGA members. Perfect for beginners.',
+    type: 'workshop',
+    location: 'Virtual',
+    address: '',
+    date: getEventDate(4, 15),
+    endDate: getEventDate(4, 17),
+    hostId: 'user-1',
+    coverImage: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800&h=400&fit=crop',
+    attendees: [
+      { userId: 'user-5', status: 'going' },
+      { userId: 'user-11', status: 'going' },
+      { userId: 'user-15', status: 'interested' },
+    ],
+    tags: ['screenwriting', 'workshop', 'wga', 'virtual'],
+    isVirtual: true,
+    virtualLink: 'https://meet.google.com/example',
+    capacity: 50,
+  },
+  {
+    id: 'event-8',
+    title: 'SAG-AFTRA Members Mixer',
+    description: 'Exclusive networking event for SAG-AFTRA members. Bring your union card!',
+    type: 'networking',
+    location: 'New York, NY',
+    address: 'SAG-AFTRA Plaza, 5757 Wilshire Blvd',
+    date: getEventDate(8, 18),
+    hostId: 'user-2',
+    coverImage: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&h=400&fit=crop',
+    attendees: [
+      { userId: 'user-6', status: 'going' },
+      { userId: 'user-9', status: 'going' },
+      { userId: 'user-12', status: 'going' },
+      { userId: 'user-16', status: 'interested' },
+      { userId: 'user-19', status: 'going' },
+    ],
+    tags: ['sagaftra', 'union', 'networking', 'actors'],
+    isVirtual: false,
+  },
+];
+
 // Initialize store with stub data
 export function initializeStubData(set: (partial: Partial<{
   users: User[];
@@ -614,6 +792,7 @@ export function initializeStubData(set: (partial: Partial<{
   stories: Story[];
   messages: Message[];
   threads: Thread[];
+  events: Event[];
 }>) => void) {
   set({
     users: stubUsers,
@@ -623,5 +802,6 @@ export function initializeStubData(set: (partial: Partial<{
     stories: stubStories,
     messages: stubMessages,
     threads: stubThreads,
+    events: stubEvents,
   });
 }

@@ -11,10 +11,10 @@ import NetworkPage from "./pages/NetworkPage";
 import StoriesPage from "./pages/StoriesPage";
 import { 
   InsightsPage, 
-  EventsPage, 
   OpportunitiesPage, 
   ResourcesPage 
 } from "./pages/SpokePlaceholders";
+import EventsPage from "./pages/EventsPage";
 import MessagesPage from "./pages/MessagesPage";
 import NotFound from "./pages/NotFound";
 

@@ -79,6 +79,27 @@ export interface Connection {
   createdAt: string;
 }
 
+export type EventType = 'networking' | 'workshop' | 'screening' | 'audition' | 'meetup' | 'conference';
+export type RSVPStatus = 'going' | 'interested' | 'not-going';
+
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  type: EventType;
+  location: string;
+  address: string;
+  date: string;
+  endDate?: string;
+  hostId: string;
+  coverImage: string;
+  attendees: { userId: string; status: RSVPStatus }[];
+  tags: string[];
+  isVirtual: boolean;
+  virtualLink?: string;
+  capacity?: number;
+}
+
 interface AppState {
   currentUserId: string;
   users: User[];
@@ -88,6 +109,7 @@ interface AppState {
   stories: Story[];
   messages: Message[];
   threads: Thread[];
+  events: Event[];
   
   // Actions
   setCurrentUser: (id: string) => void;
@@ -139,6 +161,10 @@ interface AppState {
   getMessages: (threadId: string) => Message[];
   markMessagesRead: (threadId: string, readerId: string) => void;
   setTyping: (threadId: string, userId: string | undefined) => void;
+  
+  // Event actions
+  getEvents: () => Event[];
+  rsvpToEvent: (eventId: string, userId: string, status: RSVPStatus) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -152,6 +178,7 @@ export const useStore = create<AppState>()(
       stories: [],
       messages: [],
       threads: [],
+      events: [],
       
       setCurrentUser: (id) => set({ currentUserId: id }),
       
@@ -481,6 +508,35 @@ export const useStore = create<AppState>()(
           threads: state.threads.map(t =>
             t.id === threadId ? { ...t, typingUserId: userId } : t
           )
+        }));
+      },
+      
+      // Event actions
+      getEvents: () => {
+        return get().events;
+      },
+      
+      rsvpToEvent: (eventId, userId, status) => {
+        set(state => ({
+          events: state.events.map(e => {
+            if (e.id !== eventId) return e;
+            
+            const existingIndex = e.attendees.findIndex(a => a.userId === userId);
+            const newAttendees = [...e.attendees];
+            
+            if (existingIndex >= 0) {
+              // Toggle off if same status, otherwise update
+              if (newAttendees[existingIndex].status === status) {
+                newAttendees.splice(existingIndex, 1);
+              } else {
+                newAttendees[existingIndex] = { userId, status };
+              }
+            } else {
+              newAttendees.push({ userId, status });
+            }
+            
+            return { ...e, attendees: newAttendees };
+          })
         }));
       },
     }),
