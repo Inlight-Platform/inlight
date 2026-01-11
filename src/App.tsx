@@ -14,6 +14,7 @@ import InsightsPage from "./pages/InsightsPage";
 import OpportunitiesPage from "./pages/OpportunitiesPage";
 import EventsPage from "./pages/EventsPage";
 import MessagesPage from "./pages/MessagesPage";
+import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<AuthPage />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
           <Route path="/directory/:badgeSlug" element={<DirectoryPage />} />
           <Route path="/stories" element={<StoriesPage />} />
