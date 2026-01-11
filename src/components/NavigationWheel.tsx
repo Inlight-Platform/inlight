@@ -15,18 +15,19 @@ interface SpokeConfig {
   name: string;
   route: string;
   angle: number;
+  color: string;
 }
 
-// 8 spokes at 45° intervals (equidistant)
+// 8 spokes at 45° intervals (equidistant) with unique colors
 const spokes: SpokeConfig[] = [
-  { name: 'Stories', route: '/stories', angle: 0 },
-  { name: 'Mutuals', route: '/mutuals', angle: 45 },
-  { name: 'Insights', route: '/insights', angle: 90 },
-  { name: 'Events', route: '/events', angle: 135 },
-  { name: 'Opportunities', route: '/opportunities', angle: 180 },
-  { name: 'Messages', route: '/messages', angle: 225 },
-  { name: 'My Network', route: '/network', angle: 270 },
-  { name: 'Resources', route: '/resources', angle: 315 },
+  { name: 'Stories', route: '/stories', angle: 0, color: '#FF4FA4' },
+  { name: 'Mutuals', route: '/mutuals', angle: 45, color: '#00F5FF' },
+  { name: 'Insights', route: '/insights', angle: 90, color: '#FFD400' },
+  { name: 'Events', route: '/events', angle: 135, color: '#FF6B2D' },
+  { name: 'Opportunities', route: '/opportunities', angle: 180, color: '#00FF87' },
+  { name: 'Messages', route: '/messages', angle: 225, color: '#AE6DFF' },
+  { name: 'My Network', route: '/network', angle: 270, color: '#FF4D4D' },
+  { name: 'Resources', route: '/resources', angle: 315, color: '#39FFDC' },
 ];
 
 
@@ -446,17 +447,28 @@ export const NavigationWheel: React.FC = () => {
                   />
                 )}
                 
-                {/* Target node - minimal style */}
+                {/* Cyan glow ring around each node */}
+                <circle
+                  cx={position.x}
+                  cy={position.y}
+                  r={TARGET_NODE_RADIUS + 3}
+                  fill="none"
+                  stroke={ACCENT_COLOR}
+                  strokeWidth={1.5}
+                  opacity={0.7}
+                  filter="url(#node-glow)"
+                />
+                
+                {/* Target node - colored */}
                 <circle
                   cx={position.x}
                   cy={position.y}
                   r={TARGET_NODE_RADIUS}
-                  fill={isHovered ? ACCENT_COLOR : GUNMETAL}
-                  filter={isHovered ? 'url(#node-glow)' : undefined}
+                  fill={spoke.color}
                   style={{
-                    transition: prefersReducedMotion ? 'none' : 'fill 0.2s ease, transform 0.2s ease',
+                    transition: prefersReducedMotion ? 'none' : 'transform 0.2s ease',
                     transformOrigin: `${position.x}px ${position.y}px`,
-                    transform: isHovered && !prefersReducedMotion ? 'scale(1.1)' : 'scale(1)',
+                    transform: isHovered && !prefersReducedMotion ? 'scale(1.15)' : 'scale(1)',
                   }}
                 />
                 
