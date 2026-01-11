@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
+import { useQueryClient } from '@tanstack/react-query';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type Visibility = 'public' | 'connections' | 'private';
@@ -71,6 +72,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   onVisibilityChange,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
   const { uploadFile, uploading, progress } = useMediaUpload();
   const [lightboxItem, setLightboxItem] = useState<MediaItem | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -79,9 +81,15 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    for (let i = 0; i < files.length; i++) {
-      await uploadFile(files[i], userId, 'public');
-    }
+    // Upload all files
+    const uploadPromises = Array.from(files).map(file => 
+      uploadFile(file, userId, 'public')
+    );
+    
+    await Promise.all(uploadPromises);
+    
+    // Invalidate query to force refetch and show new uploads immediately
+    await queryClient.invalidateQueries({ queryKey: ['user-media', userId] });
     
     onUploadComplete();
     
