@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, User, Visibility } from '../store/useStore';
 import { useTrackProfileView, useUpdateEngagement } from '@/hooks/useAnalytics';
+import { useAuth } from '@/hooks/useAuth';
+import { useMediaUpload, useUserMedia } from '@/hooks/useMediaUpload';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -31,13 +34,35 @@ import {
   EyeOff,
   Users,
   ChevronLeft,
-  Pencil
+  Pencil,
+  Camera,
+  Loader2
 } from 'lucide-react';
 import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
+import { MediaUploader } from '@/components/profile/MediaUploader';
+import { AvatarCropper } from '@/components/profile/AvatarCropper';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+type MediaType = 'photo' | 'video' | 'audio' | 'document';
+type MediaVisibility = 'public' | 'connections' | 'private';
+
+interface MediaItem {
+  id: string;
+  file_path: string;
+  file_name: string;
+  file_type: MediaType;
+  mime_type: string;
+  visibility: MediaVisibility;
+  url: string;
+}
 
 const ProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  
   const currentUserId = useStore((s) => s.currentUserId);
   const getUser = useStore((s) => s.getUser);
   const getConnectionStatus = useStore((s) => s.getConnectionStatus);
@@ -51,11 +76,31 @@ const ProfilePage: React.FC = () => {
   const [addCreditOpen, setAddCreditOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [announced, setAnnounced] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [cropperImageSrc, setCropperImageSrc] = useState('');
   
   const resolvedUserId = userId === 'me' ? currentUserId : userId;
   const user = getUser(resolvedUserId || '');
   const isOwnProfile = resolvedUserId === currentUserId;
   const connectionStatus = resolvedUserId ? getConnectionStatus(resolvedUserId) : null;
+  
+  // Media upload hooks
+  const { deleteFile, updateVisibility } = useMediaUpload();
+  const { fetchMedia } = useUserMedia(authUser?.id);
+  
+  // Fetch user media from database
+  const { data: userMedia = [], refetch: refetchMedia } = useQuery({
+    queryKey: ['user-media', authUser?.id],
+    queryFn: fetchMedia,
+    enabled: !!authUser?.id && isOwnProfile,
+  });
+  
+  // Filter media by type
+  const uploadedPhotos = userMedia.filter(m => m.file_type === 'photo') as MediaItem[];
+  const uploadedVideos = userMedia.filter(m => m.file_type === 'video') as MediaItem[];
+  const uploadedAudio = userMedia.filter(m => m.file_type === 'audio') as MediaItem[];
+  const uploadedDocuments = userMedia.filter(m => m.file_type === 'document') as MediaItem[];
   
   // Track profile view when visiting someone else's profile
   useTrackProfileView(resolvedUserId || '');
@@ -76,6 +121,68 @@ const ProfilePage: React.FC = () => {
       updateEngagement(resolvedUserId, 'profile_views');
     }
   }, [userId, isOwnProfile, resolvedUserId]);
+  
+  // Avatar upload handlers
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropperImageSrc(reader.result as string);
+      setCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleCroppedAvatarUpload = async (blob: Blob) => {
+    if (!authUser?.id) return;
+
+    setUploadingAvatar(true);
+    try {
+      const fileName = `${authUser.id}/avatar.jpg`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-media')
+        .upload(fileName, blob, { 
+          upsert: true,
+          contentType: 'image/jpeg'
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('profile-media')
+        .getPublicUrl(fileName);
+
+      const newAvatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: newAvatarUrl })
+        .eq('user_id', authUser.id);
+
+      toast.success('Avatar updated!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to upload avatar');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleDeleteMedia = async (id: string, filePath: string) => {
+    await deleteFile(id, filePath);
+    refetchMedia();
+  };
+
+  const handleVisibilityChange = async (id: string, visibility: MediaVisibility) => {
+    await updateVisibility(id, visibility);
+    refetchMedia();
+  };
   
   if (!user) {
     return (
@@ -174,12 +281,33 @@ const ProfilePage: React.FC = () => {
                 className="w-24 h-24 sm:w-32 sm:h-32 lg:w-[120px] lg:h-[120px] rounded-full border-4 border-background object-cover shadow-card"
               />
               {isOwnProfile && (
-                <button 
-                  className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-primary-foreground shadow-lg"
-                  aria-label="Edit profile picture"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
+                <>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleAvatarSelect}
+                    className="hidden"
+                  />
+                  <button 
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                    className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    aria-label="Change profile picture"
+                  >
+                    {uploadingAvatar ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Camera className="w-4 h-4" />
+                    )}
+                  </button>
+                  <AvatarCropper
+                    open={cropperOpen}
+                    onClose={() => setCropperOpen(false)}
+                    imageSrc={cropperImageSrc}
+                    onCropComplete={handleCroppedAvatarUpload}
+                  />
+                </>
               )}
             </div>
           </div>
@@ -274,111 +402,58 @@ const ProfilePage: React.FC = () => {
       </section>
       
       {/* C. Materials (own profile) */}
-      {isOwnProfile && (
+      {isOwnProfile && authUser?.id && (
         <section className="px-4 sm:px-6 lg:px-8 py-6">
           <Tabs defaultValue="photos" className="w-full">
             <TabsList className="grid w-full grid-cols-4 max-w-md">
-              <TabsTrigger value="photos">Photos</TabsTrigger>
-              <TabsTrigger value="reels">Reels</TabsTrigger>
-              <TabsTrigger value="resume">Résumé</TabsTrigger>
-              <TabsTrigger value="audio">Audio</TabsTrigger>
+              <TabsTrigger value="photos">Photos {uploadedPhotos.length > 0 && `(${uploadedPhotos.length})`}</TabsTrigger>
+              <TabsTrigger value="reels">Reels {uploadedVideos.length > 0 && `(${uploadedVideos.length})`}</TabsTrigger>
+              <TabsTrigger value="resume">Résumé {uploadedDocuments.length > 0 && `(${uploadedDocuments.length})`}</TabsTrigger>
+              <TabsTrigger value="audio">Audio {uploadedAudio.length > 0 && `(${uploadedAudio.length})`}</TabsTrigger>
             </TabsList>
             
             <TabsContent value="photos" className="mt-6">
-              <div className="grid grid-cols-3 gap-2 sm:gap-4">
-                {photos.map((photo) => (
-                  <div key={photo.id} className="relative group aspect-square">
-                    <img
-                      src={photo.url}
-                      alt={photo.name}
-                      className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => setLightboxImage(photo.url)}
-                    />
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="p-1.5 rounded-full bg-background/80 backdrop-blur-sm">
-                            {getVisibilityIcon(photo.visibility)}
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="bg-popover border-border">
-                          <DropdownMenuItem onClick={() => updateMaterialVisibility(photo.id, 'public')}>
-                            <Eye className="w-4 h-4 mr-2" /> Public
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => updateMaterialVisibility(photo.id, 'connections')}>
-                            <Users className="w-4 h-4 mr-2" /> Connections Only
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => updateMaterialVisibility(photo.id, 'private')}>
-                            <EyeOff className="w-4 h-4 mr-2" /> Private
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Add photo button */}
-                <button className="aspect-square rounded-lg border-2 border-dashed border-border flex items-center justify-center hover:border-primary hover:bg-accent transition-colors">
-                  <Plus className="w-8 h-8 text-muted-foreground" />
-                </button>
-              </div>
+              <MediaUploader
+                userId={authUser.id}
+                mediaType="photo"
+                items={uploadedPhotos}
+                onUploadComplete={() => refetchMedia()}
+                onDelete={handleDeleteMedia}
+                onVisibilityChange={handleVisibilityChange}
+              />
             </TabsContent>
             
             <TabsContent value="reels" className="mt-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {reels.map((reel) => (
-                  <div key={reel.id} className="relative aspect-[9/16] bg-muted rounded-lg overflow-hidden">
-                    <video
-                      src={reel.url}
-                      className="w-full h-full object-cover"
-                      muted
-                      playsInline
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-background/20">
-                      <span className="text-sm font-medium">{reel.name}</span>
-                    </div>
-                  </div>
-                ))}
-                
-                <button className="aspect-[9/16] rounded-lg border-2 border-dashed border-border flex items-center justify-center hover:border-primary hover:bg-accent transition-colors">
-                  <Plus className="w-8 h-8 text-muted-foreground" />
-                </button>
-              </div>
+              <MediaUploader
+                userId={authUser.id}
+                mediaType="video"
+                items={uploadedVideos}
+                onUploadComplete={() => refetchMedia()}
+                onDelete={handleDeleteMedia}
+                onVisibilityChange={handleVisibilityChange}
+              />
             </TabsContent>
             
             <TabsContent value="resume" className="mt-6">
-              <div className="space-y-4">
-                {resumes.map((resume) => (
-                  <div key={resume.id} className="p-4 rounded-lg bg-card border border-border flex items-center justify-between">
-                    <span className="font-medium">{resume.name}</span>
-                    <Button variant="outline" size="sm">View</Button>
-                  </div>
-                ))}
-                
-                <button className="w-full p-8 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-accent transition-colors">
-                  <Plus className="w-8 h-8 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Upload Résumé (PDF)</span>
-                </button>
-              </div>
+              <MediaUploader
+                userId={authUser.id}
+                mediaType="document"
+                items={uploadedDocuments}
+                onUploadComplete={() => refetchMedia()}
+                onDelete={handleDeleteMedia}
+                onVisibilityChange={handleVisibilityChange}
+              />
             </TabsContent>
             
             <TabsContent value="audio" className="mt-6">
-              <div className="space-y-4">
-                {audio.map((track) => (
-                  <div key={track.id} className="p-4 rounded-lg bg-card border border-border">
-                    <span className="font-medium">{track.name}</span>
-                    {/* Placeholder for waveform */}
-                    <div className="mt-2 h-16 bg-muted rounded flex items-center justify-center">
-                      <span className="text-sm text-muted-foreground">Waveform visualizer</span>
-                    </div>
-                  </div>
-                ))}
-                
-                <button className="w-full p-8 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-accent transition-colors">
-                  <Plus className="w-8 h-8 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Upload Audio (MP3/WAV)</span>
-                </button>
-              </div>
+              <MediaUploader
+                userId={authUser.id}
+                mediaType="audio"
+                items={uploadedAudio}
+                onUploadComplete={() => refetchMedia()}
+                onDelete={handleDeleteMedia}
+                onVisibilityChange={handleVisibilityChange}
+              />
             </TabsContent>
           </Tabs>
         </section>
