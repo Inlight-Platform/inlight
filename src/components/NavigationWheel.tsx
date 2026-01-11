@@ -75,6 +75,10 @@ export const NavigationWheel: React.FC = () => {
   const { user } = useAuth();
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   
+  // Notification counts for spokes
+  const [newStoriesCount, setNewStoriesCount] = useState<number>(0);
+  const [newOpportunitiesCount, setNewOpportunitiesCount] = useState<number>(0);
+  
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [hoveredIndex, setHoveredIndex] = useState<number>(-1);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -112,6 +116,27 @@ export const NavigationWheel: React.FC = () => {
     
     fetchProfileAvatar();
   }, [user?.id]);
+
+  // Simulate checking for new stories and opportunities
+  // In production, this would fetch from the database
+  useEffect(() => {
+    if (user?.id) {
+      // Placeholder: simulate new content notifications
+      // Replace with actual database queries when tables exist
+      setNewStoriesCount(3); // Example: 3 new stories
+      setNewOpportunitiesCount(2); // Example: 2 new opportunities
+    } else {
+      setNewStoriesCount(0);
+      setNewOpportunitiesCount(0);
+    }
+  }, [user?.id]);
+
+  // Get notification count for a spoke
+  const getNotificationCount = (spokeName: string): number => {
+    if (spokeName === 'Stories') return newStoriesCount;
+    if (spokeName === 'Opportunities') return newOpportunitiesCount;
+    return 0;
+  };
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -435,13 +460,19 @@ export const NavigationWheel: React.FC = () => {
             const position = polarToCartesian(CENTER, CENTER, SPOKE_END_RADIUS, spoke.angle);
             const isHovered = hoveredIndex === index;
             const isFocused = focusedIndex === index;
+            const notificationCount = getNotificationCount(spoke.name);
+            
+            // Position for notification badge (upper-right of the circle)
+            const badgeOffset = TARGET_NODE_RADIUS * 0.7;
+            const badgeX = position.x + badgeOffset;
+            const badgeY = position.y - badgeOffset;
             
             return (
               <g
                 key={`target-${index}`}
                 ref={(el) => (targetRefs.current[index] = el)}
                 role="button"
-                aria-label={`Open ${spoke.name}`}
+                aria-label={`Open ${spoke.name}${notificationCount > 0 ? `, ${notificationCount} new` : ''}`}
                 tabIndex={0}
                 onClick={() => handleSpokeClick(spoke.route)}
                 onMouseEnter={() => setHoveredIndex(index)}
@@ -516,6 +547,36 @@ export const NavigationWheel: React.FC = () => {
                     {spoke.name}
                   </text>
                 </g>
+                
+                {/* Notification badge - counter-rotate to keep upright */}
+                {notificationCount > 0 && (
+                  <g style={{ 
+                    transform: `rotate(${-rotation}deg)`,
+                    transformOrigin: `${position.x}px ${position.y}px`,
+                  }}>
+                    {/* Badge background */}
+                    <circle
+                      cx={badgeX}
+                      cy={badgeY}
+                      r={10}
+                      fill="#FF3B30"
+                      stroke="#FFFFFF"
+                      strokeWidth={2}
+                    />
+                    {/* Badge count */}
+                    <text
+                      x={badgeX}
+                      y={badgeY + 4}
+                      textAnchor="middle"
+                      fill="#FFFFFF"
+                      fontSize="10"
+                      fontWeight="700"
+                      style={{ pointerEvents: 'none' }}
+                    >
+                      {notificationCount > 9 ? '9+' : notificationCount}
+                    </text>
+                  </g>
+                )}
               </g>
             );
           })}
