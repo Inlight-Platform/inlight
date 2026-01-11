@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,9 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft, Save, User } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { MediaUploader } from '@/components/profile/MediaUploader';
+import { useMediaUpload, useUserMedia } from '@/hooks/useMediaUpload';
 
 interface Profile {
   id: string;
@@ -21,14 +24,32 @@ interface Profile {
   headline: string | null;
 }
 
+type MediaType = 'photo' | 'video' | 'audio' | 'document';
+type Visibility = 'public' | 'connections' | 'private';
+
+interface MediaItem {
+  id: string;
+  file_path: string;
+  file_name: string;
+  file_type: MediaType;
+  mime_type: string;
+  visibility: Visibility;
+  url: string;
+}
+
 const ProfileSettingsPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [headline, setHeadline] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const { deleteFile, updateVisibility } = useMediaUpload();
+  const { fetchMedia } = useUserMedia(user?.id);
 
   // Fetch current profile
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -46,6 +67,19 @@ const ProfileSettingsPage: React.FC = () => {
     },
     enabled: !!user?.id,
   });
+
+  // Fetch user media
+  const { data: media = [], isLoading: mediaLoading, refetch: refetchMedia } = useQuery({
+    queryKey: ['user-media', user?.id],
+    queryFn: fetchMedia,
+    enabled: !!user?.id,
+  });
+
+  // Filter media by type
+  const photos = media.filter(m => m.file_type === 'photo') as MediaItem[];
+  const videos = media.filter(m => m.file_type === 'video') as MediaItem[];
+  const audioFiles = media.filter(m => m.file_type === 'audio') as MediaItem[];
+  const documents = media.filter(m => m.file_type === 'document') as MediaItem[];
 
   // Populate form when profile loads
   useEffect(() => {
@@ -87,6 +121,48 @@ const ProfileSettingsPage: React.FC = () => {
     }
   }, [user, authLoading, navigate]);
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    setUploadingAvatar(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('profile-media')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('profile-media')
+        .getPublicUrl(fileName);
+
+      // Update profile with new avatar URL
+      const newAvatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      setAvatarUrl(newAvatarUrl);
+      
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: newAvatarUrl })
+        .eq('user_id', user.id);
+
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      toast.success('Avatar updated!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to upload avatar');
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateProfile.mutate({
@@ -94,6 +170,16 @@ const ProfileSettingsPage: React.FC = () => {
       avatar_url: avatarUrl.trim() || null,
       headline: headline.trim() || null,
     });
+  };
+
+  const handleDeleteMedia = async (id: string, filePath: string) => {
+    await deleteFile(id, filePath);
+    refetchMedia();
+  };
+
+  const handleVisibilityChange = async (id: string, visibility: Visibility) => {
+    await updateVisibility(id, visibility);
+    refetchMedia();
   };
 
   const getInitials = (name: string | null, email: string | null) => {
@@ -113,7 +199,7 @@ const ProfileSettingsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background p-4">
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
@@ -122,19 +208,39 @@ const ProfileSettingsPage: React.FC = () => {
           <h1 className="text-2xl font-bold">Profile Settings</h1>
         </div>
 
-        {/* Profile Preview */}
+        {/* Profile Preview with Avatar Upload */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Preview</CardTitle>
             <CardDescription>How others will see your profile</CardDescription>
           </CardHeader>
           <CardContent className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={avatarUrl} alt={displayName} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                {getInitials(displayName, user?.email || null)}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={avatarUrl} alt={displayName} />
+                <AvatarFallback className="bg-primary text-primary-foreground text-xl">
+                  {getInitials(displayName, user?.email || null)}
+                </AvatarFallback>
+              </Avatar>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                className="absolute bottom-0 right-0 p-1.5 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {uploadingAvatar ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Camera className="w-4 h-4" />
+                )}
+              </button>
+            </div>
             <div className="space-y-1">
               <p className="font-semibold text-lg">
                 {displayName || user?.email?.split('@')[0] || 'Anonymous'}
@@ -172,20 +278,6 @@ const ProfileSettingsPage: React.FC = () => {
                 />
                 <p className="text-xs text-muted-foreground">
                   This is how your name will appear to others
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="avatarUrl">Avatar URL</Label>
-                <Input
-                  id="avatarUrl"
-                  type="url"
-                  placeholder="https://example.com/avatar.jpg"
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Link to your profile picture (JPG, PNG, or GIF)
                 </p>
               </div>
 
@@ -231,6 +323,94 @@ const ProfileSettingsPage: React.FC = () => {
                 </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+
+        {/* Media Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Your Media</CardTitle>
+            <CardDescription>
+              Upload and manage your photos, videos, audio, and documents
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="photos" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="photos" className="flex items-center gap-2">
+                  <Image className="h-4 w-4" />
+                  <span className="hidden sm:inline">Photos</span>
+                  {photos.length > 0 && <span className="text-xs">({photos.length})</span>}
+                </TabsTrigger>
+                <TabsTrigger value="videos" className="flex items-center gap-2">
+                  <Video className="h-4 w-4" />
+                  <span className="hidden sm:inline">Videos</span>
+                  {videos.length > 0 && <span className="text-xs">({videos.length})</span>}
+                </TabsTrigger>
+                <TabsTrigger value="audio" className="flex items-center gap-2">
+                  <Music className="h-4 w-4" />
+                  <span className="hidden sm:inline">Audio</span>
+                  {audioFiles.length > 0 && <span className="text-xs">({audioFiles.length})</span>}
+                </TabsTrigger>
+                <TabsTrigger value="documents" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Docs</span>
+                  {documents.length > 0 && <span className="text-xs">({documents.length})</span>}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="photos" className="mt-6">
+                {user?.id && (
+                  <MediaUploader
+                    userId={user.id}
+                    mediaType="photo"
+                    items={photos}
+                    onUploadComplete={refetchMedia}
+                    onDelete={handleDeleteMedia}
+                    onVisibilityChange={handleVisibilityChange}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="videos" className="mt-6">
+                {user?.id && (
+                  <MediaUploader
+                    userId={user.id}
+                    mediaType="video"
+                    items={videos}
+                    onUploadComplete={refetchMedia}
+                    onDelete={handleDeleteMedia}
+                    onVisibilityChange={handleVisibilityChange}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="audio" className="mt-6">
+                {user?.id && (
+                  <MediaUploader
+                    userId={user.id}
+                    mediaType="audio"
+                    items={audioFiles}
+                    onUploadComplete={refetchMedia}
+                    onDelete={handleDeleteMedia}
+                    onVisibilityChange={handleVisibilityChange}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="documents" className="mt-6">
+                {user?.id && (
+                  <MediaUploader
+                    userId={user.id}
+                    mediaType="document"
+                    items={documents}
+                    onUploadComplete={refetchMedia}
+                    onDelete={handleDeleteMedia}
+                    onVisibilityChange={handleVisibilityChange}
+                  />
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
