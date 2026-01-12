@@ -47,6 +47,7 @@ import { MediaUploader } from '@/components/profile/MediaUploader';
 import { AvatarCropper } from '@/components/profile/AvatarCropper';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidation';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';
@@ -297,9 +298,15 @@ const ProfilePage: React.FC = () => {
     refetchMedia();
   };
 
-  // Profile field save handlers
+  // Profile field save handlers with validation
   const saveProfileField = async (field: string, value: string | string[] | null) => {
     if (!authUser?.id) return false;
+    
+    // Validate string fields against length limits
+    if (typeof value === 'string' && !validateProfileField(field, value)) {
+      return false;
+    }
+    
     try {
       const { error } = await supabase
         .from('profiles')
@@ -317,38 +324,52 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleSaveName = async () => {
-    if (!editName.trim()) return;
-    const success = await saveProfileField('display_name', editName.trim());
+    const trimmed = editName.trim();
+    if (!trimmed) return;
+    if (!validateProfileField('display_name', trimmed)) return;
+    const success = await saveProfileField('display_name', trimmed);
     if (success) setIsEditingName(false);
   };
 
   const handleSaveLocation = async () => {
-    const success = await saveProfileField('location', editLocation.trim() || null);
+    const trimmed = editLocation.trim() || null;
+    if (trimmed && !validateProfileField('location', trimmed)) return;
+    const success = await saveProfileField('location', trimmed);
     if (success) setIsEditingLocation(false);
   };
 
   const handleSaveRole = async () => {
-    const success = await saveProfileField('role', editRole.trim() || null);
+    const trimmed = editRole.trim() || null;
+    if (trimmed && !validateProfileField('role', trimmed)) return;
+    const success = await saveProfileField('role', trimmed);
     if (success) setIsEditingRole(false);
   };
 
   const handleSavePronouns = async () => {
-    const success = await saveProfileField('pronouns', editPronouns.trim() || null);
+    const trimmed = editPronouns.trim() || null;
+    if (trimmed && !validateProfileField('pronouns', trimmed)) return;
+    const success = await saveProfileField('pronouns', trimmed);
     if (success) setIsEditingPronouns(false);
   };
 
   const handleSaveBio = async () => {
-    const success = await saveProfileField('bio', editBio.trim() || null);
+    const trimmed = editBio.trim() || null;
+    if (trimmed && !validateProfileField('bio', trimmed)) return;
+    const success = await saveProfileField('bio', trimmed);
     if (success) setIsEditingBio(false);
   };
 
   const handleSaveUnionStatus = async () => {
-    const success = await saveProfileField('union_status', editUnionStatus.trim() || null);
+    const trimmed = editUnionStatus.trim() || null;
+    if (trimmed && !validateProfileField('union_status', trimmed)) return;
+    const success = await saveProfileField('union_status', trimmed);
     if (success) setIsEditingUnionStatus(false);
   };
 
   const handleSaveRepresentation = async () => {
-    const success = await saveProfileField('representation', editRepresentation.trim() || null);
+    const trimmed = editRepresentation.trim() || null;
+    if (trimmed && !validateProfileField('representation', trimmed)) return;
+    const success = await saveProfileField('representation', trimmed);
     if (success) setIsEditingRepresentation(false);
   };
 
@@ -376,12 +397,17 @@ const ProfilePage: React.FC = () => {
 
   const handleAddGear = async () => {
     if (!newGear.trim() || !authUser?.id) return;
+    const gearTrimmed = newGear.trim();
+    if (gearTrimmed.length > 100) {
+      toast.error('Gear item must be 100 characters or less');
+      return;
+    }
     const currentGear = displayGearList || [];
-    if (currentGear.includes(newGear.trim())) {
+    if (currentGear.includes(gearTrimmed)) {
       toast.error('Gear already exists');
       return;
     }
-    await saveProfileField('gear_list', [...currentGear, newGear.trim()]);
+    await saveProfileField('gear_list', [...currentGear, gearTrimmed]);
     setNewGear('');
   };
 
