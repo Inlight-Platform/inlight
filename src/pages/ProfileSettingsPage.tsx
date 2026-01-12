@@ -15,6 +15,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MediaUploader } from '@/components/profile/MediaUploader';
 import { AvatarCropper } from '@/components/profile/AvatarCropper';
 import { useMediaUpload, useUserMedia } from '@/hooks/useMediaUpload';
+import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidation';
 interface Profile {
   id: string;
   user_id: string;
@@ -183,10 +184,18 @@ const ProfileSettingsPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate before submitting
+    const trimmedName = displayName.trim() || null;
+    const trimmedHeadline = headline.trim() || null;
+    
+    if (trimmedName && !validateProfileField('display_name', trimmedName)) return;
+    if (trimmedHeadline && !validateProfileField('headline', trimmedHeadline)) return;
+    
     updateProfile.mutate({
-      display_name: displayName.trim() || null,
+      display_name: trimmedName,
       avatar_url: avatarUrl.trim() || null,
-      headline: headline.trim() || null,
+      headline: trimmedHeadline,
     });
   };
 
