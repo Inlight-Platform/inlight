@@ -2,7 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Search } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
 
 const MutualsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -14,11 +17,41 @@ const MutualsPage: React.FC = () => {
   const getConnectionStatus = useStore((s) => s.getConnectionStatus);
   const sendConnectionRequest = useStore((s) => s.sendConnectionRequest);
   
-  const [activeTab, setActiveTab] = useState('1st');
+  const [activeTab, setActiveTab] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   
   const firstDegree = useMemo(() => get1stDegree(currentUserId), [currentUserId, get1stDegree]);
   const secondDegree = useMemo(() => get2ndDegree(currentUserId), [currentUserId, get2ndDegree]);
   const thirdDegree = useMemo(() => get3rdDegree(currentUserId), [currentUserId, get3rdDegree]);
+  
+  // Fetch all users from the database
+  const { data: allUsers = [], isLoading } = useQuery({
+    queryKey: ['all-users'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  
+  // Filter users based on search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return allUsers;
+    
+    const query = searchQuery.toLowerCase();
+    return allUsers.filter((user) => {
+      const nameMatch = user.display_name?.toLowerCase().includes(query);
+      const roleMatch = user.role?.toLowerCase().includes(query);
+      const badgesMatch = user.badges?.some((badge: string) => 
+        badge.toLowerCase().includes(query)
+      );
+      return nameMatch || roleMatch || badgesMatch;
+    });
+  }, [allUsers, searchQuery]);
   
   const handleConnect = (userId: string) => {
     sendConnectionRequest(userId);
@@ -121,17 +154,86 @@ const MutualsPage: React.FC = () => {
       
       <main className="px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-md mb-6">
+          <TabsList className="grid w-full grid-cols-4 max-w-lg mb-6">
+            <TabsTrigger value="all" className="data-[state=active]:bg-primary/20">
+              All ({allUsers.length})
+            </TabsTrigger>
             <TabsTrigger value="1st" className="data-[state=active]:bg-neon-mutuals/20">
               Mutuals ({firstDegree.length})
             </TabsTrigger>
             <TabsTrigger value="2nd" className="data-[state=active]:bg-neon-messages/20">
-              2nd Degree ({secondDegree.length})
+              2nd ({secondDegree.length})
             </TabsTrigger>
             <TabsTrigger value="3rd" className="data-[state=active]:bg-neon-insights/20">
-              3rd Degree ({thirdDegree.length})
+              3rd ({thirdDegree.length})
             </TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="all">
+            <div className="mb-6">
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, role, or badge..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            {isLoading ? (
+              <div className="text-center text-muted-foreground py-8">Loading users...</div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredUsers.map((user) => (
+                    <div
+                      key={user.id}
+                      className="bg-card rounded-xl border border-border shadow-card overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => user.user_id && navigate(`/profile/${user.user_id}`)}
+                    >
+                      <div className="flex items-center gap-4 p-4">
+                        <img
+                          src={user.avatar_url || '/placeholder.svg'}
+                          alt={user.display_name || 'User'}
+                          className="w-14 h-14 rounded-full object-cover"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-display font-semibold truncate">
+                            {user.display_name || 'Unknown User'}
+                          </h3>
+                          <p className="text-muted-foreground text-sm truncate">{user.role || 'No role'}</p>
+                          {user.badges && user.badges.length > 0 && (
+                            <div className="flex gap-1 mt-1 flex-wrap">
+                              {user.badges.slice(0, 2).map((badge: string, idx: number) => (
+                                <span 
+                                  key={idx} 
+                                  className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full"
+                                >
+                                  {badge}
+                                </span>
+                              ))}
+                              {user.badges.length > 2 && (
+                                <span className="text-xs text-muted-foreground">
+                                  +{user.badges.length - 2}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {filteredUsers.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">
+                    {searchQuery ? 'No users found matching your search.' : 'No users yet.'}
+                  </p>
+                )}
+              </>
+            )}
+          </TabsContent>
           
           <TabsContent value="1st">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
