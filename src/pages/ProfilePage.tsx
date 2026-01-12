@@ -195,7 +195,8 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     setAnnounced(false);
     if (!isOwnProfile && resolvedUserId) {
-      updateEngagement(resolvedUserId, 'profile_views');
+      // Track engagement for the authenticated user viewing this profile
+      updateEngagement('profile_views');
     }
   }, [userId, isOwnProfile, resolvedUserId]);
   

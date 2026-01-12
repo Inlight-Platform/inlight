@@ -39,12 +39,19 @@ export const useTrackProfileView = (profileId: string) => {
 
 export const useUpdateEngagement = () => {
   const updateEngagement = async (
-    userId: string, 
     field: 'profile_views' | 'messages_sent' | 'messages_received' | 'connections_made' | 'story_views'
   ) => {
-    const today = new Date().toISOString().split('T')[0];
-    
     try {
+      // Get authenticated user session - do NOT trust client-provided user_id
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        console.warn('Cannot update engagement: user not authenticated');
+        return;
+      }
+
+      const userId = session.user.id;
+      const today = new Date().toISOString().split('T')[0];
+      
       // Try to upsert the engagement record
       const { data: existing } = await supabase
         .from('user_engagement')
