@@ -307,7 +307,60 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_public: {
+        Row: {
+          avatar_url: string | null
+          badges: string[] | null
+          bio: string | null
+          created_at: string | null
+          display_name: string | null
+          gear_list: string[] | null
+          headline: string | null
+          id: string | null
+          location: string | null
+          pronouns: string | null
+          representation: string | null
+          role: string | null
+          union_status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          badges?: string[] | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          gear_list?: string[] | null
+          headline?: string | null
+          id?: string | null
+          location?: string | null
+          pronouns?: string | null
+          representation?: string | null
+          role?: string | null
+          union_status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          badges?: string[] | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          gear_list?: string[] | null
+          headline?: string | null
+          id?: string | null
+          location?: string | null
+          pronouns?: string | null
+          representation?: string | null
+          role?: string | null
+          union_status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
