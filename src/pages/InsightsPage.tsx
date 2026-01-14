@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Lock, Globe } from 'lucide-react';
+import { ChevronLeft, Lock, Globe, GraduationCap } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStore } from '@/store/useStore';
 import { stubUsers, stubConnections, stubMaterials, stubCredits, stubStories, stubMessages, stubThreads, stubEvents, stubOpportunities } from '@/data/stubData';
 import PersonalAnalytics from '@/components/insights/PersonalAnalytics';
 import IndustryMetrics from '@/components/insights/IndustryMetrics';
+import SchoolStudios from '@/components/insights/SchoolStudios';
 
 const InsightsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ const InsightsPage: React.FC = () => {
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="personal" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
             <TabsTrigger value="personal" className="flex items-center gap-2">
               <Lock className="w-4 h-4" />
               Your Analytics
@@ -65,6 +66,10 @@ const InsightsPage: React.FC = () => {
             <TabsTrigger value="industry" className="flex items-center gap-2">
               <Globe className="w-4 h-4" />
               Industry
+            </TabsTrigger>
+            <TabsTrigger value="school" className="flex items-center gap-2">
+              <GraduationCap className="w-4 h-4" />
+              School
             </TabsTrigger>
           </TabsList>
 
@@ -74,6 +79,10 @@ const InsightsPage: React.FC = () => {
 
           <TabsContent value="industry">
             <IndustryMetrics />
+          </TabsContent>
+
+          <TabsContent value="school">
+            <SchoolStudios />
           </TabsContent>
         </Tabs>
       </main>
