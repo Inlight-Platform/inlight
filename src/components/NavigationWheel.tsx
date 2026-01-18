@@ -22,7 +22,7 @@ interface SpokeConfig {
 
 // 9 spokes at 40° intervals (equidistant) with unique colors
 const spokes: SpokeConfig[] = [
-  { name: 'Stories', route: '/stories', angle: 0, color: '#FF4FA4' },
+  { name: 'Feed', route: '/feed', angle: 0, color: '#FF4FA4' },
   { name: 'Mutuals', route: '/mutuals', angle: 40, color: '#00F5FF' },
   { name: 'Insights', route: '/insights', angle: 80, color: '#FFD400' },
   { name: 'Events', route: '/events', angle: 120, color: '#FF6B2D' },
@@ -134,7 +134,7 @@ export const NavigationWheel: React.FC = () => {
 
   // Get notification count for a spoke
   const getNotificationCount = (spokeName: string): number => {
-    if (spokeName === 'Stories') return newStoriesCount;
+    if (spokeName === 'Feed') return newStoriesCount;
     if (spokeName === 'Opportunities') return newOpportunitiesCount;
     return 0;
   };
