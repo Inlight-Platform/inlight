@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Plus, Bookmark, BookmarkCheck, Filter, Search, X } from 'lucide-react';
+import { ChevronLeft, Plus, Bookmark, BookmarkCheck, Filter, Search, X, ArrowUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ProjectCreator, PROJECT_CATEGORIES, ProjectCategory } from '@/components/projects/ProjectCreator';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+
+type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 
 interface Project {
   id: string;
@@ -41,6 +44,7 @@ const ProjectsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('feed');
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   // Fetch all projects with creator info
   const { data: projects = [], isLoading } = useQuery({
@@ -133,17 +137,35 @@ const ProjectsPage: React.FC = () => {
     );
   };
 
-  const filteredProjects = filterBySearch(
+  // Sort projects
+  const sortProjects = (projectList: Project[]) => {
+    return [...projectList].sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'a-z':
+          return a.title.localeCompare(b.title);
+        case 'z-a':
+          return b.title.localeCompare(a.title);
+        default:
+          return 0;
+      }
+    });
+  };
+
+  const filteredProjects = sortProjects(filterBySearch(
     selectedCategory === 'all' 
       ? projects 
       : projects.filter(p => p.category === selectedCategory)
-  );
+  ));
 
-  const filteredSavedProjects = filterBySearch(
+  const filteredSavedProjects = sortProjects(filterBySearch(
     selectedCategory === 'all'
       ? savedProjectDetails
       : savedProjectDetails.filter(p => p.category === selectedCategory)
-  );
+  ));
 
   // Save project mutation
   const saveProjectMutation = useMutation({
@@ -306,28 +328,46 @@ const ProjectsPage: React.FC = () => {
           )}
         </div>
 
-        {/* Category Filters */}
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-          <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          <Button
-            variant={selectedCategory === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedCategory('all')}
-            className="flex-shrink-0"
-          >
-            All
-          </Button>
-          {PROJECT_CATEGORIES.map((cat) => (
+        {/* Category Filters and Sort */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 flex-1">
+            <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <Button
-              key={cat.value}
-              variant={selectedCategory === cat.value ? 'default' : 'outline'}
+              variant={selectedCategory === 'all' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSelectedCategory(cat.value)}
+              onClick={() => setSelectedCategory('all')}
               className="flex-shrink-0"
             >
-              {cat.label}
+              All
             </Button>
-          ))}
+            {PROJECT_CATEGORIES.map((cat) => (
+              <Button
+                key={cat.value}
+                variant={selectedCategory === cat.value ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory(cat.value)}
+                className="flex-shrink-0"
+              >
+                {cat.label}
+              </Button>
+            ))}
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+            <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="oldest">Oldest</SelectItem>
+                <SelectItem value="a-z">A → Z</SelectItem>
+                <SelectItem value="z-a">Z → A</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
