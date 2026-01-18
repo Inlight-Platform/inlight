@@ -2,10 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronLeft, Search, Compass, Users } from 'lucide-react';
+import { ChevronLeft, Search, Compass, Users, UserPlus, UserCheck } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
+import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 
 const MutualsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ const MutualsPage: React.FC = () => {
   const getMutualCount = useStore((s) => s.getMutualCount);
   const getConnectionStatus = useStore((s) => s.getConnectionStatus);
   const sendConnectionRequest = useStore((s) => s.sendConnectionRequest);
+  
+  const { following, followers } = useNetworkConnections();
   
   const [activeTab, setActiveTab] = useState('explore');
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,6 +39,36 @@ const MutualsPage: React.FC = () => {
       if (error) throw error;
       return data || [];
     },
+  });
+  
+  // Get profiles for following users
+  const { data: followingProfiles = [] } = useQuery({
+    queryKey: ['following-profiles', following],
+    queryFn: async () => {
+      if (following.length === 0) return [];
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('*')
+        .in('user_id', following);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: following.length > 0,
+  });
+  
+  // Get profiles for followers
+  const { data: followerProfiles = [] } = useQuery({
+    queryKey: ['follower-profiles', followers],
+    queryFn: async () => {
+      if (followers.length === 0) return [];
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('*')
+        .in('user_id', followers);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: followers.length > 0,
   });
   
   // Filter users based on search query
@@ -154,7 +187,7 @@ const MutualsPage: React.FC = () => {
       
       <main className="px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 max-w-xl mb-6">
+          <TabsList className="grid w-full grid-cols-7 max-w-3xl mb-6">
             <TabsTrigger value="explore" className="data-[state=active]:bg-primary/20 flex items-center gap-1.5">
               <Compass className="w-4 h-4" />
               Explore
@@ -162,6 +195,14 @@ const MutualsPage: React.FC = () => {
             <TabsTrigger value="mutuals" className="data-[state=active]:bg-neon-mutuals/20 flex items-center gap-1.5">
               <Users className="w-4 h-4" />
               My Network ({firstDegree.length})
+            </TabsTrigger>
+            <TabsTrigger value="following" className="data-[state=active]:bg-neon-messages/20 flex items-center gap-1.5">
+              <UserPlus className="w-4 h-4" />
+              Following ({following.length})
+            </TabsTrigger>
+            <TabsTrigger value="followers" className="data-[state=active]:bg-neon-insights/20 flex items-center gap-1.5">
+              <UserCheck className="w-4 h-4" />
+              Followers ({followers.length})
             </TabsTrigger>
             <TabsTrigger value="2nd" className="data-[state=active]:bg-neon-messages/20">
               2nd ({secondDegree.length})
@@ -313,6 +354,70 @@ const MutualsPage: React.FC = () => {
             {firstDegree.length === 0 && (
               <p className="text-center text-muted-foreground py-8">
                 No mutual connections yet. Start connecting with others!
+              </p>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="following">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {followingProfiles.map((user) => (
+                <div
+                  key={user.id}
+                  className="bg-card rounded-xl border border-border shadow-card overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => user.user_id && navigate(`/profile/${user.user_id}`)}
+                >
+                  <div className="flex items-center gap-4 p-4">
+                    <img
+                      src={user.avatar_url || '/placeholder.svg'}
+                      alt={user.display_name || 'User'}
+                      className="w-14 h-14 rounded-full object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-display font-semibold truncate">
+                        {user.display_name || 'Unknown User'}
+                      </h3>
+                      <p className="text-muted-foreground text-sm truncate">{user.role || 'No role'}</p>
+                      <span className="text-xs text-primary">Following</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {followingProfiles.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                You're not following anyone yet.
+              </p>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="followers">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {followerProfiles.map((user) => (
+                <div
+                  key={user.id}
+                  className="bg-card rounded-xl border border-border shadow-card overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => user.user_id && navigate(`/profile/${user.user_id}`)}
+                >
+                  <div className="flex items-center gap-4 p-4">
+                    <img
+                      src={user.avatar_url || '/placeholder.svg'}
+                      alt={user.display_name || 'User'}
+                      className="w-14 h-14 rounded-full object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-display font-semibold truncate">
+                        {user.display_name || 'Unknown User'}
+                      </h3>
+                      <p className="text-muted-foreground text-sm truncate">{user.role || 'No role'}</p>
+                      <span className="text-xs text-muted-foreground">Follows you</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {followerProfiles.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                No followers yet.
               </p>
             )}
           </TabsContent>
