@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { NetworkDegree } from '@/hooks/useNetworkConnections';
 
-export type FeedItemType = 'post' | 'project' | 'event';
+export type FeedItemType = 'post' | 'project' | 'event' | 'job';
 
 export interface FeedItemData {
   id: string;
@@ -42,6 +42,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
         return <Briefcase className="h-3 w-3" />;
       case 'event':
         return <Calendar className="h-3 w-3" />;
+      case 'job':
+        return <Briefcase className="h-3 w-3 text-green-500" />;
       default:
         return <MessageCircle className="h-3 w-3" />;
     }
@@ -53,6 +55,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
         return 'shared a project';
       case 'event':
         return 'created an event';
+      case 'job':
+        return 'posted a job opportunity';
       default:
         return 'posted';
     }
@@ -75,10 +79,12 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
     }
   };
 
+  const isClickable = item.type === 'project' || item.type === 'event';
+
   return (
     <Card 
-      className={`bg-card border-border ${item.type !== 'post' ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
-      onClick={item.type !== 'post' ? handleClick : undefined}
+      className={`bg-card border-border ${isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${item.type === 'job' ? 'border-l-4 border-l-green-500' : ''}`}
+      onClick={isClickable ? handleClick : undefined}
     >
       <CardContent className="p-4">
         {/* Header */}
