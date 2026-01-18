@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Lock, Globe, GraduationCap } from 'lucide-react';
+import { ChevronLeft, Globe, GraduationCap } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStore } from '@/store/useStore';
 import { stubUsers, stubConnections, stubMaterials, stubCredits, stubStories, stubMessages, stubThreads, stubEvents, stubOpportunities } from '@/data/stubData';
-import PersonalAnalytics from '@/components/insights/PersonalAnalytics';
 import IndustryMetrics from '@/components/insights/IndustryMetrics';
 import SchoolStudios from '@/components/insights/SchoolStudios';
 
@@ -50,19 +49,15 @@ const InsightsPage: React.FC = () => {
             >
               <span className="text-lg">📊</span>
             </div>
-            <h1 className="text-2xl font-display font-bold">Insights</h1>
+            <h1 className="text-2xl font-display font-bold">Industry Insights</h1>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="personal" className="space-y-6">
-          <TabsList className="grid w-full max-w-lg grid-cols-3">
-            <TabsTrigger value="personal" className="flex items-center gap-2">
-              <Lock className="w-4 h-4" />
-              Your Analytics
-            </TabsTrigger>
+        <Tabs defaultValue="industry" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="industry" className="flex items-center gap-2">
               <Globe className="w-4 h-4" />
               Industry
@@ -72,10 +67,6 @@ const InsightsPage: React.FC = () => {
               School
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="personal">
-            <PersonalAnalytics />
-          </TabsContent>
 
           <TabsContent value="industry">
             <IndustryMetrics />
