@@ -45,6 +45,7 @@ import {
 import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
 import { MediaUploader } from '@/components/profile/MediaUploader';
 import { AvatarCropper } from '@/components/profile/AvatarCropper';
+import { MyProjects } from '@/components/profile/MyProjects';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidation';
@@ -1041,6 +1042,11 @@ const ProfilePage: React.FC = () => {
           </table>
         </div>
       </section>
+
+      {/* My Projects */}
+      {resolvedUserId && (
+        <MyProjects userId={resolvedUserId} isOwnProfile={isOwnProfile} />
+      )}
       
       {/* E. About */}
       <section className="px-4 sm:px-6 lg:px-8 py-6 border-t border-border">
