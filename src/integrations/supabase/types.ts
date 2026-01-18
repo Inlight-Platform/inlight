@@ -107,6 +107,45 @@ export type Database = {
         }
         Relationships: []
       }
+      events: {
+        Row: {
+          created_at: string
+          description: string | null
+          event_date: string
+          event_type: string | null
+          id: string
+          image_url: string | null
+          location: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          event_date: string
+          event_type?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          event_date?: string
+          event_type?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       film_metrics: {
         Row: {
           created_at: string

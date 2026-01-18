@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { FileText, Calendar, Briefcase, MessageCircle } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,8 @@ export interface FeedItemData {
   created_at: string;
   category?: string | null;
   event_date?: string;
+  location?: string;
+  event_type?: string;
   creator_profile?: {
     display_name: string | null;
     avatar_url: string | null;
@@ -142,17 +144,40 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
         )}
 
         {/* Category badge for projects */}
-        {item.category && (
-          <Badge variant="outline" className="text-xs">
+        {item.category && item.type === 'project' && (
+          <Badge variant="outline" className="text-xs mb-3">
             {item.category}
           </Badge>
         )}
 
-        {/* Event date */}
-        {item.event_date && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <span>{new Date(item.event_date).toLocaleDateString()}</span>
+        {/* Event details */}
+        {item.type === 'event' && (
+          <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-muted/50 mt-2">
+            {item.event_date && (
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-primary" />
+                <span className="font-medium">
+                  {new Date(item.event_date).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                  })}
+                </span>
+              </div>
+            )}
+            {item.location && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                <span>{item.location}</span>
+              </div>
+            )}
+            {item.event_type && (
+              <Badge variant="secondary" className="text-xs capitalize">
+                {item.event_type}
+              </Badge>
+            )}
           </div>
         )}
       </CardContent>
