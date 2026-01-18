@@ -40,7 +40,8 @@ import {
   Loader2,
   X,
   Save,
-  Trash2
+  Trash2,
+  Award
 } from 'lucide-react';
 import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
 import { MediaUploader } from '@/components/profile/MediaUploader';
@@ -49,6 +50,7 @@ import { MyProjects } from '@/components/profile/MyProjects';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidation';
+import { useVouch } from '@/hooks/useVouch';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';
@@ -125,6 +127,12 @@ const ProfilePage: React.FC = () => {
   const user = getUser(resolvedUserId || '');
   const isOwnProfile = resolvedUserId === currentUserId;
   const connectionStatus = resolvedUserId ? getConnectionStatus(resolvedUserId) : null;
+  
+  // Vouch hook - use actual auth user id for viewing other profiles
+  const profileUserId = isOwnProfile ? authUser?.id : resolvedUserId;
+  const { hasVouched, vouchCount, toggleVouch, isPending: vouchPending } = useVouch(
+    !isOwnProfile ? profileUserId : undefined
+  );
   
   // Media upload hooks
   const { deleteFile, updateVisibility } = useMediaUpload();
@@ -690,13 +698,22 @@ const ProfilePage: React.FC = () => {
                   </Button>
                 </div>
               ) : (
-                <h1 
-                  className={`text-2xl sm:text-3xl font-display font-bold ${isOwnProfile ? 'cursor-pointer hover:text-primary transition-colors group' : ''}`}
-                  onClick={isOwnProfile ? startEditingName : undefined}
-                >
-                  {displayName || 'Add your name'}
-                  {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />}
-                </h1>
+                <div className="flex items-center gap-3">
+                  <h1 
+                    className={`text-2xl sm:text-3xl font-display font-bold ${isOwnProfile ? 'cursor-pointer hover:text-primary transition-colors group' : ''}`}
+                    onClick={isOwnProfile ? startEditingName : undefined}
+                  >
+                    {displayName || 'Add your name'}
+                    {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                  </h1>
+                  {/* Vouch count badge */}
+                  {vouchCount > 0 && (
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                      <Award className="w-4 h-4" />
+                      <span className="text-sm font-medium">{vouchCount}</span>
+                    </div>
+                  )}
+                </div>
               )}
               
               {/* Editable Role, Location, Pronouns */}
@@ -790,15 +807,30 @@ const ProfilePage: React.FC = () => {
             
             {/* Actions */}
             <div className="flex items-center gap-3">
-              {!isOwnProfile && (
-                <button
-                  onClick={connectionStatus === 'accepted' ? handleMessage : handleConnect}
-                  disabled={connectionStatus === 'pending'}
-                  className={getConnectButtonClass()}
-                  aria-label={getConnectButtonLabel() || undefined}
-                >
-                  {getConnectButtonLabel()}
-                </button>
+              {!isOwnProfile && authUser && (
+                <>
+                  {/* Vouch Button */}
+                  <Button
+                    variant={hasVouched ? "default" : "outline"}
+                    size="sm"
+                    onClick={toggleVouch}
+                    disabled={vouchPending}
+                    className={hasVouched ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
+                  >
+                    <Award className="w-4 h-4 mr-1" />
+                    {hasVouched ? 'Vouched' : 'Vouch'}
+                  </Button>
+                  
+                  {/* Connect/Message Button */}
+                  <button
+                    onClick={connectionStatus === 'accepted' ? handleMessage : handleConnect}
+                    disabled={connectionStatus === 'pending'}
+                    className={getConnectButtonClass()}
+                    aria-label={getConnectButtonLabel() || undefined}
+                  >
+                    {getConnectButtonLabel()}
+                  </button>
+                </>
               )}
               
               <DropdownMenu>
