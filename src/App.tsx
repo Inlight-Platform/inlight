@@ -8,7 +8,7 @@ import ProfilePage from "./pages/ProfilePage";
 import DirectoryPage from "./pages/DirectoryPage";
 import MutualsPage from "./pages/MutualsPage";
 import NetworkPage from "./pages/NetworkPage";
-import StoriesPage from "./pages/StoriesPage";
+import FeedPage from "./pages/FeedPage";
 import ResourcesPage from "./pages/ResourcesPage";
 import InsightsPage from "./pages/InsightsPage";
 import OpportunitiesPage from "./pages/OpportunitiesPage";
@@ -34,7 +34,7 @@ const App = () => (
           <Route path="/settings" element={<ProfileSettingsPage />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
           <Route path="/directory/:badgeSlug" element={<DirectoryPage />} />
-          <Route path="/stories" element={<StoriesPage />} />
+          <Route path="/feed" element={<FeedPage />} />
           <Route path="/mutuals" element={<MutualsPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/events" element={<EventsPage />} />
