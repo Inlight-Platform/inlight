@@ -20,17 +20,16 @@ interface SpokeConfig {
   color: string;
 }
 
-// 9 spokes at 40° intervals (equidistant) with unique colors
+// 8 spokes at 45° intervals (equidistant) with unique colors
 const spokes: SpokeConfig[] = [
   { name: 'Feed', route: '/feed', angle: 0, color: '#FF4FA4' },
-  { name: 'People', route: '/mutuals', angle: 40, color: '#00F5FF' },
-  { name: 'Insights', route: '/insights', angle: 80, color: '#FFD400' },
-  { name: 'Events', route: '/events', angle: 120, color: '#FF6B2D' },
-  { name: 'Opportunities', route: '/opportunities', angle: 160, color: '#00FF87' },
-  { name: 'Projects', route: '/projects', angle: 200, color: '#7C3AED' },
-  { name: 'Messages', route: '/messages', angle: 240, color: '#AE6DFF' },
-  { name: 'My Network', route: '/network', angle: 280, color: '#FF4D4D' },
-  { name: 'Resources', route: '/resources', angle: 320, color: '#39FFDC' },
+  { name: 'People', route: '/mutuals', angle: 45, color: '#00F5FF' },
+  { name: 'Industry Insights', route: '/insights', angle: 90, color: '#FFD400' },
+  { name: 'Events', route: '/events', angle: 135, color: '#FF6B2D' },
+  { name: 'Opportunities', route: '/opportunities', angle: 180, color: '#00FF87' },
+  { name: 'Projects', route: '/projects', angle: 225, color: '#7C3AED' },
+  { name: 'Messages', route: '/messages', angle: 270, color: '#AE6DFF' },
+  { name: 'Resources', route: '/resources', angle: 315, color: '#39FFDC' },
 ];
 
 
