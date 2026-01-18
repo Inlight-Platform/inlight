@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ProjectCreator, PROJECT_CATEGORIES, ProjectCategory } from '@/components/projects/ProjectCreator';
+import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
@@ -371,8 +372,9 @@ const ProjectsPage: React.FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-xs grid-cols-2 mb-6">
+          <TabsList className="grid w-full max-w-md grid-cols-3 mb-6">
             <TabsTrigger value="feed">Feed</TabsTrigger>
+            <TabsTrigger value="open-roles">Open Roles</TabsTrigger>
             <TabsTrigger value="saved">Saved</TabsTrigger>
           </TabsList>
 
@@ -403,6 +405,10 @@ const ProjectsPage: React.FC = () => {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="open-roles">
+            <OpenRolesFeed />
           </TabsContent>
 
           <TabsContent value="saved">

@@ -18,6 +18,7 @@ import AuthPage from "./pages/AuthPage";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
+import ProjectNewPage from "./pages/ProjectNewPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
           <Route path="/network" element={<NetworkPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects/new" element={<ProjectNewPage />} />
           <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
