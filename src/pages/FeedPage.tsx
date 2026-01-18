@@ -95,9 +95,45 @@ const FeedPage: React.FC = () => {
     },
   });
 
+  // Fetch events
+  const { data: events = [], isLoading: eventsLoading } = useQuery({
+    queryKey: ['feed-events'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+
+      // Get creator profiles
+      const userIds = [...new Set(data.map(e => e.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return data.map(event => ({
+        id: event.id,
+        type: 'event' as const,
+        user_id: event.user_id,
+        title: event.title,
+        description: event.description,
+        image_url: event.image_url,
+        created_at: event.created_at,
+        event_date: event.event_date,
+        location: event.location,
+        event_type: event.event_type,
+        creator_profile: profileMap.get(event.user_id),
+      }));
+    },
+  });
+
   // Combine and filter feed items
   const feedItems = useMemo(() => {
-    const allItems: FeedItemData[] = [...posts, ...projects];
+    const allItems: FeedItemData[] = [...posts, ...projects, ...events];
     
     // Sort by created_at
     allItems.sort((a, b) => 
@@ -119,9 +155,9 @@ const FeedPage: React.FC = () => {
       if (networkFilter === '3rd+') return degree === '3rd+';
       return true;
     });
-  }, [posts, projects, networkFilter, user?.id, getConnectionDegree]);
+  }, [posts, projects, events, networkFilter, user?.id, getConnectionDegree]);
 
-  const isLoading = postsLoading || projectsLoading || connectionsLoading;
+  const isLoading = postsLoading || projectsLoading || eventsLoading || connectionsLoading;
 
   const networkFilters: { value: NetworkFilter; label: string; count?: number }[] = [
     { value: 'all', label: 'All' },
