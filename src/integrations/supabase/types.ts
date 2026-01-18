@@ -275,6 +275,7 @@ export type Database = {
           union_status: string | null
           updated_at: string
           user_id: string
+          vouch_count: number
         }
         Insert: {
           avatar_url?: string | null
@@ -293,6 +294,7 @@ export type Database = {
           union_status?: string | null
           updated_at?: string
           user_id: string
+          vouch_count?: number
         }
         Update: {
           avatar_url?: string | null
@@ -311,6 +313,7 @@ export type Database = {
           union_status?: string | null
           updated_at?: string
           user_id?: string
+          vouch_count?: number
         }
         Relationships: []
       }
@@ -612,6 +615,27 @@ export type Database = {
           updated_at?: string
           user_id?: string
           visibility?: string
+        }
+        Relationships: []
+      }
+      vouches: {
+        Row: {
+          created_at: string
+          id: string
+          vouched_for_id: string
+          voucher_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          vouched_for_id: string
+          voucher_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          vouched_for_id?: string
+          voucher_id?: string
         }
         Relationships: []
       }

@@ -1,6 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useStore } from '../store/useStore';
+import { useAuth } from '@/hooks/useAuth';
+import { useNetworkConnections } from '@/hooks/useNetworkConnections';
+import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,53 +14,75 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ChevronLeft, Download, Search, X } from 'lucide-react';
+import { ChevronLeft, Download, Search, X, Award } from 'lucide-react';
+
+interface NetworkProfile {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  role: string | null;
+  location: string | null;
+  vouch_count: number;
+}
 
 const NetworkPage: React.FC = () => {
   const navigate = useNavigate();
-  const currentUserId = useStore((s) => s.currentUserId);
-  const get1stDegree = useStore((s) => s.get1stDegree);
+  const { user } = useAuth();
+  const { firstDegree } = useNetworkConnections();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'recent' | 'name' | 'role'>('recent');
+  const [sortBy, setSortBy] = useState<'recent' | 'name' | 'vouches'>('vouches');
 
-  const connections = useMemo(() => get1stDegree(currentUserId), [currentUserId, get1stDegree]);
+  // Fetch profiles for 1st degree connections from database
+  const { data: connectionProfiles = [], isLoading } = useQuery({
+    queryKey: ['network-profiles', firstDegree],
+    queryFn: async () => {
+      if (firstDegree.length === 0) return [];
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url, role, location, vouch_count')
+        .in('user_id', firstDegree);
+      if (error) throw error;
+      return data as NetworkProfile[];
+    },
+    enabled: firstDegree.length > 0,
+  });
 
   const filteredConnections = useMemo(() => {
-    let filtered = connections.filter((user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.location.toLowerCase().includes(searchQuery.toLowerCase())
+    let filtered = connectionProfiles.filter((profile) =>
+      (profile.display_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (profile.role || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (profile.location || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
     
     switch (sortBy) {
       case 'name':
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        filtered.sort((a, b) => (a.display_name || '').localeCompare(b.display_name || ''));
         break;
-      case 'role':
-        filtered.sort((a, b) => a.role.localeCompare(b.role));
+      case 'vouches':
+        filtered.sort((a, b) => b.vouch_count - a.vouch_count);
         break;
       case 'recent':
       default:
-        // Keep original order (most recent first based on stub data)
+        // Keep original order
         break;
     }
     
     return filtered;
-  }, [connections, searchQuery, sortBy]);
+  }, [connectionProfiles, searchQuery, sortBy]);
 
   const handleExportCSV = () => {
     const date = new Date().toISOString().split('T')[0];
-    const headers = ['Name', 'Role', 'Location', 'Email'];
-    const rows = filteredConnections.map((user) => [
-      user.name,
-      user.role,
-      user.location,
-      '', // Email would be added if public
+    const headers = ['Name', 'Role', 'Location', 'Vouches'];
+    const rows = filteredConnections.map((profile) => [
+      profile.display_name || '',
+      profile.role || '',
+      profile.location || '',
+      profile.vouch_count.toString(),
     ]);
 
     const csvContent = [headers, ...rows]
-      .map((row) => row.map((cell) => `\"${cell}\"`).join(','))
+      .map((row) => row.map((cell) => `"${cell}"`).join(','))
       .join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -134,9 +160,9 @@ const NetworkPage: React.FC = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-popover border-border">
-                <SelectItem value="recent">Recently Added</SelectItem>
+                <SelectItem value="vouches">Most Vouched</SelectItem>
                 <SelectItem value="name">Name</SelectItem>
-                <SelectItem value="role">Role</SelectItem>
+                <SelectItem value="recent">Recently Added</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -144,50 +170,64 @@ const NetworkPage: React.FC = () => {
       </header>
       
       <main className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="space-y-2">
-          {filteredConnections.map((user) => (
-            <div
-              key={user.id}
-              onClick={() => handleUserClick(user.id)}
-              className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border hover:border-primary/50 hover:shadow-card transition-all cursor-pointer group"
-            >
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-12 h-12 rounded-full object-cover"
-              />
-              
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium truncate">{user.name}</h3>
-                <p className="text-sm text-muted-foreground truncate">
-                  {user.role} • {user.location}
-                </p>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredConnections.map((profile) => (
+              <div
+                key={profile.user_id}
+                onClick={() => handleUserClick(profile.user_id)}
+                className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border hover:border-primary/50 hover:shadow-card transition-all cursor-pointer group"
+              >
+                <img
+                  src={profile.avatar_url || '/placeholder.svg'}
+                  alt={profile.display_name || 'User'}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium truncate">{profile.display_name || 'Unknown'}</h3>
+                    {profile.vouch_count > 0 && (
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                        <Award className="w-3 h-3" />
+                        <span className="text-xs font-medium">{profile.vouch_count}</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {profile.role || 'No role'} • {profile.location || 'No location'}
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/messages');
+                    }}
+                    className="text-neon-messages"
+                  >
+                    Message
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => handleBlock(profile.user_id, e)}
+                    className="text-destructive"
+                  >
+                    Block
+                  </Button>
+                </div>
               </div>
-              
-              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate('/messages');
-                  }}
-                  className="text-neon-messages"
-                >
-                  Message
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => handleBlock(user.id, e)}
-                  className="text-destructive"
-                >
-                  Block
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
         
         {filteredConnections.length === 0 && (
           <div className="text-center py-16">
