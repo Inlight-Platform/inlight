@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Plus, Bookmark, BookmarkCheck, Filter } from 'lucide-react';
+import { ChevronLeft, Plus, Bookmark, BookmarkCheck, Filter, Search, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ProjectCreator, PROJECT_CATEGORIES, ProjectCategory } from '@/components/projects/ProjectCreator';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
 interface Project {
@@ -39,6 +40,7 @@ const ProjectsPage: React.FC = () => {
   const [showCreator, setShowCreator] = useState(false);
   const [activeTab, setActiveTab] = useState('feed');
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch all projects with creator info
   const { data: projects = [], isLoading } = useQuery({
@@ -121,14 +123,27 @@ const ProjectsPage: React.FC = () => {
 
   const savedProjectIds = new Set(savedProjects.map(s => s.project_id));
 
-  // Filter projects by category
-  const filteredProjects = selectedCategory === 'all' 
-    ? projects 
-    : projects.filter(p => p.category === selectedCategory);
+  // Filter projects by category and search query
+  const filterBySearch = (projectList: Project[]) => {
+    if (!searchQuery.trim()) return projectList;
+    const query = searchQuery.toLowerCase().trim();
+    return projectList.filter(p => 
+      p.title.toLowerCase().includes(query) ||
+      (p.description && p.description.toLowerCase().includes(query))
+    );
+  };
 
-  const filteredSavedProjects = selectedCategory === 'all'
-    ? savedProjectDetails
-    : savedProjectDetails.filter(p => p.category === selectedCategory);
+  const filteredProjects = filterBySearch(
+    selectedCategory === 'all' 
+      ? projects 
+      : projects.filter(p => p.category === selectedCategory)
+  );
+
+  const filteredSavedProjects = filterBySearch(
+    selectedCategory === 'all'
+      ? savedProjectDetails
+      : savedProjectDetails.filter(p => p.category === selectedCategory)
+  );
 
   // Save project mutation
   const saveProjectMutation = useMutation({
@@ -272,6 +287,25 @@ const ProjectsPage: React.FC = () => {
       </header>
 
       <main className="px-4 sm:px-6 lg:px-8 py-6">
+        {/* Search Bar */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search projects by title or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-accent rounded-full transition-colors"
+            >
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+
         {/* Category Filters */}
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
           <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -310,7 +344,11 @@ const ProjectsPage: React.FC = () => {
             ) : filteredProjects.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">
-                  {selectedCategory === 'all' ? 'No projects yet' : `No ${getCategoryLabel(selectedCategory)} projects yet`}
+                  {searchQuery 
+                    ? `No projects found for "${searchQuery}"` 
+                    : selectedCategory === 'all' 
+                      ? 'No projects yet' 
+                      : `No ${getCategoryLabel(selectedCategory)} projects yet`}
                 </p>
                 {user && selectedCategory === 'all' && (
                   <Button onClick={() => setShowCreator(true)} className="mt-4">
@@ -338,7 +376,11 @@ const ProjectsPage: React.FC = () => {
             ) : filteredSavedProjects.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">
-                  {selectedCategory === 'all' ? 'No saved projects yet' : `No saved ${getCategoryLabel(selectedCategory)} projects`}
+                  {searchQuery 
+                    ? `No saved projects found for "${searchQuery}"` 
+                    : selectedCategory === 'all' 
+                      ? 'No saved projects yet' 
+                      : `No saved ${getCategoryLabel(selectedCategory)} projects`}
                 </p>
               </div>
             ) : (
