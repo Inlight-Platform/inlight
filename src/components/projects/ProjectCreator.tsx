@@ -12,7 +12,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
+
+export const PROJECT_CATEGORIES = [
+  { value: 'film', label: 'Film' },
+  { value: 'theater', label: 'Theater' },
+  { value: 'music', label: 'Music' },
+  { value: 'dance', label: 'Dance' },
+  { value: 'photography', label: 'Photography' },
+  { value: 'commercial', label: 'Commercial' },
+  { value: 'documentary', label: 'Documentary' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+export type ProjectCategory = typeof PROJECT_CATEGORIES[number]['value'];
 
 interface ProjectCreatorProps {
   open: boolean;
@@ -30,6 +50,7 @@ export const ProjectCreator: React.FC<ProjectCreatorProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [mainImageUrl, setMainImageUrl] = useState('');
+  const [category, setCategory] = useState<ProjectCategory>('other');
 
   const createProjectMutation = useMutation({
     mutationFn: async () => {
@@ -42,6 +63,7 @@ export const ProjectCreator: React.FC<ProjectCreatorProps> = ({
           description: description.trim() || null,
           main_image_url: mainImageUrl.trim() || null,
           creator_id: user.id,
+          category,
         })
         .select('id')
         .single();
@@ -64,6 +86,7 @@ export const ProjectCreator: React.FC<ProjectCreatorProps> = ({
       setTitle('');
       setDescription('');
       setMainImageUrl('');
+      setCategory('other');
       onOpenChange(false);
       onSuccess?.();
       toast.success('Project created!');
@@ -110,6 +133,22 @@ export const ProjectCreator: React.FC<ProjectCreatorProps> = ({
               rows={4}
               maxLength={1000}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="category">Category</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v as ProjectCategory)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {PROJECT_CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

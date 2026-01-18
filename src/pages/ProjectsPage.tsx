@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Plus, Bookmark, BookmarkCheck } from 'lucide-react';
+import { ChevronLeft, Plus, Bookmark, BookmarkCheck, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ProjectCreator } from '@/components/projects/ProjectCreator';
+import { Badge } from '@/components/ui/badge';
+import { ProjectCreator, PROJECT_CATEGORIES, ProjectCategory } from '@/components/projects/ProjectCreator';
 import { toast } from 'sonner';
 
 interface Project {
@@ -18,6 +19,7 @@ interface Project {
   main_image_url: string | null;
   creator_id: string;
   created_at: string;
+  category: string | null;
   creator_profile?: {
     display_name: string | null;
     avatar_url: string | null;
@@ -36,6 +38,7 @@ const ProjectsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [showCreator, setShowCreator] = useState(false);
   const [activeTab, setActiveTab] = useState('feed');
+  const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('all');
 
   // Fetch all projects with creator info
   const { data: projects = [], isLoading } = useQuery({
@@ -118,6 +121,15 @@ const ProjectsPage: React.FC = () => {
 
   const savedProjectIds = new Set(savedProjects.map(s => s.project_id));
 
+  // Filter projects by category
+  const filteredProjects = selectedCategory === 'all' 
+    ? projects 
+    : projects.filter(p => p.category === selectedCategory);
+
+  const filteredSavedProjects = selectedCategory === 'all'
+    ? savedProjectDetails
+    : savedProjectDetails.filter(p => p.category === selectedCategory);
+
   // Save project mutation
   const saveProjectMutation = useMutation({
     mutationFn: async (projectId: string) => {
@@ -160,6 +172,10 @@ const ProjectsPage: React.FC = () => {
     } else {
       saveProjectMutation.mutate(projectId);
     }
+  };
+
+  const getCategoryLabel = (category: string | null) => {
+    return PROJECT_CATEGORIES.find(c => c.value === category)?.label || 'Other';
   };
 
   const ProjectCard = ({ project }: { project: Project }) => {
@@ -216,7 +232,12 @@ const ProjectsPage: React.FC = () => {
         </div>
 
         <CardContent className="p-4">
-          <h3 className="font-semibold text-foreground mb-2">{project.title}</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-foreground">{project.title}</h3>
+            <Badge variant="secondary" className="text-xs">
+              {getCategoryLabel(project.category)}
+            </Badge>
+          </div>
           {project.description && (
             <p className="text-sm text-muted-foreground line-clamp-2">
               {project.description}
@@ -251,6 +272,30 @@ const ProjectsPage: React.FC = () => {
       </header>
 
       <main className="px-4 sm:px-6 lg:px-8 py-6">
+        {/* Category Filters */}
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+          <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <Button
+            variant={selectedCategory === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSelectedCategory('all')}
+            className="flex-shrink-0"
+          >
+            All
+          </Button>
+          {PROJECT_CATEGORIES.map((cat) => (
+            <Button
+              key={cat.value}
+              variant={selectedCategory === cat.value ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory(cat.value)}
+              className="flex-shrink-0"
+            >
+              {cat.label}
+            </Button>
+          ))}
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-xs grid-cols-2 mb-6">
             <TabsTrigger value="feed">Feed</TabsTrigger>
@@ -262,10 +307,12 @@ const ProjectsPage: React.FC = () => {
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-            ) : projects.length === 0 ? (
+            ) : filteredProjects.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground">No projects yet</p>
-                {user && (
+                <p className="text-muted-foreground">
+                  {selectedCategory === 'all' ? 'No projects yet' : `No ${getCategoryLabel(selectedCategory)} projects yet`}
+                </p>
+                {user && selectedCategory === 'all' && (
                   <Button onClick={() => setShowCreator(true)} className="mt-4">
                     Create the first project
                   </Button>
@@ -273,7 +320,7 @@ const ProjectsPage: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {projects.map(project => (
+                {filteredProjects.map(project => (
                   <ProjectCard key={project.id} project={project} />
                 ))}
               </div>
@@ -288,13 +335,15 @@ const ProjectsPage: React.FC = () => {
                   Log In
                 </Button>
               </div>
-            ) : savedProjectDetails.length === 0 ? (
+            ) : filteredSavedProjects.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground">No saved projects yet</p>
+                <p className="text-muted-foreground">
+                  {selectedCategory === 'all' ? 'No saved projects yet' : `No saved ${getCategoryLabel(selectedCategory)} projects`}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {savedProjectDetails.map(project => (
+                {filteredSavedProjects.map(project => (
                   <ProjectCard key={project.id} project={project} />
                 ))}
               </div>
