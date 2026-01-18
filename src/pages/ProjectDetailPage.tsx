@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -9,15 +9,19 @@ import {
   Trash2, 
   UserPlus,
   Bookmark,
-  BookmarkCheck
+  BookmarkCheck,
+  Upload,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useProjectPhotoUpload } from '@/hooks/useProjectPhotoUpload';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
   DialogContent,
@@ -51,11 +55,13 @@ const ProjectDetailPage: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [addPhotoOpen, setAddPhotoOpen] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState('');
   const [photoCaption, setPhotoCaption] = useState('');
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [memberEmail, setMemberEmail] = useState('');
   const [memberRole, setMemberRole] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const { uploadPhoto, uploading, progress } = useProjectPhotoUpload();
 
   // Fetch project details
   const { data: project, isLoading } = useQuery({
@@ -147,29 +153,36 @@ const ProjectDetailPage: React.FC = () => {
   const isCreator = project?.creator_id === user?.id;
   const isMember = members.some(m => m.user_id === user?.id) || isCreator;
 
-  // Add photo mutation
-  const addPhotoMutation = useMutation({
-    mutationFn: async () => {
-      if (!projectId || !user?.id || !photoUrl.trim()) throw new Error('Invalid data');
-      const { error } = await supabase
-        .from('project_photos')
-        .insert({
-          project_id: projectId,
-          user_id: user.id,
-          image_url: photoUrl.trim(),
-          caption: photoCaption.trim() || null,
-        });
-      if (error) throw error;
-    },
-    onSuccess: () => {
+  // Handle file upload
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !projectId || !user?.id) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size must be less than 10MB');
+      return;
+    }
+
+    const result = await uploadPhoto(file, projectId, user.id, photoCaption);
+    
+    if (result) {
       queryClient.invalidateQueries({ queryKey: ['project-photos', projectId] });
-      setPhotoUrl('');
       setPhotoCaption('');
       setAddPhotoOpen(false);
-      toast.success('Photo added!');
-    },
-    onError: () => toast.error('Failed to add photo'),
-  });
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   // Delete photo mutation
   const deletePhotoMutation = useMutation({
@@ -429,25 +442,47 @@ const ProjectDetailPage: React.FC = () => {
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Add Photo</DialogTitle>
+                    <DialogTitle>Upload Photo</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-4">
-                    <Input
-                      placeholder="Image URL"
-                      value={photoUrl}
-                      onChange={(e) => setPhotoUrl(e.target.value)}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      id="photo-upload"
                     />
                     <Textarea
                       placeholder="Caption (optional)"
                       value={photoCaption}
                       onChange={(e) => setPhotoCaption(e.target.value)}
+                      disabled={uploading}
                     />
+                    {uploading && progress && (
+                      <div className="space-y-2">
+                        <Progress value={progress.percentage} className="h-2" />
+                        <p className="text-xs text-muted-foreground text-center">
+                          Uploading... {progress.percentage}%
+                        </p>
+                      </div>
+                    )}
                     <Button 
-                      onClick={() => addPhotoMutation.mutate()}
-                      disabled={addPhotoMutation.isPending}
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
                       className="w-full"
                     >
-                      Add Photo
+                      {uploading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Choose Photo
+                        </>
+                      )}
                     </Button>
                   </div>
                 </DialogContent>
