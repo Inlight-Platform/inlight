@@ -317,6 +317,44 @@ export type Database = {
         }
         Relationships: []
       }
+      project_invitations: {
+        Row: {
+          created_at: string
+          id: string
+          project_role_id: string
+          receiver_id: string
+          sender_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_role_id: string
+          receiver_id: string
+          sender_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_role_id?: string
+          receiver_id?: string
+          sender_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_invitations_project_role_id_fkey"
+            columns: ["project_role_id"]
+            isOneToOne: false
+            referencedRelation: "project_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           id: string
@@ -384,6 +422,41 @@ export type Database = {
           },
         ]
       }
+      project_roles: {
+        Row: {
+          assigned_user_id: string | null
+          created_at: string
+          id: string
+          project_id: string
+          role_name: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_user_id?: string | null
+          created_at?: string
+          id?: string
+          project_id: string
+          role_name: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_user_id?: string | null
+          created_at?: string
+          id?: string
+          project_id?: string
+          role_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_roles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           category: string | null
@@ -391,7 +464,9 @@ export type Database = {
           creator_id: string
           description: string | null
           id: string
+          is_public: boolean | null
           main_image_url: string | null
+          status: string | null
           title: string
           updated_at: string
         }
@@ -401,7 +476,9 @@ export type Database = {
           creator_id: string
           description?: string | null
           id?: string
+          is_public?: boolean | null
           main_image_url?: string | null
+          status?: string | null
           title: string
           updated_at?: string
         }
@@ -411,7 +488,9 @@ export type Database = {
           creator_id?: string
           description?: string | null
           id?: string
+          is_public?: boolean | null
           main_image_url?: string | null
+          status?: string | null
           title?: string
           updated_at?: string
         }

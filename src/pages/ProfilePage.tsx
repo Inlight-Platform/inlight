@@ -808,6 +808,15 @@ const ProfilePage: React.FC = () => {
             
             {/* Actions */}
             <div className="flex items-center gap-3">
+              {isOwnProfile && authUser && (
+                <Button
+                  onClick={() => navigate('/projects/new')}
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Project
+                </Button>
+              )}
               {!isOwnProfile && authUser && (
                 <>
                   {/* Vouch Button */}
