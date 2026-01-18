@@ -1,0 +1,318 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ChevronLeft, Plus, Bookmark, BookmarkCheck } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ProjectCreator } from '@/components/projects/ProjectCreator';
+import { toast } from 'sonner';
+
+interface Project {
+  id: string;
+  title: string;
+  description: string | null;
+  main_image_url: string | null;
+  creator_id: string;
+  created_at: string;
+  creator_profile?: {
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+}
+
+interface SavedProject {
+  id: string;
+  project_id: string;
+  project: Project;
+}
+
+const ProjectsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [showCreator, setShowCreator] = useState(false);
+  const [activeTab, setActiveTab] = useState('feed');
+
+  // Fetch all projects with creator info
+  const { data: projects = [], isLoading } = useQuery({
+    queryKey: ['projects-feed'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+
+      // Fetch creator profiles
+      const creatorIds = [...new Set(data.map(p => p.creator_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', creatorIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return data.map(project => ({
+        ...project,
+        creator_profile: profileMap.get(project.creator_id)
+      })) as Project[];
+    },
+  });
+
+  // Fetch saved projects
+  const { data: savedProjects = [] } = useQuery({
+    queryKey: ['saved-projects', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('saved_projects')
+        .select('id, project_id')
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch saved projects with details for saved tab
+  const { data: savedProjectDetails = [] } = useQuery({
+    queryKey: ['saved-projects-details', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data: saved, error } = await supabase
+        .from('saved_projects')
+        .select('id, project_id')
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      if (!saved.length) return [];
+
+      const projectIds = saved.map(s => s.project_id);
+      const { data: projectsData } = await supabase
+        .from('projects')
+        .select('*')
+        .in('id', projectIds);
+
+      // Fetch creator profiles
+      const creatorIds = [...new Set(projectsData?.map(p => p.creator_id) || [])];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', creatorIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return projectsData?.map(project => ({
+        ...project,
+        creator_profile: profileMap.get(project.creator_id)
+      })) || [];
+    },
+    enabled: !!user?.id,
+  });
+
+  const savedProjectIds = new Set(savedProjects.map(s => s.project_id));
+
+  // Save project mutation
+  const saveProjectMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      if (!user?.id) throw new Error('Must be logged in');
+      const { error } = await supabase
+        .from('saved_projects')
+        .insert({ user_id: user.id, project_id: projectId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saved-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['saved-projects-details'] });
+      toast.success('Project saved!');
+    },
+    onError: () => toast.error('Failed to save project'),
+  });
+
+  // Unsave project mutation
+  const unsaveProjectMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      if (!user?.id) throw new Error('Must be logged in');
+      const { error } = await supabase
+        .from('saved_projects')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('project_id', projectId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saved-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['saved-projects-details'] });
+      toast.success('Project removed from saved');
+    },
+    onError: () => toast.error('Failed to remove project'),
+  });
+
+  const handleToggleSave = (projectId: string) => {
+    if (savedProjectIds.has(projectId)) {
+      unsaveProjectMutation.mutate(projectId);
+    } else {
+      saveProjectMutation.mutate(projectId);
+    }
+  };
+
+  const ProjectCard = ({ project }: { project: Project }) => {
+    const isSaved = savedProjectIds.has(project.id);
+
+    return (
+      <Card 
+        className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border"
+        onClick={() => navigate(`/projects/${project.id}`)}
+      >
+        <div className="relative">
+          {/* Creator profile in top corner */}
+          <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={project.creator_profile?.avatar_url || undefined} />
+              <AvatarFallback className="text-xs">
+                {project.creator_profile?.display_name?.[0] || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-xs font-medium text-foreground">
+              {project.creator_profile?.display_name || 'Unknown'}
+            </span>
+          </div>
+
+          {/* Save button */}
+          {user && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleSave(project.id);
+              }}
+              className="absolute top-3 right-3 z-10 p-2 bg-background/80 backdrop-blur-sm rounded-full hover:bg-background transition-colors"
+            >
+              {isSaved ? (
+                <BookmarkCheck className="w-5 h-5 text-primary" />
+              ) : (
+                <Bookmark className="w-5 h-5 text-muted-foreground" />
+              )}
+            </button>
+          )}
+
+          {/* Main project image */}
+          {project.main_image_url ? (
+            <img
+              src={project.main_image_url}
+              alt={project.title}
+              className="w-full h-48 object-cover"
+            />
+          ) : (
+            <div className="w-full h-48 bg-muted flex items-center justify-center">
+              <span className="text-muted-foreground text-sm">No image</span>
+            </div>
+          )}
+        </div>
+
+        <CardContent className="p-4">
+          <h3 className="font-semibold text-foreground mb-2">{project.title}</h3>
+          {project.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              {project.description}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
+        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/')}
+              className="p-2 rounded-full hover:bg-accent transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <h1 className="text-2xl font-display font-bold">Projects</h1>
+          </div>
+
+          {user && (
+            <Button onClick={() => setShowCreator(true)} size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              New Project
+            </Button>
+          )}
+        </div>
+      </header>
+
+      <main className="px-4 sm:px-6 lg:px-8 py-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full max-w-xs grid-cols-2 mb-6">
+            <TabsTrigger value="feed">Feed</TabsTrigger>
+            <TabsTrigger value="saved">Saved</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="feed">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : projects.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No projects yet</p>
+                {user && (
+                  <Button onClick={() => setShowCreator(true)} className="mt-4">
+                    Create the first project
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {projects.map(project => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="saved">
+            {!user ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Log in to save projects</p>
+                <Button onClick={() => navigate('/auth')} className="mt-4">
+                  Log In
+                </Button>
+              </div>
+            ) : savedProjectDetails.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No saved projects yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {savedProjectDetails.map(project => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </main>
+
+      {/* Project Creator Dialog */}
+      <ProjectCreator 
+        open={showCreator} 
+        onOpenChange={setShowCreator}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['projects-feed'] });
+        }}
+      />
+    </div>
+  );
+};
+
+export default ProjectsPage;
