@@ -1,11 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Folder, Plus } from 'lucide-react';
+import { Folder, Plus, Bookmark } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Project {
   id: string;
@@ -25,10 +25,9 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
   const navigate = useNavigate();
 
   // Fetch projects where user is creator or member
-  const { data: projects = [], isLoading } = useQuery({
+  const { data: projects = [], isLoading: loadingProjects } = useQuery({
     queryKey: ['user-projects', userId],
     queryFn: async () => {
-      // Get projects user created
       const { data: createdProjects, error: createdError } = await supabase
         .from('projects')
         .select('id, title, description, main_image_url, creator_id')
@@ -36,7 +35,6 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
 
       if (createdError) throw createdError;
 
-      // Get projects user is a member of
       const { data: memberships, error: memberError } = await supabase
         .from('project_members')
         .select('project_id, role')
@@ -44,7 +42,6 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
 
       if (memberError) throw memberError;
 
-      // Get project details for memberships (excluding ones user created)
       const memberProjectIds = memberships
         ?.map(m => m.project_id)
         .filter(id => !createdProjects?.some(p => p.id === id)) || [];
@@ -62,7 +59,6 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
         }));
       }
 
-      // Combine and mark created projects
       const allProjects = [
         ...(createdProjects || []).map(p => ({ ...p, role: 'Creator' as string })),
         ...memberProjects
@@ -72,6 +68,81 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
     },
     enabled: !!userId,
   });
+
+  // Fetch saved projects (only for own profile)
+  const { data: savedProjects = [], isLoading: loadingSaved } = useQuery({
+    queryKey: ['user-saved-projects', userId],
+    queryFn: async () => {
+      const { data: saved, error } = await supabase
+        .from('saved_projects')
+        .select('project_id')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      if (!saved?.length) return [];
+
+      const projectIds = saved.map(s => s.project_id);
+      const { data: projectsData } = await supabase
+        .from('projects')
+        .select('id, title, description, main_image_url, creator_id')
+        .in('id', projectIds);
+
+      return projectsData || [];
+    },
+    enabled: !!userId && isOwnProfile,
+  });
+
+  const ProjectCard = ({ project, showRole = false }: { project: Project; showRole?: boolean }) => (
+    <Card 
+      className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border"
+      onClick={() => navigate(`/projects/${project.id}`)}
+    >
+      {project.main_image_url ? (
+        <img
+          src={project.main_image_url}
+          alt={project.title}
+          className="w-full h-32 object-cover"
+        />
+      ) : (
+        <div className="w-full h-32 bg-muted flex items-center justify-center">
+          <Folder className="w-8 h-8 text-muted-foreground" />
+        </div>
+      )}
+      <CardContent className="p-3">
+        <h3 className="font-medium text-foreground text-sm mb-1 line-clamp-1">
+          {project.title}
+        </h3>
+        {showRole && project.role && (
+          <span className="text-xs text-muted-foreground">
+            {project.role}
+          </span>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const ProjectGrid = ({ items, emptyMessage, showRole = false }: { 
+    items: Project[]; 
+    emptyMessage: string;
+    showRole?: boolean;
+  }) => (
+    items.length === 0 ? (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground mb-4">{emptyMessage}</p>
+        <Button onClick={() => navigate('/projects')}>
+          Browse Projects
+        </Button>
+      </div>
+    ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {items.map(project => (
+          <ProjectCard key={project.id} project={project} showRole={showRole} />
+        ))}
+      </div>
+    )
+  );
+
+  const isLoading = loadingProjects || loadingSaved;
 
   if (isLoading) {
     return (
@@ -92,7 +163,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-display font-semibold flex items-center gap-2">
           <Folder className="w-5 h-5" />
-          Projects ({projects.length})
+          Projects
         </h2>
         {isOwnProfile && (
           <Button 
@@ -106,52 +177,43 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
         )}
       </div>
 
-      {projects.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground mb-4">
-            {isOwnProfile ? "You haven't joined any projects yet" : "No projects to show"}
-          </p>
-          {isOwnProfile && (
-            <Button onClick={() => navigate('/projects')}>
-              Browse Projects
-            </Button>
-          )}
-        </div>
+      {isOwnProfile ? (
+        <Tabs defaultValue="my-projects" className="w-full">
+          <TabsList className="grid w-full max-w-xs grid-cols-2 mb-4">
+            <TabsTrigger value="my-projects" className="flex items-center gap-1">
+              <Folder className="w-4 h-4" />
+              My Projects ({projects.length})
+            </TabsTrigger>
+            <TabsTrigger value="saved" className="flex items-center gap-1">
+              <Bookmark className="w-4 h-4" />
+              Saved ({savedProjects.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="my-projects">
+            <ProjectGrid 
+              items={projects} 
+              emptyMessage="You haven't joined any projects yet"
+              showRole
+            />
+          </TabsContent>
+
+          <TabsContent value="saved">
+            <ProjectGrid 
+              items={savedProjects} 
+              emptyMessage="No saved projects yet"
+            />
+          </TabsContent>
+        </Tabs>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projects.map(project => (
-            <Card 
-              key={project.id}
-              className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border"
-              onClick={() => navigate(`/projects/${project.id}`)}
-            >
-              {project.main_image_url ? (
-                <img
-                  src={project.main_image_url}
-                  alt={project.title}
-                  className="w-full h-32 object-cover"
-                />
-              ) : (
-                <div className="w-full h-32 bg-muted flex items-center justify-center">
-                  <Folder className="w-8 h-8 text-muted-foreground" />
-                </div>
-              )}
-              <CardContent className="p-3">
-                <h3 className="font-medium text-foreground text-sm mb-1 line-clamp-1">
-                  {project.title}
-                </h3>
-                {project.role && (
-                  <span className="text-xs text-muted-foreground">
-                    {project.role}
-                  </span>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <ProjectGrid 
+          items={projects} 
+          emptyMessage="No projects to show"
+          showRole
+        />
       )}
 
-      {projects.length > 0 && (
+      {(projects.length > 0 || savedProjects.length > 0) && (
         <div className="mt-4 text-center">
           <Button 
             variant="ghost" 
