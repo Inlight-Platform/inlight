@@ -1,20 +1,24 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, Users, Filter } from 'lucide-react';
+import { ChevronLeft, Users, Filter, Plus, Calendar, Briefcase, FolderKanban, User, LayoutGrid } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useNetworkConnections, NetworkDegree } from '@/hooks/useNetworkConnections';
+import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { Button } from '@/components/ui/button';
 import { PostCreator } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type NetworkFilter = 'all' | '1st' | '2nd' | '3rd+';
+type ContentFilter = 'all' | 'events' | 'jobs' | 'projects' | 'updates';
 
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
+  const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
+  const [showPostCreator, setShowPostCreator] = useState(false);
   const { firstDegree, secondDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
 
   // Fetch current user's profile
@@ -53,11 +57,15 @@ const FeedPage: React.FC = () => {
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-      return data.map(post => ({
-        ...post,
-        type: 'post' as const,
-        creator_profile: profileMap.get(post.user_id),
-      }));
+      return data.map(post => {
+        // Check if it's a job post (starts with job emoji)
+        const isJob = post.content.startsWith('🎯');
+        return {
+          ...post,
+          type: isJob ? 'job' as const : 'post' as const,
+          creator_profile: profileMap.get(post.user_id),
+        };
+      });
     },
   });
 
@@ -133,8 +141,19 @@ const FeedPage: React.FC = () => {
 
   // Combine and filter feed items
   const feedItems = useMemo(() => {
-    const allItems: FeedItemData[] = [...posts, ...projects, ...events];
+    let allItems: FeedItemData[] = [...posts, ...projects, ...events];
     
+    // Filter by content type
+    if (contentFilter !== 'all') {
+      allItems = allItems.filter(item => {
+        if (contentFilter === 'events') return item.type === 'event';
+        if (contentFilter === 'jobs') return item.type === 'job';
+        if (contentFilter === 'projects') return item.type === 'project';
+        if (contentFilter === 'updates') return item.type === 'post';
+        return true;
+      });
+    }
+
     // Sort by created_at
     allItems.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -155,7 +174,7 @@ const FeedPage: React.FC = () => {
       if (networkFilter === '3rd+') return degree === '3rd+';
       return true;
     });
-  }, [posts, projects, events, networkFilter, user?.id, getConnectionDegree]);
+  }, [posts, projects, events, networkFilter, contentFilter, user?.id, getConnectionDegree]);
 
   const isLoading = postsLoading || projectsLoading || eventsLoading || connectionsLoading;
 
@@ -163,36 +182,88 @@ const FeedPage: React.FC = () => {
     { value: 'all', label: 'All' },
     { value: '1st', label: 'My Network', count: firstDegree.length },
     { value: '2nd', label: '2nd', count: secondDegree.length },
-    { value: '3rd+', label: '3rd and more' },
+    { value: '3rd+', label: '3rd+' },
   ];
+
+  const contentFilters: { value: ContentFilter; label: string; icon: React.ReactNode }[] = [
+    { value: 'all', label: 'All', icon: <LayoutGrid className="h-4 w-4" /> },
+    { value: 'events', label: 'Events', icon: <Calendar className="h-4 w-4" /> },
+    { value: 'jobs', label: 'Jobs', icon: <Briefcase className="h-4 w-4" /> },
+    { value: 'projects', label: 'Projects', icon: <FolderKanban className="h-4 w-4" /> },
+    { value: 'updates', label: 'Updates', icon: <User className="h-4 w-4" /> },
+  ];
+
+  // Count items by type
+  const itemCounts = useMemo(() => ({
+    events: events.length,
+    jobs: posts.filter(p => p.type === 'job').length,
+    projects: projects.length,
+    updates: posts.filter(p => p.type === 'post').length,
+  }), [events, posts, projects]);
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
-          <button
-            onClick={() => navigate('/')}
-            className="p-2 rounded-full hover:bg-accent transition-colors"
-            aria-label="Back to home"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <div className="flex items-center gap-2">
-            <Users className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-display font-bold">Feed</h1>
+        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/')}
+              className="p-2 rounded-full hover:bg-accent transition-colors"
+              aria-label="Back to home"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <div className="flex items-center gap-2">
+              <Users className="w-6 h-6 text-primary" />
+              <h1 className="text-2xl font-display font-bold">Feed</h1>
+            </div>
           </div>
+          
+          {user && (
+            <Button 
+              onClick={() => setShowPostCreator(true)}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Make a Post
+            </Button>
+          )}
         </div>
       </header>
 
       <main className="px-4 sm:px-6 lg:px-8 py-6 max-w-2xl mx-auto">
+        {/* Content Type Filters */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            {contentFilters.map((filter) => (
+              <Button
+                key={filter.value}
+                variant={contentFilter === filter.value ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setContentFilter(filter.value)}
+                className="flex-shrink-0 gap-1.5"
+              >
+                {filter.icon}
+                {filter.label}
+                {filter.value !== 'all' && itemCounts[filter.value as keyof typeof itemCounts] > 0 && (
+                  <span className="ml-1 text-xs opacity-70">
+                    ({itemCounts[filter.value as keyof typeof itemCounts]})
+                  </span>
+                )}
+              </Button>
+            ))}
+          </div>
+        </div>
+
         {/* Network Filters */}
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
           <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-sm text-muted-foreground flex-shrink-0">From:</span>
           {networkFilters.map((filter) => (
             <Button
               key={filter.value}
-              variant={networkFilter === filter.value ? 'default' : 'outline'}
+              variant={networkFilter === filter.value ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setNetworkFilter(filter.value)}
               className="flex-shrink-0"
@@ -205,13 +276,6 @@ const FeedPage: React.FC = () => {
           ))}
         </div>
 
-        {/* Post Creator */}
-        {user && (
-          <div className="mb-6">
-            <PostCreator userProfile={userProfile || undefined} />
-          </div>
-        )}
-
         {/* Feed Items */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -221,10 +285,18 @@ const FeedPage: React.FC = () => {
           <div className="text-center py-12">
             <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">
-              {networkFilter === 'all' 
-                ? 'No posts or projects yet. Be the first to share!'
-                : `No content from your ${networkFilter === '1st' ? 'network' : networkFilter + ' degree connections'} yet.`}
+              {contentFilter !== 'all' 
+                ? `No ${contentFilter} found.`
+                : networkFilter === 'all' 
+                  ? 'No posts or projects yet. Be the first to share!'
+                  : `No content from your ${networkFilter === '1st' ? 'network' : networkFilter + ' degree connections'} yet.`}
             </p>
+            {user && (
+              <Button onClick={() => setShowPostCreator(true)} className="mt-4 gap-2">
+                <Plus className="h-4 w-4" />
+                Create a post
+              </Button>
+            )}
             {!user && (
               <Button onClick={() => navigate('/auth')} className="mt-4">
                 Log in to post
@@ -243,6 +315,20 @@ const FeedPage: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Post Creator Dialog */}
+      <Dialog open={showPostCreator} onOpenChange={setShowPostCreator}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create a Post</DialogTitle>
+          </DialogHeader>
+          <PostCreator 
+            userProfile={userProfile || undefined} 
+            defaultOpen={true}
+            onClose={() => setShowPostCreator(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
