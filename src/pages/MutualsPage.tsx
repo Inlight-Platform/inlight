@@ -161,7 +161,7 @@ const MutualsPage: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger value="mutuals" className="data-[state=active]:bg-neon-mutuals/20 flex items-center gap-1.5">
               <Users className="w-4 h-4" />
-              Mutuals ({firstDegree.length})
+              My Network ({firstDegree.length})
             </TabsTrigger>
             <TabsTrigger value="2nd" className="data-[state=active]:bg-neon-messages/20">
               2nd ({secondDegree.length})
