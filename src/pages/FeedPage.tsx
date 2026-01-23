@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, Users, Filter, Plus, Calendar, Briefcase, FolderKanban, User, LayoutGrid } from 'lucide-react';
+import { Home, Filter, Plus, Calendar, Briefcase, FolderKanban, User, LayoutGrid, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { PostCreator } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import PageLayout from '@/components/layout/PageLayout';
 
 type NetworkFilter = 'all' | '1st' | '2nd' | '3rd+';
 type ContentFilter = 'all' | 'events' | 'jobs' | 'projects' | 'updates';
@@ -202,22 +203,21 @@ const FeedPage: React.FC = () => {
   }), [events, posts, projects]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageLayout>
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/')}
-              className="p-2 rounded-full hover:bg-accent transition-colors"
-              aria-label="Back to home"
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ 
+                background: 'linear-gradient(135deg, hsl(330 100% 64%), hsl(350 100% 70%))',
+                boxShadow: '0 0 20px hsl(330 100% 64% / 0.4)'
+              }}
             >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <div className="flex items-center gap-2">
-              <Users className="w-6 h-6 text-primary" />
-              <h1 className="text-2xl font-display font-bold">Feed</h1>
+              <Home className="w-5 h-5 text-white" />
             </div>
+            <h1 className="text-2xl font-display font-bold">Feed</h1>
           </div>
           
           {user && (
@@ -232,7 +232,7 @@ const FeedPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="px-4 sm:px-6 lg:px-8 py-6 max-w-2xl mx-auto">
+      <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-2xl mx-auto">
         {/* Content Type Filters */}
         <div className="mb-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-2">
@@ -314,7 +314,7 @@ const FeedPage: React.FC = () => {
             ))}
           </div>
         )}
-      </main>
+      </div>
 
       {/* Post Creator Dialog */}
       <Dialog open={showPostCreator} onOpenChange={setShowPostCreator}>
@@ -329,7 +329,7 @@ const FeedPage: React.FC = () => {
           />
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 };
 

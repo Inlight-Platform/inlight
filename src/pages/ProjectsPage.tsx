@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Plus, Bookmark, BookmarkCheck, Filter, Search, X, ArrowUpDown } from 'lucide-react';
+import { FolderKanban, Plus, Bookmark, BookmarkCheck, Filter, Search, X, ArrowUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import PageLayout from '@/components/layout/PageLayout';
 
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 
@@ -287,16 +288,19 @@ const ProjectsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageLayout>
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/')}
-              className="p-2 rounded-full hover:bg-accent transition-colors"
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ 
+                background: 'linear-gradient(135deg, hsl(264 100% 71%), hsl(280 100% 65%))',
+                boxShadow: '0 0 20px hsl(264 100% 71% / 0.4)'
+              }}
             >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
+              <FolderKanban className="w-5 h-5 text-white" />
+            </div>
             <h1 className="text-2xl font-display font-bold">Projects</h1>
           </div>
 
@@ -309,7 +313,7 @@ const ProjectsPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="px-4 sm:px-6 lg:px-8 py-6">
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
         {/* Search Bar */}
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -438,7 +442,7 @@ const ProjectsPage: React.FC = () => {
             )}
           </TabsContent>
         </Tabs>
-      </main>
+      </div>
 
       {/* Project Creator Dialog */}
       <ProjectCreator 
@@ -448,7 +452,7 @@ const ProjectsPage: React.FC = () => {
           queryClient.invalidateQueries({ queryKey: ['projects-feed'] });
         }}
       />
-    </div>
+    </PageLayout>
   );
 };
 
