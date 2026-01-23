@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import ProfilePage from "./pages/ProfilePage";
 import DirectoryPage from "./pages/DirectoryPage";
-import MutualsPage from "./pages/MutualsPage";
+import PeoplePage from "./pages/PeoplePage";
 import NetworkPage from "./pages/NetworkPage";
 import FeedPage from "./pages/FeedPage";
 import ResourcesPage from "./pages/ResourcesPage";
@@ -36,7 +36,8 @@ const App = () => (
           <Route path="/profile/:userId" element={<ProfilePage />} />
           <Route path="/directory/:badgeSlug" element={<DirectoryPage />} />
           <Route path="/feed" element={<FeedPage />} />
-          <Route path="/mutuals" element={<MutualsPage />} />
+          <Route path="/people" element={<PeoplePage />} />
+          <Route path="/mutuals" element={<PeoplePage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/opportunities" element={<OpportunitiesPage />} />

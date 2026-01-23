@@ -1,15 +1,11 @@
 import React, { useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import NavigationWheel from '../components/NavigationWheel';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { useAuth } from '../hooks/useAuth';
 import { stubUsers, stubConnections, stubMaterials, stubCredits, stubStories, stubMessages, stubThreads } from '../data/stubData';
-import { Button } from '@/components/ui/button';
-import { LogIn, LogOut, Settings } from 'lucide-react';
 
 const Index: React.FC = () => {
+  const navigate = useNavigate();
   const users = useStore((s) => s.users);
-  const { user, loading, signOut } = useAuth();
   
   useEffect(() => {
     // Initialize stub data if empty
@@ -26,46 +22,12 @@ const Index: React.FC = () => {
     }
   }, [users.length]);
 
-  const handleSignOut = async () => {
-    await signOut();
-  };
+  // Redirect to feed as the main landing page
+  useEffect(() => {
+    navigate('/feed', { replace: true });
+  }, [navigate]);
   
-  return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      {/* Auth header */}
-      <div className="fixed top-4 right-4 flex items-center gap-2">
-        {!loading && (
-          user ? (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {user.email}
-              </span>
-              <Link to="/settings">
-                <Button variant="ghost" size="sm">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-1" />
-                Sign out
-              </Button>
-            </div>
-          ) : (
-            <Link to="/auth">
-              <Button variant="default" size="sm">
-                <LogIn className="h-4 w-4 mr-1" />
-                Sign in
-              </Button>
-            </Link>
-          )
-        )}
-      </div>
-
-      <div className="w-full max-w-[600px] aspect-square">
-        <NavigationWheel />
-      </div>
-    </div>
-  );
+  return null;
 };
 
 export default Index;

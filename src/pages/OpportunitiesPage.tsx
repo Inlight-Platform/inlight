@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Plus, Briefcase, Star, TrendingUp } from 'lucide-react';
+import { Plus, Briefcase, Star, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStore, OpportunityType, ExperienceLevel, UserRole, Opportunity } from '@/store/useStore';
@@ -8,6 +8,7 @@ import OpportunityCard from '@/components/opportunities/OpportunityCard';
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters';
 import OpportunityCreator from '@/components/opportunities/OpportunityCreator';
 import { stubOpportunities } from '@/data/stubData';
+import PageLayout from '@/components/layout/PageLayout';
 
 const OpportunitiesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -105,22 +106,22 @@ const OpportunitiesPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageLayout>
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/')}
-              className="p-2 rounded-full hover:bg-accent transition-colors"
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ 
+                background: 'linear-gradient(135deg, hsl(147 100% 50%), hsl(160 100% 45%))',
+                boxShadow: '0 0 20px hsl(147 100% 50% / 0.4)'
+              }}
             >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
+              <Briefcase className="w-5 h-5 text-foreground" />
+            </div>
             <div>
-              <h1 className="text-2xl font-display font-bold flex items-center gap-2">
-                <Briefcase className="w-6 h-6 text-[hsl(var(--neon-opportunities))]" />
-                Opportunities
-              </h1>
+              <h1 className="text-2xl font-display font-bold">Opportunities</h1>
               <p className="text-sm text-muted-foreground">
                 {openOpportunities.length} open opportunities
               </p>
@@ -136,7 +137,7 @@ const OpportunitiesPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
+      <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-card border border-border">
             <TabsTrigger value="discover" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20">
@@ -281,11 +282,11 @@ const OpportunitiesPage: React.FC = () => {
             )}
           </TabsContent>
         </Tabs>
-      </main>
+      </div>
 
       {/* Opportunity Creator Modal */}
       <OpportunityCreator open={showCreator} onOpenChange={setShowCreator} />
-    </div>
+    </PageLayout>
   );
 };
 

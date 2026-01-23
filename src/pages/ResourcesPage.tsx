@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ExternalLink, Building2, Film } from 'lucide-react';
+import { BookOpen, ExternalLink, Building2, Film } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import PageLayout from '@/components/layout/PageLayout';
 
 type Category = 'All' | 'News' | 'Directories' | 'Education' | 'Union' | 'Casting' | 'Scripts';
 
@@ -230,22 +231,25 @@ const ResourcesPage: React.FC = () => {
     : filmResources.filter(r => r.category === filmFilter);
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageLayout>
       {/* Sticky Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
-          <button
-            onClick={() => navigate('/')}
-            className="p-2 rounded-full hover:bg-accent transition-colors"
+          <div 
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ 
+              background: 'linear-gradient(135deg, hsl(168 100% 62%), hsl(180 100% 55%))',
+              boxShadow: '0 0 20px hsl(168 100% 62% / 0.4)'
+            }}
           >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-2xl font-display font-bold">Resources for Students</h1>
+            <BookOpen className="w-5 h-5 text-foreground" />
+          </div>
+          <h1 className="text-2xl font-display font-bold">Resources</h1>
         </div>
       </header>
 
       {/* Main Content - Two Columns */}
-      <main className="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100vh-73px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100vh-73px)]">
         {/* Theatre Column */}
         <section 
           className="relative p-6 lg:p-8"
@@ -380,8 +384,8 @@ const ResourcesPage: React.FC = () => {
             </div>
           </div>
         </section>
-      </main>
-    </div>
+      </div>
+    </PageLayout>
   );
 };
 
