@@ -41,7 +41,11 @@ import {
   X,
   Save,
   Trash2,
-  Award
+  Award,
+  Calendar,
+  Briefcase,
+  MessageSquare,
+  FolderKanban
 } from 'lucide-react';
 import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
 import { MediaUploader } from '@/components/profile/MediaUploader';
@@ -49,6 +53,8 @@ import { AvatarCropper } from '@/components/profile/AvatarCropper';
 import { MyProjects } from '@/components/profile/MyProjects';
 import { SavedProjects } from '@/components/profile/SavedProjects';
 import { supabase } from '@/integrations/supabase/client';
+import { PostCreator, PostType } from '@/components/feed/PostCreator';
+import { ProjectCreator } from '@/components/projects/ProjectCreator';
 import { toast } from 'sonner';
 import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidation';
 import { useVouch } from '@/hooks/useVouch';
@@ -99,6 +105,11 @@ const ProfilePage: React.FC = () => {
   const [uploadingCover, setUploadingCover] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
   const [cropperImageSrc, setCropperImageSrc] = useState('');
+  
+  // Post creator states
+  const [showPostCreator, setShowPostCreator] = useState(false);
+  const [defaultPostType, setDefaultPostType] = useState<PostType>('update');
+  const [showProjectCreator, setShowProjectCreator] = useState(false);
   
   // Editing states
   const [isEditingName, setIsEditingName] = useState(false);
@@ -809,13 +820,32 @@ const ProfilePage: React.FC = () => {
             {/* Actions */}
             <div className="flex items-center gap-3">
               {isOwnProfile && authUser && (
-                <Button
-                  onClick={() => navigate('/projects/new')}
-                  size="sm"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Project
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => { setDefaultPostType('update'); setShowPostCreator(true); }}>
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Post Update
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setDefaultPostType('event'); setShowPostCreator(true); }}>
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Create Event
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setDefaultPostType('job'); setShowPostCreator(true); }}>
+                      <Briefcase className="w-4 h-4 mr-2" />
+                      Post Opportunity
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowProjectCreator(true)}>
+                      <FolderKanban className="w-4 h-4 mr-2" />
+                      Create Project
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
               {!isOwnProfile && authUser && (
                 <>
@@ -1249,6 +1279,32 @@ const ProfilePage: React.FC = () => {
           />
         </div>
       )}
+
+      {/* Post Creator Dialog */}
+      <Dialog open={showPostCreator} onOpenChange={setShowPostCreator}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>
+              {defaultPostType === 'update' ? 'Post an Update' : 
+               defaultPostType === 'event' ? 'Create an Event' : 
+               'Post an Opportunity'}
+            </DialogTitle>
+          </DialogHeader>
+          <PostCreator 
+            userProfile={dbProfile ? { display_name: dbProfile.display_name, avatar_url: dbProfile.avatar_url } : undefined}
+            defaultOpen={true}
+            defaultPostType={defaultPostType}
+            onClose={() => setShowPostCreator(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Creator Dialog */}
+      <ProjectCreator
+        open={showProjectCreator}
+        onOpenChange={setShowProjectCreator}
+        onSuccess={() => setShowProjectCreator(false)}
+      />
     </div>
   );
 };
