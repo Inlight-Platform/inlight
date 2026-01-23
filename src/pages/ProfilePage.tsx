@@ -135,9 +135,8 @@ const ProfilePage: React.FC = () => {
   const [creditCompany, setCreditCompany] = useState('');
   const [editingCreditId, setEditingCreditId] = useState<string | null>(null);
   
-  const resolvedUserId = userId === 'me' ? currentUserId : userId;
-  const user = getUser(resolvedUserId || '');
-  const isOwnProfile = resolvedUserId === currentUserId;
+  const resolvedUserId = userId === 'me' ? (authUser?.id || currentUserId) : userId;
+  const isOwnProfile = resolvedUserId === authUser?.id;
   const connectionStatus = resolvedUserId ? getConnectionStatus(resolvedUserId) : null;
   
   // Vouch hook - use actual auth user id for viewing other profiles
@@ -150,50 +149,64 @@ const ProfilePage: React.FC = () => {
   const { deleteFile, updateVisibility } = useMediaUpload();
   const { fetchMedia } = useUserMedia(authUser?.id);
   
-  // Fetch profile from database
-  const { data: dbProfile, refetch: refetchProfile } = useQuery({
-    queryKey: ['profile', authUser?.id],
+  // Fetch profile from database - for own profile use profiles table, for others use profiles_public view
+  const { data: dbProfile, isLoading: profileLoading, refetch: refetchProfile } = useQuery({
+    queryKey: ['profile', resolvedUserId, isOwnProfile],
     queryFn: async () => {
-      if (!authUser?.id) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('display_name, avatar_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline')
-        .eq('user_id', authUser.id)
-        .single();
-      if (error) return null;
-      return data;
+      if (!resolvedUserId) return null;
+      
+      if (isOwnProfile) {
+        // Own profile - use full profiles table
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('display_name, avatar_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id')
+          .eq('user_id', resolvedUserId)
+          .maybeSingle();
+        if (error) return null;
+        return data;
+      } else {
+        // Other users - use public view (excludes email)
+        const { data, error } = await supabase
+          .from('profiles_public')
+          .select('display_name, avatar_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id')
+          .eq('user_id', resolvedUserId)
+          .maybeSingle();
+        if (error) return null;
+        return data;
+      }
     },
-    enabled: !!authUser?.id && isOwnProfile,
+    enabled: !!resolvedUserId,
   });
   
-  // Fetch credits from database
+  // Fetch credits from database - for any user
   const { data: dbCredits = [], refetch: refetchCredits } = useQuery({
-    queryKey: ['credits', authUser?.id],
+    queryKey: ['credits', resolvedUserId],
     queryFn: async () => {
-      if (!authUser?.id) return [];
+      if (!resolvedUserId) return [];
       const { data, error } = await supabase
         .from('credits')
         .select('*')
-        .eq('user_id', authUser.id)
+        .eq('user_id', resolvedUserId)
         .order('year', { ascending: false });
       if (error) return [];
       return data as Credit[];
     },
-    enabled: !!authUser?.id && isOwnProfile,
+    enabled: !!resolvedUserId,
   });
   
-  // Use database values if available, otherwise fall back to store
-  const displayAvatar = (isOwnProfile && dbProfile?.avatar_url) || user?.avatar;
-  const displayName = (isOwnProfile && dbProfile?.display_name) || user?.name || '';
-  const displayLocation = (isOwnProfile && dbProfile?.location) || user?.location || '';
-  const displayRole = (isOwnProfile && dbProfile?.role) || user?.role || '';
-  const displayPronouns = (isOwnProfile && dbProfile?.pronouns) || user?.pronouns || '';
-  const displayBadges = (isOwnProfile && dbProfile?.badges) || user?.badges || [];
-  const displayBio = (isOwnProfile && dbProfile?.bio) || user?.bio || '';
-  const displayUnionStatus = (isOwnProfile && dbProfile?.union_status) || user?.unionStatus || '';
-  const displayRepresentation = (isOwnProfile && dbProfile?.representation) || user?.representation || '';
-  const displayGearList = (isOwnProfile && dbProfile?.gear_list) || user?.gearList || [];
-  const displayCredits = isOwnProfile ? dbCredits : [];
+  // Use database values - fall back to store only as last resort for legacy data
+  const user = getUser(resolvedUserId || '');
+  const displayAvatar = dbProfile?.avatar_url || user?.avatar;
+  const displayName = dbProfile?.display_name || user?.name || '';
+  const displayLocation = dbProfile?.location || user?.location || '';
+  const displayRole = dbProfile?.role || user?.role || '';
+  const displayPronouns = dbProfile?.pronouns || user?.pronouns || '';
+  const displayBadges = dbProfile?.badges || user?.badges || [];
+  const displayBio = dbProfile?.bio || user?.bio || '';
+  const displayUnionStatus = dbProfile?.union_status || user?.unionStatus || '';
+  const displayRepresentation = dbProfile?.representation || user?.representation || '';
+  const displayGearList = dbProfile?.gear_list || user?.gearList || [];
+  const displayCredits = dbCredits;
   
   // Fetch user media from database
   const { data: userMedia = [], refetch: refetchMedia } = useQuery({
@@ -546,7 +559,18 @@ const ProfilePage: React.FC = () => {
     setIsEditingRepresentation(true);
   };
   
-  if (!user) {
+  // Loading state
+  if (profileLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground mt-2">Loading profile...</p>
+      </div>
+    );
+  }
+  
+  // User not found - check if we have database profile OR store user
+  if (!dbProfile && !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <p className="text-muted-foreground">User not found</p>
@@ -565,7 +589,7 @@ const ProfilePage: React.FC = () => {
     announcement.setAttribute('role', 'status');
     announcement.setAttribute('aria-live', 'polite');
     announcement.className = 'sr-only';
-    announcement.textContent = `Connection request sent to ${user.name}.`;
+    announcement.textContent = `Connection request sent to ${displayName}.`;
     document.body.appendChild(announcement);
     setTimeout(() => announcement.remove(), 3000);
   };
@@ -615,8 +639,8 @@ const ProfilePage: React.FC = () => {
         {/* Cover image */}
         <div className="relative h-[200px] sm:h-[280px] md:h-[350px] lg:h-[450px] overflow-hidden">
           <img
-            src={user.coverImage}
-            alt={`${user.name}'s cover`}
+            src={user?.coverImage || '/placeholder.svg'}
+            alt={`${displayName}'s cover`}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
@@ -653,8 +677,8 @@ const ProfilePage: React.FC = () => {
           <div className="absolute -top-16 sm:-top-20 left-4 sm:left-6 lg:left-8">
             <div className="relative">
               <img
-                src={displayAvatar}
-                alt={user.name}
+                src={displayAvatar || '/placeholder.svg'}
+                alt={displayName}
                 className="w-24 h-24 sm:w-32 sm:h-32 lg:w-[120px] lg:h-[120px] rounded-full border-4 border-background object-cover shadow-card"
               />
               {isOwnProfile && (
