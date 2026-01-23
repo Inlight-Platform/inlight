@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ImagePlus, Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,21 +11,22 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
+export type PostType = 'update' | 'event' | 'job';
+
 interface PostCreatorProps {
   userProfile?: {
     display_name: string | null;
     avatar_url: string | null;
   };
   defaultOpen?: boolean;
+  defaultPostType?: PostType;
   onClose?: () => void;
 }
 
-type PostType = 'update' | 'event' | 'job';
-
-export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOpen = false, onClose }) => {
+export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOpen = false, defaultPostType = 'update', onClose }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [postType, setPostType] = useState<PostType>('update');
+  const [postType, setPostType] = useState<PostType>(defaultPostType);
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -33,6 +34,11 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [location, setLocation] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventType, setEventType] = useState('');
+
+  // Update postType when defaultPostType changes (for when dialog reopens with different type)
+  useEffect(() => {
+    setPostType(defaultPostType);
+  }, [defaultPostType]);
 
   const resetForm = () => {
     setContent('');
