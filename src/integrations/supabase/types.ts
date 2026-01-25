@@ -209,6 +209,72 @@ export type Database = {
         }
         Relationships: []
       }
+      nyc_shows: {
+        Row: {
+          accessibility_features: string[] | null
+          borough: string
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          lottery_info: string | null
+          official_url: string | null
+          poster_url: string | null
+          price_tier: string
+          run_end: string | null
+          run_start: string | null
+          rush_policy: string | null
+          show_times: string | null
+          show_type: string
+          title: string
+          updated_at: string
+          venue: string
+        }
+        Insert: {
+          accessibility_features?: string[] | null
+          borough?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          lottery_info?: string | null
+          official_url?: string | null
+          poster_url?: string | null
+          price_tier?: string
+          run_end?: string | null
+          run_start?: string | null
+          rush_policy?: string | null
+          show_times?: string | null
+          show_type?: string
+          title: string
+          updated_at?: string
+          venue: string
+        }
+        Update: {
+          accessibility_features?: string[] | null
+          borough?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          lottery_info?: string | null
+          official_url?: string | null
+          poster_url?: string | null
+          price_tier?: string
+          run_end?: string | null
+          run_start?: string | null
+          rush_policy?: string | null
+          show_times?: string | null
+          show_type?: string
+          title?: string
+          updated_at?: string
+          venue?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           content: string
@@ -525,6 +591,123 @@ export type Database = {
           },
         ]
       }
+      saved_shows: {
+        Row: {
+          id: string
+          notes: string | null
+          remind_closing: boolean | null
+          remind_ticket_release: boolean | null
+          saved_at: string
+          show_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          notes?: string | null
+          remind_closing?: boolean | null
+          remind_ticket_release?: boolean | null
+          saved_at?: string
+          show_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          notes?: string | null
+          remind_closing?: boolean | null
+          remind_ticket_release?: boolean | null
+          saved_at?: string
+          show_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_shows_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "nyc_shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      show_reminders: {
+        Row: {
+          created_at: string
+          id: string
+          is_sent: boolean | null
+          remind_date: string | null
+          reminder_type: string
+          show_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_sent?: boolean | null
+          remind_date?: string | null
+          reminder_type: string
+          show_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_sent?: boolean | null
+          remind_date?: string | null
+          reminder_type?: string
+          show_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "show_reminders_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "nyc_shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      show_tips: {
+        Row: {
+          content: string
+          created_at: string
+          helpful_count: number | null
+          id: string
+          show_id: string
+          tip_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          helpful_count?: number | null
+          id?: string
+          show_id: string
+          tip_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          helpful_count?: number | null
+          id?: string
+          show_id?: string
+          tip_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "show_tips_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "nyc_shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       studio_comments: {
         Row: {
           content: string
@@ -618,6 +801,35 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      tip_votes: {
+        Row: {
+          created_at: string
+          id: string
+          tip_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tip_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tip_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tip_votes_tip_id_fkey"
+            columns: ["tip_id"]
+            isOneToOne: false
+            referencedRelation: "show_tips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_engagement: {
         Row: {

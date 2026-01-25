@@ -19,6 +19,7 @@ import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ProjectNewPage from "./pages/ProjectNewPage";
+import StageWhisperPage from "./pages/StageWhisperPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/new" element={<ProjectNewPage />} />
           <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+          <Route path="/stage-whisper" element={<StageWhisperPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
