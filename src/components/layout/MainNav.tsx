@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, FolderKanban, BookOpen, Settings, LogOut, LogIn } from 'lucide-react';
+import { Home, Users, Briefcase, FolderKanban, BookOpen, Theater, Settings, LogOut, LogIn } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,6 +19,7 @@ const navItems: NavItem[] = [
   { label: 'People', icon: Users, path: '/people' },
   { label: 'Projects', icon: FolderKanban, path: '/projects' },
   { label: 'Opportunities', icon: Briefcase, path: '/opportunities' },
+  { label: 'Stage Whisper', icon: Theater, path: '/stage-whisper' },
   { label: 'Resources', icon: BookOpen, path: '/resources' },
 ];
 
