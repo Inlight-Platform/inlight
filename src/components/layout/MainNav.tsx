@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, FolderKanban, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { Home, Users, Briefcase, FolderKanban, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,11 +10,14 @@ import inlightLogo from '@/assets/inlight-logo.png';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSidebarState } from '@/hooks/useSidebarState';
+import { useMessages } from '@/hooks/useMessages';
+import { Badge } from '@/components/ui/badge';
 
 interface NavItem {
   label: string;
   icon: React.ElementType;
   path: string;
+  badge?: number;
 }
 
 const navItems: NavItem[] = [
@@ -30,6 +33,7 @@ export const MainNav: React.FC = () => {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { collapsed, toggleCollapsed } = useSidebarState();
+  const { totalUnread } = useMessages();
 
   const { data: profile } = useQuery({
     queryKey: ['nav-profile', user?.id],
@@ -46,6 +50,11 @@ export const MainNav: React.FC = () => {
   });
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
+
+  // Build nav items with messages at top when user is logged in
+  const allNavItems: NavItem[] = user 
+    ? [{ label: 'Messages', icon: MessageCircle, path: '/messages', badge: totalUnread }, ...navItems]
+    : navItems;
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -66,7 +75,7 @@ export const MainNav: React.FC = () => {
 
         {/* Nav Items */}
         <nav className={cn("flex-1 space-y-1", collapsed ? "p-2" : "p-4")}>
-          {navItems.map((item) => {
+          {allNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             
@@ -75,15 +84,31 @@ export const MainNav: React.FC = () => {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex items-center gap-3 rounded-xl text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-xl text-sm font-medium transition-colors relative',
                   collapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3',
                   active
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                 )}
               >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                {!collapsed && item.label}
+                <div className="relative">
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  {item.badge && item.badge > 0 && (
+                    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
+                </div>
+                {!collapsed && (
+                  <>
+                    {item.label}
+                    {item.badge && item.badge > 0 && (
+                      <Badge variant="destructive" className="ml-auto text-xs px-1.5 py-0.5">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </Badge>
+                    )}
+                  </>
+                )}
               </Link>
             );
 
@@ -95,6 +120,7 @@ export const MainNav: React.FC = () => {
                   </TooltipTrigger>
                   <TooltipContent side="right">
                     {item.label}
+                    {item.badge && item.badge > 0 && ` (${item.badge})`}
                   </TooltipContent>
                 </Tooltip>
               );
@@ -232,7 +258,27 @@ export const MainNav: React.FC = () => {
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-pb">
         <div className="flex items-center justify-around py-2">
-          {navItems.map((item) => {
+          {/* Messages for mobile */}
+          {user && (
+            <Link
+              to="/messages"
+              className={cn(
+                'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors relative',
+                isActive('/messages') ? 'text-primary' : 'text-muted-foreground'
+              )}
+            >
+              <div className="relative">
+                <MessageCircle className="w-5 h-5" />
+                {totalUnread > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold bg-destructive text-destructive-foreground rounded-full">
+                    {totalUnread > 9 ? '9+' : totalUnread}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs">Messages</span>
+            </Link>
+          )}
+          {navItems.slice(0, 4).map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (

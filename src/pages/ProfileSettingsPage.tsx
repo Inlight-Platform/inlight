@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera, MessageCircle, Lock, Globe } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MediaUploader } from '@/components/profile/MediaUploader';
 import { AvatarCropper } from '@/components/profile/AvatarCropper';
@@ -23,6 +24,7 @@ interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   headline: string | null;
+  message_privacy: string;
 }
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
@@ -47,6 +49,7 @@ const ProfileSettingsPage: React.FC = () => {
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [headline, setHeadline] = useState('');
+  const [messagePrivacy, setMessagePrivacy] = useState('mutuals_only');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
   const [cropperImageSrc, setCropperImageSrc] = useState('');
@@ -90,6 +93,7 @@ const ProfileSettingsPage: React.FC = () => {
       setDisplayName(profile.display_name || '');
       setAvatarUrl(profile.avatar_url || '');
       setHeadline(profile.headline || '');
+      setMessagePrivacy(profile.message_privacy || 'mutuals_only');
     }
   }, [profile]);
 
@@ -196,6 +200,7 @@ const ProfileSettingsPage: React.FC = () => {
       display_name: trimmedName,
       avatar_url: avatarUrl.trim() || null,
       headline: trimmedHeadline,
+      message_privacy: messagePrivacy,
     });
   };
 
@@ -358,6 +363,55 @@ const ProfileSettingsPage: React.FC = () => {
                 </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+
+        {/* Message Privacy Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Message Settings
+            </CardTitle>
+            <CardDescription>
+              Control who can send you direct messages
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup
+              value={messagePrivacy}
+              onValueChange={(value) => {
+                setMessagePrivacy(value);
+                updateProfile.mutate({ message_privacy: value });
+              }}
+              className="space-y-4"
+            >
+              <div className="flex items-start space-x-3 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors">
+                <RadioGroupItem value="mutuals_only" id="mutuals_only" className="mt-1" />
+                <div className="flex-1">
+                  <Label htmlFor="mutuals_only" className="flex items-center gap-2 cursor-pointer">
+                    <Lock className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">Mutual Connections Only</span>
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Only people you follow who also follow you back can message you
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors">
+                <RadioGroupItem value="open" id="open" className="mt-1" />
+                <div className="flex-1">
+                  <Label htmlFor="open" className="flex items-center gap-2 cursor-pointer">
+                    <Globe className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">Open to All</span>
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Anyone on the platform can send you messages
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
           </CardContent>
         </Card>
 
