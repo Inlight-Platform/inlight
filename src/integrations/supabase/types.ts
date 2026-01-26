@@ -529,9 +529,12 @@ export type Database = {
           created_at: string
           creator_id: string
           description: string | null
+          end_date: string | null
           id: string
           is_public: boolean | null
           main_image_url: string | null
+          post_approval_required: boolean
+          start_date: string | null
           status: string | null
           title: string
           updated_at: string
@@ -541,9 +544,12 @@ export type Database = {
           created_at?: string
           creator_id: string
           description?: string | null
+          end_date?: string | null
           id?: string
           is_public?: boolean | null
           main_image_url?: string | null
+          post_approval_required?: boolean
+          start_date?: string | null
           status?: string | null
           title: string
           updated_at?: string
@@ -553,9 +559,12 @@ export type Database = {
           created_at?: string
           creator_id?: string
           description?: string | null
+          end_date?: string | null
           id?: string
           is_public?: boolean | null
           main_image_url?: string | null
+          post_approval_required?: boolean
+          start_date?: string | null
           status?: string | null
           title?: string
           updated_at?: string

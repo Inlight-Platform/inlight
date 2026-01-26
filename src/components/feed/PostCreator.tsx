@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ImagePlus, Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock } from 'lucide-react';
+import { ImagePlus, Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,16 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { ProjectWizard } from './ProjectWizard';
 
-export type PostType = 'update' | 'event' | 'job';
+export type PostType = 'update' | 'event' | 'job' | 'project';
 
 interface PostCreatorProps {
   userProfile?: {
@@ -34,10 +41,14 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [location, setLocation] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventType, setEventType] = useState('');
+  const [showProjectWizard, setShowProjectWizard] = useState(false);
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
   useEffect(() => {
     setPostType(defaultPostType);
+    if (defaultPostType === 'project') {
+      setShowProjectWizard(true);
+    }
   }, [defaultPostType]);
 
   const resetForm = () => {
@@ -118,174 +129,220 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     return false;
   };
 
+  const handlePostTypeChange = (value: string) => {
+    const newType = value as PostType;
+    setPostType(newType);
+    if (newType === 'project') {
+      setShowProjectWizard(true);
+    }
+  };
+
+  const handleProjectWizardClose = () => {
+    setShowProjectWizard(false);
+    setPostType('update');
+    onClose?.();
+  };
+
   if (!user) return null;
 
   return (
-    <Card className="bg-card border-border">
-      <CardContent className="p-4">
-        <div className="flex gap-3">
-          <Avatar className="h-10 w-10 flex-shrink-0">
-            <AvatarImage src={userProfile?.avatar_url || undefined} />
-            <AvatarFallback>{userProfile?.display_name?.[0] || 'U'}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 space-y-4">
-            {/* Post Type Tabs */}
-            <Tabs value={postType} onValueChange={(v) => setPostType(v as PostType)}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="update" className="flex items-center gap-1.5">
-                  <MessageSquare className="h-4 w-4" />
-                  Update
-                </TabsTrigger>
-                <TabsTrigger value="event" className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4" />
-                  Event
-                </TabsTrigger>
-                <TabsTrigger value="job" className="flex items-center gap-1.5">
-                  <Briefcase className="h-4 w-4" />
-                  Job
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+    <>
+      <Card className="bg-card border-border">
+        <CardContent className="p-4">
+          <div className="flex gap-3">
+            <Avatar className="h-10 w-10 flex-shrink-0">
+              <AvatarImage src={userProfile?.avatar_url || undefined} />
+              <AvatarFallback>{userProfile?.display_name?.[0] || 'U'}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 space-y-4">
+              {/* Post Type Tabs */}
+              <Tabs value={postType} onValueChange={handlePostTypeChange}>
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="update" className="flex items-center gap-1.5">
+                    <MessageSquare className="h-4 w-4" />
+                    <span className="hidden sm:inline">Update</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="event" className="flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4" />
+                    <span className="hidden sm:inline">Event</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="job" className="flex items-center gap-1.5">
+                    <Briefcase className="h-4 w-4" />
+                    <span className="hidden sm:inline">Job</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="project" className="flex items-center gap-1.5">
+                    <Film className="h-4 w-4" />
+                    <span className="hidden sm:inline">Project</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
 
-            {/* Title field for events and jobs */}
-            {(postType === 'event' || postType === 'job') && (
-              <Input
-                placeholder={postType === 'event' ? 'Event title...' : 'Job title...'}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            )}
+              {postType !== 'project' && (
+                <>
+                  {/* Title field for events and jobs */}
+                  {(postType === 'event' || postType === 'job') && (
+                    <Input
+                      placeholder={postType === 'event' ? 'Event title...' : 'Job title...'}
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                    />
+                  )}
 
-            {/* Content textarea */}
-            <Textarea
-              placeholder={
-                postType === 'update' ? "Share something with your network..." :
-                postType === 'event' ? "Describe your event..." :
-                "Describe the opportunity..."
-              }
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="min-h-[80px] resize-none"
-            />
-
-            {/* Event-specific fields */}
-            {postType === 'event' && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    Date & Time
-                  </label>
-                  <Input
-                    type="datetime-local"
-                    value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
+                  {/* Content textarea */}
+                  <Textarea
+                    placeholder={
+                      postType === 'update' ? "Share something with your network..." :
+                      postType === 'event' ? "Describe your event..." :
+                      "Describe the opportunity..."
+                    }
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="min-h-[80px] resize-none"
                   />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" />
-                    Location
-                  </label>
-                  <Input
-                    placeholder="Location..."
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
 
-            {/* Job-specific fields */}
-            {postType === 'job' && (
-              <div className="space-y-1.5">
-                <label className="text-sm text-muted-foreground flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5" />
-                  Location (optional)
-                </label>
-                <Input
-                  placeholder="Remote, NYC, LA..."
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                />
-              </div>
-            )}
+                  {/* Event-specific fields */}
+                  {postType === 'event' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          Date & Time
+                        </label>
+                        <Input
+                          type="datetime-local"
+                          value={eventDate}
+                          onChange={(e) => setEventDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5" />
+                          Location
+                        </label>
+                        <Input
+                          placeholder="Location..."
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
 
-            {/* Event type for events */}
-            {postType === 'event' && (
-              <div className="space-y-1.5">
-                <label className="text-sm text-muted-foreground">Event Type</label>
-                <Input
-                  placeholder="Workshop, Networking, Performance..."
-                  value={eventType}
-                  onChange={(e) => setEventType(e.target.value)}
-                />
-              </div>
-            )}
-            
-            {showImageInput && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Image URL (optional)"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setShowImageInput(false);
-                    setImageUrl('');
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+                  {/* Job-specific fields */}
+                  {postType === 'job' && (
+                    <div className="space-y-1.5">
+                      <label className="text-sm text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5" />
+                        Location (optional)
+                      </label>
+                      <Input
+                        placeholder="Remote, NYC, LA..."
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                      />
+                    </div>
+                  )}
 
-            {imageUrl && (
-              <div className="relative rounded-lg overflow-hidden max-h-48">
-                <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
-              </div>
-            )}
+                  {/* Event type for events */}
+                  {postType === 'event' && (
+                    <div className="space-y-1.5">
+                      <label className="text-sm text-muted-foreground">Event Type</label>
+                      <Input
+                        placeholder="Workshop, Networking, Performance..."
+                        value={eventType}
+                        onChange={(e) => setEventType(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  
+                  {showImageInput && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Image URL (optional)"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setShowImageInput(false);
+                          setImageUrl('');
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
 
-            <div className="flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowImageInput(!showImageInput)}
-              >
-                <ImagePlus className="h-4 w-4 mr-2" />
-                Image
-              </Button>
-              <div className="flex items-center gap-2">
-                {onClose && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      resetForm();
-                      onClose();
-                    }}
-                  >
-                    Cancel
+                  {imageUrl && (
+                    <div className="relative rounded-lg overflow-hidden max-h-48">
+                      <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowImageInput(!showImageInput)}
+                    >
+                      <ImagePlus className="h-4 w-4 mr-2" />
+                      Image
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      {onClose && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            resetForm();
+                            onClose();
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={handleSubmit}
+                        disabled={!isValid() || createPostMutation.isPending}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        {postType === 'update' ? 'Post' : postType === 'event' ? 'Create Event' : 'Post Job'}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {postType === 'project' && (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Create a project to collaborate with your team
+                  </p>
+                  <Button onClick={() => setShowProjectWizard(true)}>
+                    <Film className="h-4 w-4 mr-2" />
+                    Start Project Wizard
                   </Button>
-                )}
-                <Button
-                  size="sm"
-                  onClick={handleSubmit}
-                  disabled={!isValid() || createPostMutation.isPending}
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {postType === 'update' ? 'Post' : postType === 'event' ? 'Create Event' : 'Post Job'}
-                </Button>
-              </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Project Wizard Dialog */}
+      <Dialog open={showProjectWizard} onOpenChange={setShowProjectWizard}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create a Project</DialogTitle>
+          </DialogHeader>
+          <ProjectWizard onClose={handleProjectWizardClose} />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
