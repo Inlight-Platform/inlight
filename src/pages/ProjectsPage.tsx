@@ -23,6 +23,7 @@ interface Project {
   title: string;
   description: string | null;
   main_image_url: string | null;
+  header_image_url: string | null;
   creator_id: string;
   created_at: string;
   category: string | null;
@@ -273,8 +274,14 @@ const ProjectsPage: React.FC = () => {
             </button>
           )}
 
-          {/* Main project image */}
-          {project.main_image_url ? (
+          {/* Display header image if available, otherwise main image */}
+          {project.header_image_url ? (
+            <img
+              src={project.header_image_url}
+              alt={project.title}
+              className="w-full h-48 object-cover"
+            />
+          ) : project.main_image_url ? (
             <img
               src={project.main_image_url}
               alt={project.title}

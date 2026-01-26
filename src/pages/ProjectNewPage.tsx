@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { PROJECT_CATEGORIES, ProjectCategory } from '@/components/projects/ProjectCreator';
 import { RoleSlotBuilder, RoleSlot } from '@/components/projects/RoleSlotBuilder';
+import { ProjectHeaderImageUploader } from '@/components/projects/ProjectHeaderImageUploader';
 
 const PROJECT_STATUSES = [
   { value: 'pre-production', label: 'Pre-Production' },
@@ -38,6 +39,7 @@ const ProjectNewPage: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [mainImageUrl, setMainImageUrl] = useState('');
+  const [headerImageUrl, setHeaderImageUrl] = useState('');
   const [category, setCategory] = useState<ProjectCategory>('other');
   const [status, setStatus] = useState<ProjectStatus>('pre-production');
   const [isPublic, setIsPublic] = useState(false);
@@ -54,6 +56,7 @@ const ProjectNewPage: React.FC = () => {
           title: title.trim(),
           description: description.trim() || null,
           main_image_url: mainImageUrl.trim() || null,
+          header_image_url: headerImageUrl.trim() || null,
           creator_id: user.id,
           category,
           status,
@@ -234,6 +237,20 @@ const ProjectNewPage: React.FC = () => {
                   />
                 </div>
               )}
+            </div>
+
+            {/* Header Image Upload */}
+            <div className="space-y-2">
+              <Label>Header Image</Label>
+              <p className="text-sm text-muted-foreground">
+                This image appears at the top of your project page for all viewers
+              </p>
+              <ProjectHeaderImageUploader
+                userId={user.id}
+                currentImageUrl={headerImageUrl}
+                onImageUploaded={setHeaderImageUrl}
+                onRemoveImage={() => setHeaderImageUrl('')}
+              />
             </div>
           </div>
 
