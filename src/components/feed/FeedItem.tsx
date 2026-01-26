@@ -1,10 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
+import { toast } from 'sonner';
 import { NetworkDegree } from '@/hooks/useNetworkConnections';
 
 export type FeedItemType = 'post' | 'project' | 'event' | 'job';
@@ -35,6 +47,40 @@ interface FeedItemProps {
 
 export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const isOwner = user?.id === item.user_id;
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      let error;
+      if (item.type === 'post' || item.type === 'job') {
+        ({ error } = await supabase.from('posts').delete().eq('id', item.id));
+      } else if (item.type === 'event') {
+        ({ error } = await supabase.from('events').delete().eq('id', item.id));
+      } else if (item.type === 'project') {
+        ({ error } = await supabase.from('projects').delete().eq('id', item.id));
+      }
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feed-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-events'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-projects'] });
+      toast.success(`${item.type === 'job' ? 'Job' : item.type.charAt(0).toUpperCase() + item.type.slice(1)} deleted`);
+      setDeleteDialogOpen(false);
+    },
+    onError: () => {
+      toast.error('Failed to delete. Please try again.');
+    },
+  });
+
+  const handleDelete = () => {
+    deleteMutation.mutate();
+  };
 
   const getTypeIcon = () => {
     switch (item.type) {
@@ -121,8 +167,33 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
               {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
             </p>
           </div>
-          <div className="p-1.5 rounded-full bg-muted">
-            {getTypeIcon()}
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-full bg-muted">
+              {getTypeIcon()}
+            </div>
+            {isOwner && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
@@ -187,6 +258,16 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
           </div>
         )}
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDelete}
+        title={`Delete this ${item.type === 'job' ? 'job post' : item.type}?`}
+        description={`This will permanently delete this ${item.type}. This action cannot be undone.`}
+        isPending={deleteMutation.isPending}
+      />
     </Card>
   );
 };
