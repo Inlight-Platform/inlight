@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, FolderKanban, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, MessageCircle } from 'lucide-react';
+import { Home, Users, Briefcase, FolderKanban, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, MessageCircle, Bell } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { useMessages } from '@/hooks/useMessages';
 import { Badge } from '@/components/ui/badge';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 interface NavItem {
   label: string;
@@ -75,6 +76,22 @@ export const MainNav: React.FC = () => {
 
         {/* Nav Items */}
         <nav className={cn("flex-1 space-y-1", collapsed ? "p-2" : "p-4")}>
+          {/* Notification Bell - only for authenticated users */}
+          {user && (
+            collapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <NotificationBell collapsed={collapsed} />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">Notifications</TooltipContent>
+              </Tooltip>
+            ) : (
+              <NotificationBell collapsed={collapsed} />
+            )
+          )}
+
           {allNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
