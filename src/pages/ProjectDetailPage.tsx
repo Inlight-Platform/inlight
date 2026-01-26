@@ -29,6 +29,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 import { toast } from 'sonner';
 import { ProjectTimeline } from '@/components/projects/ProjectTimeline';
 import { OpenRolesDisplay } from '@/components/projects/OpenRolesDisplay';
@@ -62,6 +63,7 @@ const ProjectDetailPage: React.FC = () => {
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [memberEmail, setMemberEmail] = useState('');
   const [memberRole, setMemberRole] = useState('');
+  const [deleteProjectDialogOpen, setDeleteProjectDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { uploadPhoto, uploading, progress } = useProjectPhotoUpload();
@@ -262,6 +264,25 @@ const ProjectDetailPage: React.FC = () => {
     onError: () => toast.error('Failed to update'),
   });
 
+  // Delete project mutation
+  const deleteProjectMutation = useMutation({
+    mutationFn: async () => {
+      if (!projectId) throw new Error('No project ID');
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-projects'] });
+      toast.success('Project deleted');
+      navigate('/projects');
+    },
+    onError: () => toast.error('Failed to delete project'),
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -296,17 +317,29 @@ const ProjectDetailPage: React.FC = () => {
           </div>
 
           {user && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => toggleSaveMutation.mutate()}
-            >
-              {isSaved ? (
-                <BookmarkCheck className="w-5 h-5 text-primary" />
-              ) : (
-                <Bookmark className="w-5 h-5" />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => toggleSaveMutation.mutate()}
+              >
+                {isSaved ? (
+                  <BookmarkCheck className="w-5 h-5 text-primary" />
+                ) : (
+                  <Bookmark className="w-5 h-5" />
+                )}
+              </Button>
+              {isCreator && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setDeleteProjectDialogOpen(true)}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </Button>
               )}
-            </Button>
+            </div>
           )}
         </div>
       </header>
@@ -562,6 +595,16 @@ const ProjectDetailPage: React.FC = () => {
           </CardContent>
         </Card>
       </main>
+
+      {/* Delete Project Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={deleteProjectDialogOpen}
+        onOpenChange={setDeleteProjectDialogOpen}
+        onConfirm={() => deleteProjectMutation.mutate()}
+        title="Delete this project?"
+        description="This will permanently delete this project, including all photos and team members. This action cannot be undone."
+        isPending={deleteProjectMutation.isPending}
+      />
     </div>
   );
 };
