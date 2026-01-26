@@ -1,8 +1,9 @@
 import React from 'react';
-import { Bell, Mail, FileText, UserPlus, Check, Trash2 } from 'lucide-react';
+import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface NotificationBellProps {
   collapsed?: boolean;
@@ -25,6 +27,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
     markAllAsRead,
     deleteNotification 
   } = useNotifications();
+  const { follow, isFollowing, isFollowPending } = useNetworkConnections();
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -34,9 +37,18 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
         return <FileText className="w-4 h-4" />;
       case 'invitation':
         return <UserPlus className="w-4 h-4" />;
+      case 'follow':
+        return <Users className="w-4 h-4" />;
       default:
         return <Bell className="w-4 h-4" />;
     }
+  };
+
+  const handleFollowBack = (e: React.MouseEvent, followerId: string, notificationId: string) => {
+    e.stopPropagation();
+    follow(followerId);
+    markAsRead.mutate(notificationId);
+    toast.success('Following back!');
   };
 
   const handleNotificationClick = (notification: typeof notifications[0]) => {
@@ -60,6 +72,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
       case 'invitation':
         // Navigate to invitations
         navigate('/projects');
+        break;
+      case 'follow':
+        // Navigate to follower's profile
+        if (data.follower_id) {
+          navigate(`/profile/${data.follower_id}`);
+        }
         break;
       default:
         break;
@@ -143,28 +161,48 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
                           {notification.body}
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-                      </p>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteNotification.mutate(notification.id);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded transition-all"
-                    >
-                      <Trash2 className="w-3 h-3 text-muted-foreground" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
-      </PopoverContent>
-    </Popover>
-  );
-};
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                                      </p>
+                                      {/* Follow back button for follow notifications */}
+                                      {notification.type === 'follow' && (() => {
+                                        const data = notification.data as Record<string, string>;
+                                        const followerId = data?.follower_id;
+                                        if (followerId && !isFollowing(followerId)) {
+                                          return (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="mt-2 h-7 text-xs"
+                                              onClick={(e) => handleFollowBack(e, followerId, notification.id)}
+                                              disabled={isFollowPending}
+                                            >
+                                              <UserPlus className="w-3 h-3 mr-1" />
+                                              Follow Back
+                                            </Button>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
+                                    </div>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        deleteNotification.mutate(notification.id);
+                                      }}
+                                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded transition-all"
+                                    >
+                                      <Trash2 className="w-3 h-3 text-muted-foreground" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </PopoverContent>
+                    </Popover>
+                  );
+                };
 
 export default NotificationBell;
