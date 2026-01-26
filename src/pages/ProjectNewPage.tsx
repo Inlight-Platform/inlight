@@ -22,11 +22,10 @@ import { RoleSlotBuilder, RoleSlot } from '@/components/projects/RoleSlotBuilder
 import { ProjectHeaderImageUploader } from '@/components/projects/ProjectHeaderImageUploader';
 
 const PROJECT_STATUSES = [
-  { value: 'pre-production', label: 'Pre-Production' },
-  { value: 'in-production', label: 'In Production' },
-  { value: 'post-production', label: 'Post-Production' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'on-hold', label: 'On Hold' },
+  { value: 'planning', label: 'Planning' },
+  { value: 'active', label: 'Active' },
+  { value: 'wrapping', label: 'Wrapping' },
+  { value: 'archived', label: 'Archived' },
 ] as const;
 
 type ProjectStatus = typeof PROJECT_STATUSES[number]['value'];
@@ -41,7 +40,7 @@ const ProjectNewPage: React.FC = () => {
   const [mainImageUrl, setMainImageUrl] = useState('');
   const [headerImageUrl, setHeaderImageUrl] = useState('');
   const [category, setCategory] = useState<ProjectCategory>('other');
-  const [status, setStatus] = useState<ProjectStatus>('pre-production');
+  const [status, setStatus] = useState<ProjectStatus>('planning');
   const [isPublic, setIsPublic] = useState(false);
   const [roles, setRoles] = useState<RoleSlot[]>([]);
 

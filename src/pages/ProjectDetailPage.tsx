@@ -30,6 +30,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { ProjectTimeline } from '@/components/projects/ProjectTimeline';
+import { OpenRolesDisplay } from '@/components/projects/OpenRolesDisplay';
 
 interface ProjectMember {
   id: string;
@@ -309,6 +311,29 @@ const ProjectDetailPage: React.FC = () => {
       </header>
 
       <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+        {/* Header Image */}
+        {project.header_image_url && (
+          <div className="w-full h-48 sm:h-64 rounded-xl overflow-hidden">
+            <img
+              src={project.header_image_url}
+              alt={project.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
+        {/* Project Timeline */}
+        {project.status && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProjectTimeline status={project.status} />
+            </CardContent>
+          </Card>
+        )}
+
         {/* Main Project Info */}
         <section>
           <div className="flex items-center gap-3 mb-4">
@@ -326,7 +351,7 @@ const ProjectDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {project.main_image_url && (
+          {project.main_image_url && !project.header_image_url && (
             <img
               src={project.main_image_url}
               alt={project.title}
@@ -338,6 +363,15 @@ const ProjectDetailPage: React.FC = () => {
             <p className="text-muted-foreground">{project.description}</p>
           )}
         </section>
+
+        {/* Open Roles */}
+        {project.is_public && (
+          <Card>
+            <CardContent className="pt-6">
+              <OpenRolesDisplay projectId={projectId!} creatorId={project.creator_id} />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Members Section */}
         <Card>

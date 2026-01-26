@@ -209,6 +209,33 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          read_at: string | null
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
       nyc_shows: {
         Row: {
           accessibility_features: string[] | null
@@ -335,6 +362,7 @@ export type Database = {
           headline: string | null
           id: string
           location: string | null
+          message_privacy: string
           pronouns: string | null
           representation: string | null
           role: string | null
@@ -354,6 +382,7 @@ export type Database = {
           headline?: string | null
           id?: string
           location?: string | null
+          message_privacy?: string
           pronouns?: string | null
           representation?: string | null
           role?: string | null
@@ -373,6 +402,7 @@ export type Database = {
           headline?: string | null
           id?: string
           location?: string | null
+          message_privacy?: string
           pronouns?: string | null
           representation?: string | null
           role?: string | null
@@ -573,6 +603,50 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      role_applications: {
+        Row: {
+          applicant_id: string
+          created_at: string
+          id: string
+          message: string
+          project_role_id: string
+          reel_url: string | null
+          resume_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          applicant_id: string
+          created_at?: string
+          id?: string
+          message: string
+          project_role_id: string
+          reel_url?: string | null
+          resume_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          applicant_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          project_role_id?: string
+          reel_url?: string | null
+          resume_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_applications_project_role_id_fkey"
+            columns: ["project_role_id"]
+            isOneToOne: false
+            referencedRelation: "project_roles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       saved_projects: {
         Row: {
