@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { PROJECT_CATEGORIES, ProjectCategory } from '@/components/projects/ProjectCreator';
 import { RoleSlotBuilder, RoleSlot } from '@/components/projects/RoleSlotBuilder';
+import { ImageUploader } from './ImageUploader';
 import { cn } from '@/lib/utils';
 
 const STEPS = [
@@ -295,31 +296,18 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({ onClose }) => {
         {currentStep === 'media' && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="mainImage">Cover Image URL</Label>
-              <Input
-                id="mainImage"
-                placeholder="https://example.com/image.jpg"
-                value={mainImageUrl}
-                onChange={(e) => setMainImageUrl(e.target.value)}
-                type="url"
-              />
+              <Label>Cover Image</Label>
               <p className="text-xs text-muted-foreground">
                 Add a cover image for your project
               </p>
             </div>
 
-            {mainImageUrl && (
-              <div className="rounded-lg overflow-hidden border border-border">
-                <img
-                  src={mainImageUrl}
-                  alt="Preview"
-                  className="w-full h-40 object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
+            <ImageUploader
+              userId={user.id}
+              onImageUploaded={setMainImageUrl}
+              currentImageUrl={mainImageUrl}
+              onRemoveImage={() => setMainImageUrl('')}
+            />
           </div>
         )}
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ImagePlus, Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film } from 'lucide-react';
+import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { ProjectWizard } from './ProjectWizard';
+import { ImageUploader } from './ImageUploader';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
 
@@ -37,7 +38,6 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [showImageInput, setShowImageInput] = useState(false);
   const [location, setLocation] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventType, setEventType] = useState('');
@@ -55,7 +55,6 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setContent('');
     setTitle('');
     setImageUrl('');
-    setShowImageInput(false);
     setLocation('');
     setEventDate('');
     setEventType('');
@@ -72,7 +71,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           .insert({
             user_id: user.id,
             content: content.trim(),
-            image_url: imageUrl.trim() || null,
+            image_url: imageUrl || null,
           });
         if (error) throw error;
       } else if (postType === 'event') {
@@ -85,7 +84,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             event_date: eventDate,
             location: location.trim() || null,
             event_type: eventType.trim() || 'General',
-            image_url: imageUrl.trim() || null,
+            image_url: imageUrl || null,
           });
         if (error) throw error;
       } else if (postType === 'job') {
@@ -96,7 +95,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           .insert({
             user_id: user.id,
             content: `🎯 **${title.trim()}**\n\n${content.trim()}${location ? `\n\n📍 ${location}` : ''}`,
-            image_url: imageUrl.trim() || null,
+            image_url: imageUrl || null,
           });
         if (error) throw error;
       }
@@ -255,43 +254,27 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                     </div>
                   )}
                   
-                  {showImageInput && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Image URL (optional)"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm"
-                      />
+                  {/* Image Upload Section */}
+                  {imageUrl ? (
+                    <div className="relative rounded-lg overflow-hidden max-h-48">
+                      <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
                       <Button
-                        variant="ghost"
+                        variant="destructive"
                         size="icon"
-                        onClick={() => {
-                          setShowImageInput(false);
-                          setImageUrl('');
-                        }}
+                        className="absolute top-2 right-2 h-8 w-8"
+                        onClick={() => setImageUrl('')}
                       >
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                  )}
-
-                  {imageUrl && (
-                    <div className="relative rounded-lg overflow-hidden max-h-48">
-                      <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                    </div>
-                  )}
+                  ) : null}
 
                   <div className="flex items-center justify-between">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowImageInput(!showImageInput)}
-                    >
-                      <ImagePlus className="h-4 w-4 mr-2" />
-                      Image
-                    </Button>
+                    <ImageUploader
+                      userId={user.id}
+                      onImageUploaded={setImageUrl}
+                      compact
+                    />
                     <div className="flex items-center gap-2">
                       {onClose && (
                         <Button
