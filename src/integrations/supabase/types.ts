@@ -236,6 +236,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          data: Json | null
+          id: string
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          data?: Json | null
+          id?: string
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          data?: Json | null
+          id?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       nyc_shows: {
         Row: {
           accessibility_features: string[] | null
@@ -358,6 +391,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           email: string
+          email_notifications: boolean | null
           gear_list: string[] | null
           headline: string | null
           id: string
@@ -378,6 +412,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email: string
+          email_notifications?: boolean | null
           gear_list?: string[] | null
           headline?: string | null
           id?: string
@@ -398,6 +433,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string
+          email_notifications?: boolean | null
           gear_list?: string[] | null
           headline?: string | null
           id?: string
