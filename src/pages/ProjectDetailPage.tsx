@@ -32,6 +32,7 @@ import {
 import { toast } from 'sonner';
 import { ProjectTimeline } from '@/components/projects/ProjectTimeline';
 import { OpenRolesDisplay } from '@/components/projects/OpenRolesDisplay';
+import { ProjectStatusDropdown } from '@/components/projects/ProjectStatusDropdown';
 
 interface ProjectMember {
   id: string;
@@ -325,8 +326,14 @@ const ProjectDetailPage: React.FC = () => {
         {/* Project Timeline */}
         {project.status && (
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Project Status</CardTitle>
+              {isCreator && (
+                <ProjectStatusDropdown 
+                  projectId={projectId!} 
+                  currentStatus={project.status} 
+                />
+              )}
             </CardHeader>
             <CardContent>
               <ProjectTimeline status={project.status} />

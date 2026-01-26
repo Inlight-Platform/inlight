@@ -11,12 +11,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera, MessageCircle, Lock, Globe } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera, MessageCircle, Lock, Globe, Bell, Mail } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MediaUploader } from '@/components/profile/MediaUploader';
 import { AvatarCropper } from '@/components/profile/AvatarCropper';
 import { useMediaUpload, useUserMedia } from '@/hooks/useMediaUpload';
 import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidation';
+import { Switch } from '@/components/ui/switch';
+
 interface Profile {
   id: string;
   user_id: string;
@@ -25,6 +27,7 @@ interface Profile {
   avatar_url: string | null;
   headline: string | null;
   message_privacy: string;
+  email_notifications: boolean;
 }
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
@@ -50,6 +53,7 @@ const ProfileSettingsPage: React.FC = () => {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [headline, setHeadline] = useState('');
   const [messagePrivacy, setMessagePrivacy] = useState('mutuals_only');
+  const [emailNotifications, setEmailNotifications] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
   const [cropperImageSrc, setCropperImageSrc] = useState('');
@@ -94,6 +98,7 @@ const ProfileSettingsPage: React.FC = () => {
       setAvatarUrl(profile.avatar_url || '');
       setHeadline(profile.headline || '');
       setMessagePrivacy(profile.message_privacy || 'mutuals_only');
+      setEmailNotifications(profile.email_notifications ?? true);
     }
   }, [profile]);
 
@@ -412,6 +417,41 @@ const ProfileSettingsPage: React.FC = () => {
                 </div>
               </div>
             </RadioGroup>
+          </CardContent>
+        </Card>
+
+        {/* Email Notification Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Email Notifications
+            </CardTitle>
+            <CardDescription>
+              Choose whether to receive email alerts for important activity
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-muted">
+                  <Bell className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-medium">Email Notifications</p>
+                  <p className="text-sm text-muted-foreground">
+                    Receive emails for new messages, role applications, and project invitations
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={emailNotifications}
+                onCheckedChange={(checked) => {
+                  setEmailNotifications(checked);
+                  updateProfile.mutate({ email_notifications: checked });
+                }}
+              />
+            </div>
           </CardContent>
         </Card>
 
