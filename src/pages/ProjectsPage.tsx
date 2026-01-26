@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Plus, Bookmark, BookmarkCheck, Filter, Search, X, ArrowUpDown } from 'lucide-react';
+import { FolderKanban, Plus, Bookmark, BookmarkCheck, Filter, Search, X, ArrowUpDown, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,7 +16,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import PageLayout from '@/components/layout/PageLayout';
-
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 
 interface Project {
@@ -42,6 +42,7 @@ const ProjectsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { firstDegree, secondDegree } = useNetworkConnections();
   const [showCreator, setShowCreator] = useState(false);
   const [activeTab, setActiveTab] = useState('feed');
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('all');
@@ -168,6 +169,22 @@ const ProjectsPage: React.FC = () => {
       ? savedProjectDetails
       : savedProjectDetails.filter(p => p.category === selectedCategory)
   ));
+
+  // Filter projects by network (1st and 2nd degree connections)
+  const networkUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    firstDegree.forEach(id => ids.add(id));
+    secondDegree.forEach(id => ids.add(id));
+    if (user?.id) ids.add(user.id); // Include own projects
+    return ids;
+  }, [firstDegree, secondDegree, user?.id]);
+
+  const networkProjects = useMemo(() => {
+    return sortProjects(filterBySearch(
+      projects.filter(p => networkUserIds.has(p.creator_id))
+        .filter(p => selectedCategory === 'all' || p.category === selectedCategory)
+    ));
+  }, [projects, networkUserIds, selectedCategory, searchQuery, sortBy]);
 
   // Save project mutation
   const saveProjectMutation = useMutation({
@@ -376,8 +393,12 @@ const ProjectsPage: React.FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3 mb-6">
+          <TabsList className="grid w-full max-w-lg grid-cols-4 mb-6">
             <TabsTrigger value="feed">Feed</TabsTrigger>
+            <TabsTrigger value="my-network" className="gap-1">
+              <Users className="w-3 h-3" />
+              My Network
+            </TabsTrigger>
             <TabsTrigger value="open-roles">Open Roles</TabsTrigger>
             <TabsTrigger value="saved">Saved</TabsTrigger>
           </TabsList>
@@ -405,6 +426,33 @@ const ProjectsPage: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredProjects.map(project => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="my-network">
+            {!user ? (
+              <div className="text-center py-12">
+                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">Log in to see projects from your network</p>
+                <Button onClick={() => navigate('/auth')} className="mt-4">
+                  Log In
+                </Button>
+              </div>
+            ) : networkProjects.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  {searchQuery 
+                    ? `No network projects found for "${searchQuery}"` 
+                    : 'No projects from your network yet. Connect with more people to see their projects here!'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {networkProjects.map(project => (
                   <ProjectCard key={project.id} project={project} />
                 ))}
               </div>

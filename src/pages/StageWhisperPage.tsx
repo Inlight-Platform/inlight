@@ -236,6 +236,15 @@ const StageWhisperPage: React.FC = () => {
 
       {/* Content */}
       <div className="px-4 sm:px-6 lg:px-8 py-6">
+        {/* Creator Note */}
+        <div className="mb-4 p-3 bg-accent/50 rounded-lg border border-accent flex items-start gap-2">
+          <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Putting up a show or releasing a project?</span>{' '}
+            It will appear here to the public!
+          </p>
+        </div>
+
         {viewTab === 'discover' ? (
           <>
             {/* Welcome Message */}

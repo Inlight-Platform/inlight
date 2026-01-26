@@ -8,6 +8,7 @@ import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { Button } from '@/components/ui/button';
 import { PostCreator } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
+import { ConnectionSuggestions } from '@/components/feed/ConnectionSuggestions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PageLayout from '@/components/layout/PageLayout';
 
@@ -232,49 +233,61 @@ const FeedPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-2xl mx-auto">
-        {/* Content Type Filters */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
-            {contentFilters.map((filter) => (
-              <Button
-                key={filter.value}
-                variant={contentFilter === filter.value ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setContentFilter(filter.value)}
-                className="flex-shrink-0 gap-1.5"
-              >
-                {filter.icon}
-                {filter.label}
-                {filter.value !== 'all' && itemCounts[filter.value as keyof typeof itemCounts] > 0 && (
-                  <span className="ml-1 text-xs opacity-70">
-                    ({itemCounts[filter.value as keyof typeof itemCounts]})
-                  </span>
-                )}
-              </Button>
-            ))}
-          </div>
-        </div>
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex gap-6 max-w-4xl mx-auto">
+          {/* Left Sidebar - Connection Suggestions */}
+          {user && (
+            <div className="hidden lg:block w-64 flex-shrink-0">
+              <div className="sticky top-24">
+                <ConnectionSuggestions />
+              </div>
+            </div>
+          )}
 
-        {/* Network Filters */}
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-          <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          <span className="text-sm text-muted-foreground flex-shrink-0">From:</span>
-          {networkFilters.map((filter) => (
-            <Button
-              key={filter.value}
-              variant={networkFilter === filter.value ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setNetworkFilter(filter.value)}
-              className="flex-shrink-0"
-            >
-              {filter.label}
-              {filter.count !== undefined && filter.count > 0 && (
-                <span className="ml-1.5 text-xs opacity-70">({filter.count})</span>
-              )}
-            </Button>
-          ))}
-        </div>
+          {/* Main Feed Content */}
+          <div className="flex-1 max-w-2xl">
+            {/* Content Type Filters */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                {contentFilters.map((filter) => (
+                  <Button
+                    key={filter.value}
+                    variant={contentFilter === filter.value ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setContentFilter(filter.value)}
+                    className="flex-shrink-0 gap-1.5"
+                  >
+                    {filter.icon}
+                    {filter.label}
+                    {filter.value !== 'all' && itemCounts[filter.value as keyof typeof itemCounts] > 0 && (
+                      <span className="ml-1 text-xs opacity-70">
+                        ({itemCounts[filter.value as keyof typeof itemCounts]})
+                      </span>
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Network Filters */}
+            <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+              <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-sm text-muted-foreground flex-shrink-0">From:</span>
+              {networkFilters.map((filter) => (
+                <Button
+                  key={filter.value}
+                  variant={networkFilter === filter.value ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setNetworkFilter(filter.value)}
+                  className="flex-shrink-0"
+                >
+                  {filter.label}
+                  {filter.count !== undefined && filter.count > 0 && (
+                    <span className="ml-1.5 text-xs opacity-70">({filter.count})</span>
+                  )}
+                </Button>
+              ))}
+            </div>
 
         {/* Feed Items */}
         {isLoading ? (
@@ -313,7 +326,9 @@ const FeedPage: React.FC = () => {
               />
             ))}
           </div>
-        )}
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Post Creator Dialog */}
