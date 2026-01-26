@@ -34,7 +34,8 @@ const StageWhisperPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
-  const [activeTab, setActiveTab] = useState('discover');
+  const [activeTab, setActiveTab] = useState('broadway');
+  const [viewTab, setViewTab] = useState<'discover' | 'my-list'>('discover');
 
   // Fetch all shows
   const { data: shows = [], isLoading } = useQuery({
@@ -50,9 +51,12 @@ const StageWhisperPage: React.FC = () => {
     },
   });
 
-  // Filter shows
+  // Filter shows based on active category tab
   const filteredShows = useMemo(() => {
     let result = shows;
+
+    // Filter by category tab
+    result = result.filter(show => show.category === activeTab);
 
     // Search
     if (searchQuery.trim()) {
@@ -62,11 +66,6 @@ const StageWhisperPage: React.FC = () => {
         show.venue.toLowerCase().includes(query) ||
         show.description?.toLowerCase().includes(query)
       );
-    }
-
-    // Category filter
-    if (filters.category.length > 0) {
-      result = result.filter(show => filters.category.includes(show.category));
     }
 
     // Show type filter
@@ -92,7 +91,14 @@ const StageWhisperPage: React.FC = () => {
     }
 
     return result;
-  }, [shows, searchQuery, filters]);
+  }, [shows, searchQuery, filters, activeTab]);
+
+  // Count shows by category for tab badges
+  const showCounts = useMemo(() => ({
+    broadway: shows.filter(s => s.category === 'broadway').length,
+    'off-broadway': shows.filter(s => s.category === 'off-broadway').length,
+    'off-off-broadway': shows.filter(s => s.category === 'off-off-broadway').length,
+  }), [shows]);
 
   // Surprise Me - random show
   const handleSurpriseMe = () => {
@@ -126,7 +132,7 @@ const StageWhisperPage: React.FC = () => {
                 <Theater className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-display font-bold">Stage Whisper</h1>
+                <h1 className="text-2xl font-display font-bold">Industry Now</h1>
                 <p className="text-xs text-muted-foreground">Your NYC theatre companion 🎭</p>
               </div>
             </div>
@@ -182,27 +188,55 @@ const StageWhisperPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 sm:px-6 lg:px-8">
-          <TabsList className="w-full max-w-md">
-            <TabsTrigger value="discover" className="flex-1 gap-2">
-              <Sparkles className="w-4 h-4" />
-              Discover
-            </TabsTrigger>
-            <TabsTrigger value="my-list" className="flex-1 gap-2">
-              <Heart className="w-4 h-4" />
-              My List
-              {savedShowIds.length > 0 && (
-                <span className="ml-1 text-xs opacity-70">({savedShowIds.length})</span>
-              )}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* View Toggle */}
+        <div className="px-4 sm:px-6 lg:px-8 pb-2 flex gap-2">
+          <Button 
+            variant={viewTab === 'discover' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewTab('discover')}
+            className="gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            Discover
+          </Button>
+          <Button 
+            variant={viewTab === 'my-list' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewTab('my-list')}
+            className="gap-2"
+          >
+            <Heart className="w-4 h-4" />
+            My List
+            {savedShowIds.length > 0 && (
+              <span className="ml-1 text-xs opacity-70">({savedShowIds.length})</span>
+            )}
+          </Button>
+        </div>
+
+        {/* Category Tabs */}
+        {viewTab === 'discover' && (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 sm:px-6 lg:px-8">
+            <TabsList className="w-full max-w-lg">
+              <TabsTrigger value="broadway" className="flex-1">
+                ⭐ Broadway
+                <span className="ml-1 text-xs opacity-70">({showCounts.broadway})</span>
+              </TabsTrigger>
+              <TabsTrigger value="off-broadway" className="flex-1">
+                🌟 Off-Broadway
+                <span className="ml-1 text-xs opacity-70">({showCounts['off-broadway']})</span>
+              </TabsTrigger>
+              <TabsTrigger value="off-off-broadway" className="flex-1">
+                ✨ Off-Off
+                <span className="ml-1 text-xs opacity-70">({showCounts['off-off-broadway']})</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
       </header>
 
       {/* Content */}
       <div className="px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'discover' ? (
+        {viewTab === 'discover' ? (
           <>
             {/* Welcome Message */}
             <div className="mb-6 p-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl border border-primary/20">
@@ -218,18 +252,7 @@ const StageWhisperPage: React.FC = () => {
             {/* Active Filters Display */}
             {hasActiveFilters && (
               <div className="mb-4 flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-muted-foreground">Showing:</span>
-                {filters.category.map(c => (
-                  <Button 
-                    key={c} 
-                    variant="secondary" 
-                    size="sm" 
-                    className="h-6 text-xs"
-                    onClick={() => setFilters({...filters, category: filters.category.filter(x => x !== c)})}
-                  >
-                    {c} ×
-                  </Button>
-                ))}
+                <span className="text-xs text-muted-foreground">Filters:</span>
                 {filters.showType.map(t => (
                   <Button 
                     key={t} 
@@ -250,6 +273,17 @@ const StageWhisperPage: React.FC = () => {
                     onClick={() => setFilters({...filters, priceTier: filters.priceTier.filter(x => x !== p)})}
                   >
                     {p} ×
+                  </Button>
+                ))}
+                {filters.borough.map(b => (
+                  <Button 
+                    key={b} 
+                    variant="secondary" 
+                    size="sm" 
+                    className="h-6 text-xs"
+                    onClick={() => setFilters({...filters, borough: filters.borough.filter(x => x !== b)})}
+                  >
+                    {b} ×
                   </Button>
                 ))}
                 <Button 
