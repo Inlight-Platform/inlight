@@ -530,6 +530,7 @@ export type Database = {
           creator_id: string
           description: string | null
           end_date: string | null
+          header_image_url: string | null
           id: string
           is_public: boolean | null
           main_image_url: string | null
@@ -545,6 +546,7 @@ export type Database = {
           creator_id: string
           description?: string | null
           end_date?: string | null
+          header_image_url?: string | null
           id?: string
           is_public?: boolean | null
           main_image_url?: string | null
@@ -560,6 +562,7 @@ export type Database = {
           creator_id?: string
           description?: string | null
           end_date?: string | null
+          header_image_url?: string | null
           id?: string
           is_public?: boolean | null
           main_image_url?: string | null
