@@ -20,14 +20,15 @@ const SUPPORTED_IMAGE_TYPES = [
   'image/heif',
 ];
 
-// Max file size: 10MB
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+// Max file size before compression: 50MB (will be compressed down)
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 // Compression settings
 const COMPRESSION_MAX_WIDTH = 1920;
 const COMPRESSION_MAX_HEIGHT = 1920;
 const COMPRESSION_QUALITY = 0.85;
 const COMPRESSION_THRESHOLD = 500 * 1024; // Compress if > 500KB
+const TARGET_MAX_SIZE = 8 * 1024 * 1024; // Target max 8MB after compression
 
 interface ImageUploaderProps {
   userId: string;
@@ -39,20 +40,23 @@ interface ImageUploaderProps {
 }
 
 /**
- * Compresses an image file using Canvas API
+ * Compresses an image file using Canvas API with progressive quality reduction
  * Returns the original file if compression isn't needed or fails
  */
 const compressImage = async (file: File): Promise<File> => {
-  // Skip compression for small files, GIFs, and SVGs
+  // Skip compression for GIFs and SVGs (they don't compress well with canvas)
   const skipTypes = ['image/gif', 'image/svg+xml'];
-  if (file.size < COMPRESSION_THRESHOLD || skipTypes.includes(file.type)) {
+  if (skipTypes.includes(file.type)) {
+    return file;
+  }
+
+  // For small files, skip unless they're over threshold
+  if (file.size < COMPRESSION_THRESHOLD) {
     return file;
   }
 
   return new Promise((resolve) => {
     const img = new Image();
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
 
     img.onload = () => {
       URL.revokeObjectURL(img.src);
@@ -60,49 +64,77 @@ const compressImage = async (file: File): Promise<File> => {
       // Calculate new dimensions maintaining aspect ratio
       let { width, height } = img;
       
-      if (width > COMPRESSION_MAX_WIDTH) {
-        height = (height * COMPRESSION_MAX_WIDTH) / width;
-        width = COMPRESSION_MAX_WIDTH;
+      // For very large files, be more aggressive with resizing
+      let maxDimension = COMPRESSION_MAX_WIDTH;
+      if (file.size > 20 * 1024 * 1024) {
+        maxDimension = 1600; // Reduce more for huge files
+      } else if (file.size > 10 * 1024 * 1024) {
+        maxDimension = 1800;
       }
       
-      if (height > COMPRESSION_MAX_HEIGHT) {
-        width = (width * COMPRESSION_MAX_HEIGHT) / height;
-        height = COMPRESSION_MAX_HEIGHT;
+      if (width > maxDimension) {
+        height = (height * maxDimension) / width;
+        width = maxDimension;
+      }
+      
+      if (height > maxDimension) {
+        width = (width * maxDimension) / height;
+        height = maxDimension;
       }
 
+      const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
-
+      
+      const ctx = canvas.getContext('2d');
       if (!ctx) {
         resolve(file);
         return;
       }
 
-      // Draw and compress
+      // Draw image
       ctx.drawImage(img, 0, 0, width, height);
 
-      canvas.toBlob(
-        (blob) => {
-          if (!blob || blob.size >= file.size) {
-            // If compression made it bigger or failed, use original
-            resolve(file);
-            return;
-          }
+      // Progressive compression: try different quality levels
+      const tryCompress = (quality: number): void => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
 
-          // Create new file with compressed blob
-          const compressedFile = new File([blob], file.name, {
-            type: 'image/jpeg',
-            lastModified: Date.now(),
-          });
+            // If still too large and quality > 0.5, try lower quality
+            if (blob.size > TARGET_MAX_SIZE && quality > 0.5) {
+              tryCompress(quality - 0.1);
+              return;
+            }
 
-          const savings = Math.round((1 - blob.size / file.size) * 100);
-          console.log(`Image compressed: ${(file.size / 1024).toFixed(1)}KB → ${(blob.size / 1024).toFixed(1)}KB (${savings}% smaller)`);
-          
-          resolve(compressedFile);
-        },
-        'image/jpeg',
-        COMPRESSION_QUALITY
-      );
+            // If compression made it bigger, use original (only for small files)
+            if (blob.size >= file.size && file.size < TARGET_MAX_SIZE) {
+              resolve(file);
+              return;
+            }
+
+            // Create new file with compressed blob
+            const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+
+            const originalMB = (file.size / 1024 / 1024).toFixed(2);
+            const compressedMB = (blob.size / 1024 / 1024).toFixed(2);
+            const savings = Math.round((1 - blob.size / file.size) * 100);
+            console.log(`Image compressed: ${originalMB}MB → ${compressedMB}MB (${savings}% smaller, quality: ${quality})`);
+            
+            resolve(compressedFile);
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+
+      tryCompress(COMPRESSION_QUALITY);
     };
 
     img.onerror = () => {
@@ -128,9 +160,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const [dragActive, setDragActive] = useState(false);
 
   const validateFile = (file: File): string | null => {
-    // Check file size
+    // Check file size - allow up to 50MB, will be compressed
     if (file.size > MAX_FILE_SIZE) {
-      return `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`;
+      return `File too large. Maximum size is 50MB (will be auto-compressed)`;
     }
 
     // Check file type - be more permissive
