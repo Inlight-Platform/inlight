@@ -23,6 +23,12 @@ const SUPPORTED_IMAGE_TYPES = [
 // Max file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+// Compression settings
+const COMPRESSION_MAX_WIDTH = 1920;
+const COMPRESSION_MAX_HEIGHT = 1920;
+const COMPRESSION_QUALITY = 0.85;
+const COMPRESSION_THRESHOLD = 500 * 1024; // Compress if > 500KB
+
 interface ImageUploaderProps {
   userId: string;
   onImageUploaded: (url: string) => void;
@@ -31,6 +37,82 @@ interface ImageUploaderProps {
   className?: string;
   compact?: boolean;
 }
+
+/**
+ * Compresses an image file using Canvas API
+ * Returns the original file if compression isn't needed or fails
+ */
+const compressImage = async (file: File): Promise<File> => {
+  // Skip compression for small files, GIFs, and SVGs
+  const skipTypes = ['image/gif', 'image/svg+xml'];
+  if (file.size < COMPRESSION_THRESHOLD || skipTypes.includes(file.type)) {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    img.onload = () => {
+      URL.revokeObjectURL(img.src);
+
+      // Calculate new dimensions maintaining aspect ratio
+      let { width, height } = img;
+      
+      if (width > COMPRESSION_MAX_WIDTH) {
+        height = (height * COMPRESSION_MAX_WIDTH) / width;
+        width = COMPRESSION_MAX_WIDTH;
+      }
+      
+      if (height > COMPRESSION_MAX_HEIGHT) {
+        width = (width * COMPRESSION_MAX_HEIGHT) / height;
+        height = COMPRESSION_MAX_HEIGHT;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      // Draw and compress
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob || blob.size >= file.size) {
+            // If compression made it bigger or failed, use original
+            resolve(file);
+            return;
+          }
+
+          // Create new file with compressed blob
+          const compressedFile = new File([blob], file.name, {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+
+          const savings = Math.round((1 - blob.size / file.size) * 100);
+          console.log(`Image compressed: ${(file.size / 1024).toFixed(1)}KB → ${(blob.size / 1024).toFixed(1)}KB (${savings}% smaller)`);
+          
+          resolve(compressedFile);
+        },
+        'image/jpeg',
+        COMPRESSION_QUALITY
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      resolve(file); // Return original on error
+    };
+
+    img.src = URL.createObjectURL(file);
+  });
+};
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
   userId,
@@ -42,6 +124,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
 
   const validateFile = (file: File): string | null => {
@@ -78,22 +161,28 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     }
 
     setUploading(true);
+    setUploadStatus('Compressing...');
 
     try {
+      // Compress the image first
+      const processedFile = await compressImage(file);
+      
+      setUploadStatus('Uploading...');
+
       // Generate unique file path
-      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileExt = processedFile.type === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop()?.toLowerCase() || 'jpg');
       const timestamp = Date.now();
       const randomId = Math.random().toString(36).substring(2, 9);
       const fileName = `posts/${timestamp}-${randomId}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
 
       // Upload to storage
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('profile-media')
-        .upload(filePath, file, {
+        .upload(filePath, processedFile, {
           cacheControl: '3600',
           upsert: false,
-          contentType: file.type || 'image/jpeg', // Fallback content type
+          contentType: processedFile.type || 'image/jpeg',
         });
 
       if (uploadError) {
@@ -113,6 +202,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       toast.error(error.message || 'Failed to upload image');
     } finally {
       setUploading(false);
+      setUploadStatus('');
     }
   };
 
@@ -195,7 +285,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           ) : (
             <ImagePlus className="h-4 w-4 mr-2" />
           )}
-          {uploading ? 'Uploading...' : 'Image'}
+          {uploading ? uploadStatus || 'Uploading...' : 'Image'}
         </Button>
       </>
     );
@@ -227,7 +317,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         {uploading ? (
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Uploading...</p>
+            <p className="text-sm text-muted-foreground">{uploadStatus || 'Processing...'}</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
@@ -236,7 +326,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               Drag and drop or click to upload
             </p>
             <p className="text-xs text-muted-foreground/70">
-              Supports JPG, PNG, GIF, WebP up to 10MB
+              Images auto-compressed for fast uploads
             </p>
           </div>
         )}
