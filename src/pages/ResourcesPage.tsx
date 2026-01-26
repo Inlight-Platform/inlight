@@ -1,389 +1,497 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { BookOpen, ExternalLink, Building2, Film } from 'lucide-react';
+import { BookOpen, ExternalLink, GraduationCap, Mic, Music, Video, Theater, Building2, Film, Newspaper, Users, FileText, Shield } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import PageLayout from '@/components/layout/PageLayout';
 
-type Category = 'All' | 'News' | 'Directories' | 'Education' | 'Union' | 'Casting' | 'Scripts';
+type ResourceCategory = 'news' | 'directories' | 'education' | 'union' | 'casting' | 'scripts';
 
 interface ResourceItem {
   name: string;
   description: string;
   url: string;
-  category: Category;
+  category: ResourceCategory;
 }
 
-interface DirectoryItem {
+interface CategoryCard {
+  id: ResourceCategory;
   name: string;
-  url: string;
-  specialty?: string;
+  description: string;
+  icon: string;
 }
 
-const categories: Category[] = ['All', 'News', 'Directories', 'Education', 'Union', 'Casting', 'Scripts'];
+interface EducationProgram {
+  name: string;
+  description: string;
+  url: string;
+  type: 'acting' | 'filmmaking' | 'producing' | 'dance' | 'voice' | 'general';
+  industry: 'theatre' | 'film' | 'both';
+}
+
+const resourceCategories: CategoryCard[] = [
+  { id: 'news', name: 'Industry News', description: 'Latest updates', icon: '📰' },
+  { id: 'directories', name: 'Directories', description: 'Find contacts', icon: '📇' },
+  { id: 'education', name: 'Education', description: 'Learn & grow', icon: '🎓' },
+  { id: 'union', name: 'Unions', description: 'Professional orgs', icon: '🛡️' },
+  { id: 'casting', name: 'Casting', description: 'Find work', icon: '🎭' },
+  { id: 'scripts', name: 'Scripts', description: 'Read & submit', icon: '📜' },
+];
 
 const theatreResources: ResourceItem[] = [
-  { name: "Playbill", description: "Broadway news, reviews, and show listings", url: "https://www.playbill.com", category: "News" },
-  { name: "Broadway World", description: "Comprehensive theatre news and job board", url: "https://www.broadwayworld.com", category: "News" },
-  { name: "Actors' Equity", description: "Union resources for stage actors and managers", url: "https://www.actorsequity.org", category: "Union" },
-  { name: "Backstage", description: "Casting calls and audition notices", url: "https://www.backstage.com", category: "Casting" },
-  { name: "Theatre Communications Group", description: "Grants, internships, and professional development", url: "https://www.tcg.org", category: "Education" },
-  { name: "Samuel French", description: "Play scripts and licensing information", url: "https://www.samuelfrench.com", category: "Scripts" },
-  { name: "The Stage", description: "UK and international theatre industry news", url: "https://www.thestage.co.uk", category: "News" },
-  { name: "American Theatre Wing", description: "Educational programs and Tony Awards info", url: "https://americantheatrewing.org", category: "Education" },
-  { name: "New Play Exchange", description: "Database of new plays by living writers", url: "https://newplayexchange.org", category: "Scripts" },
+  { name: "Playbill", description: "Broadway news, reviews, and show listings", url: "https://www.playbill.com", category: "news" },
+  { name: "Broadway World", description: "Comprehensive theatre news and job board", url: "https://www.broadwayworld.com", category: "news" },
+  { name: "The Stage", description: "UK and international theatre industry news", url: "https://www.thestage.co.uk", category: "news" },
+  { name: "Actors' Equity", description: "Union resources for stage actors and managers", url: "https://www.actorsequity.org", category: "union" },
+  { name: "Backstage", description: "Casting calls and audition notices", url: "https://www.backstage.com", category: "casting" },
+  { name: "Theatre Communications Group", description: "Grants, internships, and professional development", url: "https://www.tcg.org", category: "education" },
+  { name: "Samuel French", description: "Play scripts and licensing information", url: "https://www.samuelfrench.com", category: "scripts" },
+  { name: "American Theatre Wing", description: "Educational programs and Tony Awards info", url: "https://americantheatrewing.org", category: "education" },
+  { name: "New Play Exchange", description: "Database of new plays by living writers", url: "https://newplayexchange.org", category: "scripts" },
+  { name: "NYC Talent Agencies", description: "Find representation in New York", url: "#", category: "directories" },
 ];
 
 const filmResources: ResourceItem[] = [
-  { name: "IMDbPro", description: "Industry contacts and production tracking", url: "https://pro.imdb.com", category: "Directories" },
-  { name: "Variety", description: "Entertainment industry news and analysis", url: "https://variety.com", category: "News" },
-  { name: "The Black List", description: "Screenplay hosting and industry access", url: "https://blcklst.com", category: "Scripts" },
-  { name: "SAG-AFTRA", description: "Union membership and actor resources", url: "https://www.sagaftra.org", category: "Union" },
-  { name: "Film Independent", description: "Grants, labs, and Spirit Awards programs", url: "https://www.filmindependent.org", category: "Education" },
-  { name: "No Film School", description: "Filmmaking tutorials and industry insights", url: "https://nofilmschool.com", category: "Education" },
-  { name: "Stage 32", description: "Networking platform for film professionals", url: "https://www.stage32.com", category: "Directories" },
-  { name: "Mandy.com", description: "Crew jobs and casting opportunities", url: "https://www.mandy.com", category: "Casting" },
-  { name: "Deadline", description: "Breaking entertainment news and deals", url: "https://deadline.com", category: "News" },
-  { name: "Sundance Co//ab", description: "Educational courses from Sundance Institute", url: "https://collab.sundance.org", category: "Education" },
+  { name: "IMDbPro", description: "Industry contacts and production tracking", url: "https://pro.imdb.com", category: "directories" },
+  { name: "Variety", description: "Entertainment industry news and analysis", url: "https://variety.com", category: "news" },
+  { name: "Deadline", description: "Breaking entertainment news and deals", url: "https://deadline.com", category: "news" },
+  { name: "The Black List", description: "Screenplay hosting and industry access", url: "https://blcklst.com", category: "scripts" },
+  { name: "SAG-AFTRA", description: "Union membership and actor resources", url: "https://www.sagaftra.org", category: "union" },
+  { name: "Film Independent", description: "Grants, labs, and Spirit Awards programs", url: "https://www.filmindependent.org", category: "education" },
+  { name: "No Film School", description: "Filmmaking tutorials and industry insights", url: "https://nofilmschool.com", category: "education" },
+  { name: "Stage 32", description: "Networking platform for film professionals", url: "https://www.stage32.com", category: "directories" },
+  { name: "Mandy.com", description: "Crew jobs and casting opportunities", url: "https://www.mandy.com", category: "casting" },
+  { name: "Sundance Co//ab", description: "Educational courses from Sundance Institute", url: "https://collab.sundance.org", category: "education" },
 ];
 
-const nycTalentAgencies: DirectoryItem[] = [
-  { name: "William Morris Endeavor (WME)", url: "https://www.wmeagency.com", specialty: "Full-service" },
-  { name: "Creative Artists Agency (CAA)", url: "https://www.caa.com", specialty: "Full-service" },
-  { name: "United Talent Agency (UTA)", url: "https://www.unitedtalent.com", specialty: "Full-service" },
-  { name: "ICM Partners", url: "https://www.icmpartners.com", specialty: "Full-service" },
-  { name: "Paradigm Talent Agency", url: "https://www.paradigmagency.com", specialty: "Full-service" },
-  { name: "Abrams Artists Agency", url: "https://www.abramsartists.com", specialty: "Theatre & TV" },
-  { name: "Gersh Agency", url: "https://www.gershagency.com", specialty: "Full-service" },
-  { name: "APA (Agency for the Performing Arts)", url: "https://www.apa-agency.com", specialty: "Full-service" },
-  { name: "Stewart Talent", url: "https://www.stewarttalent.com", specialty: "Commercial & Print" },
-  { name: "CESD Talent Agency", url: "https://www.cesdtalent.com", specialty: "Voice-over & On-camera" },
-  { name: "Don Buchwald & Associates", url: "https://www.buchwald.com", specialty: "Broadcast & Voice" },
-  { name: "Innovative Artists", url: "https://www.innovativeartists.com", specialty: "Full-service" },
-  { name: "DGRW (Douglas, Gorman, Rothacker & Wilhelm)", url: "https://www.dfrw.com", specialty: "Theatre" },
-  { name: "Harden-Curtis Associates", url: "https://www.hardencurtis.com", specialty: "Theatre & Musical" },
-  { name: "Telsey + Company", url: "https://www.telseyandco.com", specialty: "Casting" },
+const educationPrograms: EducationProgram[] = [
+  // Acting
+  { name: "Stella Adler Studio", description: "Renowned acting conservatory with technique-based training", url: "https://stellaadler.com", type: "acting", industry: "both" },
+  { name: "Lee Strasberg Theatre & Film Institute", description: "Method acting training for stage and screen", url: "https://strasberg.edu", type: "acting", industry: "both" },
+  { name: "Atlantic Theater Company", description: "Practical Aesthetics acting technique training", url: "https://atlantictheater.org/atlantic-acting-school/", type: "acting", industry: "theatre" },
+  { name: "William Esper Studio", description: "Meisner Technique training program", url: "https://www.esperstudio.com", type: "acting", industry: "both" },
+  { name: "HB Studio", description: "Affordable acting classes in Greenwich Village", url: "https://hbstudio.org", type: "acting", industry: "both" },
+  { name: "Susan Batson Studio", description: "Private coaching and intensive workshops", url: "https://susanbatson.com", type: "acting", industry: "film" },
+  
+  // Filmmaking
+  { name: "New York Film Academy", description: "Hands-on filmmaking courses and degrees", url: "https://www.nyfa.edu", type: "filmmaking", industry: "film" },
+  { name: "Manhattan Edit Workshop", description: "Editing, post-production, and DIT training", url: "https://www.mewshop.com", type: "filmmaking", industry: "film" },
+  { name: "Gotham Film & Media Institute", description: "Classes for emerging screenwriters and filmmakers", url: "https://gotham.org", type: "filmmaking", industry: "film" },
+  { name: "IFP (Independent Filmmaker Project)", description: "Labs, workshops, and filmmaker support", url: "https://www.ifp.org", type: "filmmaking", industry: "film" },
+  
+  // Producing
+  { name: "Commercial Theater Institute", description: "Broadway producing intensive program", url: "https://www.commercialtheaterinstitute.com", type: "producing", industry: "theatre" },
+  { name: "Producers Guild of America", description: "Workshops and mentorship for producers", url: "https://producersguild.org", type: "producing", industry: "film" },
+  { name: "The Producer's Perspective", description: "Broadway producing resources and courses", url: "https://www.theproducersperspective.com", type: "producing", industry: "theatre" },
+  
+  // Dance
+  { name: "Steps on Broadway", description: "Open dance classes for all levels", url: "https://stepsnyc.com", type: "dance", industry: "theatre" },
+  { name: "Broadway Dance Center", description: "Professional dance training in NYC", url: "https://broadwaydancecenter.com", type: "dance", industry: "theatre" },
+  { name: "Peridance Capezio Center", description: "Ballet, contemporary, and commercial dance", url: "https://peridance.com", type: "dance", industry: "both" },
+  { name: "Alvin Ailey Extension", description: "Open classes from the renowned dance company", url: "https://www.alvinailey.org/extension", type: "dance", industry: "both" },
+  
+  // Voice
+  { name: "New York Vocal Coaching", description: "Private voice lessons and group classes", url: "https://newyorkvocalcoaching.com", type: "voice", industry: "both" },
+  { name: "Singing for Actors", description: "Musical theatre vocal technique", url: "https://singingforactors.com", type: "voice", industry: "theatre" },
+  { name: "Voice Teacher NYC", description: "Professional voice training directory", url: "https://voiceteachernyc.com", type: "voice", industry: "both" },
+  { name: "Matt Farnsworth Vocal Studios", description: "Contemporary and MT voice lessons", url: "https://www.mattfarnsworthvocalstudios.com", type: "voice", industry: "theatre" },
 ];
 
-const nycFilmProductionCompanies: DirectoryItem[] = [
-  { name: "A24", url: "https://a24films.com", specialty: "Independent Film" },
-  { name: "Killer Films", url: "https://www.killerfilms.com", specialty: "Independent Film" },
-  { name: "Scott Rudin Productions", url: "https://www.scottrudin.com", specialty: "Film & Theatre" },
-  { name: "Annapurna Pictures", url: "https://www.annapurnapics.com", specialty: "Feature Films" },
-  { name: "Big Beach", url: "https://www.bigbeachfilms.com", specialty: "Independent Film" },
-  { name: "Likely Story", url: "https://www.likelystory.com", specialty: "Feature Films" },
-  { name: "Plan B Entertainment", url: "https://www.planbentertainment.com", specialty: "Feature Films" },
-  { name: "Bow and Arrow Entertainment", url: "https://www.bowandarrowent.com", specialty: "Feature Films" },
-  { name: "Glass Eye Pix", url: "https://www.glasseyepix.com", specialty: "Horror & Indie" },
-  { name: "Sikelia Productions", url: "https://www.sikeliaproductions.com", specialty: "Documentary" },
-  { name: "RadicalMedia", url: "https://www.radicalmedia.com", specialty: "Commercials & Docs" },
-  { name: "Tribeca Productions", url: "https://www.tribecafilm.com", specialty: "Feature Films" },
-  { name: "Cinereach", url: "https://www.cinereach.org", specialty: "Independent Film" },
-  { name: "Blumhouse Productions", url: "https://www.blumhouse.com", specialty: "Horror & Thriller" },
-  { name: "FilmNation Entertainment", url: "https://www.filmnation.com", specialty: "International Sales" },
-];
-
-const getCategoryColor = (category: Category): string => {
-  switch (category) {
-    case 'News': return 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30';
-    case 'Directories': return 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30';
-    case 'Education': return 'bg-green-500/20 text-green-300 hover:bg-green-500/30';
-    case 'Union': return 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30';
-    case 'Casting': return 'bg-pink-500/20 text-pink-300 hover:bg-pink-500/30';
-    case 'Scripts': return 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30';
-    default: return 'bg-muted text-muted-foreground';
+const getEducationTypeIcon = (type: EducationProgram['type']) => {
+  switch (type) {
+    case 'acting': return <Theater className="w-4 h-4" />;
+    case 'filmmaking': return <Video className="w-4 h-4" />;
+    case 'producing': return <Building2 className="w-4 h-4" />;
+    case 'dance': return <Music className="w-4 h-4" />;
+    case 'voice': return <Mic className="w-4 h-4" />;
+    default: return <GraduationCap className="w-4 h-4" />;
   }
 };
 
-const ResourceCard: React.FC<{ resource: ResourceItem; variant: 'theatre' | 'film' }> = ({ resource, variant }) => {
-  return (
-    <a 
-      href={resource.url} 
-      target="_blank" 
-      rel="noopener noreferrer"
-      className="block group"
-    >
-      <Card className={`
-        transition-all duration-300 border-0
-        ${variant === 'theatre' 
-          ? 'bg-rose-950/40 hover:bg-rose-900/50 hover:shadow-lg hover:shadow-rose-500/10' 
-          : 'bg-slate-800/60 hover:bg-slate-700/70 hover:shadow-lg hover:shadow-cyan-500/10'
-        }
-      `}>
-        <CardContent className="p-4 flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className={`
-                font-semibold text-base group-hover:underline underline-offset-2
-                ${variant === 'theatre' ? 'text-rose-100' : 'text-cyan-100'}
-              `}>
-                {resource.name}
-              </h3>
-              <Badge variant="secondary" className={`text-xs px-2 py-0 ${getCategoryColor(resource.category)}`}>
-                {resource.category}
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {resource.description}
-            </p>
-          </div>
-          <ExternalLink className={`
-            w-4 h-4 flex-shrink-0 mt-1 opacity-50 group-hover:opacity-100 transition-opacity
-            ${variant === 'theatre' ? 'text-rose-300' : 'text-cyan-300'}
-          `} />
-        </CardContent>
-      </Card>
-    </a>
-  );
-};
-
-const DirectoryDropdown: React.FC<{
-  items: DirectoryItem[];
-  placeholder: string;
-  variant: 'theatre' | 'film';
-  icon: React.ReactNode;
-}> = ({ items, placeholder, variant, icon }) => {
-  const [selectedUrl, setSelectedUrl] = useState<string>('');
-
-  const handleSelect = (url: string) => {
-    setSelectedUrl(url);
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  return (
-    <Select value={selectedUrl} onValueChange={handleSelect}>
-      <SelectTrigger className={`
-        w-full border-0 
-        ${variant === 'theatre' 
-          ? 'bg-rose-950/60 text-rose-100 hover:bg-rose-900/70' 
-          : 'bg-slate-800/80 text-cyan-100 hover:bg-slate-700/90'
-        }
-      `}>
-        <div className="flex items-center gap-2">
-          {icon}
-          <SelectValue placeholder={placeholder} />
-        </div>
-      </SelectTrigger>
-      <SelectContent className="z-50 max-h-80 bg-popover border border-border">
-        {items.map((item) => (
-          <SelectItem key={item.name} value={item.url} className="cursor-pointer">
-            <div className="flex flex-col">
-              <span className="font-medium">{item.name}</span>
-              {item.specialty && (
-                <span className="text-xs text-muted-foreground">{item.specialty}</span>
-              )}
-            </div>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-};
-
-const FilterChips: React.FC<{
-  activeFilter: Category;
-  onFilterChange: (category: Category) => void;
-  variant: 'theatre' | 'film';
-}> = ({ activeFilter, onFilterChange, variant }) => {
-  return (
-    <div className="flex flex-wrap gap-2 mb-4">
-      {categories.map((category) => (
-        <button
-          key={category}
-          onClick={() => onFilterChange(category)}
-          className={`
-            px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200
-            ${activeFilter === category
-              ? variant === 'theatre'
-                ? 'bg-rose-500 text-white'
-                : 'bg-cyan-500 text-white'
-              : variant === 'theatre'
-                ? 'bg-rose-950/50 text-rose-200 hover:bg-rose-900/60'
-                : 'bg-slate-700/50 text-cyan-200 hover:bg-slate-600/60'
-            }
-          `}
-        >
-          {category}
-        </button>
-      ))}
-    </div>
-  );
+const getEducationTypeName = (type: EducationProgram['type']) => {
+  switch (type) {
+    case 'acting': return 'Acting';
+    case 'filmmaking': return 'Filmmaking';
+    case 'producing': return 'Producing';
+    case 'dance': return 'Dance';
+    case 'voice': return 'Voice';
+    default: return 'General';
+  }
 };
 
 const ResourcesPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [theatreFilter, setTheatreFilter] = useState<Category>('All');
-  const [filmFilter, setFilmFilter] = useState<Category>('All');
+  const [activeTab, setActiveTab] = useState<'theatre' | 'film'>('theatre');
+  const [selectedCategory, setSelectedCategory] = useState<ResourceCategory | null>(null);
+  const [educationFilter, setEducationFilter] = useState<EducationProgram['type'] | 'all'>('all');
 
-  const filteredTheatreResources = theatreFilter === 'All' 
-    ? theatreResources 
-    : theatreResources.filter(r => r.category === theatreFilter);
+  const currentResources = activeTab === 'theatre' ? theatreResources : filmResources;
+  const filteredResources = selectedCategory 
+    ? currentResources.filter(r => r.category === selectedCategory)
+    : currentResources;
 
-  const filteredFilmResources = filmFilter === 'All' 
-    ? filmResources 
-    : filmResources.filter(r => r.category === filmFilter);
+  const filteredEducation = educationPrograms.filter(p => {
+    const industryMatch = p.industry === 'both' || p.industry === activeTab;
+    const typeMatch = educationFilter === 'all' || p.type === educationFilter;
+    return industryMatch && typeMatch;
+  });
+
+  const educationTypes: EducationProgram['type'][] = ['acting', 'filmmaking', 'producing', 'dance', 'voice'];
 
   return (
     <PageLayout>
-      {/* Sticky Header */}
+      {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
-          <div 
-            className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ 
-              background: 'linear-gradient(135deg, hsl(168 100% 62%), hsl(180 100% 55%))',
-              boxShadow: '0 0 20px hsl(168 100% 62% / 0.4)'
-            }}
-          >
-            <BookOpen className="w-5 h-5 text-foreground" />
+        <div className="px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center gap-4">
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ 
+                background: 'linear-gradient(135deg, hsl(168 100% 62%), hsl(180 100% 55%))',
+                boxShadow: '0 0 20px hsl(168 100% 62% / 0.4)'
+              }}
+            >
+              <BookOpen className="w-5 h-5 text-foreground" />
+            </div>
+            <h1 className="text-2xl font-display font-bold">Resources</h1>
           </div>
-          <h1 className="text-2xl font-display font-bold">Resources</h1>
         </div>
       </header>
+      
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        {/* Industry Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as 'theatre' | 'film'); setSelectedCategory(null); }} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+            <TabsTrigger value="theatre" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
+              <Theater className="w-4 h-4" />
+              Theatre
+            </TabsTrigger>
+            <TabsTrigger value="film" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
+              <Film className="w-4 h-4" />
+              Film
+            </TabsTrigger>
+          </TabsList>
 
-      {/* Main Content - Two Columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100vh-73px)]">
-        {/* Theatre Column */}
-        <section 
-          className="relative p-6 lg:p-8"
-          style={{
-            background: 'linear-gradient(135deg, hsl(350 40% 12%) 0%, hsl(350 30% 8%) 50%, hsl(350 25% 5%) 100%)',
-          }}
-        >
-          {/* Curtain texture overlay */}
-          <div 
-            className="absolute inset-0 opacity-10 pointer-events-none"
-            style={{
-              backgroundImage: `repeating-linear-gradient(
-                90deg,
-                transparent,
-                transparent 20px,
-                hsl(350 50% 30%) 20px,
-                hsl(350 50% 30%) 22px
-              )`,
-            }}
-          />
-          
-          <div className="relative z-10">
-            <h2 className="text-3xl font-display font-bold text-rose-200 mb-4 tracking-wide">
-              THEATRE
-            </h2>
-            
-            {/* Directory Dropdown */}
-            <div className="mb-4">
-              <DirectoryDropdown
-                items={nycTalentAgencies}
-                placeholder="NYC Talent Agencies Directory"
-                variant="theatre"
-                icon={<Building2 className="w-4 h-4" />}
-              />
-            </div>
-            
-            {/* Filter Chips */}
-            <FilterChips 
-              activeFilter={theatreFilter} 
-              onFilterChange={setTheatreFilter} 
-              variant="theatre" 
-            />
-            
-            <div className="space-y-3">
-              {filteredTheatreResources.length > 0 ? (
-                filteredTheatreResources.map((resource) => (
-                  <ResourceCard key={resource.name} resource={resource} variant="theatre" />
-                ))
-              ) : (
-                <p className="text-rose-300/60 text-center py-4">No resources in this category</p>
-              )}
-            </div>
-          </div>
-        </section>
+          <TabsContent value="theatre" className="space-y-8">
+            {/* Categories Grid */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-lg">📚</span>
+                <h2 className="text-lg font-display font-semibold">Browse by Category</h2>
+              </div>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {resourceCategories.map((cat) => (
+                  <Card
+                    key={cat.id}
+                    className={`cursor-pointer transition-colors group ${
+                      selectedCategory === cat.id 
+                        ? 'bg-primary/20 border-primary' 
+                        : 'hover:bg-accent/50'
+                    }`}
+                    onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <span className="text-3xl mb-2 block group-hover:scale-110 transition-transform">
+                        {cat.icon}
+                      </span>
+                      <h3 className="font-semibold text-xs mb-0.5 line-clamp-1">
+                        {cat.name}
+                      </h3>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">
+                        {cat.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
 
-        {/* Film Column */}
-        <section 
-          className="relative p-6 lg:p-8"
-          style={{
-            background: 'linear-gradient(135deg, hsl(210 20% 8%) 0%, hsl(210 15% 5%) 50%, hsl(220 20% 3%) 100%)',
-          }}
-        >
-          {/* Film strip texture overlay */}
-          <div 
-            className="absolute inset-0 opacity-[0.07] pointer-events-none"
-            style={{
-              backgroundImage: `
-                repeating-linear-gradient(
-                  0deg,
-                  transparent,
-                  transparent 40px,
-                  hsl(200 50% 50%) 40px,
-                  hsl(200 50% 50%) 42px
-                ),
-                repeating-linear-gradient(
-                  90deg,
-                  transparent,
-                  transparent 60px,
-                  hsl(200 30% 40%) 60px,
-                  hsl(200 30% 40%) 62px
-                )
-              `,
-            }}
-          />
-          
-          {/* Film sprocket holes */}
-          <div 
-            className="absolute left-0 top-0 bottom-0 w-6 opacity-5 pointer-events-none hidden lg:block"
-            style={{
-              backgroundImage: `repeating-linear-gradient(
-                180deg,
-                transparent,
-                transparent 30px,
-                hsl(0 0% 100%) 30px,
-                hsl(0 0% 100%) 50px,
-                transparent 50px,
-                transparent 60px
-              )`,
-            }}
-          />
-          
-          <div className="relative z-10">
-            <h2 className="text-3xl font-display font-bold text-cyan-200 mb-4 tracking-wide">
-              FILM
-            </h2>
-            
-            {/* Directory Dropdown */}
-            <div className="mb-4">
-              <DirectoryDropdown
-                items={nycFilmProductionCompanies}
-                placeholder="NYC Film Production Companies"
-                variant="film"
-                icon={<Film className="w-4 h-4" />}
-              />
-            </div>
-            
-            {/* Filter Chips */}
-            <FilterChips 
-              activeFilter={filmFilter} 
-              onFilterChange={setFilmFilter} 
-              variant="film" 
-            />
-            
-            <div className="space-y-3">
-              {filteredFilmResources.length > 0 ? (
-                filteredFilmResources.map((resource) => (
-                  <ResourceCard key={resource.name} resource={resource} variant="film" />
-                ))
-              ) : (
-                <p className="text-cyan-300/60 text-center py-4">No resources in this category</p>
-              )}
-            </div>
-          </div>
-        </section>
+            {/* Resources List */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-display font-semibold">
+                  {selectedCategory 
+                    ? resourceCategories.find(c => c.id === selectedCategory)?.name 
+                    : 'All Resources'}
+                </h2>
+                {selectedCategory && (
+                  <button 
+                    onClick={() => setSelectedCategory(null)}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Clear filter
+                  </button>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredResources.map((resource) => (
+                  <a 
+                    key={resource.name}
+                    href={resource.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block group"
+                  >
+                    <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-semibold group-hover:text-primary transition-colors">
+                            {resource.name}
+                          </h3>
+                          <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                          {resource.description}
+                        </p>
+                        <Badge variant="secondary" className="text-xs">
+                          {resourceCategories.find(c => c.id === resource.category)?.name}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  </a>
+                ))}
+              </div>
+            </section>
+
+            {/* Education & Programs Section */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <GraduationCap className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Find workshops, classes, and training programs outside of college
+              </p>
+              
+              {/* Education Type Filters */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={() => setEducationFilter('all')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    educationFilter === 'all'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-accent'
+                  }`}
+                >
+                  All
+                </button>
+                {educationTypes.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setEducationFilter(type)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
+                      educationFilter === type
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-accent'
+                    }`}
+                  >
+                    {getEducationTypeIcon(type)}
+                    {getEducationTypeName(type)}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredEducation.map((program) => (
+                  <a 
+                    key={program.name}
+                    href={program.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block group"
+                  >
+                    <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-semibold group-hover:text-primary transition-colors">
+                            {program.name}
+                          </h3>
+                          <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                          {program.description}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                            {getEducationTypeIcon(program.type)}
+                            {getEducationTypeName(program.type)}
+                          </Badge>
+                          {program.industry !== 'both' && (
+                            <Badge variant="outline" className="text-xs">
+                              {program.industry === 'theatre' ? 'Theatre' : 'Film'}
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </a>
+                ))}
+              </div>
+            </section>
+          </TabsContent>
+
+          <TabsContent value="film" className="space-y-8">
+            {/* Categories Grid */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-lg">📚</span>
+                <h2 className="text-lg font-display font-semibold">Browse by Category</h2>
+              </div>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {resourceCategories.map((cat) => (
+                  <Card
+                    key={cat.id}
+                    className={`cursor-pointer transition-colors group ${
+                      selectedCategory === cat.id 
+                        ? 'bg-primary/20 border-primary' 
+                        : 'hover:bg-accent/50'
+                    }`}
+                    onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <span className="text-3xl mb-2 block group-hover:scale-110 transition-transform">
+                        {cat.icon}
+                      </span>
+                      <h3 className="font-semibold text-xs mb-0.5 line-clamp-1">
+                        {cat.name}
+                      </h3>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">
+                        {cat.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+
+            {/* Resources List */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-display font-semibold">
+                  {selectedCategory 
+                    ? resourceCategories.find(c => c.id === selectedCategory)?.name 
+                    : 'All Resources'}
+                </h2>
+                {selectedCategory && (
+                  <button 
+                    onClick={() => setSelectedCategory(null)}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Clear filter
+                  </button>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredResources.map((resource) => (
+                  <a 
+                    key={resource.name}
+                    href={resource.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block group"
+                  >
+                    <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-semibold group-hover:text-primary transition-colors">
+                            {resource.name}
+                          </h3>
+                          <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                          {resource.description}
+                        </p>
+                        <Badge variant="secondary" className="text-xs">
+                          {resourceCategories.find(c => c.id === resource.category)?.name}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  </a>
+                ))}
+              </div>
+            </section>
+
+            {/* Education & Programs Section */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <GraduationCap className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Find workshops, classes, and training programs outside of college
+              </p>
+              
+              {/* Education Type Filters */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={() => setEducationFilter('all')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    educationFilter === 'all'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-accent'
+                  }`}
+                >
+                  All
+                </button>
+                {educationTypes.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setEducationFilter(type)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
+                      educationFilter === type
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-accent'
+                    }`}
+                  >
+                    {getEducationTypeIcon(type)}
+                    {getEducationTypeName(type)}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredEducation.map((program) => (
+                  <a 
+                    key={program.name}
+                    href={program.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block group"
+                  >
+                    <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-semibold group-hover:text-primary transition-colors">
+                            {program.name}
+                          </h3>
+                          <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                          {program.description}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                            {getEducationTypeIcon(program.type)}
+                            {getEducationTypeName(program.type)}
+                          </Badge>
+                          {program.industry !== 'both' && (
+                            <Badge variant="outline" className="text-xs">
+                              {program.industry === 'theatre' ? 'Theatre' : 'Film'}
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </a>
+                ))}
+              </div>
+            </section>
+          </TabsContent>
+        </Tabs>
       </div>
     </PageLayout>
   );
