@@ -19,7 +19,7 @@ const navItems: NavItem[] = [
   { label: 'People', icon: Users, path: '/people' },
   { label: 'Projects', icon: FolderKanban, path: '/projects' },
   { label: 'Opportunities', icon: Briefcase, path: '/opportunities' },
-  { label: 'Stage Whisper', icon: Theater, path: '/stage-whisper' },
+  { label: 'Industry Now', icon: Theater, path: '/stage-whisper' },
   { label: 'Resources', icon: BookOpen, path: '/resources' },
 ];
 

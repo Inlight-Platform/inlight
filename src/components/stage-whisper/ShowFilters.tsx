@@ -95,27 +95,6 @@ export const ShowFilters: React.FC<ShowFiltersProps> = ({
         )}
       </div>
 
-      {/* Category Filter */}
-      <div className="space-y-2">
-        <p className="text-xs text-muted-foreground font-medium">Stage</p>
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.value}
-              onClick={() => toggleFilter('category', cat.value)}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                filters.category.includes(cat.value)
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
-              )}
-            >
-              {cat.emoji} {cat.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Show Type Filter */}
       <div className="space-y-2">
         <p className="text-xs text-muted-foreground font-medium">Genre</p>
