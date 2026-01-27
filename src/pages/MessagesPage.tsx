@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { NewMessageDialog } from '@/components/messages/NewMessageDialog';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const MessagesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -29,7 +31,32 @@ const MessagesPage: React.FC = () => {
   } = useMessages();
 
   const { data: messages = [], isLoading: messagesLoading } = useConversation(selectedPartnerId);
-  const selectedConversation = conversations.find(c => c.user_id === selectedPartnerId);
+  
+  // Get conversation from list OR fetch profile for new conversations
+  const existingConversation = conversations.find(c => c.user_id === selectedPartnerId);
+  
+  // Fetch profile for new conversations that aren't in the list yet
+  const { data: newUserProfile } = useQuery({
+    queryKey: ['message-partner-profile', selectedPartnerId],
+    queryFn: async () => {
+      if (!selectedPartnerId) return null;
+      const { data } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .eq('user_id', selectedPartnerId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!selectedPartnerId && !existingConversation,
+  });
+
+  // Use existing conversation data or fetched profile
+  const selectedConversation = existingConversation || (newUserProfile ? {
+    user_id: newUserProfile.user_id,
+    display_name: newUserProfile.display_name,
+    avatar_url: newUserProfile.avatar_url,
+    unread_count: 0,
+  } : null);
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -40,10 +67,10 @@ const MessagesPage: React.FC = () => {
 
   // Mark messages as read when conversation is selected
   useEffect(() => {
-    if (selectedPartnerId && selectedConversation?.unread_count) {
+    if (selectedPartnerId && existingConversation?.unread_count) {
       markAsRead.mutate(selectedPartnerId);
     }
-  }, [selectedPartnerId, selectedConversation?.unread_count]);
+  }, [selectedPartnerId, existingConversation?.unread_count]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
