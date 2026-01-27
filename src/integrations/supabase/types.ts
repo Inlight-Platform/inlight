@@ -314,6 +314,7 @@ export type Database = {
           rush_policy: string | null
           show_times: string | null
           show_type: string
+          submitted_by: string | null
           title: string
           updated_at: string
           venue: string
@@ -335,6 +336,7 @@ export type Database = {
           rush_policy?: string | null
           show_times?: string | null
           show_type?: string
+          submitted_by?: string | null
           title: string
           updated_at?: string
           venue: string
@@ -356,6 +358,7 @@ export type Database = {
           rush_policy?: string | null
           show_times?: string | null
           show_type?: string
+          submitted_by?: string | null
           title?: string
           updated_at?: string
           venue?: string
