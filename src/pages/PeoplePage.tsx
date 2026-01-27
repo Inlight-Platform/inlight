@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Compass, Users, UserPlus, UserCheck, GraduationCap } from 'lucide-react';
+import { Search, Compass, Users, UserPlus, UserCheck, GraduationCap, Clock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
+import { useConnectionRequests } from '@/hooks/useConnectionRequests';
 import PageLayout from '@/components/layout/PageLayout';
 
 interface Studio {
@@ -31,6 +32,13 @@ const PeoplePage: React.FC = () => {
   const sendConnectionRequest = useStore((s) => s.sendConnectionRequest);
   
   const { following, followers } = useNetworkConnections();
+  const { sentRequests, cancelRequest } = useConnectionRequests();
+  
+  // Get pending sent requests
+  const pendingSentRequests = useMemo(() => 
+    sentRequests.filter(r => r.status === 'pending'), 
+    [sentRequests]
+  );
   
   const [activeTab, setActiveTab] = useState('explore');
   const [searchQuery, setSearchQuery] = useState('');
@@ -94,6 +102,26 @@ const PeoplePage: React.FC = () => {
       return data || [];
     },
     enabled: followers.length > 0,
+  });
+  
+  // Get profiles for pending sent requests
+  const pendingReceiverIds = useMemo(() => 
+    pendingSentRequests.map(r => r.receiver_id), 
+    [pendingSentRequests]
+  );
+  
+  const { data: pendingProfiles = [] } = useQuery({
+    queryKey: ['pending-request-profiles', pendingReceiverIds],
+    queryFn: async () => {
+      if (pendingReceiverIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('*')
+        .in('user_id', pendingReceiverIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: pendingReceiverIds.length > 0,
   });
   
   // Filter users based on search query
@@ -198,21 +226,24 @@ const PeoplePage: React.FC = () => {
     );
   };
 
-  const renderProfileUserCard = (user: any) => (
+  const renderProfileUserCard = (user: any, showCancelButton?: boolean, requestId?: string) => (
     <div
       key={user.id}
-      className="bg-card rounded-xl border border-border shadow-card overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-      onClick={() => user.user_id && navigate(`/profile/${user.user_id}`)}
+      className="bg-card rounded-xl border border-border shadow-card overflow-hidden hover:shadow-lg transition-shadow"
     >
-      <div className="flex items-center gap-4 p-4">
-        <Avatar className="w-14 h-14">
-          <AvatarImage src={user.avatar_url || undefined} />
-          <AvatarFallback>{user.display_name?.[0] || 'U'}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-display font-semibold truncate">
-            {user.display_name || 'Unknown User'}
-          </h3>
+      <div 
+        className="cursor-pointer"
+        onClick={() => user.user_id && navigate(`/profile/${user.user_id}`)}
+      >
+        <div className="flex items-center gap-4 p-4">
+          <Avatar className="w-14 h-14">
+            <AvatarImage src={user.avatar_url || undefined} />
+            <AvatarFallback>{user.display_name?.[0] || 'U'}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-display font-semibold truncate">
+              {user.display_name || 'Unknown User'}
+            </h3>
           <p className="text-muted-foreground text-sm truncate">{user.role || 'No role'}</p>
           {user.badges && user.badges.length > 0 && (
             <div className="flex gap-1 mt-1 flex-wrap">
@@ -231,8 +262,25 @@ const PeoplePage: React.FC = () => {
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
+      
+      {showCancelButton && requestId && (
+        <div className="px-4 pb-4">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              cancelRequest.mutate(requestId);
+            }}
+            disabled={cancelRequest.isPending}
+            className="w-full h-9 rounded-full font-medium text-sm bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all flex items-center justify-center gap-2"
+          >
+            <Clock className="w-4 h-4" />
+            {cancelRequest.isPending ? 'Canceling...' : 'Cancel Request'}
+          </button>
+        </div>
+      )}
     </div>
   );
   
@@ -316,6 +364,10 @@ const PeoplePage: React.FC = () => {
               <UserCheck className="w-4 h-4" />
               Followers ({followers.length})
             </TabsTrigger>
+            <TabsTrigger value="pending" className="data-[state=active]:bg-amber-500/20 flex items-center gap-1.5 flex-shrink-0">
+              <Clock className="w-4 h-4" />
+              Pending ({pendingSentRequests.length})
+            </TabsTrigger>
             <TabsTrigger value="2nd" className="data-[state=active]:bg-neon-messages/20 flex-shrink-0">
               2nd ({secondDegree.length})
             </TabsTrigger>
@@ -382,6 +434,20 @@ const PeoplePage: React.FC = () => {
             {followerProfiles.length === 0 && (
               <p className="text-center text-muted-foreground py-8">
                 No followers yet.
+              </p>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="pending">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {pendingProfiles.map((user) => {
+                const request = pendingSentRequests.find(r => r.receiver_id === user.user_id);
+                return renderProfileUserCard(user, true, request?.id);
+              })}
+            </div>
+            {pendingProfiles.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                No pending connection requests.
               </p>
             )}
           </TabsContent>
