@@ -620,7 +620,9 @@ const ProfilePage: React.FC = () => {
   };
   
   const handleMessage = () => {
-    navigate('/messages');
+    if (resolvedUserId) {
+      navigate(`/messages?user=${resolvedUserId}`);
+    }
   };
   
   const handleBadgeClick = (badge: string) => {
