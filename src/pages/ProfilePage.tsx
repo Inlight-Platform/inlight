@@ -861,32 +861,42 @@ const ProfilePage: React.FC = () => {
             {/* Actions */}
             <div className="flex items-center gap-3">
               {isOwnProfile && authUser && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => { setDefaultPostType('update'); setShowPostCreator(true); }}>
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Post Update
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setDefaultPostType('event'); setShowPostCreator(true); }}>
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Create Event
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setDefaultPostType('job'); setShowPostCreator(true); }}>
-                      <Briefcase className="w-4 h-4 mr-2" />
-                      Post Opportunity
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowProjectCreator(true)}>
-                      <FolderKanban className="w-4 h-4 mr-2" />
-                      Create Project
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate('/network')}
+                  >
+                    <Users className="w-4 h-4 mr-2" />
+                    My Network
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => { setDefaultPostType('update'); setShowPostCreator(true); }}>
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Post Update
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setDefaultPostType('event'); setShowPostCreator(true); }}>
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Create Event
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setDefaultPostType('job'); setShowPostCreator(true); }}>
+                        <Briefcase className="w-4 h-4 mr-2" />
+                        Post Opportunity
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowProjectCreator(true)}>
+                        <FolderKanban className="w-4 h-4 mr-2" />
+                        Create Project
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
               )}
               {!isOwnProfile && authUser && (
                 <>
