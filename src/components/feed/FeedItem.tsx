@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,7 +19,7 @@ import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 import { toast } from 'sonner';
 import { NetworkDegree } from '@/hooks/useNetworkConnections';
 
-export type FeedItemType = 'post' | 'project' | 'event' | 'job';
+export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show';
 
 export interface FeedItemData {
   id: string;
@@ -34,6 +34,12 @@ export interface FeedItemData {
   event_date?: string;
   location?: string;
   event_type?: string;
+  // Show-specific fields
+  venue?: string;
+  borough?: string;
+  show_type?: string;
+  run_start?: string | null;
+  run_end?: string | null;
   creator_profile?: {
     display_name: string | null;
     avatar_url: string | null;
@@ -63,6 +69,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
         ({ error } = await supabase.from('events').delete().eq('id', item.id));
       } else if (item.type === 'project') {
         ({ error } = await supabase.from('projects').delete().eq('id', item.id));
+      } else if (item.type === 'show') {
+        ({ error } = await supabase.from('nyc_shows').delete().eq('id', item.id));
       }
       if (error) throw error;
     },
@@ -70,7 +78,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
       queryClient.invalidateQueries({ queryKey: ['feed-posts'] });
       queryClient.invalidateQueries({ queryKey: ['feed-events'] });
       queryClient.invalidateQueries({ queryKey: ['feed-projects'] });
-      toast.success(`${item.type === 'job' ? 'Job' : item.type.charAt(0).toUpperCase() + item.type.slice(1)} deleted`);
+      queryClient.invalidateQueries({ queryKey: ['feed-shows'] });
+      toast.success(`${item.type === 'job' ? 'Job' : item.type === 'show' ? 'Show' : item.type.charAt(0).toUpperCase() + item.type.slice(1)} deleted`);
       setDeleteDialogOpen(false);
     },
     onError: () => {
@@ -90,6 +99,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
         return <Calendar className="h-3 w-3" />;
       case 'job':
         return <Briefcase className="h-3 w-3 text-green-500" />;
+      case 'show':
+        return <Theater className="h-3 w-3 text-pink-500" />;
       default:
         return <MessageCircle className="h-3 w-3" />;
     }
@@ -103,6 +114,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
         return 'created an event';
       case 'job':
         return 'posted a job opportunity';
+      case 'show':
+        return 'added a show';
       default:
         return 'posted';
     }
@@ -111,6 +124,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const handleClick = () => {
     if (item.type === 'project') {
       navigate(`/projects/${item.id}`);
+    } else if (item.type === 'show') {
+      navigate('/stage-whisper');
     }
   };
 
@@ -125,11 +140,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
     }
   };
 
-  const isClickable = item.type === 'project' || item.type === 'event';
+  const isClickable = item.type === 'project' || item.type === 'event' || item.type === 'show';
 
   return (
     <Card 
-      className={`bg-card border-border ${isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${item.type === 'job' ? 'border-l-4 border-l-green-500' : ''}`}
+      className={`bg-card border-border ${isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${item.type === 'job' ? 'border-l-4 border-l-green-500' : ''} ${item.type === 'show' ? 'border-l-4 border-l-pink-500' : ''}`}
       onClick={isClickable ? handleClick : undefined}
     >
       <CardContent className="p-4">
@@ -253,6 +268,34 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
             {item.event_type && (
               <Badge variant="secondary" className="text-xs capitalize">
                 {item.event_type}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {/* Show details */}
+        {item.type === 'show' && (
+          <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-pink-500/10 mt-2">
+            {item.venue && (
+              <div className="flex items-center gap-2 text-sm">
+                <Theater className="h-4 w-4 text-pink-500" />
+                <span className="font-medium">{item.venue}</span>
+              </div>
+            )}
+            {item.borough && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                <span>{item.borough}</span>
+              </div>
+            )}
+            {item.show_type && (
+              <Badge variant="secondary" className="text-xs capitalize">
+                {item.show_type}
+              </Badge>
+            )}
+            {item.category && (
+              <Badge variant="outline" className="text-xs">
+                {item.category}
               </Badge>
             )}
           </div>

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Home, Filter, Plus, Calendar, Briefcase, FolderKanban, User, LayoutGrid, Users } from 'lucide-react';
+import { Home, Filter, Plus, Calendar, Briefcase, FolderKanban, User, LayoutGrid, Users, Theater } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import PageLayout from '@/components/layout/PageLayout';
 
 type NetworkFilter = 'all' | '1st' | '2nd' | '3rd+';
-type ContentFilter = 'all' | 'events' | 'jobs' | 'projects' | 'updates';
+type ContentFilter = 'all' | 'events' | 'jobs' | 'projects' | 'updates' | 'shows';
 
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
@@ -141,9 +141,49 @@ const FeedPage: React.FC = () => {
     },
   });
 
+  // Fetch shows (user-submitted off-off-broadway shows)
+  const { data: shows = [], isLoading: showsLoading } = useQuery({
+    queryKey: ['feed-shows'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('nyc_shows')
+        .select('*')
+        .not('submitted_by', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+
+      // Get creator profiles
+      const userIds = [...new Set(data.map(s => s.submitted_by).filter(Boolean))] as string[];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return data.map(show => ({
+        id: show.id,
+        type: 'show' as const,
+        user_id: show.submitted_by!,
+        title: show.title,
+        description: show.description,
+        image_url: show.poster_url,
+        created_at: show.created_at,
+        venue: show.venue,
+        borough: show.borough,
+        show_type: show.show_type,
+        category: show.category,
+        run_start: show.run_start,
+        run_end: show.run_end,
+        creator_profile: profileMap.get(show.submitted_by!),
+      }));
+    },
+  });
+
   // Combine and filter feed items
   const feedItems = useMemo(() => {
-    let allItems: FeedItemData[] = [...posts, ...projects, ...events];
+    let allItems: FeedItemData[] = [...posts, ...projects, ...events, ...shows];
     
     // Filter by content type
     if (contentFilter !== 'all') {
@@ -152,6 +192,7 @@ const FeedPage: React.FC = () => {
         if (contentFilter === 'jobs') return item.type === 'job';
         if (contentFilter === 'projects') return item.type === 'project';
         if (contentFilter === 'updates') return item.type === 'post';
+        if (contentFilter === 'shows') return item.type === 'show';
         return true;
       });
     }
@@ -176,9 +217,9 @@ const FeedPage: React.FC = () => {
       if (networkFilter === '3rd+') return degree === '3rd+';
       return true;
     });
-  }, [posts, projects, events, networkFilter, contentFilter, user?.id, getConnectionDegree]);
+  }, [posts, projects, events, shows, networkFilter, contentFilter, user?.id, getConnectionDegree]);
 
-  const isLoading = postsLoading || projectsLoading || eventsLoading || connectionsLoading;
+  const isLoading = postsLoading || projectsLoading || eventsLoading || showsLoading || connectionsLoading;
 
   const networkFilters: { value: NetworkFilter; label: string; count?: number }[] = [
     { value: 'all', label: 'All' },
@@ -193,6 +234,7 @@ const FeedPage: React.FC = () => {
     { value: 'jobs', label: 'Jobs', icon: <Briefcase className="h-4 w-4" /> },
     { value: 'projects', label: 'Projects', icon: <FolderKanban className="h-4 w-4" /> },
     { value: 'updates', label: 'Updates', icon: <User className="h-4 w-4" /> },
+    { value: 'shows', label: 'Shows', icon: <Theater className="h-4 w-4" /> },
   ];
 
   // Count items by type
@@ -201,7 +243,8 @@ const FeedPage: React.FC = () => {
     jobs: posts.filter(p => p.type === 'job').length,
     projects: projects.length,
     updates: posts.filter(p => p.type === 'post').length,
-  }), [events, posts, projects]);
+    shows: shows.length,
+  }), [events, posts, projects, shows]);
 
   return (
     <PageLayout>
