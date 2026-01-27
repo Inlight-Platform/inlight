@@ -305,6 +305,7 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean | null
+          is_anonymous: boolean | null
           lottery_info: string | null
           official_url: string | null
           poster_url: string | null
@@ -327,6 +328,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          is_anonymous?: boolean | null
           lottery_info?: string | null
           official_url?: string | null
           poster_url?: string | null
@@ -349,6 +351,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          is_anonymous?: boolean | null
           lottery_info?: string | null
           official_url?: string | null
           poster_url?: string | null
@@ -815,6 +818,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "show_reminders_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "nyc_shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      show_teammates: {
+        Row: {
+          created_at: string
+          id: string
+          role_description: string | null
+          show_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role_description?: string | null
+          show_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role_description?: string | null
+          show_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "show_teammates_show_id_fkey"
             columns: ["show_id"]
             isOneToOne: false
             referencedRelation: "nyc_shows"

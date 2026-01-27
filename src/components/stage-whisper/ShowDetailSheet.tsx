@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { 
   Heart, MapPin, Calendar, Clock, Ticket, Accessibility, 
   ExternalLink, Bell, BellOff, MessageSquare, ThumbsUp, X,
-  ChevronRight, Share2, Pencil
+  ChevronRight, Share2, Pencil, Users, EyeOff
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { Show } from './ShowCard';
 import { EditShowDialog } from './EditShowDialog';
@@ -51,6 +53,13 @@ const TIP_TYPES = [
   { value: 'family-friendly', label: 'Family Friendly', emoji: '👨‍👩‍👧‍👦' },
 ];
 
+interface ShowTeammate {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  role_description?: string;
+}
+
 export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
   show,
   isOpen,
@@ -61,6 +70,7 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
 }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [newTip, setNewTip] = useState('');
   const [tipType, setTipType] = useState('general');
 
@@ -92,6 +102,55 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
       })) as Tip[];
     },
     enabled: !!show?.id,
+  });
+
+  // Fetch teammates for this show
+  const { data: teammates = [] } = useQuery({
+    queryKey: ['show-teammates', show?.id],
+    queryFn: async () => {
+      if (!show?.id) return [];
+      
+      const { data: teammateData } = await supabase
+        .from('show_teammates')
+        .select('user_id, role_description')
+        .eq('show_id', show.id);
+
+      if (!teammateData || teammateData.length === 0) return [];
+
+      // Fetch profiles for teammates
+      const userIds = teammateData.map(t => t.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return teammateData.map(t => ({
+        user_id: t.user_id,
+        display_name: profileMap.get(t.user_id)?.display_name || null,
+        avatar_url: profileMap.get(t.user_id)?.avatar_url || null,
+        role_description: t.role_description || undefined,
+      })) as ShowTeammate[];
+    },
+    enabled: !!show?.id && isOpen,
+  });
+
+  // Fetch submitter profile (for non-anonymous shows)
+  const { data: submitterProfile } = useQuery({
+    queryKey: ['show-submitter', show?.submitted_by],
+    queryFn: async () => {
+      if (!show?.submitted_by || (show as any).is_anonymous) return null;
+      
+      const { data } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .eq('user_id', show.submitted_by)
+        .maybeSingle();
+
+      return data;
+    },
+    enabled: !!show?.submitted_by && !(show as any).is_anonymous && isOpen,
   });
 
   // Fetch user's votes
@@ -282,6 +341,65 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
           {show.description && (
             <div>
               <p className="text-muted-foreground leading-relaxed">{show.description}</p>
+            </div>
+          )}
+
+          {/* Submitter & Teammates Section */}
+          {(submitterProfile || teammates.length > 0) && (
+            <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Users className="w-4 h-4" />
+                {(show as any).is_anonymous ? 'Team' : 'Posted by'}
+              </div>
+              
+              {/* Submitter (if not anonymous) */}
+              {submitterProfile && !(show as any).is_anonymous && (
+                <button
+                  onClick={() => navigate(`/profile/${submitterProfile.user_id}`)}
+                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent transition-colors w-full text-left"
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={submitterProfile.avatar_url || undefined} />
+                    <AvatarFallback>{submitterProfile.display_name?.[0] || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{submitterProfile.display_name}</p>
+                    <p className="text-xs text-muted-foreground">Submitted this show</p>
+                  </div>
+                </button>
+              )}
+
+              {/* Anonymous indicator */}
+              {(show as any).is_anonymous && (
+                <div className="flex items-center gap-2 p-2 text-muted-foreground">
+                  <EyeOff className="w-4 h-4" />
+                  <span className="text-sm">Posted anonymously</span>
+                </div>
+              )}
+
+              {/* Teammates */}
+              {teammates.length > 0 && (
+                <div className="space-y-2">
+                  {!((show as any).is_anonymous && !submitterProfile) && teammates.length > 0 && (
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Team Members</p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {teammates.map((teammate) => (
+                      <button
+                        key={teammate.user_id}
+                        onClick={() => navigate(`/profile/${teammate.user_id}`)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent hover:bg-accent/80 transition-colors"
+                      >
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={teammate.avatar_url || undefined} />
+                          <AvatarFallback className="text-xs">{teammate.display_name?.[0] || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs font-medium">{teammate.display_name || 'Unknown'}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

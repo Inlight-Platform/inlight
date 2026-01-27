@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -40,6 +40,7 @@ export interface FeedItemData {
   show_type?: string;
   run_start?: string | null;
   run_end?: string | null;
+  is_anonymous?: boolean;
   creator_profile?: {
     display_name: string | null;
     avatar_url: string | null;
@@ -141,6 +142,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   };
 
   const isClickable = item.type === 'project' || item.type === 'event' || item.type === 'show';
+  
+  // For anonymous shows, hide the creator info
+  const showAnonymous = item.type === 'show' && item.is_anonymous;
+  const displayName = showAnonymous ? 'Anonymous' : (item.creator_profile?.display_name || 'Unknown');
+  const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
 
   return (
     <Card 
@@ -151,28 +157,32 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
           <Avatar 
-            className="h-10 w-10 cursor-pointer"
+            className={`h-10 w-10 ${showAnonymous ? '' : 'cursor-pointer'}`}
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/profile/${item.user_id}`);
+              if (!showAnonymous) {
+                navigate(`/profile/${item.user_id}`);
+              }
             }}
           >
-            <AvatarImage src={item.creator_profile?.avatar_url || undefined} />
-            <AvatarFallback>{item.creator_profile?.display_name?.[0] || 'U'}</AvatarFallback>
+            <AvatarImage src={avatarUrl || undefined} />
+            <AvatarFallback>{showAnonymous ? <EyeOff className="w-4 h-4" /> : (displayName[0] || 'U')}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span 
-                className="font-medium text-foreground cursor-pointer hover:underline"
+                className={`font-medium text-foreground ${showAnonymous ? 'italic text-muted-foreground' : 'cursor-pointer hover:underline'}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/profile/${item.user_id}`);
+                  if (!showAnonymous) {
+                    navigate(`/profile/${item.user_id}`);
+                  }
                 }}
               >
-                {item.creator_profile?.display_name || 'Unknown'}
+                {displayName}
               </span>
               <span className="text-muted-foreground text-sm">{getTypeLabel()}</span>
-              {networkDegree && (
+              {networkDegree && !showAnonymous && (
                 <Badge variant="secondary" className={`text-xs ${getDegreeColor()}`}>
                   {networkDegree}
                 </Badge>

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { CalendarIcon, Plus, Loader2, ImagePlus, X } from 'lucide-react';
+import { CalendarIcon, Plus, Loader2, ImagePlus, X, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
+import { TeammateSelector, Teammate } from './TeammateSelector';
 
 interface AddShowDialogProps {
   trigger?: React.ReactNode;
@@ -77,6 +79,10 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
   const [officialUrl, setOfficialUrl] = useState('');
   const [rushPolicy, setRushPolicy] = useState('');
   
+  // Anonymity and teammates
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [teammates, setTeammates] = useState<Teammate[]>([]);
+  
   // Poster image state
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
@@ -94,6 +100,8 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
     setShowTimes('');
     setOfficialUrl('');
     setRushPolicy('');
+    setIsAnonymous(false);
+    setTeammates([]);
     setPosterFile(null);
     setPosterPreview(null);
   };
@@ -186,6 +194,7 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
           rush_policy: rushPolicy.trim() || null,
           submitted_by: user.id,
           is_active: true,
+          is_anonymous: isAnonymous,
         })
         .select('id')
         .single();
@@ -203,6 +212,19 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
             .update({ poster_url: posterUrl })
             .eq('id', showData.id);
         }
+      }
+
+      // Add teammates if any
+      if (teammates.length > 0 && showData?.id) {
+        const teammateRecords = teammates.map(t => ({
+          show_id: showData.id,
+          user_id: t.user_id,
+          role_description: t.role_description || null,
+        }));
+
+        await supabase
+          .from('show_teammates')
+          .insert(teammateRecords);
       }
     },
     onSuccess: () => {
@@ -479,11 +501,40 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
           <div className="space-y-2">
             <Label htmlFor="rushPolicy">Rush/Discount Policy</Label>
             <Input
-              id="rushPolicy"
+              id="rushPolicy-add"
               value={rushPolicy}
               onChange={(e) => setRushPolicy(e.target.value)}
               placeholder="e.g., PWYC Thursdays, Student rush $15"
               maxLength={200}
+            />
+          </div>
+
+          {/* Teammates */}
+          <div className="space-y-2">
+            <Label>Teammates (Optional)</Label>
+            <TeammateSelector
+              teammates={teammates}
+              onChange={setTeammates}
+              excludeUserIds={user ? [user.id] : []}
+              placeholder="Search to add cast & crew..."
+            />
+          </div>
+
+          {/* Anonymous Posting */}
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <div className="space-y-0.5">
+              <Label htmlFor="anonymous-toggle" className="text-sm font-medium flex items-center gap-2">
+                <EyeOff className="w-4 h-4" />
+                Post Anonymously
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Your name won't be shown as the submitter
+              </p>
+            </div>
+            <Switch
+              id="anonymous-toggle"
+              checked={isAnonymous}
+              onCheckedChange={setIsAnonymous}
             />
           </div>
 
