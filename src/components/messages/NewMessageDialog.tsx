@@ -28,35 +28,30 @@ export const NewMessageDialog: React.FC<NewMessageDialogProps> = ({
   const [search, setSearch] = useState('');
   const { user } = useAuth();
 
-  // Fetch mutual connections (network)
-  const { data: networkUsers = [], isLoading } = useQuery({
-    queryKey: ['network-for-messaging', user?.id],
+  // Fetch all users matching the search query
+  const { data: searchResults = [], isLoading } = useQuery({
+    queryKey: ['users-for-messaging', user?.id, search],
     queryFn: async () => {
       if (!user?.id) return [];
 
-      // Get mutual connections
-      const { data: mutuals } = await supabase
-        .rpc('get_mutual_connections', { target_user_id: user.id });
-
-      if (!mutuals || mutuals.length === 0) return [];
-
-      const mutualIds = mutuals.map((m: { user_id: string }) => m.user_id);
-
-      // Get profiles for these users
-      const { data: profiles } = await supabase
+      // If no search, show recent or suggested users
+      let query = supabase
         .from('profiles_public')
         .select('user_id, display_name, avatar_url, headline')
-        .in('user_id', mutualIds);
+        .neq('user_id', user.id)
+        .limit(50);
+
+      // Apply search filter if provided
+      if (search.trim()) {
+        query = query.or(`display_name.ilike.%${search}%,headline.ilike.%${search}%`);
+      }
+
+      const { data: profiles } = await query.order('display_name');
 
       return profiles || [];
     },
     enabled: !!user?.id && open,
   });
-
-  const filteredUsers = networkUsers.filter(u => 
-    u.display_name?.toLowerCase().includes(search.toLowerCase()) ||
-    u.headline?.toLowerCase().includes(search.toLowerCase())
-  );
 
   const handleSelectUser = (userId: string) => {
     onSelectUser(userId);
@@ -83,7 +78,7 @@ export const NewMessageDialog: React.FC<NewMessageDialogProps> = ({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search your network..."
+              placeholder="Search for anyone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -95,23 +90,21 @@ export const NewMessageDialog: React.FC<NewMessageDialogProps> = ({
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
-            ) : filteredUsers.length === 0 ? (
+            ) : searchResults.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 {search ? (
-                  <p className="text-sm">No connections match "{search}"</p>
-                ) : networkUsers.length === 0 ? (
+                  <p className="text-sm">No users match "{search}"</p>
+                ) : (
                   <>
                     <MessageSquare className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No connections yet</p>
-                    <p className="text-xs mt-1">Connect with others to message them</p>
+                    <p className="text-sm">Start typing to search</p>
+                    <p className="text-xs mt-1">Find anyone on the platform</p>
                   </>
-                ) : (
-                  <p className="text-sm">No results found</p>
                 )}
               </div>
             ) : (
               <div className="space-y-1">
-                {filteredUsers.map((profile) => (
+                {searchResults.map((profile) => (
                   <button
                     key={profile.user_id}
                     onClick={() => handleSelectUser(profile.user_id)}
