@@ -407,9 +407,26 @@ const ProfilePage: React.FC = () => {
     if (success) setIsEditingRepresentation(false);
   };
 
-  const handleAddBadgeToDb = async () => {
-    if (!newBadge.trim() || !authUser?.id) return;
-    const normalized = newBadge.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 25);
+  // Studio badge options for the dropdown
+  const studioBadgeOptions = [
+    { tag: 'etw', label: 'Experimental Theatre Wing' },
+    { tag: 'nsb', label: 'New Studio on Broadway' },
+    { tag: 'atlantic', label: 'Atlantic' },
+    { tag: 'classical', label: 'Classical' },
+    { tag: 'stonestreet', label: 'Stonestreet' },
+    { tag: 'gradacting', label: 'Graduate Acting' },
+    { tag: 'playwrights', label: 'Playwrights' },
+    { tag: 'adler', label: 'Stella Adler' },
+    { tag: 'meisner', label: 'Meisner' },
+    { tag: 'innovation', label: 'The Innovation Studio' },
+    { tag: 'strasberg', label: 'Strasberg' },
+    { tag: 'UGFTV', label: 'Film and TV' },
+  ];
+
+  const handleAddBadgeToDb = async (badgeTag?: string) => {
+    const tagToAdd = badgeTag || newBadge.trim();
+    if (!tagToAdd || !authUser?.id) return;
+    const normalized = tagToAdd.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 25);
     if (!normalized) return;
     
     const currentBadges = displayBadges || [];
@@ -948,24 +965,33 @@ const ProfilePage: React.FC = () => {
           ))}
           
           {isOwnProfile && (
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Input
-                type="text"
-                placeholder="Add badge..."
-                value={newBadge}
-                onChange={(e) => setNewBadge(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddBadgeToDb()}
-                className="w-32 h-8 text-sm"
-                maxLength={25}
-              />
-              <Button 
-                size="sm" 
-                onClick={handleAddBadgeToDb}
-                className="h-8 px-3"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="h-8 px-3 gap-1">
+                  <Plus className="w-4 h-4" />
+                  Add Badge
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 bg-popover border border-border z-50">
+                {studioBadgeOptions
+                  .filter(option => !displayBadges?.includes(option.tag.toLowerCase()))
+                  .map((option) => (
+                    <DropdownMenuItem 
+                      key={option.tag}
+                      onClick={() => handleAddBadgeToDb(option.tag)}
+                      className="cursor-pointer"
+                    >
+                      <span className="text-primary font-medium">#{option.tag}</span>
+                      <span className="ml-2 text-muted-foreground text-sm">{option.label}</span>
+                    </DropdownMenuItem>
+                  ))}
+                {studioBadgeOptions.filter(option => !displayBadges?.includes(option.tag.toLowerCase())).length === 0 && (
+                  <DropdownMenuItem disabled className="text-muted-foreground">
+                    All badges added
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </section>
