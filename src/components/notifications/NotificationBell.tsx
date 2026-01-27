@@ -1,9 +1,10 @@
 import React from 'react';
-import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users } from 'lucide-react';
+import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
+import { useConnectionRequests } from '@/hooks/useConnectionRequests';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -28,6 +29,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
     deleteNotification 
   } = useNotifications();
   const { follow, isFollowing, isFollowPending } = useNetworkConnections();
+  const { acceptRequest, rejectRequest } = useConnectionRequests();
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -39,9 +41,39 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
         return <UserPlus className="w-4 h-4" />;
       case 'follow':
         return <Users className="w-4 h-4" />;
+      case 'connection_request':
+        return <Link2 className="w-4 h-4" />;
+      case 'connection_request_accepted':
+        return <Check className="w-4 h-4" />;
       default:
         return <Bell className="w-4 h-4" />;
     }
+  };
+
+  const handleAcceptRequest = (e: React.MouseEvent, requestId: string, notificationId: string) => {
+    e.stopPropagation();
+    acceptRequest.mutate(requestId, {
+      onSuccess: () => {
+        markAsRead.mutate(notificationId);
+        toast.success('Connection accepted!');
+      },
+      onError: () => {
+        toast.error('Failed to accept connection');
+      },
+    });
+  };
+
+  const handleRejectRequest = (e: React.MouseEvent, requestId: string, notificationId: string) => {
+    e.stopPropagation();
+    rejectRequest.mutate(requestId, {
+      onSuccess: () => {
+        deleteNotification.mutate(notificationId);
+        toast.success('Connection declined');
+      },
+      onError: () => {
+        toast.error('Failed to decline connection');
+      },
+    });
   };
 
   const handleFollowBack = (e: React.MouseEvent, followerId: string, notificationId: string) => {
@@ -77,6 +109,18 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
         // Navigate to follower's profile
         if (data.follower_id) {
           navigate(`/profile/${data.follower_id}`);
+        }
+        break;
+      case 'connection_request':
+        // Navigate to sender's profile
+        if (data.sender_id) {
+          navigate(`/profile/${data.sender_id}`);
+        }
+        break;
+      case 'connection_request_accepted':
+        // Navigate to user's profile
+        if (data.user_id) {
+          navigate(`/profile/${data.user_id}`);
         }
         break;
       default:
@@ -161,48 +205,80 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
                           {notification.body}
                         </p>
                       )}
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-                                      </p>
-                                      {/* Follow back button for follow notifications */}
-                                      {notification.type === 'follow' && (() => {
-                                        const data = notification.data as Record<string, string>;
-                                        const followerId = data?.follower_id;
-                                        if (followerId && !isFollowing(followerId)) {
-                                          return (
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="mt-2 h-7 text-xs"
-                                              onClick={(e) => handleFollowBack(e, followerId, notification.id)}
-                                              disabled={isFollowPending}
-                                            >
-                                              <UserPlus className="w-3 h-3 mr-1" />
-                                              Follow Back
-                                            </Button>
-                                          );
-                                        }
-                                        return null;
-                                      })()}
-                                    </div>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        deleteNotification.mutate(notification.id);
-                                      }}
-                                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded transition-all"
-                                    >
-                                      <Trash2 className="w-3 h-3 text-muted-foreground" />
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                      </p>
+                      {/* Follow back button for follow notifications */}
+                      {notification.type === 'follow' && (() => {
+                        const data = notification.data as Record<string, string>;
+                        const followerId = data?.follower_id;
+                        if (followerId && !isFollowing(followerId)) {
+                          return (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mt-2 h-7 text-xs"
+                              onClick={(e) => handleFollowBack(e, followerId, notification.id)}
+                              disabled={isFollowPending}
+                            >
+                              <UserPlus className="w-3 h-3 mr-1" />
+                              Follow Back
+                            </Button>
+                          );
+                        }
+                        return null;
+                      })()}
+                      {/* Accept/Decline buttons for connection requests */}
+                      {notification.type === 'connection_request' && !notification.read_at && (() => {
+                        const data = notification.data as Record<string, string>;
+                        const requestId = data?.request_id;
+                        if (requestId) {
+                          return (
+                            <div className="flex gap-2 mt-2">
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="h-7 text-xs"
+                                onClick={(e) => handleAcceptRequest(e, requestId, notification.id)}
+                                disabled={acceptRequest.isPending}
+                              >
+                                <Check className="w-3 h-3 mr-1" />
+                                Accept
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
+                                onClick={(e) => handleRejectRequest(e, requestId, notification.id)}
+                                disabled={rejectRequest.isPending}
+                              >
+                                <X className="w-3 h-3 mr-1" />
+                                Decline
+                              </Button>
                             </div>
-                          )}
-                        </ScrollArea>
-                      </PopoverContent>
-                    </Popover>
-                  );
-                };
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotification.mutate(notification.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded transition-all"
+                    >
+                      <Trash2 className="w-3 h-3 text-muted-foreground" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 export default NotificationBell;
