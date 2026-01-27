@@ -98,6 +98,7 @@ const ProfilePage: React.FC = () => {
   const updateMaterialVisibility = useStore((s) => s.updateMaterialVisibility);
   
   const [newBadge, setNewBadge] = useState('');
+  const [newSkill, setNewSkill] = useState('');
   const [addCreditOpen, setAddCreditOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [announced, setAnnounced] = useState(false);
@@ -159,7 +160,7 @@ const ProfilePage: React.FC = () => {
         // Own profile - use full profiles table
         const { data, error } = await supabase
           .from('profiles')
-          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id')
+          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) return null;
@@ -168,7 +169,7 @@ const ProfilePage: React.FC = () => {
         // Other users - use public view (excludes email)
         const { data, error } = await supabase
           .from('profiles_public')
-          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id')
+          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) return null;
@@ -206,6 +207,7 @@ const ProfilePage: React.FC = () => {
   const displayUnionStatus = dbProfile?.union_status || user?.unionStatus || '';
   const displayRepresentation = dbProfile?.representation || user?.representation || '';
   const displayGearList = dbProfile?.gear_list || user?.gearList || [];
+  const displaySkills = dbProfile?.skills || [];
   const displayCredits = dbCredits;
   
   // Fetch user media from database
@@ -475,6 +477,30 @@ const ProfilePage: React.FC = () => {
     const currentGear = displayGearList || [];
     const updatedGear = currentGear.filter(g => g !== gearToRemove);
     await saveProfileField('gear_list', updatedGear);
+  };
+
+  // Skills handlers
+  const handleAddSkill = async () => {
+    if (!newSkill.trim() || !authUser?.id) return;
+    const skillTrimmed = newSkill.trim();
+    if (skillTrimmed.length > 50) {
+      toast.error('Skill must be 50 characters or less');
+      return;
+    }
+    const currentSkills = displaySkills || [];
+    if (currentSkills.some(s => s.toLowerCase() === skillTrimmed.toLowerCase())) {
+      toast.error('Skill already exists');
+      return;
+    }
+    await saveProfileField('skills', [...currentSkills, skillTrimmed]);
+    setNewSkill('');
+  };
+
+  const handleRemoveSkill = async (skillToRemove: string) => {
+    if (!authUser?.id) return;
+    const currentSkills = displaySkills || [];
+    const updatedSkills = currentSkills.filter(s => s !== skillToRemove);
+    await saveProfileField('skills', updatedSkills);
   };
 
   // Credit handlers
@@ -961,8 +987,9 @@ const ProfilePage: React.FC = () => {
         </div>
       </header>
       
-      {/* B. Badges */}
+      {/* B. Affiliation */}
       <section className="px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
+        <h3 className="text-sm font-medium text-muted-foreground mb-2">Affiliation</h3>
         <div className="flex items-center gap-3 overflow-x-auto scrollbar-thin pb-2">
           {displayBadges.map((badge) => (
             <div key={badge} className="relative group flex-shrink-0">
@@ -989,7 +1016,7 @@ const ProfilePage: React.FC = () => {
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="outline" className="h-8 px-3 gap-1">
                   <Plus className="w-4 h-4" />
-                  Add Badge
+                  Add Affiliation
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 bg-popover border border-border z-50">
@@ -1007,11 +1034,58 @@ const ProfilePage: React.FC = () => {
                   ))}
                 {studioBadgeOptions.filter(option => !displayBadges?.includes(option.tag.toLowerCase())).length === 0 && (
                   <DropdownMenuItem disabled className="text-muted-foreground">
-                    All badges added
+                    All affiliations added
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+          )}
+          
+          {displayBadges.length === 0 && !isOwnProfile && (
+            <span className="text-muted-foreground text-sm">No affiliations added</span>
+          )}
+        </div>
+      </section>
+
+      {/* B2. Skills */}
+      <section className="px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
+        <h3 className="text-sm font-medium text-muted-foreground mb-2">Skills</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          {displaySkills.map((skill) => (
+            <div key={skill} className="relative group">
+              <Badge variant="secondary" className="px-3 py-1">
+                {skill}
+                {isOwnProfile && (
+                  <button
+                    onClick={() => handleRemoveSkill(skill)}
+                    className="ml-1.5 hover:text-destructive transition-colors"
+                    aria-label={`Remove ${skill} skill`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </Badge>
+            </div>
+          ))}
+          
+          {isOwnProfile && (
+            <div className="flex items-center gap-2">
+              <Input
+                value={newSkill}
+                onChange={(e) => setNewSkill(e.target.value)}
+                placeholder="Add a skill..."
+                className="w-32 h-8 text-sm"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddSkill()}
+                maxLength={50}
+              />
+              <Button size="sm" variant="outline" className="h-8" onClick={handleAddSkill} disabled={!newSkill.trim()}>
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+          
+          {displaySkills.length === 0 && !isOwnProfile && (
+            <span className="text-muted-foreground text-sm">No skills added</span>
           )}
         </div>
       </section>

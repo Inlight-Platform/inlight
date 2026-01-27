@@ -135,7 +135,10 @@ const PeoplePage: React.FC = () => {
       const badgesMatch = user.badges?.some((badge: string) => 
         badge.toLowerCase().includes(query)
       );
-      return nameMatch || roleMatch || badgesMatch;
+      const skillsMatch = user.skills?.some((skill: string) => 
+        skill.toLowerCase().includes(query)
+      );
+      return nameMatch || roleMatch || badgesMatch || skillsMatch;
     });
   }, [allUsers, searchQuery]);
   
@@ -381,7 +384,7 @@ const PeoplePage: React.FC = () => {
               <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name, role, or badge..."
+                  placeholder="Search by name, role, affiliation, or skill..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
