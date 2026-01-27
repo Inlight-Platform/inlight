@@ -17,6 +17,7 @@ interface Studio {
   name: string;
   description: string;
   icon: string;
+  badge_tag: string | null;
 }
 
 const PeoplePage: React.FC = () => {
@@ -118,8 +119,10 @@ const PeoplePage: React.FC = () => {
     navigate(`/profile/${userId}`);
   };
 
-  const handleStudioClick = (studioId: string) => {
-    navigate(`/insights?studio=${studioId}`);
+  const handleStudioClick = (badgeTag: string | null) => {
+    if (badgeTag) {
+      navigate(`/group?badge=${badgeTag}`);
+    }
   };
   
   const renderUserCard = (user: ReturnType<typeof get1stDegree>[0], degree: number) => {
@@ -273,7 +276,7 @@ const PeoplePage: React.FC = () => {
                 <Card
                   key={studio.id}
                   className="cursor-pointer hover:bg-accent/50 transition-colors group"
-                  onClick={() => handleStudioClick(studio.id)}
+                  onClick={() => handleStudioClick(studio.badge_tag)}
                 >
                   <CardContent className="p-4 text-center">
                     <span className="text-3xl mb-2 block group-hover:scale-110 transition-transform">

@@ -902,6 +902,7 @@ export type Database = {
       }
       studios: {
         Row: {
+          badge_tag: string | null
           created_at: string
           description: string | null
           icon: string | null
@@ -909,6 +910,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          badge_tag?: string | null
           created_at?: string
           description?: string | null
           icon?: string | null
@@ -916,6 +918,7 @@ export type Database = {
           name: string
         }
         Update: {
+          badge_tag?: string | null
           created_at?: string
           description?: string | null
           icon?: string | null
