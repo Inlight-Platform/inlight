@@ -159,7 +159,7 @@ const ProfilePage: React.FC = () => {
         // Own profile - use full profiles table
         const { data, error } = await supabase
           .from('profiles')
-          .select('display_name, avatar_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id')
+          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) return null;
@@ -168,7 +168,7 @@ const ProfilePage: React.FC = () => {
         // Other users - use public view (excludes email)
         const { data, error } = await supabase
           .from('profiles_public')
-          .select('display_name, avatar_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id')
+          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) return null;
@@ -310,7 +310,15 @@ const ProfilePage: React.FC = () => {
         .from('profile-media')
         .getPublicUrl(fileName);
 
-      // For now we store cover in a custom way - could add cover_url column later
+      const newCoverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      
+      // Save the cover URL to the database
+      await supabase
+        .from('profiles')
+        .update({ cover_url: newCoverUrl })
+        .eq('user_id', authUser.id);
+
+      await queryClient.invalidateQueries({ queryKey: ['profile', authUser.id] });
       toast.success('Cover image updated!');
     } catch (error: any) {
       toast.error(error.message || 'Failed to upload cover');
@@ -656,7 +664,7 @@ const ProfilePage: React.FC = () => {
         {/* Cover image */}
         <div className="relative h-[200px] sm:h-[280px] md:h-[350px] lg:h-[450px] overflow-hidden">
           <img
-            src={user?.coverImage || '/placeholder.svg'}
+            src={dbProfile?.cover_url || '/placeholder.svg'}
             alt={`${displayName}'s cover`}
             className="w-full h-full object-cover"
           />
