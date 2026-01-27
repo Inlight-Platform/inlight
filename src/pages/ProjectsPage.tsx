@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Plus, Bookmark, BookmarkCheck, Filter, Search, X, ArrowUpDown, Users } from 'lucide-react';
+import { FolderKanban, Plus, Bookmark, BookmarkCheck, Filter, Search, X, ArrowUpDown, Users, Archive } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
@@ -27,6 +27,7 @@ interface Project {
   creator_id: string;
   created_at: string;
   category: string | null;
+  status: string | null;
   creator_profile?: {
     display_name: string | null;
     avatar_url: string | null;
@@ -159,10 +160,31 @@ const ProjectsPage: React.FC = () => {
     });
   };
 
+  // Helper to normalize status
+  const normalizeStatus = (s: string | null): string => {
+    const statusMap: Record<string, string> = {
+      'pre-production': 'planning',
+      'in-production': 'active',
+      'post-production': 'wrapping',
+      'completed': 'archived',
+    };
+    return statusMap[s?.toLowerCase() || ''] || s || 'planning';
+  };
+
+  // Filter out archived projects from main feed
+  const activeProjects = projects.filter(p => normalizeStatus(p.status) !== 'archived');
+  const archivedProjects = projects.filter(p => normalizeStatus(p.status) === 'archived');
+
   const filteredProjects = sortProjects(filterBySearch(
     selectedCategory === 'all' 
-      ? projects 
-      : projects.filter(p => p.category === selectedCategory)
+      ? activeProjects 
+      : activeProjects.filter(p => p.category === selectedCategory)
+  ));
+
+  const filteredArchivedProjects = sortProjects(filterBySearch(
+    selectedCategory === 'all'
+      ? archivedProjects
+      : archivedProjects.filter(p => p.category === selectedCategory)
   ));
 
   const filteredSavedProjects = sortProjects(filterBySearch(
@@ -182,10 +204,10 @@ const ProjectsPage: React.FC = () => {
 
   const networkProjects = useMemo(() => {
     return sortProjects(filterBySearch(
-      projects.filter(p => networkUserIds.has(p.creator_id))
+      activeProjects.filter(p => networkUserIds.has(p.creator_id))
         .filter(p => selectedCategory === 'all' || p.category === selectedCategory)
     ));
-  }, [projects, networkUserIds, selectedCategory, searchQuery, sortBy]);
+  }, [activeProjects, networkUserIds, selectedCategory, searchQuery, sortBy]);
 
   // Save project mutation
   const saveProjectMutation = useMutation({
@@ -400,7 +422,7 @@ const ProjectsPage: React.FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-lg grid-cols-4 mb-6">
+          <TabsList className="grid w-full max-w-2xl grid-cols-5 mb-6">
             <TabsTrigger value="feed">Feed</TabsTrigger>
             <TabsTrigger value="my-network" className="gap-1">
               <Users className="w-3 h-3" />
@@ -408,6 +430,10 @@ const ProjectsPage: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger value="open-roles">Open Roles</TabsTrigger>
             <TabsTrigger value="saved">Saved</TabsTrigger>
+            <TabsTrigger value="archive" className="gap-1">
+              <Archive className="w-3 h-3" />
+              Archive
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="feed">
@@ -491,6 +517,31 @@ const ProjectsPage: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredSavedProjects.map(project => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="archive">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : filteredArchivedProjects.length === 0 ? (
+              <div className="text-center py-12">
+                <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  {searchQuery 
+                    ? `No archived projects found for "${searchQuery}"` 
+                    : selectedCategory === 'all' 
+                      ? 'No archived projects yet. Projects that complete their timeline will appear here.' 
+                      : `No archived ${getCategoryLabel(selectedCategory)} projects`}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredArchivedProjects.map(project => (
                   <ProjectCard key={project.id} project={project} />
                 ))}
               </div>
