@@ -126,9 +126,12 @@ const ResourcesPage: React.FC = () => {
   const [educationFilter, setEducationFilter] = useState<EducationProgram['type'] | 'all'>('all');
 
   const currentResources = activeTab === 'theatre' ? theatreResources : filmResources;
+  // Filter out education from regular resources since it has its own section
   const filteredResources = selectedCategory 
-    ? currentResources.filter(r => r.category === selectedCategory)
-    : currentResources;
+    ? selectedCategory === 'education' 
+      ? [] // Education is handled separately
+      : currentResources.filter(r => r.category === selectedCategory)
+    : currentResources.filter(r => r.category !== 'education');
 
   const filteredEducation = educationPrograms.filter(p => {
     const industryMatch = p.industry === 'both' || p.industry === activeTab;
@@ -207,129 +210,141 @@ const ResourcesPage: React.FC = () => {
               </div>
             </section>
 
-            {/* Resources List */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-display font-semibold">
-                  {selectedCategory 
-                    ? resourceCategories.find(c => c.id === selectedCategory)?.name 
-                    : 'All Resources'}
-                </h2>
-                {selectedCategory && (
+            {/* Education & Programs Section - shown when education is selected */}
+            {selectedCategory === 'education' && (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="w-5 h-5 text-primary" />
+                    <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
+                  </div>
                   <button 
                     onClick={() => setSelectedCategory(null)}
                     className="text-sm text-primary hover:underline"
                   >
                     Clear filter
                   </button>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredResources.map((resource) => (
-                  <a 
-                    key={resource.name}
-                    href={resource.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="block group"
-                  >
-                    <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="font-semibold group-hover:text-primary transition-colors">
-                            {resource.name}
-                          </h3>
-                          <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                          {resource.description}
-                        </p>
-                        <Badge variant="secondary" className="text-xs">
-                          {resourceCategories.find(c => c.id === resource.category)?.name}
-                        </Badge>
-                      </CardContent>
-                    </Card>
-                  </a>
-                ))}
-              </div>
-            </section>
-
-            {/* Education & Programs Section */}
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <GraduationCap className="w-5 h-5 text-primary" />
-                <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
-              </div>
-              <p className="text-sm text-muted-foreground mb-4">
-                Find workshops, classes, and training programs outside of college
-              </p>
-              
-              {/* Education Type Filters */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <button
-                  onClick={() => setEducationFilter('all')}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                    educationFilter === 'all'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-accent'
-                  }`}
-                >
-                  All
-                </button>
-                {educationTypes.map((type) => (
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Find workshops, classes, and training programs outside of college
+                </p>
+                
+                {/* Education Type Filters */}
+                <div className="flex flex-wrap gap-2 mb-4">
                   <button
-                    key={type}
-                    onClick={() => setEducationFilter(type)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
-                      educationFilter === type
+                    onClick={() => setEducationFilter('all')}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      educationFilter === 'all'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-muted-foreground hover:bg-accent'
                     }`}
                   >
-                    {getEducationTypeIcon(type)}
-                    {getEducationTypeName(type)}
+                    All
                   </button>
-                ))}
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredEducation.map((program) => (
-                  <a 
-                    key={program.name}
-                    href={program.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="block group"
-                  >
-                    <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="font-semibold group-hover:text-primary transition-colors">
-                            {program.name}
-                          </h3>
-                          <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                          {program.description}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                            {getEducationTypeIcon(program.type)}
-                            {getEducationTypeName(program.type)}
-                          </Badge>
-                          {program.industry !== 'both' && (
-                            <Badge variant="outline" className="text-xs">
-                              {program.industry === 'theatre' ? 'Theatre' : 'Film'}
+                  {educationTypes.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setEducationFilter(type)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
+                        educationFilter === type
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {getEducationTypeIcon(type)}
+                      {getEducationTypeName(type)}
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredEducation.map((program) => (
+                    <a 
+                      key={program.name}
+                      href={program.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block group"
+                    >
+                      <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h3 className="font-semibold group-hover:text-primary transition-colors">
+                              {program.name}
+                            </h3>
+                            <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                            {program.description}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                              {getEducationTypeIcon(program.type)}
+                              {getEducationTypeName(program.type)}
                             </Badge>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </a>
-                ))}
-              </div>
-            </section>
+                            {program.industry !== 'both' && (
+                              <Badge variant="outline" className="text-xs">
+                                {program.industry === 'theatre' ? 'Theatre' : 'Film'}
+                              </Badge>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Resources List - shown when not education */}
+            {selectedCategory !== 'education' && (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-display font-semibold">
+                    {selectedCategory 
+                      ? resourceCategories.find(c => c.id === selectedCategory)?.name 
+                      : 'All Resources'}
+                  </h2>
+                  {selectedCategory && (
+                    <button 
+                      onClick={() => setSelectedCategory(null)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredResources.map((resource) => (
+                    <a 
+                      key={resource.name}
+                      href={resource.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block group"
+                    >
+                      <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h3 className="font-semibold group-hover:text-primary transition-colors">
+                              {resource.name}
+                            </h3>
+                            <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                            {resource.description}
+                          </p>
+                          <Badge variant="secondary" className="text-xs">
+                            {resourceCategories.find(c => c.id === resource.category)?.name}
+                          </Badge>
+                        </CardContent>
+                      </Card>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
           </TabsContent>
 
           <TabsContent value="film" className="space-y-8">
@@ -367,129 +382,141 @@ const ResourcesPage: React.FC = () => {
               </div>
             </section>
 
-            {/* Resources List */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-display font-semibold">
-                  {selectedCategory 
-                    ? resourceCategories.find(c => c.id === selectedCategory)?.name 
-                    : 'All Resources'}
-                </h2>
-                {selectedCategory && (
+            {/* Education & Programs Section - shown when education is selected */}
+            {selectedCategory === 'education' && (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="w-5 h-5 text-primary" />
+                    <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
+                  </div>
                   <button 
                     onClick={() => setSelectedCategory(null)}
                     className="text-sm text-primary hover:underline"
                   >
                     Clear filter
                   </button>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredResources.map((resource) => (
-                  <a 
-                    key={resource.name}
-                    href={resource.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="block group"
-                  >
-                    <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="font-semibold group-hover:text-primary transition-colors">
-                            {resource.name}
-                          </h3>
-                          <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                          {resource.description}
-                        </p>
-                        <Badge variant="secondary" className="text-xs">
-                          {resourceCategories.find(c => c.id === resource.category)?.name}
-                        </Badge>
-                      </CardContent>
-                    </Card>
-                  </a>
-                ))}
-              </div>
-            </section>
-
-            {/* Education & Programs Section */}
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <GraduationCap className="w-5 h-5 text-primary" />
-                <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
-              </div>
-              <p className="text-sm text-muted-foreground mb-4">
-                Find workshops, classes, and training programs outside of college
-              </p>
-              
-              {/* Education Type Filters */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <button
-                  onClick={() => setEducationFilter('all')}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                    educationFilter === 'all'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-accent'
-                  }`}
-                >
-                  All
-                </button>
-                {educationTypes.map((type) => (
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Find workshops, classes, and training programs outside of college
+                </p>
+                
+                {/* Education Type Filters */}
+                <div className="flex flex-wrap gap-2 mb-4">
                   <button
-                    key={type}
-                    onClick={() => setEducationFilter(type)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
-                      educationFilter === type
+                    onClick={() => setEducationFilter('all')}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      educationFilter === 'all'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-muted-foreground hover:bg-accent'
                     }`}
                   >
-                    {getEducationTypeIcon(type)}
-                    {getEducationTypeName(type)}
+                    All
                   </button>
-                ))}
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredEducation.map((program) => (
-                  <a 
-                    key={program.name}
-                    href={program.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="block group"
-                  >
-                    <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="font-semibold group-hover:text-primary transition-colors">
-                            {program.name}
-                          </h3>
-                          <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                          {program.description}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                            {getEducationTypeIcon(program.type)}
-                            {getEducationTypeName(program.type)}
-                          </Badge>
-                          {program.industry !== 'both' && (
-                            <Badge variant="outline" className="text-xs">
-                              {program.industry === 'theatre' ? 'Theatre' : 'Film'}
+                  {educationTypes.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setEducationFilter(type)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
+                        educationFilter === type
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {getEducationTypeIcon(type)}
+                      {getEducationTypeName(type)}
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredEducation.map((program) => (
+                    <a 
+                      key={program.name}
+                      href={program.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block group"
+                    >
+                      <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h3 className="font-semibold group-hover:text-primary transition-colors">
+                              {program.name}
+                            </h3>
+                            <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                            {program.description}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                              {getEducationTypeIcon(program.type)}
+                              {getEducationTypeName(program.type)}
                             </Badge>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </a>
-                ))}
-              </div>
-            </section>
+                            {program.industry !== 'both' && (
+                              <Badge variant="outline" className="text-xs">
+                                {program.industry === 'theatre' ? 'Theatre' : 'Film'}
+                              </Badge>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Resources List - shown when not education */}
+            {selectedCategory !== 'education' && (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-display font-semibold">
+                    {selectedCategory 
+                      ? resourceCategories.find(c => c.id === selectedCategory)?.name 
+                      : 'All Resources'}
+                  </h2>
+                  {selectedCategory && (
+                    <button 
+                      onClick={() => setSelectedCategory(null)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredResources.map((resource) => (
+                    <a 
+                      key={resource.name}
+                      href={resource.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block group"
+                    >
+                      <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h3 className="font-semibold group-hover:text-primary transition-colors">
+                              {resource.name}
+                            </h3>
+                            <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                            {resource.description}
+                          </p>
+                          <Badge variant="secondary" className="text-xs">
+                            {resourceCategories.find(c => c.id === resource.category)?.name}
+                          </Badge>
+                        </CardContent>
+                      </Card>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
           </TabsContent>
         </Tabs>
       </div>
