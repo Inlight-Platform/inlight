@@ -23,6 +23,8 @@ export interface Show {
   lottery_info: string | null;
   official_url: string | null;
   is_active: boolean;
+  show_times: string | null;
+  submitted_by: string | null;
 }
 
 interface ShowCardProps {

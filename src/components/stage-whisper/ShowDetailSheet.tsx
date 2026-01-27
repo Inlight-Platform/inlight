@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Heart, MapPin, Calendar, Clock, Ticket, Accessibility, 
   ExternalLink, Bell, BellOff, MessageSquare, ThumbsUp, X,
-  ChevronRight, Share2
+  ChevronRight, Share2, Pencil
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Show } from './ShowCard';
+import { EditShowDialog } from './EditShowDialog';
 
 interface ShowDetailSheetProps {
   show: Show | null;
@@ -200,6 +201,22 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
             
             {/* Floating Actions */}
             <div className="absolute top-4 right-4 flex gap-2">
+              {/* Edit button - only for submitter */}
+              {user && show.submitted_by === user.id && (
+                <EditShowDialog
+                  show={show}
+                  onSuccess={onClose}
+                  trigger={
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="backdrop-blur-sm"
+                    >
+                      <Pencil className="w-5 h-5" />
+                    </Button>
+                  }
+                />
+              )}
               <Button
                 size="icon"
                 variant="secondary"
