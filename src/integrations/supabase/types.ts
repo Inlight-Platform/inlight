@@ -434,6 +434,7 @@ export type Database = {
           pronouns: string | null
           representation: string | null
           role: string | null
+          skills: string[] | null
           union_status: string | null
           updated_at: string
           user_id: string
@@ -456,6 +457,7 @@ export type Database = {
           pronouns?: string | null
           representation?: string | null
           role?: string | null
+          skills?: string[] | null
           union_status?: string | null
           updated_at?: string
           user_id: string
@@ -478,6 +480,7 @@ export type Database = {
           pronouns?: string | null
           representation?: string | null
           role?: string | null
+          skills?: string[] | null
           union_status?: string | null
           updated_at?: string
           user_id?: string
@@ -1140,6 +1143,7 @@ export type Database = {
           pronouns: string | null
           representation: string | null
           role: string | null
+          skills: string[] | null
           union_status: string | null
           updated_at: string | null
           user_id: string | null
@@ -1158,6 +1162,7 @@ export type Database = {
           pronouns?: string | null
           representation?: string | null
           role?: string | null
+          skills?: string[] | null
           union_status?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -1176,6 +1181,7 @@ export type Database = {
           pronouns?: string | null
           representation?: string | null
           role?: string | null
+          skills?: string[] | null
           union_status?: string | null
           updated_at?: string | null
           user_id?: string | null
