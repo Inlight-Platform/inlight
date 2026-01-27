@@ -176,7 +176,8 @@ const FeedPage: React.FC = () => {
         category: show.category,
         run_start: show.run_start,
         run_end: show.run_end,
-        creator_profile: profileMap.get(show.submitted_by!),
+        is_anonymous: show.is_anonymous || false,
+        creator_profile: show.is_anonymous ? { display_name: null, avatar_url: null } : profileMap.get(show.submitted_by!),
       }));
     },
   });

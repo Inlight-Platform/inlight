@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, ImagePlus, X, Pencil } from 'lucide-react';
+import { CalendarIcon, Loader2, ImagePlus, X, Pencil, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
+import { TeammateSelector, Teammate } from './TeammateSelector';
 import { Show } from './ShowCard';
 
 interface EditShowDialogProps {
@@ -83,11 +85,43 @@ export const EditShowDialog: React.FC<EditShowDialogProps> = ({ show, trigger, o
   const [showTimes, setShowTimes] = useState(show.show_times || '');
   const [officialUrl, setOfficialUrl] = useState(show.official_url || '');
   const [rushPolicy, setRushPolicy] = useState(show.rush_policy || '');
+  const [isAnonymous, setIsAnonymous] = useState((show as any).is_anonymous || false);
+  const [teammates, setTeammates] = useState<Teammate[]>([]);
 
   // Poster image state
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(show.poster_url || null);
   const [uploadingPoster, setUploadingPoster] = useState(false);
+
+  // Fetch existing teammates
+  const { data: existingTeammates = [] } = useQuery({
+    queryKey: ['show-teammates', show.id],
+    queryFn: async () => {
+      const { data: teammateData } = await supabase
+        .from('show_teammates')
+        .select('user_id, role_description')
+        .eq('show_id', show.id);
+
+      if (!teammateData || teammateData.length === 0) return [];
+
+      // Fetch profiles for teammates
+      const userIds = teammateData.map(t => t.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return teammateData.map(t => ({
+        user_id: t.user_id,
+        display_name: profileMap.get(t.user_id)?.display_name || null,
+        avatar_url: profileMap.get(t.user_id)?.avatar_url || null,
+        role_description: t.role_description || undefined,
+      })) as Teammate[];
+    },
+    enabled: open,
+  });
 
   // Reset form when show changes
   useEffect(() => {
@@ -102,9 +136,17 @@ export const EditShowDialog: React.FC<EditShowDialogProps> = ({ show, trigger, o
     setShowTimes(show.show_times || '');
     setOfficialUrl(show.official_url || '');
     setRushPolicy(show.rush_policy || '');
+    setIsAnonymous((show as any).is_anonymous || false);
     setPosterPreview(show.poster_url || null);
     setPosterFile(null);
   }, [show]);
+
+  // Sync teammates when existingTeammates loads
+  useEffect(() => {
+    if (existingTeammates.length > 0) {
+      setTeammates(existingTeammates);
+    }
+  }, [existingTeammates]);
 
   const handlePosterSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -201,14 +243,34 @@ export const EditShowDialog: React.FC<EditShowDialogProps> = ({ show, trigger, o
           official_url: officialUrl.trim() || null,
           rush_policy: rushPolicy.trim() || null,
           poster_url: posterUrl,
+          is_anonymous: isAnonymous,
         })
         .eq('id', show.id);
 
       if (error) throw error;
+
+      // Update teammates: delete existing and re-insert
+      await supabase
+        .from('show_teammates')
+        .delete()
+        .eq('show_id', show.id);
+
+      if (teammates.length > 0) {
+        const teammateRecords = teammates.map(t => ({
+          show_id: show.id,
+          user_id: t.user_id,
+          role_description: t.role_description || null,
+        }));
+
+        await supabase
+          .from('show_teammates')
+          .insert(teammateRecords);
+      }
     },
     onSuccess: () => {
       toast.success('Show updated! 🎭');
       queryClient.invalidateQueries({ queryKey: ['nyc-shows'] });
+      queryClient.invalidateQueries({ queryKey: ['show-teammates', show.id] });
       setOpen(false);
       onSuccess?.();
     },
@@ -462,6 +524,35 @@ export const EditShowDialog: React.FC<EditShowDialogProps> = ({ show, trigger, o
               onChange={(e) => setRushPolicy(e.target.value)}
               placeholder="e.g., PWYC Thursdays, Student rush $15"
               maxLength={200}
+            />
+          </div>
+
+          {/* Teammates */}
+          <div className="space-y-2">
+            <Label>Teammates</Label>
+            <TeammateSelector
+              teammates={teammates}
+              onChange={setTeammates}
+              excludeUserIds={user ? [user.id] : []}
+              placeholder="Search to add cast & crew..."
+            />
+          </div>
+
+          {/* Anonymous Posting */}
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <div className="space-y-0.5">
+              <Label htmlFor="edit-anonymous-toggle" className="text-sm font-medium flex items-center gap-2">
+                <EyeOff className="w-4 h-4" />
+                Post Anonymously
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Your name won't be shown as the submitter
+              </p>
+            </div>
+            <Switch
+              id="edit-anonymous-toggle"
+              checked={isAnonymous}
+              onCheckedChange={setIsAnonymous}
             />
           </div>
 
