@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, MessageSquare, Send, Loader2 } from 'lucide-react';
+import { ChevronLeft, MessageSquare, Send, Loader2, Plus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMessages } from '@/hooks/useMessages';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { NewMessageDialog } from '@/components/messages/NewMessageDialog';
 
 const MessagesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -51,6 +52,11 @@ const MessagesPage: React.FC = () => {
 
   const handleSelectConversation = (partnerId: string) => {
     setSelectedPartnerId(partnerId);
+    setShowMobileChat(true);
+  };
+
+  const handleNewMessage = (userId: string) => {
+    setSelectedPartnerId(userId);
     setShowMobileChat(true);
   };
 
@@ -128,8 +134,16 @@ const MessagesPage: React.FC = () => {
         <div className="hidden md:flex flex-1">
           {/* Sidebar - Conversation List */}
           <div className="w-80 border-r border-border flex flex-col">
-            <div className="p-4 border-b border-border">
+            <div className="p-4 border-b border-border flex items-center justify-between">
               <h2 className="text-lg font-semibold">Conversations</h2>
+              <NewMessageDialog 
+                onSelectUser={handleNewMessage}
+                trigger={
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                }
+              />
             </div>
             
             <div className="flex-1 overflow-y-auto">
@@ -140,7 +154,8 @@ const MessagesPage: React.FC = () => {
               ) : conversations.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <p className="text-sm">No conversations yet</p>
-                  <p className="text-xs mt-1">Visit a profile to start a chat</p>
+                  <p className="text-xs mt-1 mb-3">Start a conversation with someone in your network</p>
+                  <NewMessageDialog onSelectUser={handleNewMessage} />
                 </div>
               ) : (
                 conversations.map((conv) => (
@@ -346,7 +361,8 @@ const MessagesPage: React.FC = () => {
                 <div className="p-4 text-center text-muted-foreground">
                   <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p className="text-sm">No conversations yet</p>
-                  <p className="text-xs mt-1">Visit a profile to start a chat</p>
+                  <p className="text-xs mt-1 mb-3">Start a conversation with someone in your network</p>
+                  <NewMessageDialog onSelectUser={handleNewMessage} />
                 </div>
               ) : (
                 conversations.map((conv) => (
