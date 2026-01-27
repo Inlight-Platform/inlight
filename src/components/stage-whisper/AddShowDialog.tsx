@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { CalendarIcon, Plus, Loader2 } from 'lucide-react';
+import { CalendarIcon, Plus, Loader2, ImagePlus, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -62,6 +62,7 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -75,6 +76,11 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
   const [showTimes, setShowTimes] = useState('');
   const [officialUrl, setOfficialUrl] = useState('');
   const [rushPolicy, setRushPolicy] = useState('');
+  
+  // Poster image state
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [posterPreview, setPosterPreview] = useState<string | null>(null);
+  const [uploadingPoster, setUploadingPoster] = useState(false);
 
   const resetForm = () => {
     setTitle('');
@@ -88,6 +94,72 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
     setShowTimes('');
     setOfficialUrl('');
     setRushPolicy('');
+    setPosterFile(null);
+    setPosterPreview(null);
+  };
+
+  const handlePosterSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image must be under 10MB');
+      return;
+    }
+    
+    setPosterFile(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPosterPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removePoster = () => {
+    setPosterFile(null);
+    setPosterPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadPoster = async (showId: string): Promise<string | null> => {
+    if (!posterFile || !user) return null;
+    
+    setUploadingPoster(true);
+    try {
+      const fileExt = posterFile.name.split('.').pop();
+      const fileName = `shows/${showId}/poster.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('profile-media')
+        .upload(fileName, posterFile, {
+          upsert: true,
+          contentType: posterFile.type,
+        });
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: urlData } = supabase.storage
+        .from('profile-media')
+        .getPublicUrl(fileName);
+      
+      return urlData.publicUrl;
+    } catch (error: any) {
+      console.error('Poster upload failed:', error);
+      return null;
+    } finally {
+      setUploadingPoster(false);
+    }
   };
 
   const submitShowMutation = useMutation({
@@ -96,24 +168,42 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
       if (!title.trim()) throw new Error('Title is required');
       if (!venue.trim()) throw new Error('Venue is required');
 
-      const { error } = await supabase.from('nyc_shows').insert({
-        title: title.trim(),
-        venue: venue.trim(),
-        borough,
-        description: description.trim() || null,
-        show_type: showType,
-        category: 'off-off-broadway',
-        price_tier: priceTier,
-        run_start: runStart ? format(runStart, 'yyyy-MM-dd') : null,
-        run_end: runEnd ? format(runEnd, 'yyyy-MM-dd') : null,
-        show_times: showTimes.trim() || null,
-        official_url: officialUrl.trim() || null,
-        rush_policy: rushPolicy.trim() || null,
-        submitted_by: user.id,
-        is_active: true,
-      });
+      // First insert the show to get its ID
+      const { data: showData, error: insertError } = await supabase
+        .from('nyc_shows')
+        .insert({
+          title: title.trim(),
+          venue: venue.trim(),
+          borough,
+          description: description.trim() || null,
+          show_type: showType,
+          category: 'off-off-broadway',
+          price_tier: priceTier,
+          run_start: runStart ? format(runStart, 'yyyy-MM-dd') : null,
+          run_end: runEnd ? format(runEnd, 'yyyy-MM-dd') : null,
+          show_times: showTimes.trim() || null,
+          official_url: officialUrl.trim() || null,
+          rush_policy: rushPolicy.trim() || null,
+          submitted_by: user.id,
+          is_active: true,
+        })
+        .select('id')
+        .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
+      
+      // Upload poster if provided
+      if (posterFile && showData?.id) {
+        const posterUrl = await uploadPoster(showData.id);
+        
+        if (posterUrl) {
+          // Update the show with the poster URL
+          await supabase
+            .from('nyc_shows')
+            .update({ poster_url: posterUrl })
+            .eq('id', showData.id);
+        }
+      }
     },
     onSuccess: () => {
       toast.success('Your show has been added! 🎭');
@@ -173,6 +263,47 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          {/* Poster Image Upload */}
+          <div className="space-y-2">
+            <Label>Show Poster</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePosterSelect}
+              className="hidden"
+            />
+            
+            {posterPreview ? (
+              <div className="relative w-full aspect-[2/3] max-w-[200px] rounded-lg overflow-hidden border border-border">
+                <img
+                  src={posterPreview}
+                  alt="Poster preview"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={removePoster}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full aspect-[2/3] max-w-[200px] rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <ImagePlus className="w-8 h-8" />
+                <span className="text-sm">Add poster image</span>
+              </button>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Recommended: 2:3 aspect ratio (like a playbill)
+            </p>
+          </div>
+
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Show Title *</Label>
@@ -360,12 +491,12 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
           <Button
             type="submit"
             className="w-full"
-            disabled={submitShowMutation.isPending}
+            disabled={submitShowMutation.isPending || uploadingPoster}
           >
-            {submitShowMutation.isPending ? (
+            {submitShowMutation.isPending || uploadingPoster ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Submitting...
+                {uploadingPoster ? 'Uploading image...' : 'Submitting...'}
               </>
             ) : (
               'Add Show'
