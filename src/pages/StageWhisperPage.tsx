@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Theater, Search, Shuffle, Heart, Filter, SlidersHorizontal,
-  Sparkles, ChevronDown
+  Sparkles, ChevronDown, Plus
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,6 +16,7 @@ import { ShowCard, Show } from '@/components/stage-whisper/ShowCard';
 import { ShowFilters, FilterState } from '@/components/stage-whisper/ShowFilters';
 import { ShowDetailSheet } from '@/components/stage-whisper/ShowDetailSheet';
 import { MyShowList } from '@/components/stage-whisper/MyShowList';
+import { AddShowDialog } from '@/components/stage-whisper/AddShowDialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -236,13 +237,25 @@ const StageWhisperPage: React.FC = () => {
 
       {/* Content */}
       <div className="px-4 sm:px-6 lg:px-8 py-6">
-        {/* Creator Note */}
-        <div className="mb-4 p-3 bg-accent/50 rounded-lg border border-accent flex items-start gap-2">
-          <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">Putting up a show or releasing a project?</span>{' '}
-            It will appear here to the public!
-          </p>
+        {/* Creator Note - Show Add Show button for Off-Off-Broadway */}
+        <div className="mb-4 p-3 bg-accent/50 rounded-lg border border-accent flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2">
+            <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Putting up a show or releasing a project?</span>{' '}
+              It will appear here to the public!
+            </p>
+          </div>
+          {activeTab === 'off-off-broadway' && (
+            <AddShowDialog 
+              trigger={
+                <Button size="sm" className="gap-1.5 shrink-0">
+                  <Plus className="w-4 h-4" />
+                  Add Your Show
+                </Button>
+              }
+            />
+          )}
         </div>
 
         {viewTab === 'discover' ? (
