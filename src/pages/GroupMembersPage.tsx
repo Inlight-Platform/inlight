@@ -27,14 +27,14 @@ const GroupMembersPage: React.FC = () => {
     enabled: !!badgeTag,
   });
   
-  // Fetch members with this badge
+  // Fetch members with this badge (badges are stored without # prefix)
   const { data: members = [], isLoading: membersLoading } = useQuery({
     queryKey: ['group-members', badgeTag],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles_public')
         .select('*')
-        .contains('badges', [`#${badgeTag}`]);
+        .contains('badges', [badgeTag.toLowerCase()]);
       if (error) throw error;
       return data || [];
     },
