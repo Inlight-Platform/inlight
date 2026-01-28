@@ -7,26 +7,41 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, GraduationCap } from 'lucide-react';
+import { Loader2, GraduationCap, ArrowLeft } from 'lucide-react';
+
+type AuthView = 'login' | 'signup' | 'forgot' | 'reset';
 
 const AuthPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const defaultTab = searchParams.get('mode') === 'signup' ? 'signup' : 'login';
+  const mode = searchParams.get('mode');
   
-  const [activeTab, setActiveTab] = useState(defaultTab);
+  const getInitialView = (): AuthView => {
+    if (mode === 'signup') return 'signup';
+    if (mode === 'reset') return 'reset';
+    return 'login';
+  };
+  
+  const [view, setView] = useState<AuthView>(getInitialView());
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { user, loading, signIn, signUp } = useAuth();
+  const { user, loading, signIn, signUp, resetPassword, updatePassword } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && view !== 'reset') {
       navigate('/');
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, view]);
+
+  useEffect(() => {
+    if (mode === 'reset') {
+      setView('reset');
+    }
+  }, [mode]);
 
   const validateEduEmail = (email: string): boolean => {
     return email.toLowerCase().endsWith('.edu');
@@ -75,6 +90,55 @@ const AuthPage: React.FC = () => {
     setIsLoading(false);
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      toast.error('Please enter your email address.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    const { error } = await resetPassword(email);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Password reset email sent! Check your inbox.');
+      setView('login');
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    const { error } = await updatePassword(password);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Password updated successfully!');
+      navigate('/');
+    }
+
+    setIsLoading(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -83,6 +147,117 @@ const AuthPage: React.FC = () => {
     );
   }
 
+  // Reset password view
+  if (view === 'reset') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center space-y-2">
+            <div className="mx-auto w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+              <GraduationCap className="h-6 w-6 text-primary-foreground" />
+            </div>
+            <CardTitle className="text-2xl font-bold">Set New Password</CardTitle>
+            <CardDescription>
+              Enter your new password below
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Password'
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Forgot password view
+  if (view === 'forgot') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center space-y-2">
+            <div className="mx-auto w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+              <GraduationCap className="h-6 w-6 text-primary-foreground" />
+            </div>
+            <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
+            <CardDescription>
+              Enter your email and we'll send you a reset link
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="you@university.edu"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  'Send Reset Link'
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setView('login')}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Login
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Login/Signup view
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -96,7 +271,7 @@ const AuthPage: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={view} onValueChange={(v) => setView(v as AuthView)}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -135,6 +310,14 @@ const AuthPage: React.FC = () => {
                   ) : (
                     'Login'
                   )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-full text-sm"
+                  onClick={() => setView('forgot')}
+                >
+                  Forgot your password?
                 </Button>
               </form>
             </TabsContent>
