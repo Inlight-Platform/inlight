@@ -53,10 +53,7 @@ Deno.serve(async (req) => {
 
     // Block self-views
     if (viewerId === profileId) {
-      return new Response(
-        JSON.stringify({ message: "Self-view blocked" }),
-        { status: 204, headers: corsHeaders }
-      );
+      return new Response(null, { status: 204, headers: corsHeaders });
     }
 
     // Check for existing view today (once per user per day limit)
