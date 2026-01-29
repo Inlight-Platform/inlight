@@ -45,7 +45,10 @@ import {
   Calendar,
   Briefcase,
   MessageSquare,
-  FolderKanban
+  FolderKanban,
+  Instagram,
+  Globe,
+  Link as LinkIcon
 } from 'lucide-react';
 import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
 import { MediaUploader } from '@/components/profile/MediaUploader';
@@ -128,6 +131,10 @@ const ProfilePage: React.FC = () => {
   const [editUnionStatus, setEditUnionStatus] = useState('');
   const [editRepresentation, setEditRepresentation] = useState('');
   const [newGear, setNewGear] = useState('');
+  const [isEditingInstagram, setIsEditingInstagram] = useState(false);
+  const [isEditingWebsite, setIsEditingWebsite] = useState(false);
+  const [editInstagram, setEditInstagram] = useState('');
+  const [editWebsite, setEditWebsite] = useState('');
   
   // Credit form states
   const [creditProject, setCreditProject] = useState('');
@@ -160,7 +167,7 @@ const ProfilePage: React.FC = () => {
         // Own profile - use full profiles table
         const { data, error } = await supabase
           .from('profiles')
-          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills')
+          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) return null;
@@ -169,7 +176,7 @@ const ProfilePage: React.FC = () => {
         // Other users - use public view (excludes email)
         const { data, error } = await supabase
           .from('profiles_public')
-          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills')
+          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) return null;
@@ -208,6 +215,8 @@ const ProfilePage: React.FC = () => {
   const displayRepresentation = dbProfile?.representation || user?.representation || '';
   const displayGearList = dbProfile?.gear_list || user?.gearList || [];
   const displaySkills = dbProfile?.skills || [];
+  const displayInstagram = (dbProfile as any)?.instagram_url || '';
+  const displayWebsite = (dbProfile as any)?.website_url || '';
   const displayCredits = dbCredits;
   
   // Fetch user media from database
@@ -417,6 +426,27 @@ const ProfilePage: React.FC = () => {
     if (success) setIsEditingRepresentation(false);
   };
 
+  const handleSaveInstagram = async () => {
+    const trimmed = editInstagram.trim() || null;
+    const success = await saveProfileField('instagram_url', trimmed);
+    if (success) setIsEditingInstagram(false);
+  };
+
+  const handleSaveWebsite = async () => {
+    const trimmed = editWebsite.trim() || null;
+    const success = await saveProfileField('website_url', trimmed);
+    if (success) setIsEditingWebsite(false);
+  };
+
+  const startEditingInstagram = () => {
+    setEditInstagram(displayInstagram);
+    setIsEditingInstagram(true);
+  };
+
+  const startEditingWebsite = () => {
+    setEditWebsite(displayWebsite);
+    setIsEditingWebsite(true);
+  };
   // Studio badge options for the dropdown
   const studioBadgeOptions = [
     { tag: 'etw', label: 'Experimental Theatre Wing' },
@@ -986,6 +1016,149 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
       </header>
+
+      {/* A. Bio & Social Links - Prominent Section */}
+      <section className="px-4 sm:px-6 lg:px-8 py-6 border-b border-border bg-gradient-to-b from-muted/30 to-transparent">
+        <div className="max-w-3xl">
+          {/* Bio */}
+          <div className="mb-4">
+            {isOwnProfile && isEditingBio ? (
+              <div className="space-y-3">
+                <Textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  className="min-h-[120px] text-base leading-relaxed resize-none"
+                  placeholder="Tell your story... What drives you? What are you working on?"
+                  autoFocus
+                  maxLength={2000}
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{editBio.length}/2000</span>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSaveBio}>
+                      <Save className="w-4 h-4 mr-1" /> Save
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setIsEditingBio(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div 
+                className={`${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-3 -m-3 rounded-lg transition-colors group' : ''}`}
+                onClick={isOwnProfile ? startEditingBio : undefined}
+              >
+                <p className="text-foreground text-base leading-relaxed whitespace-pre-wrap">
+                  {displayBio || (isOwnProfile ? 'Tell your story... Click to add your bio.' : '')}
+                </p>
+                {isOwnProfile && !displayBio && (
+                  <p className="text-muted-foreground text-sm mt-1 italic">
+                    Add a bio to let others know who you are
+                  </p>
+                )}
+                {isOwnProfile && displayBio && <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-50 transition-opacity" />}
+              </div>
+            )}
+          </div>
+
+          {/* Social Links */}
+          <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-border/50">
+            {/* Instagram */}
+            {isOwnProfile && isEditingInstagram ? (
+              <div className="flex items-center gap-2">
+                <Instagram className="w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={editInstagram}
+                  onChange={(e) => setEditInstagram(e.target.value)}
+                  className="w-48 h-8 text-sm"
+                  placeholder="@username or URL"
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveInstagram()}
+                  autoFocus
+                />
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveInstagram}>
+                  <Save className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingInstagram(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : displayInstagram ? (
+              <a 
+                href={displayInstagram.startsWith('http') ? displayInstagram : `https://instagram.com/${displayInstagram.replace('@', '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted text-sm transition-colors"
+              >
+                <Instagram className="w-4 h-4" />
+                <span>{displayInstagram.startsWith('@') ? displayInstagram : `@${displayInstagram.split('/').pop()}`}</span>
+              </a>
+            ) : isOwnProfile ? (
+              <button
+                onClick={startEditingInstagram}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-dashed border-border hover:bg-muted/50 text-sm text-muted-foreground transition-colors"
+              >
+                <Instagram className="w-4 h-4" />
+                <span>Add Instagram</span>
+              </button>
+            ) : null}
+
+            {/* Website */}
+            {isOwnProfile && isEditingWebsite ? (
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={editWebsite}
+                  onChange={(e) => setEditWebsite(e.target.value)}
+                  className="w-48 h-8 text-sm"
+                  placeholder="https://yourwebsite.com"
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveWebsite()}
+                  autoFocus
+                />
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveWebsite}>
+                  <Save className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingWebsite(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : displayWebsite ? (
+              <a 
+                href={displayWebsite.startsWith('http') ? displayWebsite : `https://${displayWebsite}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted text-sm transition-colors"
+              >
+                <Globe className="w-4 h-4" />
+                <span>{displayWebsite.replace(/^https?:\/\//, '').split('/')[0]}</span>
+              </a>
+            ) : isOwnProfile ? (
+              <button
+                onClick={startEditingWebsite}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-dashed border-border hover:bg-muted/50 text-sm text-muted-foreground transition-colors"
+              >
+                <Globe className="w-4 h-4" />
+                <span>Add Website</span>
+              </button>
+            ) : null}
+
+            {/* Edit links button for own profile when links exist */}
+            {isOwnProfile && (displayInstagram || displayWebsite) && (
+              <button
+                onClick={() => {
+                  if (!isEditingInstagram && !isEditingWebsite) {
+                    startEditingInstagram();
+                  }
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Pencil className="w-3 h-3 inline mr-1" />
+                Edit links
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
       
       {/* B. Affiliation */}
       <section className="px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
@@ -1267,28 +1440,27 @@ const ProfilePage: React.FC = () => {
       {/* Saved Projects (only visible on own profile) */}
       {isOwnProfile && <SavedProjects />}
       
-      {/* E. About */}
+      {/* E. Details */}
       <section className="px-4 sm:px-6 lg:px-8 py-6 border-t border-border">
-        <h2 className="text-xl font-display font-semibold mb-4">About</h2>
+        <h2 className="text-xl font-display font-semibold mb-4">Details</h2>
         
-        <div className="space-y-6">
-          {/* Bio */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Union Status */}
           <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Bio</h3>
-            {isOwnProfile && isEditingBio ? (
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Union Status</h3>
+            {isOwnProfile && isEditingUnionStatus ? (
               <div className="space-y-2">
-                <Textarea
-                  value={editBio}
-                  onChange={(e) => setEditBio(e.target.value)}
-                  className="min-h-[100px]"
-                  placeholder="Tell us about yourself..."
+                <Input
+                  value={editUnionStatus}
+                  onChange={(e) => setEditUnionStatus(e.target.value)}
+                  placeholder="e.g., SAG-AFTRA, AEA, Non-Union"
                   autoFocus
                 />
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSaveBio}>
+                  <Button size="sm" onClick={handleSaveUnionStatus}>
                     <Save className="w-4 h-4 mr-1" /> Save
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setIsEditingBio(false)}>
+                  <Button size="sm" variant="ghost" onClick={() => setIsEditingUnionStatus(false)}>
                     <X className="w-4 h-4 mr-1" /> Cancel
                   </Button>
                 </div>
@@ -1296,115 +1468,82 @@ const ProfilePage: React.FC = () => {
             ) : (
               <p 
                 className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
-                onClick={isOwnProfile ? startEditingBio : undefined}
+                onClick={isOwnProfile ? startEditingUnionStatus : undefined}
               >
-                {displayBio || (isOwnProfile ? 'Click to add your bio...' : 'No bio provided.')}
+                {displayUnionStatus || (isOwnProfile ? 'Click to add...' : 'Not specified')}
                 {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
               </p>
             )}
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Union Status */}
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Union Status</h3>
-              {isOwnProfile && isEditingUnionStatus ? (
-                <div className="space-y-2">
-                  <Input
-                    value={editUnionStatus}
-                    onChange={(e) => setEditUnionStatus(e.target.value)}
-                    placeholder="e.g., SAG-AFTRA, AEA, Non-Union"
-                    autoFocus
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveUnionStatus}>
-                      <Save className="w-4 h-4 mr-1" /> Save
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setIsEditingUnionStatus(false)}>
-                      <X className="w-4 h-4 mr-1" /> Cancel
-                    </Button>
-                  </div>
+          {/* Representation */}
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Representation</h3>
+            {isOwnProfile && isEditingRepresentation ? (
+              <div className="space-y-2">
+                <Input
+                  value={editRepresentation}
+                  onChange={(e) => setEditRepresentation(e.target.value)}
+                  placeholder="e.g., Agency name"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleSaveRepresentation}>
+                    <Save className="w-4 h-4 mr-1" /> Save
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setIsEditingRepresentation(false)}>
+                    <X className="w-4 h-4 mr-1" /> Cancel
+                  </Button>
                 </div>
-              ) : (
-                <p 
-                  className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
-                  onClick={isOwnProfile ? startEditingUnionStatus : undefined}
-                >
-                  {displayUnionStatus || (isOwnProfile ? 'Click to add...' : 'Not specified')}
-                  {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
-                </p>
-              )}
-            </div>
-            
-            {/* Representation */}
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Representation</h3>
-              {isOwnProfile && isEditingRepresentation ? (
-                <div className="space-y-2">
-                  <Input
-                    value={editRepresentation}
-                    onChange={(e) => setEditRepresentation(e.target.value)}
-                    placeholder="e.g., Agency name"
-                    autoFocus
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveRepresentation}>
-                      <Save className="w-4 h-4 mr-1" /> Save
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setIsEditingRepresentation(false)}>
-                      <X className="w-4 h-4 mr-1" /> Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <p 
-                  className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
-                  onClick={isOwnProfile ? startEditingRepresentation : undefined}
-                >
-                  {displayRepresentation || (isOwnProfile ? 'Click to add...' : 'Not specified')}
-                  {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
-                </p>
-              )}
-            </div>
-            
-            {/* Gear */}
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Gear</h3>
-              <div className="flex flex-wrap gap-2">
-                {displayGearList.length > 0 ? (
-                  displayGearList.map((gear, i) => (
-                    <div key={i} className="relative group">
-                      <Badge variant="secondary">{gear}</Badge>
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => handleRemoveGear(gear)}
-                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          aria-label={`Remove ${gear}`}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <span className="text-muted-foreground">{isOwnProfile ? 'Add your gear...' : 'None listed'}</span>
-                )}
-                
-                {isOwnProfile && (
-                  <div className="flex items-center gap-1">
-                    <Input
-                      value={newGear}
-                      onChange={(e) => setNewGear(e.target.value)}
-                      placeholder="Add gear"
-                      className="w-24 h-7 text-sm"
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddGear()}
-                    />
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleAddGear}>
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
               </div>
+            ) : (
+              <p 
+                className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
+                onClick={isOwnProfile ? startEditingRepresentation : undefined}
+              >
+                {displayRepresentation || (isOwnProfile ? 'Click to add...' : 'Not specified')}
+                {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
+              </p>
+            )}
+          </div>
+          
+          {/* Gear */}
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Gear</h3>
+            <div className="flex flex-wrap gap-2">
+              {displayGearList.length > 0 ? (
+                displayGearList.map((gear, i) => (
+                  <div key={i} className="relative group">
+                    <Badge variant="secondary">{gear}</Badge>
+                    {isOwnProfile && (
+                      <button
+                        onClick={() => handleRemoveGear(gear)}
+                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label={`Remove ${gear}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <span className="text-muted-foreground">{isOwnProfile ? 'Add your gear...' : 'None listed'}</span>
+              )}
+              
+              {isOwnProfile && (
+                <div className="flex items-center gap-1">
+                  <Input
+                    value={newGear}
+                    onChange={(e) => setNewGear(e.target.value)}
+                    placeholder="Add gear"
+                    className="w-24 h-7 text-sm"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddGear()}
+                  />
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleAddGear}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>
