@@ -260,6 +260,10 @@
     @apply bg-muted text-muted-foreground;
   }
 
+  .btn-connect-connected {
+    @apply bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30;
+  }
+
   .btn-connect-message {
     @apply bg-gradient-to-r from-[hsl(264,100%,71%)] to-[hsl(280,100%,65%)];
   }
