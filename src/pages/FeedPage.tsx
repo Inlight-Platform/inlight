@@ -277,8 +277,8 @@ const FeedPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-6 max-w-4xl mx-auto">
+      <div className="px-3 sm:px-6 lg:px-8 py-6 w-full overflow-x-hidden">
+        <div className="flex gap-6 max-w-4xl mx-auto w-full">
           {/* Left Sidebar - Connection Suggestions */}
           {user && (
             <div className="hidden lg:block w-64 flex-shrink-0">
@@ -289,7 +289,7 @@ const FeedPage: React.FC = () => {
           )}
 
           {/* Main Feed Content */}
-          <div className="flex-1 max-w-2xl">
+          <div className="flex-1 min-w-0 max-w-full lg:max-w-2xl">
             {/* Content Type Filters */}
             <div className="mb-4">
               <div className="flex items-center gap-2 overflow-x-auto pb-2">
