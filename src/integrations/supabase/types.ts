@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           date: string
           id: string
+          poster_url: string | null
           show_type: string
           theater: string
           title: string
@@ -32,6 +33,7 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          poster_url?: string | null
           show_type: string
           theater: string
           title: string
@@ -43,6 +45,7 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          poster_url?: string | null
           show_type?: string
           theater?: string
           title?: string
