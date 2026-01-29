@@ -51,7 +51,7 @@ import {
   Link as LinkIcon
 } from 'lucide-react';
 import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
-import { GetToKnowMeFlipbook } from '@/components/profile/GetToKnowMeFlipbook';
+import { WhyIStartedFlipbook } from '@/components/profile/WhyIStartedFlipbook';
 import { MediaUploader } from '@/components/profile/MediaUploader';
 import { AvatarCropper } from '@/components/profile/AvatarCropper';
 import { MyProjects } from '@/components/profile/MyProjects';
@@ -1161,10 +1161,10 @@ const ProfilePage: React.FC = () => {
           </div>
           </div>
 
-          {/* Right side - Get to Know Me Flipbook */}
+          {/* Right side - Why I Started Flipbook */}
           <div className="flex-shrink-0 lg:self-start">
             {resolvedUserId && (
-              <GetToKnowMeFlipbook 
+              <WhyIStartedFlipbook 
                 userId={resolvedUserId} 
                 isOwnProfile={isOwnProfile} 
               />
