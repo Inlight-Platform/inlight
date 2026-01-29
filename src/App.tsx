@@ -21,6 +21,7 @@ import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ProjectNewPage from "./pages/ProjectNewPage";
 import StageWhisperPage from "./pages/StageWhisperPage";
 import GroupMembersPage from "./pages/GroupMembersPage";
+import AdminPage from "./pages/AdminPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
           <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
           <Route path="/stage-whisper" element={<StageWhisperPage />} />
           <Route path="/group" element={<GroupMembersPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
