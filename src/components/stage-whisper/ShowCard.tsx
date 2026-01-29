@@ -25,6 +25,7 @@ export interface Show {
   is_active: boolean;
   show_times: string | null;
   submitted_by: string | null;
+  badges?: string[] | null;
 }
 
 interface ShowCardProps {
@@ -135,6 +136,17 @@ export const ShowCard: React.FC<ShowCardProps> = ({
               <Clock className="w-3 h-3 mr-1" />
               {daysUntilClosing} days left!
             </Badge>
+          </div>
+        )}
+
+        {/* Custom Badges from Admin */}
+        {!isClosingSoon && show.badges && show.badges.length > 0 && (
+          <div className="absolute top-3 left-3 flex flex-col gap-1">
+            {show.badges.slice(0, 2).map((badge) => (
+              <Badge key={badge} className="bg-primary/90 text-primary-foreground border-0 backdrop-blur-sm text-xs">
+                {badge}
+              </Badge>
+            ))}
           </div>
         )}
 
