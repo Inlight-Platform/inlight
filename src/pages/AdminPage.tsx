@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater } from 'lucide-react';
+import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2 } from 'lucide-react';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const AdminPage: React.FC = () => {
@@ -588,6 +589,8 @@ const BroadwayMetricsManager: React.FC = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingShow, setEditingShow] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     title: '',
     theater: '',
@@ -596,6 +599,7 @@ const BroadwayMetricsManager: React.FC = () => {
     attendance: 0,
     capacity_percentage: 0,
     date: new Date().toISOString().split('T')[0],
+    poster_url: '',
   });
 
   const { data: shows, isLoading } = useQuery({
@@ -667,6 +671,7 @@ const BroadwayMetricsManager: React.FC = () => {
       attendance: 0,
       capacity_percentage: 0,
       date: new Date().toISOString().split('T')[0],
+      poster_url: '',
     });
     setEditingShow(null);
     setIsDialogOpen(false);
@@ -682,8 +687,49 @@ const BroadwayMetricsManager: React.FC = () => {
       attendance: show.attendance,
       capacity_percentage: show.capacity_percentage,
       date: show.date,
+      poster_url: show.poster_url || '',
     });
     setIsDialogOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 9);
+      const fileName = `broadway-posters/${timestamp}-${randomId}.${fileExt}`;
+
+      const { error: uploadError } = await supabaseClient.storage
+        .from('profile-media')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabaseClient.storage
+        .from('profile-media')
+        .getPublicUrl(fileName);
+
+      setFormData({ ...formData, poster_url: urlData.publicUrl });
+      toast.success('Cover photo uploaded!');
+    } catch (error: any) {
+      toast.error('Failed to upload image: ' + error.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setFormData({ ...formData, poster_url: '' });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -789,6 +835,54 @@ const BroadwayMetricsManager: React.FC = () => {
                   required
                 />
               </div>
+              
+              {/* Cover Photo Upload */}
+              <div className="space-y-2">
+                <Label>Cover Photo</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                {formData.poster_url ? (
+                  <div className="relative rounded-lg overflow-hidden border">
+                    <img 
+                      src={formData.poster_url} 
+                      alt="Cover preview" 
+                      className="w-full h-32 object-cover"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-6 w-6"
+                      onClick={handleRemoveImage}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 hover:bg-accent/50 transition-colors"
+                  >
+                    {uploading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm text-muted-foreground">Uploading...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <Upload className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Click to upload cover photo</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancel
@@ -810,6 +904,7 @@ const BroadwayMetricsManager: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">Cover</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Theater</TableHead>
@@ -822,6 +917,19 @@ const BroadwayMetricsManager: React.FC = () => {
             <TableBody>
               {shows?.map((show) => (
                 <TableRow key={show.id}>
+                  <TableCell>
+                    {show.poster_url ? (
+                      <img 
+                        src={show.poster_url} 
+                        alt={show.title} 
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
+                        <Theater className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>{show.date}</TableCell>
                   <TableCell className="font-medium">{show.title}</TableCell>
                   <TableCell>{show.theater}</TableCell>
