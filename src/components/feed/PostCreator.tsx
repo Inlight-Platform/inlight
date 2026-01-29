@@ -75,18 +75,28 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           });
         if (error) throw error;
       } else if (postType === 'event') {
+        // Convert datetime-local to ISO format for Supabase
+        const eventDateValue = eventDate ? new Date(eventDate).toISOString() : null;
+        
+        if (!eventDateValue) {
+          throw new Error('Event date is required');
+        }
+        
         const { error } = await supabase
           .from('events')
           .insert({
             user_id: user.id,
             title: title.trim(),
             description: content.trim() || null,
-            event_date: eventDate,
+            event_date: eventDateValue,
             location: location.trim() || null,
-            event_type: eventType.trim() || 'General',
+            event_type: eventType.trim() || 'general',
             image_url: imageUrl || null,
           });
-        if (error) throw error;
+        if (error) {
+          console.error('Event creation error:', error);
+          throw error;
+        }
       } else if (postType === 'job') {
         // For now, jobs are stored as posts with a special format
         // In the future, you could create a dedicated opportunities table
@@ -111,7 +121,10 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       );
       onClose?.();
     },
-    onError: () => toast.error('Failed to create post'),
+    onError: (error: Error) => {
+      console.error('Post creation failed:', error);
+      toast.error(error.message || 'Failed to create post');
+    },
   });
 
   const handleSubmit = () => {
