@@ -404,26 +404,32 @@ export type Database = {
       profile_flipbook: {
         Row: {
           caption: string | null
+          content: string | null
+          content_type: string
           created_at: string
           display_order: number
           id: string
-          image_url: string
+          image_url: string | null
           user_id: string
         }
         Insert: {
           caption?: string | null
+          content?: string | null
+          content_type?: string
           created_at?: string
           display_order?: number
           id?: string
-          image_url: string
+          image_url?: string | null
           user_id: string
         }
         Update: {
           caption?: string | null
+          content?: string | null
+          content_type?: string
           created_at?: string
           display_order?: number
           id?: string
-          image_url?: string
+          image_url?: string | null
           user_id?: string
         }
         Relationships: []

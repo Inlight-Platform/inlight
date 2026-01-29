@@ -62,6 +62,8 @@ import { ProjectCreator } from '@/components/projects/ProjectCreator';
 import { toast } from 'sonner';
 import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidation';
 import { useVouch } from '@/hooks/useVouch';
+import { useNetworkConnections } from '@/hooks/useNetworkConnections';
+import { useConnectionRequests } from '@/hooks/useConnectionRequests';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';
@@ -153,6 +155,13 @@ const ProfilePage: React.FC = () => {
   const { hasVouched, vouchCount, toggleVouch, isPending: vouchPending } = useVouch(
     !isOwnProfile ? profileUserId : undefined
   );
+  
+  // Follow/connection hooks
+  const { isFollowing, follow, unfollow, isFollowPending, isUnfollowPending } = useNetworkConnections();
+  const { sendRequest, hasSentRequestTo } = useConnectionRequests();
+  
+  const userIsFollowing = resolvedUserId ? isFollowing(resolvedUserId) : false;
+  const hasPendingRequest = resolvedUserId ? hasSentRequestTo(resolvedUserId) : false;
   
   // Media upload hooks
   const { deleteFile, updateVisibility } = useMediaUpload();
@@ -665,15 +674,32 @@ const ProfilePage: React.FC = () => {
   
   const handleConnect = () => {
     if (!resolvedUserId || isOwnProfile) return;
-    sendConnectionRequest(resolvedUserId);
-    setAnnounced(true);
-    const announcement = document.createElement('div');
-    announcement.setAttribute('role', 'status');
-    announcement.setAttribute('aria-live', 'polite');
-    announcement.className = 'sr-only';
-    announcement.textContent = `Connection request sent to ${displayName}.`;
-    document.body.appendChild(announcement);
-    setTimeout(() => announcement.remove(), 3000);
+    // Use connection request system instead of direct follow
+    sendRequest.mutate(resolvedUserId, {
+      onSuccess: () => {
+        setAnnounced(true);
+        const announcement = document.createElement('div');
+        announcement.setAttribute('role', 'status');
+        announcement.setAttribute('aria-live', 'polite');
+        announcement.className = 'sr-only';
+        announcement.textContent = `Connection request sent to ${displayName}.`;
+        document.body.appendChild(announcement);
+        setTimeout(() => announcement.remove(), 3000);
+        toast.success('Connection request sent!');
+      },
+      onError: () => {
+        toast.error('Failed to send connection request');
+      },
+    });
+  };
+  
+  const handleFollowToggle = () => {
+    if (!resolvedUserId) return;
+    if (userIsFollowing) {
+      unfollow(resolvedUserId);
+    } else {
+      follow(resolvedUserId);
+    }
   };
   
   const handleMessage = () => {
@@ -689,7 +715,7 @@ const ProfilePage: React.FC = () => {
   const getConnectButtonLabel = () => {
     if (isOwnProfile) return null;
     if (connectionStatus === 'accepted') return 'Message';
-    if (connectionStatus === 'pending') return 'Pending';
+    if (connectionStatus === 'pending' || hasPendingRequest) return 'Pending';
     return 'Connect';
   };
   
@@ -979,10 +1005,30 @@ const ProfilePage: React.FC = () => {
                     {hasVouched ? 'Vouched' : 'Vouch'}
                   </Button>
                   
+                  {/* Follow Button */}
+                  <Button
+                    variant={userIsFollowing ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={handleFollowToggle}
+                    disabled={isFollowPending || isUnfollowPending}
+                  >
+                    {userIsFollowing ? (
+                      <>
+                        <Check className="w-4 h-4 mr-1" />
+                        Following
+                      </>
+                    ) : (
+                      <>
+                        <Users className="w-4 h-4 mr-1" />
+                        Follow
+                      </>
+                    )}
+                  </Button>
+                  
                   {/* Connect/Message Button */}
                   <button
                     onClick={connectionStatus === 'accepted' ? handleMessage : handleConnect}
-                    disabled={connectionStatus === 'pending'}
+                    disabled={connectionStatus === 'pending' || hasPendingRequest || sendRequest.isPending}
                     className={getConnectButtonClass()}
                     aria-label={getConnectButtonLabel() || undefined}
                   >
