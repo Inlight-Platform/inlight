@@ -28,8 +28,9 @@ export function useAuth() {
   }, []);
 
   const signUp = async (email: string, password: string, displayName?: string) => {
-    // Validate .edu email
-    if (!email.toLowerCase().endsWith('.edu')) {
+    // Validate .edu email (admin email bypasses this check)
+    const adminEmail = 'info@inlight.social';
+    if (!email.toLowerCase().endsWith('.edu') && email.toLowerCase() !== adminEmail) {
       return { error: { message: 'Only .edu email addresses are allowed to sign up.' } };
     }
 
