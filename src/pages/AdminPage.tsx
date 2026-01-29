@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Ticket } from 'lucide-react';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -64,13 +64,17 @@ const AdminPage: React.FC = () => {
               <Newspaper className="w-4 h-4" />
               Highlights
             </TabsTrigger>
+            <TabsTrigger value="shows" className="gap-2">
+              <Ticket className="w-4 h-4" />
+              NYC Shows
+            </TabsTrigger>
             <TabsTrigger value="film" className="gap-2">
               <Film className="w-4 h-4" />
               Film Metrics
             </TabsTrigger>
             <TabsTrigger value="broadway" className="gap-2">
               <Theater className="w-4 h-4" />
-              Broadway
+              Broadway Metrics
             </TabsTrigger>
             <TabsTrigger value="photos" className="gap-2">
               <Image className="w-4 h-4" />
@@ -80,6 +84,10 @@ const AdminPage: React.FC = () => {
 
           <TabsContent value="highlights">
             <IndustryHighlightsManager />
+          </TabsContent>
+
+          <TabsContent value="shows">
+            <NYCShowsManager />
           </TabsContent>
 
           <TabsContent value="film">
@@ -295,6 +303,411 @@ const IndustryHighlightsManager: React.FC = () => {
               ))}
             </TableBody>
           </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// NYC Shows Manager Component - for managing shows on Industry Now page
+const NYCShowsManager: React.FC = () => {
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingShow, setEditingShow] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>('broadway');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    venue: '',
+    borough: 'Manhattan',
+    description: '',
+    poster_url: '',
+    show_type: 'musical',
+    category: 'broadway',
+    price_tier: 'moderate',
+    run_start: '',
+    run_end: '',
+    show_times: '',
+    rush_policy: '',
+    lottery_info: '',
+    official_url: '',
+  });
+
+  const { data: shows, isLoading } = useQuery({
+    queryKey: ['admin-nyc-shows', categoryFilter],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('nyc_shows')
+        .select('*')
+        .eq('category', categoryFilter)
+        .order('title', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<typeof formData> }) => {
+      const { error } = await supabase.from('nyc_shows').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-nyc-shows'] });
+      queryClient.invalidateQueries({ queryKey: ['nyc-shows'] });
+      toast.success('Show updated successfully');
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error('Failed to update show: ' + error.message);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('nyc_shows').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-nyc-shows'] });
+      queryClient.invalidateQueries({ queryKey: ['nyc-shows'] });
+      toast.success('Show deleted successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to delete show: ' + error.message);
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      venue: '',
+      borough: 'Manhattan',
+      description: '',
+      poster_url: '',
+      show_type: 'musical',
+      category: 'broadway',
+      price_tier: 'moderate',
+      run_start: '',
+      run_end: '',
+      show_times: '',
+      rush_policy: '',
+      lottery_info: '',
+      official_url: '',
+    });
+    setEditingShow(null);
+    setIsDialogOpen(false);
+  };
+
+  const handleEdit = (show: any) => {
+    setEditingShow(show);
+    setFormData({
+      title: show.title || '',
+      venue: show.venue || '',
+      borough: show.borough || 'Manhattan',
+      description: show.description || '',
+      poster_url: show.poster_url || '',
+      show_type: show.show_type || 'musical',
+      category: show.category || 'broadway',
+      price_tier: show.price_tier || 'moderate',
+      run_start: show.run_start || '',
+      run_end: show.run_end || '',
+      show_times: show.show_times || '',
+      rush_policy: show.rush_policy || '',
+      lottery_info: show.lottery_info || '',
+      official_url: show.official_url || '',
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 9);
+      const fileName = `show-posters/${timestamp}-${randomId}.${fileExt}`;
+
+      const { error: uploadError } = await supabaseClient.storage
+        .from('profile-media')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabaseClient.storage
+        .from('profile-media')
+        .getPublicUrl(fileName);
+
+      setFormData({ ...formData, poster_url: urlData.publicUrl });
+      toast.success('Cover photo uploaded!');
+    } catch (error: any) {
+      toast.error('Failed to upload image: ' + error.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setFormData({ ...formData, poster_url: '' });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingShow) {
+      updateMutation.mutate({ id: editingShow.id, data: formData });
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>NYC Shows (Industry Now)</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage shows displayed on the public Industry Now page
+          </p>
+        </div>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="broadway">Broadway</SelectItem>
+            <SelectItem value="off-broadway">Off-Broadway</SelectItem>
+            <SelectItem value="off-off-broadway">Off-Off-Broadway</SelectItem>
+          </SelectContent>
+        </Select>
+      </CardHeader>
+      <CardContent>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Show: {editingShow?.title}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Cover Photo Upload */}
+              <div className="space-y-2">
+                <Label>Cover Photo</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                {formData.poster_url ? (
+                  <div className="relative rounded-lg overflow-hidden border">
+                    <img 
+                      src={formData.poster_url} 
+                      alt="Cover preview" 
+                      className="w-full h-48 object-cover"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-8 w-8"
+                      onClick={handleRemoveImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-accent/50 transition-colors"
+                  >
+                    {uploading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <span className="text-muted-foreground">Uploading...</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <Upload className="h-8 w-8 text-muted-foreground" />
+                        <span className="text-muted-foreground">Click to upload cover photo</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Venue</Label>
+                  <Input
+                    value={formData.venue}
+                    onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Show Type</Label>
+                  <Select value={formData.show_type} onValueChange={(v) => setFormData({ ...formData, show_type: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="musical">Musical</SelectItem>
+                      <SelectItem value="play">Play</SelectItem>
+                      <SelectItem value="opera">Opera</SelectItem>
+                      <SelectItem value="dance">Dance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="broadway">Broadway</SelectItem>
+                      <SelectItem value="off-broadway">Off-Broadway</SelectItem>
+                      <SelectItem value="off-off-broadway">Off-Off-Broadway</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Price Tier</Label>
+                  <Select value={formData.price_tier} onValueChange={(v) => setFormData({ ...formData, price_tier: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="budget">Budget ($)</SelectItem>
+                      <SelectItem value="moderate">Moderate ($$)</SelectItem>
+                      <SelectItem value="premium">Premium ($$$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Run Start</Label>
+                  <Input
+                    type="date"
+                    value={formData.run_start}
+                    onChange={(e) => setFormData({ ...formData, run_start: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Run End</Label>
+                  <Input
+                    type="date"
+                    value={formData.run_end}
+                    onChange={(e) => setFormData({ ...formData, run_end: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Rush Policy</Label>
+                <Input
+                  value={formData.rush_policy}
+                  onChange={(e) => setFormData({ ...formData, rush_policy: e.target.value })}
+                  placeholder="e.g., $39 digital lottery daily"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Official URL</Label>
+                <Input
+                  value={formData.official_url}
+                  onChange={(e) => setFormData({ ...formData, official_url: e.target.value })}
+                  placeholder="https://..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {isLoading ? (
+          <p className="text-muted-foreground">Loading shows...</p>
+        ) : shows?.length === 0 ? (
+          <p className="text-muted-foreground">No shows in this category.</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {shows?.map((show) => (
+              <div 
+                key={show.id} 
+                className="relative group bg-card border rounded-lg overflow-hidden cursor-pointer hover:border-primary transition-colors"
+                onClick={() => handleEdit(show)}
+              >
+                <div className="aspect-[2/3] bg-muted">
+                  {show.poster_url ? (
+                    <img 
+                      src={show.poster_url} 
+                      alt={show.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Theater className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div className="p-3">
+                  <h3 className="font-medium text-sm truncate">{show.title}</h3>
+                  <p className="text-xs text-muted-foreground truncate">{show.venue}</p>
+                </div>
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    className="h-7 w-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm('Delete this show?')) {
+                        deleteMutation.mutate(show.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
