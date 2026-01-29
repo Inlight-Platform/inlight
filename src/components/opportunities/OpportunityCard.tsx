@@ -82,9 +82,6 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold text-foreground truncate">{opportunity.title}</h3>
-                {opportunity.isFeatured && (
-                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
-                )}
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {opportunity.company && (
@@ -123,12 +120,6 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
               <Badge variant="outline" className={opportunityTypeColors[opportunity.type]}>
                 {opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}
               </Badge>
-              {opportunity.isFeatured && (
-                <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">
-                  <Star className="w-3 h-3 mr-1 fill-current" />
-                  Featured
-                </Badge>
-              )}
               {opportunity.status === 'closed' && (
                 <Badge variant="destructive">Closed</Badge>
               )}
