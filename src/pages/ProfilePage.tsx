@@ -51,6 +51,7 @@ import {
   Link as LinkIcon
 } from 'lucide-react';
 import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
+import { GetToKnowMeFlipbook } from '@/components/profile/GetToKnowMeFlipbook';
 import { MediaUploader } from '@/components/profile/MediaUploader';
 import { AvatarCropper } from '@/components/profile/AvatarCropper';
 import { MyProjects } from '@/components/profile/MyProjects';
@@ -1019,8 +1020,9 @@ const ProfilePage: React.FC = () => {
 
       {/* A. Bio & Social Links - Prominent Section */}
       <section className="px-4 sm:px-6 lg:px-8 py-6 border-b border-border bg-gradient-to-b from-muted/30 to-transparent">
-        <div className="max-w-3xl">
-          {/* Bio */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left side - Bio and social links */}
+          <div className="flex-1 max-w-3xl">
           <div className="mb-4">
             {isOwnProfile && isEditingBio ? (
               <div className="space-y-3">
@@ -1155,6 +1157,17 @@ const ProfilePage: React.FC = () => {
                 <Pencil className="w-3 h-3 inline mr-1" />
                 Edit links
               </button>
+            )}
+          </div>
+          </div>
+
+          {/* Right side - Get to Know Me Flipbook */}
+          <div className="flex-shrink-0 lg:self-start">
+            {resolvedUserId && (
+              <GetToKnowMeFlipbook 
+                userId={resolvedUserId} 
+                isOwnProfile={isOwnProfile} 
+              />
             )}
           </div>
         </div>
