@@ -302,6 +302,7 @@ export type Database = {
       nyc_shows: {
         Row: {
           accessibility_features: string[] | null
+          badges: string[] | null
           borough: string
           category: string
           created_at: string
@@ -325,6 +326,7 @@ export type Database = {
         }
         Insert: {
           accessibility_features?: string[] | null
+          badges?: string[] | null
           borough?: string
           category?: string
           created_at?: string
@@ -348,6 +350,7 @@ export type Database = {
         }
         Update: {
           accessibility_features?: string[] | null
+          badges?: string[] | null
           borough?: string
           category?: string
           created_at?: string
