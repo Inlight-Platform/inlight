@@ -429,6 +429,7 @@ export type Database = {
           gear_list: string[] | null
           headline: string | null
           id: string
+          instagram_url: string | null
           location: string | null
           message_privacy: string
           pronouns: string | null
@@ -439,6 +440,7 @@ export type Database = {
           updated_at: string
           user_id: string
           vouch_count: number
+          website_url: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -452,6 +454,7 @@ export type Database = {
           gear_list?: string[] | null
           headline?: string | null
           id?: string
+          instagram_url?: string | null
           location?: string | null
           message_privacy?: string
           pronouns?: string | null
@@ -462,6 +465,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           vouch_count?: number
+          website_url?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -475,6 +479,7 @@ export type Database = {
           gear_list?: string[] | null
           headline?: string | null
           id?: string
+          instagram_url?: string | null
           location?: string | null
           message_privacy?: string
           pronouns?: string | null
@@ -485,6 +490,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           vouch_count?: number
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -1160,6 +1166,7 @@ export type Database = {
           gear_list: string[] | null
           headline: string | null
           id: string | null
+          instagram_url: string | null
           location: string | null
           pronouns: string | null
           representation: string | null
@@ -1168,6 +1175,7 @@ export type Database = {
           union_status: string | null
           updated_at: string | null
           user_id: string | null
+          website_url: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -1179,6 +1187,7 @@ export type Database = {
           gear_list?: string[] | null
           headline?: string | null
           id?: string | null
+          instagram_url?: string | null
           location?: string | null
           pronouns?: string | null
           representation?: string | null
@@ -1187,6 +1196,7 @@ export type Database = {
           union_status?: string | null
           updated_at?: string | null
           user_id?: string | null
+          website_url?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -1198,6 +1208,7 @@ export type Database = {
           gear_list?: string[] | null
           headline?: string | null
           id?: string | null
+          instagram_url?: string | null
           location?: string | null
           pronouns?: string | null
           representation?: string | null
@@ -1206,6 +1217,7 @@ export type Database = {
           union_status?: string | null
           updated_at?: string | null
           user_id?: string | null
+          website_url?: string | null
         }
         Relationships: []
       }
