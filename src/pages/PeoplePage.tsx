@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Compass, Users, UserPlus, UserCheck, GraduationCap, Clock } from 'lucide-react';
+import { Search, Compass, Users, UserPlus, UserCheck, GraduationCap, Clock, Check } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,7 @@ const PeoplePage: React.FC = () => {
   const getConnectionStatus = useStore((s) => s.getConnectionStatus);
   const sendConnectionRequest = useStore((s) => s.sendConnectionRequest);
   
-  const { following, followers } = useNetworkConnections();
+  const { following, followers, isMutual } = useNetworkConnections();
   const { sentRequests, cancelRequest } = useConnectionRequests();
   
   // Get pending sent requests
@@ -229,63 +229,80 @@ const PeoplePage: React.FC = () => {
     );
   };
 
-  const renderProfileUserCard = (user: any, showCancelButton?: boolean, requestId?: string) => (
-    <div
-      key={user.id}
-      className="bg-card rounded-xl border border-border shadow-card overflow-hidden hover:shadow-lg transition-shadow"
-    >
-      <div 
-        className="cursor-pointer"
-        onClick={() => user.user_id && navigate(`/profile/${user.user_id}`)}
+  const renderProfileUserCard = (user: any, showCancelButton?: boolean, requestId?: string) => {
+    const userId = user.user_id;
+    const isUserConnected = userId ? isMutual(userId) : false;
+    
+    return (
+      <div
+        key={user.id}
+        className="bg-card rounded-xl border border-border shadow-card overflow-hidden hover:shadow-lg transition-shadow"
       >
-        <div className="flex items-center gap-4 p-4">
-          <Avatar className="w-14 h-14">
-            <AvatarImage src={user.avatar_url || undefined} />
-            <AvatarFallback>{user.display_name?.[0] || 'U'}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-display font-semibold truncate">
-              {user.display_name || 'Unknown User'}
-            </h3>
-          <p className="text-muted-foreground text-sm truncate">{user.role || 'No role'}</p>
-          {user.badges && user.badges.length > 0 && (
-            <div className="flex gap-1 mt-1 flex-wrap">
-              {user.badges.slice(0, 2).map((badge: string, idx: number) => (
-                <span 
-                  key={idx} 
-                  className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full"
-                >
-                  {badge}
-                </span>
-              ))}
-              {user.badges.length > 2 && (
-                <span className="text-xs text-muted-foreground">
-                  +{user.badges.length - 2}
-                </span>
+        <div 
+          className="cursor-pointer"
+          onClick={() => userId && navigate(`/profile/${userId}`)}
+        >
+          <div className="flex items-center gap-4 p-4">
+            <Avatar className="w-14 h-14">
+              <AvatarImage src={user.avatar_url || undefined} />
+              <AvatarFallback>{user.display_name?.[0] || 'U'}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-display font-semibold truncate">
+                {user.display_name || 'Unknown User'}
+              </h3>
+              <p className="text-muted-foreground text-sm truncate">{user.role || 'No role'}</p>
+              {user.badges && user.badges.length > 0 && (
+                <div className="flex gap-1 mt-1 flex-wrap">
+                  {user.badges.slice(0, 2).map((badge: string, idx: number) => (
+                    <span 
+                      key={idx} 
+                      className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full"
+                    >
+                      {badge}
+                    </span>
+                  ))}
+                  {user.badges.length > 2 && (
+                    <span className="text-xs text-muted-foreground">
+                      +{user.badges.length - 2}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
-          )}
           </div>
         </div>
+        
+        {/* Show Connected button for mutual connections */}
+        {isUserConnected && !showCancelButton && (
+          <div className="px-4 pb-4">
+            <button
+              className="w-full h-9 rounded-full font-medium text-sm bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30 flex items-center justify-center gap-2 cursor-default"
+            >
+              <Check className="w-4 h-4" />
+              Connected
+            </button>
+          </div>
+        )}
+        
+        {showCancelButton && requestId && (
+          <div className="px-4 pb-4">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                cancelRequest.mutate(requestId);
+              }}
+              disabled={cancelRequest.isPending}
+              className="w-full h-9 rounded-full font-medium text-sm bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all flex items-center justify-center gap-2"
+            >
+              <Clock className="w-4 h-4" />
+              {cancelRequest.isPending ? 'Canceling...' : 'Cancel Request'}
+            </button>
+          </div>
+        )}
       </div>
-      
-      {showCancelButton && requestId && (
-        <div className="px-4 pb-4">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              cancelRequest.mutate(requestId);
-            }}
-            disabled={cancelRequest.isPending}
-            className="w-full h-9 rounded-full font-medium text-sm bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all flex items-center justify-center gap-2"
-          >
-            <Clock className="w-4 h-4" />
-            {cancelRequest.isPending ? 'Canceling...' : 'Cancel Request'}
-          </button>
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
   
   return (
     <PageLayout>

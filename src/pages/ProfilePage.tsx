@@ -157,11 +157,12 @@ const ProfilePage: React.FC = () => {
   );
   
   // Follow/connection hooks
-  const { isFollowing, follow, unfollow, isFollowPending, isUnfollowPending } = useNetworkConnections();
+  const { isFollowing, follow, unfollow, isFollowPending, isUnfollowPending, isMutual } = useNetworkConnections();
   const { sendRequest, hasSentRequestTo } = useConnectionRequests();
   
   const userIsFollowing = resolvedUserId ? isFollowing(resolvedUserId) : false;
   const hasPendingRequest = resolvedUserId ? hasSentRequestTo(resolvedUserId) : false;
+  const isConnected = resolvedUserId ? isMutual(resolvedUserId) : false;
   
   // Media upload hooks
   const { deleteFile, updateVisibility } = useMediaUpload();
@@ -714,14 +715,14 @@ const ProfilePage: React.FC = () => {
   
   const getConnectButtonLabel = () => {
     if (isOwnProfile) return null;
-    if (connectionStatus === 'accepted') return 'Message';
+    if (isConnected || connectionStatus === 'accepted') return 'Connected';
     if (connectionStatus === 'pending' || hasPendingRequest) return 'Pending';
     return 'Connect';
   };
   
   const getConnectButtonClass = () => {
-    if (connectionStatus === 'accepted') return 'btn-connect btn-connect-message';
-    if (connectionStatus === 'pending') return 'btn-connect btn-connect-pending';
+    if (isConnected || connectionStatus === 'accepted') return 'btn-connect btn-connect-connected';
+    if (connectionStatus === 'pending' || hasPendingRequest) return 'btn-connect btn-connect-pending';
     return 'btn-connect';
   };
   
