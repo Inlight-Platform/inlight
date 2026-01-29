@@ -205,6 +205,19 @@ export const MainNav: React.FC = () => {
                     </TooltipTrigger>
                     <TooltipContent side="right">Settings</TooltipContent>
                   </Tooltip>
+                  {isAdmin && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link
+                          to="/admin"
+                          className="flex items-center justify-center py-3 rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                        >
+                          <Shield className="w-5 h-5" />
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">Admin</TooltipContent>
+                    </Tooltip>
+                  )}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
