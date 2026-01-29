@@ -91,8 +91,8 @@ const BroadwayShowsManager: React.FC = () => {
         show_type: data.show_type || 'musical',
         category: 'broadway',
         price_tier: data.price_tier || 'moderate',
-        run_start: data.run_start || null,
-        run_end: data.run_end || null,
+        run_start: data.run_start && data.run_start.trim() !== '' ? data.run_start : null,
+        run_end: data.run_end && data.run_end.trim() !== '' ? data.run_end : null,
         show_times: data.show_times || null,
         rush_policy: data.rush_policy || null,
         lottery_info: data.lottery_info || null,
@@ -115,7 +115,13 @@ const BroadwayShowsManager: React.FC = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<typeof formData> }) => {
-      const { error } = await supabase.from('nyc_shows').update(data).eq('id', id);
+      // Convert empty strings to null for date fields
+      const sanitizedData = {
+        ...data,
+        run_start: data.run_start && data.run_start.trim() !== '' ? data.run_start : null,
+        run_end: data.run_end && data.run_end.trim() !== '' ? data.run_end : null,
+      };
+      const { error } = await supabase.from('nyc_shows').update(sanitizedData).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
