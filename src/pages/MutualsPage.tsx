@@ -187,33 +187,35 @@ const MutualsPage: React.FC = () => {
       
       <main className="px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 max-w-3xl mb-6">
-            <TabsTrigger value="explore" className="data-[state=active]:bg-primary/20 flex items-center gap-1.5">
-              <Compass className="w-4 h-4" />
-              Explore
-            </TabsTrigger>
-            <TabsTrigger value="mutuals" className="data-[state=active]:bg-neon-mutuals/20 flex items-center gap-1.5">
-              <Users className="w-4 h-4" />
-              My Network ({firstDegree.length})
-            </TabsTrigger>
-            <TabsTrigger value="following" className="data-[state=active]:bg-neon-messages/20 flex items-center gap-1.5">
-              <UserPlus className="w-4 h-4" />
-              Following ({following.length})
-            </TabsTrigger>
-            <TabsTrigger value="followers" className="data-[state=active]:bg-neon-insights/20 flex items-center gap-1.5">
-              <UserCheck className="w-4 h-4" />
-              Followers ({followers.length})
-            </TabsTrigger>
-            <TabsTrigger value="2nd" className="data-[state=active]:bg-neon-messages/20">
-              2nd ({secondDegree.length})
-            </TabsTrigger>
-            <TabsTrigger value="3rd" className="data-[state=active]:bg-neon-insights/20">
-              3rd ({thirdDegree.length})
-            </TabsTrigger>
-            <TabsTrigger value="all" className="data-[state=active]:bg-accent/20">
-              All ({allUsers.length})
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mb-6">
+              <TabsTrigger value="explore" className="data-[state=active]:bg-primary/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+                <Compass className="w-4 h-4" />
+                Explore
+              </TabsTrigger>
+              <TabsTrigger value="mutuals" className="data-[state=active]:bg-neon-mutuals/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">My Network</span> ({firstDegree.length})
+              </TabsTrigger>
+              <TabsTrigger value="following" className="data-[state=active]:bg-neon-messages/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+                <UserPlus className="w-4 h-4" />
+                <span className="hidden sm:inline">Following</span> ({following.length})
+              </TabsTrigger>
+              <TabsTrigger value="followers" className="data-[state=active]:bg-neon-insights/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+                <UserCheck className="w-4 h-4" />
+                <span className="hidden sm:inline">Followers</span> ({followers.length})
+              </TabsTrigger>
+              <TabsTrigger value="2nd" className="data-[state=active]:bg-neon-messages/20 flex-shrink-0 whitespace-nowrap">
+                2nd ({secondDegree.length})
+              </TabsTrigger>
+              <TabsTrigger value="3rd" className="data-[state=active]:bg-neon-insights/20 flex-shrink-0 whitespace-nowrap">
+                3rd ({thirdDegree.length})
+              </TabsTrigger>
+              <TabsTrigger value="all" className="data-[state=active]:bg-accent/20 flex-shrink-0 whitespace-nowrap">
+                All ({allUsers.length})
+              </TabsTrigger>
+            </TabsList>
+          </div>
           
           <TabsContent value="explore">
             <div className="mb-6">

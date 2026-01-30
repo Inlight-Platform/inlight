@@ -422,19 +422,23 @@ const ProjectsPage: React.FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-2xl grid-cols-5 mb-6">
-            <TabsTrigger value="feed">Feed</TabsTrigger>
-            <TabsTrigger value="my-network" className="gap-1">
-              <Users className="w-3 h-3" />
-              My Network
-            </TabsTrigger>
-            <TabsTrigger value="open-roles">Open Roles</TabsTrigger>
-            <TabsTrigger value="saved">Saved</TabsTrigger>
-            <TabsTrigger value="archive" className="gap-1">
-              <Archive className="w-3 h-3" />
-              Archive
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mb-6">
+              <TabsTrigger value="feed" className="flex-shrink-0 whitespace-nowrap">Feed</TabsTrigger>
+              <TabsTrigger value="my-network" className="gap-1 flex-shrink-0 whitespace-nowrap">
+                <Users className="w-3 h-3" />
+                <span className="hidden sm:inline">My </span>Network
+              </TabsTrigger>
+              <TabsTrigger value="open-roles" className="flex-shrink-0 whitespace-nowrap">
+                <span className="hidden sm:inline">Open </span>Roles
+              </TabsTrigger>
+              <TabsTrigger value="saved" className="flex-shrink-0 whitespace-nowrap">Saved</TabsTrigger>
+              <TabsTrigger value="archive" className="gap-1 flex-shrink-0 whitespace-nowrap">
+                <Archive className="w-3 h-3" />
+                Archive
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="feed">
             {isLoading ? (

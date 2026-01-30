@@ -161,15 +161,17 @@ const EventsPage: React.FC = () => {
 
       <main className="px-4 sm:px-6 lg:px-8 py-6">
         <Tabs defaultValue="discover" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="discover">Discover</TabsTrigger>
-            <TabsTrigger value="connections">
-              Connections ({connectionsEvents.length})
-            </TabsTrigger>
-            <TabsTrigger value="my-events">
-              My Events ({myEvents.length})
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
+              <TabsTrigger value="discover" className="flex-shrink-0 whitespace-nowrap">Discover</TabsTrigger>
+              <TabsTrigger value="connections" className="flex-shrink-0 whitespace-nowrap">
+                Connections ({connectionsEvents.length})
+              </TabsTrigger>
+              <TabsTrigger value="my-events" className="flex-shrink-0 whitespace-nowrap">
+                My Events ({myEvents.length})
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="discover" className="space-y-6">
             {/* Filters */}

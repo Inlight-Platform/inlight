@@ -302,22 +302,24 @@ const StageWhisperPage: React.FC = () => {
 
         {/* Theatre Category Tabs */}
         {industryTab === 'theatre' && viewTab === 'discover' && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 sm:px-6 lg:px-8">
-            <TabsList className="w-full max-w-lg">
-              <TabsTrigger value="broadway" className="flex-1">
-                ⭐ Broadway
-                <span className="ml-1 text-xs opacity-70">({showCounts.broadway})</span>
-              </TabsTrigger>
-              <TabsTrigger value="off-broadway" className="flex-1">
-                🌟 Off-Broadway
-                <span className="ml-1 text-xs opacity-70">({showCounts['off-broadway']})</span>
-              </TabsTrigger>
-              <TabsTrigger value="off-off-broadway" className="flex-1">
-                ✨ Off-Off
-                <span className="ml-1 text-xs opacity-70">({showCounts['off-off-broadway']})</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="overflow-x-auto scrollbar-thin px-4 sm:px-6 lg:px-8">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
+                <TabsTrigger value="broadway" className="flex-shrink-0 whitespace-nowrap">
+                  ⭐ Broadway
+                  <span className="ml-1 text-xs opacity-70">({showCounts.broadway})</span>
+                </TabsTrigger>
+                <TabsTrigger value="off-broadway" className="flex-shrink-0 whitespace-nowrap">
+                  🌟 Off-Broadway
+                  <span className="ml-1 text-xs opacity-70">({showCounts['off-broadway']})</span>
+                </TabsTrigger>
+                <TabsTrigger value="off-off-broadway" className="flex-shrink-0 whitespace-nowrap">
+                  ✨ Off-Off
+                  <span className="ml-1 text-xs opacity-70">({showCounts['off-off-broadway']})</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         )}
 
         {/* Film View Toggle */}

@@ -1317,13 +1317,15 @@ const ProfilePage: React.FC = () => {
       {isOwnProfile && authUser?.id && (
         <section className="px-4 sm:px-6 lg:px-8 py-6">
           <Tabs defaultValue="photos" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 max-w-xl">
-              <TabsTrigger value="photos">Photos {uploadedPhotos.length > 0 && `(${uploadedPhotos.length})`}</TabsTrigger>
-              <TabsTrigger value="reels">Reels {uploadedVideos.length > 0 && `(${uploadedVideos.length})`}</TabsTrigger>
-              <TabsTrigger value="resume">Résumé {uploadedDocuments.length > 0 && `(${uploadedDocuments.length})`}</TabsTrigger>
-              <TabsTrigger value="audio">Audio {uploadedAudio.length > 0 && `(${uploadedAudio.length})`}</TabsTrigger>
-              <TabsTrigger value="why-i-started">Why I Started</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+              <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 max-w-xl">
+                <TabsTrigger value="photos" className="flex-shrink-0 whitespace-nowrap">Photos {uploadedPhotos.length > 0 && `(${uploadedPhotos.length})`}</TabsTrigger>
+                <TabsTrigger value="reels" className="flex-shrink-0 whitespace-nowrap">Reels {uploadedVideos.length > 0 && `(${uploadedVideos.length})`}</TabsTrigger>
+                <TabsTrigger value="resume" className="flex-shrink-0 whitespace-nowrap">Résumé {uploadedDocuments.length > 0 && `(${uploadedDocuments.length})`}</TabsTrigger>
+                <TabsTrigger value="audio" className="flex-shrink-0 whitespace-nowrap">Audio {uploadedAudio.length > 0 && `(${uploadedAudio.length})`}</TabsTrigger>
+                <TabsTrigger value="why-i-started" className="flex-shrink-0 whitespace-nowrap">Why I Started</TabsTrigger>
+              </TabsList>
+            </div>
             
             <TabsContent value="photos" className="mt-6">
               <MediaUploader

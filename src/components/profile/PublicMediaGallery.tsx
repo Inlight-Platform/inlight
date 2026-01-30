@@ -103,28 +103,30 @@ export const PublicMediaGallery: React.FC<PublicMediaGalleryProps> = ({
       <h2 className="text-xl font-display font-semibold mb-4">Media</h2>
 
       <Tabs defaultValue="photos" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-md">
-          <TabsTrigger value="photos" className="flex items-center gap-1.5">
-            <Image className="w-4 h-4" />
-            <span className="hidden sm:inline">Photos</span>
-            {photos.length > 0 && <span className="text-xs">({photos.length})</span>}
-          </TabsTrigger>
-          <TabsTrigger value="videos" className="flex items-center gap-1.5">
-            <Video className="w-4 h-4" />
-            <span className="hidden sm:inline">Videos</span>
-            {videos.length > 0 && <span className="text-xs">({videos.length})</span>}
-          </TabsTrigger>
-          <TabsTrigger value="audio" className="flex items-center gap-1.5">
-            <Music className="w-4 h-4" />
-            <span className="hidden sm:inline">Audio</span>
-            {audioFiles.length > 0 && <span className="text-xs">({audioFiles.length})</span>}
-          </TabsTrigger>
-          <TabsTrigger value="documents" className="flex items-center gap-1.5">
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">Docs</span>
-            {documents.length > 0 && <span className="text-xs">({documents.length})</span>}
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 max-w-md">
+            <TabsTrigger value="photos" className="flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+              <Image className="w-4 h-4" />
+              <span className="hidden sm:inline">Photos</span>
+              {photos.length > 0 && <span className="text-xs">({photos.length})</span>}
+            </TabsTrigger>
+            <TabsTrigger value="videos" className="flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+              <Video className="w-4 h-4" />
+              <span className="hidden sm:inline">Videos</span>
+              {videos.length > 0 && <span className="text-xs">({videos.length})</span>}
+            </TabsTrigger>
+            <TabsTrigger value="audio" className="flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+              <Music className="w-4 h-4" />
+              <span className="hidden sm:inline">Audio</span>
+              {audioFiles.length > 0 && <span className="text-xs">({audioFiles.length})</span>}
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">Docs</span>
+              {documents.length > 0 && <span className="text-xs">({documents.length})</span>}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="photos" className="mt-6">
           {photos.length > 0 ? (

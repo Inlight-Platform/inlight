@@ -465,28 +465,30 @@ const ProfileSettingsPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="photos" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="photos" className="flex items-center gap-2">
-                  <Image className="h-4 w-4" />
-                  <span className="hidden sm:inline">Photos</span>
-                  {photos.length > 0 && <span className="text-xs">({photos.length})</span>}
-                </TabsTrigger>
-                <TabsTrigger value="videos" className="flex items-center gap-2">
-                  <Video className="h-4 w-4" />
-                  <span className="hidden sm:inline">Videos</span>
-                  {videos.length > 0 && <span className="text-xs">({videos.length})</span>}
-                </TabsTrigger>
-                <TabsTrigger value="audio" className="flex items-center gap-2">
-                  <Music className="h-4 w-4" />
-                  <span className="hidden sm:inline">Audio</span>
-                  {audioFiles.length > 0 && <span className="text-xs">({audioFiles.length})</span>}
-                </TabsTrigger>
-                <TabsTrigger value="documents" className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  <span className="hidden sm:inline">Docs</span>
-                  {documents.length > 0 && <span className="text-xs">({documents.length})</span>}
-                </TabsTrigger>
-              </TabsList>
+              <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+                <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
+                  <TabsTrigger value="photos" className="flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
+                    <Image className="h-4 w-4" />
+                    <span className="hidden sm:inline">Photos</span>
+                    {photos.length > 0 && <span className="text-xs">({photos.length})</span>}
+                  </TabsTrigger>
+                  <TabsTrigger value="videos" className="flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
+                    <Video className="h-4 w-4" />
+                    <span className="hidden sm:inline">Videos</span>
+                    {videos.length > 0 && <span className="text-xs">({videos.length})</span>}
+                  </TabsTrigger>
+                  <TabsTrigger value="audio" className="flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
+                    <Music className="h-4 w-4" />
+                    <span className="hidden sm:inline">Audio</span>
+                    {audioFiles.length > 0 && <span className="text-xs">({audioFiles.length})</span>}
+                  </TabsTrigger>
+                  <TabsTrigger value="documents" className="flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
+                    <FileText className="h-4 w-4" />
+                    <span className="hidden sm:inline">Docs</span>
+                    {documents.length > 0 && <span className="text-xs">({documents.length})</span>}
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
               <TabsContent value="photos" className="mt-6">
                 {user?.id && (
