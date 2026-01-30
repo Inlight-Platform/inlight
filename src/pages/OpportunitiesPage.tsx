@@ -139,22 +139,24 @@ const OpportunitiesPage: React.FC = () => {
 
       <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-card border border-border">
-            <TabsTrigger value="discover" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Discover
-            </TabsTrigger>
-            <TabsTrigger value="matching" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20">
-              <Star className="w-4 h-4 mr-2" />
-              For You ({matchingOpportunities.length})
-            </TabsTrigger>
-            <TabsTrigger value="applied" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20">
-              Applied ({appliedOpportunities.length})
-            </TabsTrigger>
-            <TabsTrigger value="posted" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20">
-              My Posts ({myOpportunities.length})
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-card border border-border">
+              <TabsTrigger value="discover" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20 whitespace-nowrap">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Discover
+              </TabsTrigger>
+              <TabsTrigger value="matching" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20 whitespace-nowrap">
+                <Star className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">For You </span>({matchingOpportunities.length})
+              </TabsTrigger>
+              <TabsTrigger value="applied" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20 whitespace-nowrap">
+                Applied ({appliedOpportunities.length})
+              </TabsTrigger>
+              <TabsTrigger value="posted" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20 whitespace-nowrap">
+                <span className="hidden sm:inline">My </span>Posts ({myOpportunities.length})
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Filters */}
           <OpportunityFilters
