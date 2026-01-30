@@ -22,7 +22,19 @@ interface ShowTip {
   helpful_count: number;
 }
 
-const BroadwayShowsManager: React.FC = () => {
+type ShowCategory = 'broadway' | 'off-broadway' | 'off-off-broadway';
+
+interface ShowsManagerProps {
+  category: ShowCategory;
+}
+
+const CATEGORY_LABELS: Record<ShowCategory, string> = {
+  'broadway': 'Broadway',
+  'off-broadway': 'Off-Broadway',
+  'off-off-broadway': 'Off-Off-Broadway',
+};
+
+const BroadwayShowsManager: React.FC<ShowsManagerProps> = ({ category }) => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingShow, setEditingShow] = useState<any>(null);
@@ -32,6 +44,8 @@ const BroadwayShowsManager: React.FC = () => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [badgeInput, setBadgeInput] = useState('');
   
+  const categoryLabel = CATEGORY_LABELS[category];
+  
   const [formData, setFormData] = useState({
     title: '',
     venue: '',
@@ -39,7 +53,7 @@ const BroadwayShowsManager: React.FC = () => {
     description: '',
     poster_url: '',
     show_type: 'musical',
-    category: 'broadway',
+    category: category,
     price_tier: 'moderate',
     run_start: '',
     run_end: '',
@@ -50,14 +64,14 @@ const BroadwayShowsManager: React.FC = () => {
     badges: [] as string[],
   });
 
-  // Fetch Broadway shows from nyc_shows
+  // Fetch shows from nyc_shows based on category
   const { data: shows, isLoading } = useQuery({
-    queryKey: ['admin-broadway-shows'],
+    queryKey: ['admin-shows', category],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('nyc_shows')
         .select('*')
-        .eq('category', 'broadway')
+        .eq('category', category)
         .order('title', { ascending: true });
       if (error) throw error;
       return data;
@@ -89,7 +103,7 @@ const BroadwayShowsManager: React.FC = () => {
         description: data.description || null,
         poster_url: data.poster_url || null,
         show_type: data.show_type || 'musical',
-        category: 'broadway',
+        category: category,
         price_tier: data.price_tier || 'moderate',
         run_start: data.run_start && data.run_start.trim() !== '' ? data.run_start : null,
         run_end: data.run_end && data.run_end.trim() !== '' ? data.run_end : null,
@@ -103,9 +117,9 @@ const BroadwayShowsManager: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-broadway-shows'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-shows', category] });
       queryClient.invalidateQueries({ queryKey: ['nyc-shows'] });
-      toast.success('Broadway show created successfully');
+      toast.success(`${categoryLabel} show created successfully`);
       resetForm();
     },
     onError: (error) => {
@@ -125,7 +139,7 @@ const BroadwayShowsManager: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-broadway-shows'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-shows', category] });
       queryClient.invalidateQueries({ queryKey: ['nyc-shows'] });
       toast.success('Show updated successfully');
       resetForm();
@@ -141,7 +155,7 @@ const BroadwayShowsManager: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-broadway-shows'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-shows', category] });
       queryClient.invalidateQueries({ queryKey: ['nyc-shows'] });
       toast.success('Show deleted successfully');
     },
@@ -197,7 +211,7 @@ const BroadwayShowsManager: React.FC = () => {
       description: '',
       poster_url: '',
       show_type: 'musical',
-      category: 'broadway',
+      category: category,
       price_tier: 'moderate',
       run_start: '',
       run_end: '',
@@ -222,7 +236,7 @@ const BroadwayShowsManager: React.FC = () => {
       description: show.description || '',
       poster_url: show.poster_url || '',
       show_type: show.show_type || 'musical',
-      category: 'broadway',
+      category: category,
       price_tier: show.price_tier || 'moderate',
       run_start: show.run_start || '',
       run_end: show.run_end || '',
@@ -320,10 +334,10 @@ const BroadwayShowsManager: React.FC = () => {
         <div>
           <CardTitle className="flex items-center gap-2">
             <Theater className="w-5 h-5 text-primary" />
-            Broadway Shows (Industry Now)
+            {categoryLabel} Shows (Industry Now)
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage all Broadway shows displayed on Industry Now page
+            Manage all {categoryLabel} shows displayed on Industry Now page
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -338,7 +352,7 @@ const BroadwayShowsManager: React.FC = () => {
           </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingShow ? `Edit: ${editingShow.title}` : 'Add New Broadway Show'}</DialogTitle>
+              <DialogTitle>{editingShow ? `Edit: ${editingShow.title}` : `Add New ${categoryLabel} Show`}</DialogTitle>
             </DialogHeader>
             
             <Tabs value={activeTab} onValueChange={setActiveTab}>
