@@ -62,7 +62,15 @@ const AdminPage: React.FC = () => {
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="broadway" className="gap-2">
               <Theater className="w-4 h-4" />
-              Broadway Shows
+              ⭐ Broadway
+            </TabsTrigger>
+            <TabsTrigger value="off-broadway" className="gap-2">
+              <Theater className="w-4 h-4" />
+              🌟 Off-Broadway
+            </TabsTrigger>
+            <TabsTrigger value="off-off-broadway" className="gap-2">
+              <Theater className="w-4 h-4" />
+              ✨ Off-Off
             </TabsTrigger>
             <TabsTrigger value="highlights" className="gap-2">
               <Newspaper className="w-4 h-4" />
@@ -79,7 +87,15 @@ const AdminPage: React.FC = () => {
           </TabsList>
 
           <TabsContent value="broadway">
-            <BroadwayShowsManager />
+            <BroadwayShowsManager category="broadway" />
+          </TabsContent>
+
+          <TabsContent value="off-broadway">
+            <BroadwayShowsManager category="off-broadway" />
+          </TabsContent>
+
+          <TabsContent value="off-off-broadway">
+            <BroadwayShowsManager category="off-off-broadway" />
           </TabsContent>
 
           <TabsContent value="highlights">
