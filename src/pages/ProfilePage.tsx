@@ -164,6 +164,33 @@ const ProfilePage: React.FC = () => {
   const hasPendingRequest = resolvedUserId ? hasSentRequestTo(resolvedUserId) : false;
   const isConnected = resolvedUserId ? isMutual(resolvedUserId) : false;
   
+  // Fetch network counts for this profile (mutual connections and followers)
+  const { data: networkCounts } = useQuery({
+    queryKey: ['network-counts', resolvedUserId],
+    queryFn: async () => {
+      if (!resolvedUserId) return { networkCount: 0, followerCount: 0 };
+      
+      // Get mutual connections count (1st degree / network)
+      const { data: mutualData, error: mutualError } = await supabase
+        .rpc('get_mutual_connections', { target_user_id: resolvedUserId });
+      
+      // Get follower count (people following this user)
+      const { count: followerCount, error: followerError } = await supabase
+        .from('connections')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', resolvedUserId);
+      
+      if (mutualError) console.error('Error fetching mutual connections:', mutualError);
+      if (followerError) console.error('Error fetching followers:', followerError);
+      
+      return {
+        networkCount: mutualData?.length || 0,
+        followerCount: followerCount || 0
+      };
+    },
+    enabled: !!resolvedUserId,
+  });
+  
   // Media upload hooks
   const { deleteFile, updateVisibility } = useMediaUpload();
   const { fetchMedia } = useUserMedia(authUser?.id);
@@ -949,6 +976,22 @@ const ProfilePage: React.FC = () => {
                     {isOwnProfile && <Pencil className="w-3 h-3 ml-1 inline" />}
                   </span>
                 )}
+              </div>
+              
+              {/* Network and Follower Counts - LinkedIn style */}
+              <div className="flex items-center gap-4 mt-3">
+                <button
+                  onClick={() => navigate(isOwnProfile ? '/network' : `/mutuals/${resolvedUserId}`)}
+                  className="text-sm text-muted-foreground hover:text-primary hover:underline transition-colors"
+                >
+                  <span className="font-semibold text-foreground">{networkCounts?.networkCount || 0}</span>
+                  {' '}connection{networkCounts?.networkCount !== 1 ? 's' : ''}
+                </button>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-sm text-muted-foreground">
+                  <span className="font-semibold text-foreground">{networkCounts?.followerCount || 0}</span>
+                  {' '}follower{networkCounts?.followerCount !== 1 ? 's' : ''}
+                </span>
               </div>
             </div>
             
