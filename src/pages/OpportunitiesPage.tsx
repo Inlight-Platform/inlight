@@ -8,7 +8,6 @@ import OpportunityCard from '@/components/opportunities/OpportunityCard';
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters';
 import OpportunityCreator from '@/components/opportunities/OpportunityCreator';
 import { stubOpportunities } from '@/data/stubData';
-import PageLayout from '@/components/layout/PageLayout';
 
 const OpportunitiesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -106,7 +105,7 @@ const OpportunitiesPage: React.FC = () => {
   );
 
   return (
-    <PageLayout>
+    <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
@@ -288,7 +287,7 @@ const OpportunitiesPage: React.FC = () => {
 
       {/* Opportunity Creator Modal */}
       <OpportunityCreator open={showCreator} onOpenChange={setShowCreator} />
-    </PageLayout>
+    </div>
   );
 };
 

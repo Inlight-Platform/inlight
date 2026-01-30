@@ -15,7 +15,6 @@ import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import PageLayout from '@/components/layout/PageLayout';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 
 interface Project {
@@ -334,7 +333,7 @@ const ProjectsPage: React.FC = () => {
   };
 
   return (
-    <PageLayout>
+    <div className="w-full">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -562,7 +561,7 @@ const ProjectsPage: React.FC = () => {
           queryClient.invalidateQueries({ queryKey: ['projects-feed'] });
         }}
       />
-    </PageLayout>
+    </div>
   );
 };
 

@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import PageLayout from "@/components/layout/PageLayout";
 import Index from "./pages/Index";
 import ProfilePage from "./pages/ProfilePage";
 import DirectoryPage from "./pages/DirectoryPage";
@@ -26,6 +27,12 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const AppShell = () => (
+  <PageLayout>
+    <Outlet />
+  </PageLayout>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -33,27 +40,31 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
           <Route path="/auth" element={<AuthPage />} />
-          <Route path="/settings" element={<ProfileSettingsPage />} />
-          <Route path="/profile/:userId" element={<ProfilePage />} />
-          <Route path="/directory/:badgeSlug" element={<DirectoryPage />} />
-          <Route path="/feed" element={<FeedPage />} />
-          <Route path="/people" element={<PeoplePage />} />
-          <Route path="/mutuals" element={<PeoplePage />} />
-          <Route path="/insights" element={<InsightsPage />} />
-          <Route path="/events" element={<EventsPage />} />
-          <Route path="/opportunities" element={<OpportunitiesPage />} />
-          <Route path="/messages" element={<MessagesPage />} />
-          <Route path="/network" element={<NetworkPage />} />
-          <Route path="/resources" element={<ResourcesPage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/projects/new" element={<ProjectNewPage />} />
-          <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-          <Route path="/stage-whisper" element={<StageWhisperPage />} />
-          <Route path="/group" element={<GroupMembersPage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="*" element={<NotFound />} />
+
+          {/* App shell (sidebar on desktop, bottom nav on mobile) */}
+          <Route element={<AppShell />}>
+            <Route path="/" element={<Index />} />
+            <Route path="/settings" element={<ProfileSettingsPage />} />
+            <Route path="/profile/:userId" element={<ProfilePage />} />
+            <Route path="/directory/:badgeSlug" element={<DirectoryPage />} />
+            <Route path="/feed" element={<FeedPage />} />
+            <Route path="/people" element={<PeoplePage />} />
+            <Route path="/mutuals" element={<PeoplePage />} />
+            <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/events" element={<EventsPage />} />
+            <Route path="/opportunities" element={<OpportunitiesPage />} />
+            <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/network" element={<NetworkPage />} />
+            <Route path="/resources" element={<ResourcesPage />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/new" element={<ProjectNewPage />} />
+            <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+            <Route path="/stage-whisper" element={<StageWhisperPage />} />
+            <Route path="/group" element={<GroupMembersPage />} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

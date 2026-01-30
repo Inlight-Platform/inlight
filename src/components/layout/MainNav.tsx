@@ -298,13 +298,17 @@ export const MainNav: React.FC = () => {
 
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-pb">
-        <div className="flex items-center justify-around py-2">
+        {/*
+          Horizontal scroll so ALL tabs are always accessible on small screens.
+          (LinkedIn-style: compact items; no squeezing/overlap)
+        */}
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide px-2 py-2">
           {/* Messages for mobile */}
           {user && (
             <Link
               to="/messages"
               className={cn(
-                'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors relative',
+                'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors relative flex-shrink-0 min-w-[72px]',
                 isActive('/messages') ? 'text-primary' : 'text-muted-foreground'
               )}
             >
@@ -316,10 +320,11 @@ export const MainNav: React.FC = () => {
                   </span>
                 )}
               </div>
-              <span className="text-xs">Messages</span>
+              <span className="text-[10px] leading-none whitespace-nowrap">Messages</span>
             </Link>
           )}
-          {navItems.slice(0, 4).map((item) => {
+
+          {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
@@ -327,38 +332,37 @@ export const MainNav: React.FC = () => {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors',
+                  'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors flex-shrink-0 min-w-[72px]',
                   active ? 'text-primary' : 'text-muted-foreground'
                 )}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-xs">{item.label}</span>
+                <span className="text-[10px] leading-none whitespace-nowrap">{item.label}</span>
               </Link>
             );
           })}
+
           {user ? (
             <Link
               to={`/profile/${user.id}`}
               className={cn(
-                'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors',
+                'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors flex-shrink-0 min-w-[72px]',
                 isActive(`/profile/${user.id}`) ? 'text-primary' : 'text-muted-foreground'
               )}
             >
               <Avatar className="w-5 h-5">
                 <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="text-[8px]">
-                  {profile?.display_name?.[0] || 'U'}
-                </AvatarFallback>
+                <AvatarFallback className="text-[8px]">{profile?.display_name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
-              <span className="text-xs">Profile</span>
+              <span className="text-[10px] leading-none whitespace-nowrap">Profile</span>
             </Link>
           ) : (
             <Link
               to="/auth"
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-muted-foreground"
+              className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg text-muted-foreground flex-shrink-0 min-w-[72px]"
             >
               <LogIn className="w-5 h-5" />
-              <span className="text-xs">Sign in</span>
+              <span className="text-[10px] leading-none whitespace-nowrap">Sign in</span>
             </Link>
           )}
         </div>
