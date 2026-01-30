@@ -181,6 +181,7 @@ export type Database = {
           created_at: string
           date: string
           id: string
+          poster_url: string | null
           rating: number
           studio: string
           title: string
@@ -193,6 +194,7 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          poster_url?: string | null
           rating?: number
           studio: string
           title: string
@@ -205,6 +207,7 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          poster_url?: string | null
           rating?: number
           studio?: string
           title?: string
@@ -945,6 +948,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      streaming_content: {
+        Row: {
+          content_type: string
+          created_at: string
+          description: string | null
+          genre: string | null
+          id: string
+          is_active: boolean | null
+          platform: string
+          poster_url: string | null
+          rating: number | null
+          release_year: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content_type?: string
+          created_at?: string
+          description?: string | null
+          genre?: string | null
+          id?: string
+          is_active?: boolean | null
+          platform: string
+          poster_url?: string | null
+          rating?: number | null
+          release_year?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          description?: string | null
+          genre?: string | null
+          id?: string
+          is_active?: boolean | null
+          platform?: string
+          poster_url?: string | null
+          rating?: number | null
+          release_year?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       studio_comments: {
         Row: {

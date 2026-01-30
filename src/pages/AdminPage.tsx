@@ -14,9 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import BroadwayShowsManager from '@/components/admin/BroadwayShowsManager';
+import FilmContentManager from '@/components/admin/FilmContentManager';
 
 const AdminPage: React.FC = () => {
   const navigate = useNavigate();
@@ -72,13 +73,17 @@ const AdminPage: React.FC = () => {
               <Theater className="w-4 h-4" />
               ✨ Off-Off
             </TabsTrigger>
+            <TabsTrigger value="film-theatres" className="gap-2">
+              <Film className="w-4 h-4" />
+              🎬 In Theatres
+            </TabsTrigger>
+            <TabsTrigger value="film-streaming" className="gap-2">
+              <Tv className="w-4 h-4" />
+              📺 Streaming
+            </TabsTrigger>
             <TabsTrigger value="highlights" className="gap-2">
               <Newspaper className="w-4 h-4" />
               Highlights
-            </TabsTrigger>
-            <TabsTrigger value="film" className="gap-2">
-              <Film className="w-4 h-4" />
-              Film Metrics
             </TabsTrigger>
             <TabsTrigger value="photos" className="gap-2">
               <Image className="w-4 h-4" />
@@ -98,12 +103,16 @@ const AdminPage: React.FC = () => {
             <BroadwayShowsManager category="off-off-broadway" />
           </TabsContent>
 
-          <TabsContent value="highlights">
-            <IndustryHighlightsManager />
+          <TabsContent value="film-theatres">
+            <FilmContentManager contentType="theatres" />
           </TabsContent>
 
-          <TabsContent value="film">
-            <FilmMetricsManager />
+          <TabsContent value="film-streaming">
+            <FilmContentManager contentType="streaming" />
+          </TabsContent>
+
+          <TabsContent value="highlights">
+            <IndustryHighlightsManager />
           </TabsContent>
 
           <TabsContent value="photos">
@@ -302,289 +311,6 @@ const IndustryHighlightsManager: React.FC = () => {
                         variant="ghost"
                         className="text-destructive"
                         onClick={() => deleteMutation.mutate(highlight.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-// Film Metrics Manager Component
-const FilmMetricsManager: React.FC = () => {
-  const queryClient = useQueryClient();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingFilm, setEditingFilm] = useState<any>(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    studio: '',
-    weekend_gross: 0,
-    total_gross: 0,
-    week_change: 0,
-    rating: 0,
-    weeks_in_release: 1,
-    date: new Date().toISOString().split('T')[0],
-  });
-
-  const { data: films, isLoading } = useQuery({
-    queryKey: ['admin-film-metrics'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('film_metrics')
-        .select('*')
-        .order('date', { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      const { error } = await supabase.from('film_metrics').insert(data);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-film-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['film-metrics'] });
-      toast.success('Film metrics added successfully');
-      resetForm();
-    },
-    onError: (error) => {
-      toast.error('Failed to add film metrics: ' + error.message);
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
-      const { error } = await supabase.from('film_metrics').update(data).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-film-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['film-metrics'] });
-      toast.success('Film metrics updated successfully');
-      resetForm();
-    },
-    onError: (error) => {
-      toast.error('Failed to update film metrics: ' + error.message);
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('film_metrics').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-film-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['film-metrics'] });
-      toast.success('Film metrics deleted successfully');
-    },
-    onError: (error) => {
-      toast.error('Failed to delete film metrics: ' + error.message);
-    },
-  });
-
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      studio: '',
-      weekend_gross: 0,
-      total_gross: 0,
-      week_change: 0,
-      rating: 0,
-      weeks_in_release: 1,
-      date: new Date().toISOString().split('T')[0],
-    });
-    setEditingFilm(null);
-    setIsDialogOpen(false);
-  };
-
-  const handleEdit = (film: any) => {
-    setEditingFilm(film);
-    setFormData({
-      title: film.title,
-      studio: film.studio,
-      weekend_gross: Number(film.weekend_gross),
-      total_gross: Number(film.total_gross),
-      week_change: Number(film.week_change),
-      rating: Number(film.rating),
-      weeks_in_release: film.weeks_in_release,
-      date: film.date,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingFilm) {
-      updateMutation.mutate({ id: editingFilm.id, data: formData });
-    } else {
-      createMutation.mutate(formData);
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
-    if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
-    return `$${amount}`;
-  };
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Film Box Office Metrics</CardTitle>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => resetForm()}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Film
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{editingFilm ? 'Edit Film' : 'Add Film Metrics'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Title</Label>
-                  <Input
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Movie title"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Studio</Label>
-                  <Input
-                    value={formData.studio}
-                    onChange={(e) => setFormData({ ...formData, studio: e.target.value })}
-                    placeholder="e.g., Disney"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Weekend Gross ($)</Label>
-                  <Input
-                    type="number"
-                    value={formData.weekend_gross}
-                    onChange={(e) => setFormData({ ...formData, weekend_gross: Number(e.target.value) })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Total Gross ($)</Label>
-                  <Input
-                    type="number"
-                    value={formData.total_gross}
-                    onChange={(e) => setFormData({ ...formData, total_gross: Number(e.target.value) })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Week Change (%)</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={formData.week_change}
-                    onChange={(e) => setFormData({ ...formData, week_change: Number(e.target.value) })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Rating</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="10"
-                    value={formData.rating}
-                    onChange={(e) => setFormData({ ...formData, rating: Number(e.target.value) })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Week #</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={formData.weeks_in_release}
-                    onChange={(e) => setFormData({ ...formData, weeks_in_release: Number(e.target.value) })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {editingFilm ? 'Update' : 'Create'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <p className="text-muted-foreground">Loading films...</p>
-        ) : films?.length === 0 ? (
-          <p className="text-muted-foreground">No film metrics yet.</p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Studio</TableHead>
-                <TableHead>Weekend</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Change</TableHead>
-                <TableHead className="w-24">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {films?.map((film) => (
-                <TableRow key={film.id}>
-                  <TableCell>{film.date}</TableCell>
-                  <TableCell className="font-medium">{film.title}</TableCell>
-                  <TableCell>{film.studio}</TableCell>
-                  <TableCell>{formatCurrency(Number(film.weekend_gross))}</TableCell>
-                  <TableCell>{formatCurrency(Number(film.total_gross))}</TableCell>
-                  <TableCell className={Number(film.week_change) >= 0 ? 'text-green-500' : 'text-red-500'}>
-                    {Number(film.week_change) >= 0 ? '+' : ''}{film.week_change}%
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => handleEdit(film)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-destructive"
-                        onClick={() => deleteMutation.mutate(film.id)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
