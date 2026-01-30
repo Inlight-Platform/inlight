@@ -28,14 +28,22 @@ const AuthPage: React.FC = () => {
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { user, loading, signIn, signUp, resetPassword, updatePassword } = useAuth();
+  const { user, loading, signIn, signUp, resetPassword, updatePassword, isPasswordRecovery } = useAuth();
   const navigate = useNavigate();
 
+  // Handle password recovery mode - detect when user arrives via reset link
   useEffect(() => {
-    if (!loading && user && view !== 'reset') {
+    if (isPasswordRecovery) {
+      setView('reset');
+    }
+  }, [isPasswordRecovery]);
+
+  useEffect(() => {
+    // Don't redirect if in password recovery mode
+    if (!loading && user && view !== 'reset' && !isPasswordRecovery) {
       navigate('/');
     }
-  }, [user, loading, navigate, view]);
+  }, [user, loading, navigate, view, isPasswordRecovery]);
 
   useEffect(() => {
     if (mode === 'reset') {
@@ -150,6 +158,45 @@ const AuthPage: React.FC = () => {
 
   // Reset password view
   if (view === 'reset') {
+    // Show loading while waiting for password recovery session to be established
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    // If no user session and not in password recovery, the link might be invalid/expired
+    if (!user && !isPasswordRecovery) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center space-y-2">
+              <div className="mx-auto w-12 h-12 bg-destructive rounded-full flex items-center justify-center">
+                <GraduationCap className="h-6 w-6 text-destructive-foreground" />
+              </div>
+              <CardTitle className="text-2xl font-bold">Link Expired</CardTitle>
+              <CardDescription>
+                This password reset link has expired or is invalid. Please request a new one.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  setView('forgot');
+                  navigate('/auth');
+                }}
+              >
+                Request New Reset Link
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
