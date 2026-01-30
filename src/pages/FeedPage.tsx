@@ -10,7 +10,6 @@ import { PostCreator } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
 import { ConnectionSuggestions } from '@/components/feed/ConnectionSuggestions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import PageLayout from '@/components/layout/PageLayout';
 
 type NetworkFilter = 'all' | '1st' | '2nd' | '3rd+';
 type ContentFilter = 'all' | 'events' | 'jobs' | 'projects' | 'updates' | 'shows';
@@ -248,7 +247,7 @@ const FeedPage: React.FC = () => {
   }), [events, posts, projects, shows]);
 
   return (
-    <PageLayout>
+    <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
@@ -388,7 +387,7 @@ const FeedPage: React.FC = () => {
           />
         </DialogContent>
       </Dialog>
-    </PageLayout>
+    </div>
   );
 };
 

@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
-import { PageLayout } from '@/components/layout/PageLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,11 +38,9 @@ const AdminPage: React.FC = () => {
 
   if (authLoading || adminLoading) {
     return (
-      <PageLayout>
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </PageLayout>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
     );
   }
 
@@ -52,77 +49,75 @@ const AdminPage: React.FC = () => {
   }
 
   return (
-    <PageLayout>
-      <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center gap-3">
-          <Shield className="w-8 h-8 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto space-y-6">
+      <div className="flex items-center gap-3">
+        <Shield className="w-8 h-8 text-primary" />
+        <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
+      </div>
+
+      <Tabs defaultValue="broadway" className="space-y-4">
+        <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 h-auto gap-1 p-1">
+            <TabsTrigger value="broadway" className="gap-2 whitespace-nowrap">
+              <Theater className="w-4 h-4" />
+              <span className="hidden sm:inline">⭐</span> Broadway
+            </TabsTrigger>
+            <TabsTrigger value="off-broadway" className="gap-2 whitespace-nowrap">
+              <Theater className="w-4 h-4" />
+              <span className="hidden sm:inline">🌟</span> Off-Bway
+            </TabsTrigger>
+            <TabsTrigger value="off-off-broadway" className="gap-2 whitespace-nowrap">
+              <Theater className="w-4 h-4" />
+              <span className="hidden sm:inline">✨</span> Off-Off
+            </TabsTrigger>
+            <TabsTrigger value="film-theatres" className="gap-2 whitespace-nowrap">
+              <Film className="w-4 h-4" />
+              <span className="hidden sm:inline">🎬</span> Theatres
+            </TabsTrigger>
+            <TabsTrigger value="film-streaming" className="gap-2 whitespace-nowrap">
+              <Tv className="w-4 h-4" />
+              <span className="hidden sm:inline">📺</span> Streaming
+            </TabsTrigger>
+            <TabsTrigger value="highlights" className="gap-2 whitespace-nowrap">
+              <Newspaper className="w-4 h-4" />
+              <span className="hidden sm:inline">Highlights</span>
+            </TabsTrigger>
+            <TabsTrigger value="photos" className="gap-2 whitespace-nowrap">
+              <Image className="w-4 h-4" />
+              <span className="hidden sm:inline">Photos</span>
+            </TabsTrigger>
+          </TabsList>
         </div>
 
-        <Tabs defaultValue="broadway" className="space-y-4">
-          <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 h-auto gap-1 p-1">
-              <TabsTrigger value="broadway" className="gap-2 whitespace-nowrap">
-                <Theater className="w-4 h-4" />
-                <span className="hidden sm:inline">⭐</span> Broadway
-              </TabsTrigger>
-              <TabsTrigger value="off-broadway" className="gap-2 whitespace-nowrap">
-                <Theater className="w-4 h-4" />
-                <span className="hidden sm:inline">🌟</span> Off-Bway
-              </TabsTrigger>
-              <TabsTrigger value="off-off-broadway" className="gap-2 whitespace-nowrap">
-                <Theater className="w-4 h-4" />
-                <span className="hidden sm:inline">✨</span> Off-Off
-              </TabsTrigger>
-              <TabsTrigger value="film-theatres" className="gap-2 whitespace-nowrap">
-                <Film className="w-4 h-4" />
-                <span className="hidden sm:inline">🎬</span> Theatres
-              </TabsTrigger>
-              <TabsTrigger value="film-streaming" className="gap-2 whitespace-nowrap">
-                <Tv className="w-4 h-4" />
-                <span className="hidden sm:inline">📺</span> Streaming
-              </TabsTrigger>
-              <TabsTrigger value="highlights" className="gap-2 whitespace-nowrap">
-                <Newspaper className="w-4 h-4" />
-                <span className="hidden sm:inline">Highlights</span>
-              </TabsTrigger>
-              <TabsTrigger value="photos" className="gap-2 whitespace-nowrap">
-                <Image className="w-4 h-4" />
-                <span className="hidden sm:inline">Photos</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
+        <TabsContent value="broadway">
+          <BroadwayShowsManager category="broadway" />
+        </TabsContent>
 
-          <TabsContent value="broadway">
-            <BroadwayShowsManager category="broadway" />
-          </TabsContent>
+        <TabsContent value="off-broadway">
+          <BroadwayShowsManager category="off-broadway" />
+        </TabsContent>
 
-          <TabsContent value="off-broadway">
-            <BroadwayShowsManager category="off-broadway" />
-          </TabsContent>
+        <TabsContent value="off-off-broadway">
+          <BroadwayShowsManager category="off-off-broadway" />
+        </TabsContent>
 
-          <TabsContent value="off-off-broadway">
-            <BroadwayShowsManager category="off-off-broadway" />
-          </TabsContent>
+        <TabsContent value="film-theatres">
+          <FilmContentManager contentType="theatres" />
+        </TabsContent>
 
-          <TabsContent value="film-theatres">
-            <FilmContentManager contentType="theatres" />
-          </TabsContent>
+        <TabsContent value="film-streaming">
+          <FilmContentManager contentType="streaming" />
+        </TabsContent>
 
-          <TabsContent value="film-streaming">
-            <FilmContentManager contentType="streaming" />
-          </TabsContent>
+        <TabsContent value="highlights">
+          <IndustryHighlightsManager />
+        </TabsContent>
 
-          <TabsContent value="highlights">
-            <IndustryHighlightsManager />
-          </TabsContent>
-
-          <TabsContent value="photos">
-            <PhotosManager />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </PageLayout>
+        <TabsContent value="photos">
+          <PhotosManager />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

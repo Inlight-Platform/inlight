@@ -5,7 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import PageLayout from '@/components/layout/PageLayout';
 
 const GroupMembersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -47,16 +46,14 @@ const GroupMembersPage: React.FC = () => {
 
   if (!badgeTag) {
     return (
-      <PageLayout>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">No group specified</p>
-        </div>
-      </PageLayout>
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">No group specified</p>
+      </div>
     );
   }
 
   return (
-    <PageLayout>
+    <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -158,7 +155,7 @@ const GroupMembersPage: React.FC = () => {
           </div>
         )}
       </div>
-    </PageLayout>
+    </div>
   );
 };
 

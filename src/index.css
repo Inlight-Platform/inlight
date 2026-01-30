@@ -372,4 +372,13 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* iOS safe-area helpers (home-indicator / notch) */
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-pt {
+    padding-top: env(safe-area-inset-top);
+  }
 }

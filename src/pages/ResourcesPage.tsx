@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import PageLayout from '@/components/layout/PageLayout';
 
 type ResourceCategory = 'news' | 'directories' | 'education' | 'union' | 'casting' | 'scripts';
 
@@ -142,7 +141,7 @@ const ResourcesPage: React.FC = () => {
   const educationTypes: EducationProgram['type'][] = ['acting', 'filmmaking', 'producing', 'dance', 'voice'];
 
   return (
-    <PageLayout>
+    <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -520,7 +519,7 @@ const ResourcesPage: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </PageLayout>
+    </div>
   );
 };
 

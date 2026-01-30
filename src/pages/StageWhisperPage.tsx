@@ -7,7 +7,6 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedShows } from '@/hooks/useSavedShows';
-import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -181,7 +180,7 @@ const StageWhisperPage: React.FC = () => {
   };
 
   return (
-    <PageLayout>
+    <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -609,7 +608,7 @@ const StageWhisperPage: React.FC = () => {
         onSave={saveShow}
         onUnsave={unsaveShow}
       />
-    </PageLayout>
+    </div>
   );
 };
 

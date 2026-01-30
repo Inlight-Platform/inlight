@@ -11,7 +11,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
-import PageLayout from '@/components/layout/PageLayout';
 
 interface Studio {
   id: string;
@@ -305,7 +304,7 @@ const PeoplePage: React.FC = () => {
   };
   
   return (
-    <PageLayout>
+    <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -497,7 +496,7 @@ const PeoplePage: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </PageLayout>
+    </div>
   );
 };
 
