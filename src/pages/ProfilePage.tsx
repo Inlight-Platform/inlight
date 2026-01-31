@@ -499,6 +499,8 @@ const ProfilePage: React.FC = () => {
     { tag: 'innovation', label: 'The Innovation Studio' },
     { tag: 'strasberg', label: 'Strasberg' },
     { tag: 'UGFTV', label: 'Film and TV' },
+    { tag: 'p&d', label: 'Production and Design' },
+    { tag: 'cinemastudies', label: 'Cinema Studies' },
   ];
 
   const handleAddBadgeToDb = async (badgeTag?: string) => {
