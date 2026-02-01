@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, FolderKanban, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, MessageCircle, Bell, Shield } from 'lucide-react';
+import { Home, Users, Briefcase, FolderKanban, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, MessageCircle, Bell, Shield, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
@@ -20,13 +20,14 @@ interface NavItem {
   icon: React.ElementType;
   path: string;
   badge?: number;
+  accent?: boolean;
 }
 
 const navItems: NavItem[] = [
   { label: 'Feed', icon: Home, path: '/feed' },
   { label: 'People', icon: Users, path: '/people' },
   { label: 'Projects', icon: FolderKanban, path: '/projects' },
-  { label: 'Opportunities', icon: Briefcase, path: '/opportunities' },
+  { label: 'Opportunities', icon: Briefcase, path: '/opportunities', accent: true },
   { label: 'Industry Now', icon: Theater, path: '/stage-whisper' },
   { label: 'Resources', icon: BookOpen, path: '/resources' },
 ];
@@ -61,18 +62,30 @@ export const MainNav: React.FC = () => {
 
   return (
     <TooltipProvider delayDuration={0}>
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar - Premium dark design */}
       <aside 
         className={cn(
-          "hidden md:flex fixed left-0 top-0 h-full flex-col bg-card border-r border-border z-50 transition-all duration-300 ease-in-out",
+          "hidden md:flex fixed left-0 top-0 h-full flex-col z-50 transition-all duration-300 ease-in-out",
+          "bg-gradient-to-b from-[hsl(222_32%_10%)] via-[hsl(222_35%_8%)] to-[hsl(222_38%_6%)]",
+          "border-r border-[hsl(45_95%_58%/0.1)]",
           collapsed ? "w-16" : "w-64"
         )}
       >
-        {/* Logo */}
-        <div className={cn("border-b border-border", collapsed ? "p-3" : "p-6")}>
-          <Link to="/" className="flex items-center gap-3">
-            <img src={inlightLogo} alt="Inlight" className={cn("transition-all", collapsed ? "h-8 w-auto" : "h-10 w-auto")} />
-            {!collapsed && <span className="text-xl font-display font-bold tracking-wide">Inlight</span>}
+        {/* Decorative gold line at top */}
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[hsl(45_95%_58%/0.5)] to-transparent" />
+        
+        {/* Logo with gold accent */}
+        <div className={cn("border-b border-[hsl(45_95%_58%/0.1)] relative", collapsed ? "p-3" : "p-6")}>
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="relative">
+              <img src={inlightLogo} alt="Inlight" className={cn("transition-all relative z-10", collapsed ? "h-8 w-auto" : "h-10 w-auto")} />
+              <div className="absolute inset-0 blur-lg bg-[hsl(45_95%_58%/0.2)] opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            {!collapsed && (
+              <span className="text-xl font-display font-bold tracking-wide bg-gradient-to-r from-white to-[hsl(45_95%_58%)] bg-clip-text text-transparent">
+                Inlight
+              </span>
+            )}
           </Link>
         </div>
 
@@ -103,28 +116,41 @@ export const MainNav: React.FC = () => {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex items-center gap-3 rounded-xl text-sm font-medium transition-colors relative',
+                  'flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 relative group',
                   collapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3',
                   active
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    ? 'bg-gradient-to-r from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white shadow-lg shadow-[hsl(220_85%_55%/0.3)]'
+                    : item.accent 
+                      ? 'text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)] hover:text-[hsl(45_95%_68%)]'
+                      : 'text-[hsl(220_15%_70%)] hover:bg-[hsl(220_30%_15%)] hover:text-white'
                 )}
               >
+                {/* Gold accent indicator for active state */}
+                {active && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-[hsl(45_95%_58%)]" />
+                )}
+                
                 <div className="relative">
-                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <Icon className={cn(
+                    "w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110",
+                    item.accent && !active && "text-[hsl(45_95%_58%)]"
+                  )} />
                   {item.badge && item.badge > 0 && (
-                    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full px-1">
+                    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold bg-[hsl(45_95%_58%)] text-[hsl(222_35%_8%)] rounded-full px-1 shadow-lg shadow-[hsl(45_95%_58%/0.4)]">
                       {item.badge > 99 ? '99+' : item.badge}
                     </span>
                   )}
                 </div>
                 {!collapsed && (
                   <>
-                    {item.label}
+                    <span className={cn(item.accent && !active && "font-semibold")}>{item.label}</span>
                     {item.badge && item.badge > 0 && (
-                      <Badge variant="destructive" className="ml-auto text-xs px-1.5 py-0.5">
+                      <Badge className="ml-auto text-xs px-1.5 py-0.5 bg-[hsl(45_95%_58%)] text-[hsl(222_35%_8%)] hover:bg-[hsl(45_95%_68%)]">
                         {item.badge > 99 ? '99+' : item.badge}
                       </Badge>
+                    )}
+                    {item.accent && !active && (
+                      <Sparkles className="w-3 h-3 ml-auto text-[hsl(45_95%_58%)] opacity-60" />
                     )}
                   </>
                 )}
@@ -137,7 +163,7 @@ export const MainNav: React.FC = () => {
                   <TooltipTrigger asChild>
                     {linkContent}
                   </TooltipTrigger>
-                  <TooltipContent side="right">
+                  <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
                     {item.label}
                     {item.badge && item.badge > 0 && ` (${item.badge})`}
                   </TooltipContent>
@@ -157,7 +183,7 @@ export const MainNav: React.FC = () => {
                 variant="ghost"
                 size="icon"
                 onClick={toggleCollapsed}
-                className="h-9 w-9"
+                className="h-9 w-9 text-[hsl(220_15%_60%)] hover:text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)] transition-colors"
               >
                 {collapsed ? (
                   <PanelLeft className="w-5 h-5" />
@@ -166,14 +192,14 @@ export const MainNav: React.FC = () => {
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right">
+            <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
               {collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             </TooltipContent>
           </Tooltip>
         </div>
 
-        {/* User Section */}
-        <div className={cn("border-t border-border", collapsed ? "p-2" : "p-4")}>
+        {/* User Section - Premium styling */}
+        <div className={cn("border-t border-[hsl(45_95%_58%/0.1)]", collapsed ? "p-2" : "p-4")}>
           {user ? (
             <div className="space-y-2">
               {collapsed ? (
@@ -182,15 +208,19 @@ export const MainNav: React.FC = () => {
                     <TooltipTrigger asChild>
                       <Link
                         to={`/profile/${user.id}`}
-                        className="flex items-center justify-center py-3 rounded-xl hover:bg-accent transition-colors"
+                        className="flex items-center justify-center py-3 rounded-xl hover:bg-[hsl(220_30%_15%)] transition-colors group"
                       >
-                        <Avatar className="w-8 h-8">
-                          <AvatarImage src={profile?.avatar_url || undefined} />
-                          <AvatarFallback>{profile?.display_name?.[0] || 'U'}</AvatarFallback>
-                        </Avatar>
+                        <div className="relative">
+                          <Avatar className="w-8 h-8 ring-2 ring-[hsl(45_95%_58%/0.3)] group-hover:ring-[hsl(45_95%_58%/0.6)] transition-all">
+                            <AvatarImage src={profile?.avatar_url || undefined} />
+                            <AvatarFallback className="bg-gradient-to-br from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white">
+                              {profile?.display_name?.[0] || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
                       </Link>
                     </TooltipTrigger>
-                    <TooltipContent side="right">
+                    <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
                       {profile?.display_name || 'My Profile'}
                     </TooltipContent>
                   </Tooltip>
@@ -198,55 +228,57 @@ export const MainNav: React.FC = () => {
                     <TooltipTrigger asChild>
                       <Link
                         to="/settings"
-                        className="flex items-center justify-center py-3 rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                        className="flex items-center justify-center py-3 rounded-xl text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-white transition-colors"
                       >
                         <Settings className="w-5 h-5" />
                       </Link>
                     </TooltipTrigger>
-                    <TooltipContent side="right">Settings</TooltipContent>
+                    <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">Settings</TooltipContent>
                   </Tooltip>
                   {isAdmin && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Link
                           to="/admin"
-                          className="flex items-center justify-center py-3 rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                          className="flex items-center justify-center py-3 rounded-xl text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)] transition-colors"
                         >
                           <Shield className="w-5 h-5" />
                         </Link>
                       </TooltipTrigger>
-                      <TooltipContent side="right">Admin</TooltipContent>
+                      <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">Admin</TooltipContent>
                     </Tooltip>
                   )}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
                         onClick={signOut}
-                        className="w-full flex items-center justify-center py-3 rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                        className="w-full flex items-center justify-center py-3 rounded-xl text-[hsl(220_15%_60%)] hover:bg-[hsl(0_75%_55%/0.1)] hover:text-[hsl(0_75%_60%)] transition-colors"
                       >
                         <LogOut className="w-5 h-5" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="right">Sign out</TooltipContent>
+                    <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">Sign out</TooltipContent>
                   </Tooltip>
                 </>
               ) : (
                 <>
                   <Link
                     to={`/profile/${user.id}`}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-accent transition-colors"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[hsl(220_30%_15%)] transition-colors group"
                   >
-                    <Avatar className="w-8 h-8">
+                    <Avatar className="w-8 h-8 ring-2 ring-[hsl(45_95%_58%/0.3)] group-hover:ring-[hsl(45_95%_58%/0.6)] transition-all">
                       <AvatarImage src={profile?.avatar_url || undefined} />
-                      <AvatarFallback>{profile?.display_name?.[0] || 'U'}</AvatarFallback>
+                      <AvatarFallback className="bg-gradient-to-br from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white">
+                        {profile?.display_name?.[0] || 'U'}
+                      </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium truncate">
+                    <span className="text-sm font-medium truncate text-white">
                       {profile?.display_name || 'My Profile'}
                     </span>
                   </Link>
                   <Link
                     to="/settings"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-white transition-colors"
                   >
                     <Settings className="w-5 h-5" />
                     Settings
@@ -254,7 +286,7 @@ export const MainNav: React.FC = () => {
                   {isAdmin && (
                     <Link
                       to="/admin"
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)] transition-colors"
                     >
                       <Shield className="w-5 h-5" />
                       Admin
@@ -262,7 +294,7 @@ export const MainNav: React.FC = () => {
                   )}
                   <button
                     onClick={signOut}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(220_15%_60%)] hover:bg-[hsl(0_75%_55%/0.1)] hover:text-[hsl(0_75%_60%)] transition-colors"
                   >
                     <LogOut className="w-5 h-5" />
                     Sign out
@@ -276,17 +308,17 @@ export const MainNav: React.FC = () => {
                 <TooltipTrigger asChild>
                   <Link
                     to="/auth"
-                    className="flex items-center justify-center py-3 rounded-xl bg-primary text-primary-foreground font-medium"
+                    className="flex items-center justify-center py-3 rounded-xl bg-gradient-to-r from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white font-medium shadow-lg shadow-[hsl(220_85%_55%/0.3)] hover:shadow-[hsl(220_85%_55%/0.5)] transition-shadow"
                   >
                     <LogIn className="w-5 h-5" />
                   </Link>
                 </TooltipTrigger>
-                <TooltipContent side="right">Sign in</TooltipContent>
+                <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">Sign in</TooltipContent>
               </Tooltip>
             ) : (
               <Link
                 to="/auth"
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary text-primary-foreground font-medium"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white font-medium shadow-lg shadow-[hsl(220_85%_55%/0.3)] hover:shadow-[hsl(220_85%_55%/0.5)] transition-shadow"
               >
                 <LogIn className="w-5 h-5" />
                 Sign in
@@ -294,18 +326,20 @@ export const MainNav: React.FC = () => {
             )
           )}
         </div>
+        
+        {/* Decorative bottom glow */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-[hsl(45_95%_58%/0.3)] to-transparent" />
       </aside>
 
-      {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-pb">
-        {/*
-          Horizontal scroll so ALL tabs are always accessible on small screens.
-          (LinkedIn-style: compact items; no squeezing/overlap)
-        */}
+      {/* Mobile Bottom Nav - Premium dark design */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-pb bg-gradient-to-t from-[hsl(222_38%_6%)] via-[hsl(222_35%_8%)] to-[hsl(222_32%_10%)] border-t border-[hsl(45_95%_58%/0.1)]">
+        {/* Gold accent line */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(45_95%_58%/0.4)] to-transparent" />
+        
         <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide px-2 py-2">
           {/* Notifications for mobile */}
           {user && (
-            <div className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg text-muted-foreground flex-shrink-0 min-w-[72px]">
+            <div className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg text-[hsl(220_15%_60%)] flex-shrink-0 min-w-[72px]">
               <NotificationBell collapsed={true} />
             </div>
           )}
@@ -315,14 +349,16 @@ export const MainNav: React.FC = () => {
             <Link
               to="/messages"
               className={cn(
-                'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors relative flex-shrink-0 min-w-[72px]',
-                isActive('/messages') ? 'text-primary' : 'text-muted-foreground'
+                'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all relative flex-shrink-0 min-w-[72px]',
+                isActive('/messages') 
+                  ? 'text-[hsl(45_95%_58%)]' 
+                  : 'text-[hsl(220_15%_60%)]'
               )}
             >
               <div className="relative">
                 <MessageCircle className="w-5 h-5" />
                 {totalUnread > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold bg-destructive text-destructive-foreground rounded-full">
+                  <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold bg-[hsl(45_95%_58%)] text-[hsl(222_35%_8%)] rounded-full shadow-lg shadow-[hsl(45_95%_58%/0.4)]">
                     {totalUnread > 9 ? '9+' : totalUnread}
                   </span>
                 )}
@@ -339,12 +375,25 @@ export const MainNav: React.FC = () => {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors flex-shrink-0 min-w-[72px]',
-                  active ? 'text-primary' : 'text-muted-foreground'
+                  'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all flex-shrink-0 min-w-[72px] relative',
+                  active 
+                    ? 'text-white' 
+                    : item.accent 
+                      ? 'text-[hsl(45_95%_58%)]' 
+                      : 'text-[hsl(220_15%_60%)]'
                 )}
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-[10px] leading-none whitespace-nowrap">{item.label}</span>
+                {active && (
+                  <div className="absolute inset-0 bg-gradient-to-t from-[hsl(220_85%_55%/0.2)] to-transparent rounded-lg" />
+                )}
+                <Icon className={cn("w-5 h-5 relative z-10", item.accent && !active && "text-[hsl(45_95%_58%)]")} />
+                <span className={cn(
+                  "text-[10px] leading-none whitespace-nowrap relative z-10",
+                  active && "font-medium"
+                )}>{item.label}</span>
+                {active && (
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[hsl(45_95%_58%)]" />
+                )}
               </Link>
             );
           })}
@@ -353,23 +402,30 @@ export const MainNav: React.FC = () => {
             <Link
               to={`/profile/${user.id}`}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors flex-shrink-0 min-w-[72px]',
-                isActive(`/profile/${user.id}`) ? 'text-primary' : 'text-muted-foreground'
+                'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all flex-shrink-0 min-w-[72px]',
+                isActive(`/profile/${user.id}`) ? 'text-white' : 'text-[hsl(220_15%_60%)]'
               )}
             >
-              <Avatar className="w-5 h-5">
+              <Avatar className={cn(
+                "w-5 h-5 ring-1 transition-all",
+                isActive(`/profile/${user.id}`) 
+                  ? "ring-[hsl(45_95%_58%)]" 
+                  : "ring-[hsl(45_95%_58%/0.3)]"
+              )}>
                 <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="text-[8px]">{profile?.display_name?.[0] || 'U'}</AvatarFallback>
+                <AvatarFallback className="text-[8px] bg-gradient-to-br from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white">
+                  {profile?.display_name?.[0] || 'U'}
+                </AvatarFallback>
               </Avatar>
               <span className="text-[10px] leading-none whitespace-nowrap">Profile</span>
             </Link>
           ) : (
             <Link
               to="/auth"
-              className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg text-muted-foreground flex-shrink-0 min-w-[72px]"
+              className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg text-[hsl(45_95%_58%)] flex-shrink-0 min-w-[72px]"
             >
               <LogIn className="w-5 h-5" />
-              <span className="text-[10px] leading-none whitespace-nowrap">Sign in</span>
+              <span className="text-[10px] leading-none whitespace-nowrap font-medium">Sign in</span>
             </Link>
           )}
         </div>
