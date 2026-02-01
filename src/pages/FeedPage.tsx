@@ -131,6 +131,8 @@ const FeedPage: React.FC = () => {
         title: event.title,
         description: event.description,
         image_url: event.image_url,
+        link_url: event.link_url,
+        link_title: event.link_title,
         created_at: event.created_at,
         event_date: event.event_date,
         location: event.location,

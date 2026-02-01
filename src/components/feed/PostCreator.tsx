@@ -98,6 +98,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             location: location.trim() || null,
             event_type: eventType.trim() || 'general',
             image_url: imageUrl || null,
+            link_url: linkUrl.trim() || null,
+            link_title: linkTitle.trim() || null,
           });
         if (error) {
           console.error('Event creation error:', error);
@@ -273,8 +275,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                     </div>
                   )}
 
-                  {/* Link fields for updates */}
-                  {postType === 'update' && (
+                  {/* Link fields for updates and events */}
+                  {(postType === 'update' || postType === 'event') && (
                     <div className="space-y-2 p-3 rounded-lg bg-muted/50">
                       <label className="text-sm text-muted-foreground flex items-center gap-1.5">
                         <Link className="h-3.5 w-3.5" />
@@ -282,7 +284,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                       </label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <Input
-                          placeholder="Link title (e.g. Read more)"
+                          placeholder="Link title (e.g. RSVP here)"
                           value={linkTitle}
                           onChange={(e) => setLinkTitle(e.target.value)}
                         />
