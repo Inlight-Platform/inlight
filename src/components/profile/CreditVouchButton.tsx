@@ -19,9 +19,11 @@ export const CreditVouchButton: React.FC<CreditVouchButtonProps> = ({
 
   if (isVerified) {
     return (
-      <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-        <Check className="w-4 h-4" />
-        <span className="text-xs font-medium">Verified</span>
+      <div className="flex items-center gap-1.5">
+        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white" title="Verified Credit">
+          <Check className="w-3.5 h-3.5" />
+        </span>
+        <span className="text-xs font-medium text-blue-500">Verified</span>
       </div>
     );
   }

@@ -33,13 +33,13 @@ export const CreditRow: React.FC<CreditRowProps> = ({ credit, isOwnProfile, onDe
         {isOwnProfile ? (
           // On own profile, show verified badge or pending status
           credit.verified ? (
-            <span className="verified-badge">
-              <Check className="w-3 h-3" />
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white" title="Verified Credit">
+              <Check className="w-3.5 h-3.5" />
             </span>
           ) : (
-            <button className="unverified-badge" title="Submit for verification">
-              <Clock className="w-3 h-3" />
-            </button>
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-muted-foreground" title="Pending verification">
+              <Clock className="w-3.5 h-3.5" />
+            </span>
           )
         ) : (
           // On other profiles, show vouch button if can vouch
