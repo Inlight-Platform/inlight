@@ -66,6 +66,8 @@ import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidat
 import { useVouch } from '@/hooks/useVouch';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
+import { VerifyCreditsDialog } from '@/components/profile/VerifyCreditsDialog';
+import { CreditRow } from '@/components/profile/CreditRow';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';
@@ -1588,45 +1590,48 @@ const ProfilePage: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-display font-semibold">Credits</h2>
           {isOwnProfile && (
-            <Dialog open={addCreditOpen} onOpenChange={setAddCreditOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Credit
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-card border-border">
-                <DialogHeader>
-                  <DialogTitle>Add Credit</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <Input 
-                    placeholder="Project title *" 
-                    value={creditProject}
-                    onChange={(e) => setCreditProject(e.target.value)}
-                  />
-                  <Input 
-                    placeholder="Role *" 
-                    value={creditRole}
-                    onChange={(e) => setCreditRole(e.target.value)}
-                  />
-                  <Input 
-                    placeholder="Year *" 
-                    type="number" 
-                    value={creditYear}
-                    onChange={(e) => setCreditYear(e.target.value)}
-                  />
-                  <Input 
-                    placeholder="Company" 
-                    value={creditCompany}
-                    onChange={(e) => setCreditCompany(e.target.value)}
-                  />
-                  <Button className="w-full" onClick={handleAddCredit}>
+            <div className="flex items-center gap-2">
+              <VerifyCreditsDialog credits={displayCredits} />
+              <Dialog open={addCreditOpen} onOpenChange={setAddCreditOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
                     Add Credit
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border">
+                  <DialogHeader>
+                    <DialogTitle>Add Credit</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Input 
+                      placeholder="Project title *" 
+                      value={creditProject}
+                      onChange={(e) => setCreditProject(e.target.value)}
+                    />
+                    <Input 
+                      placeholder="Role *" 
+                      value={creditRole}
+                      onChange={(e) => setCreditRole(e.target.value)}
+                    />
+                    <Input 
+                      placeholder="Year *" 
+                      type="number" 
+                      value={creditYear}
+                      onChange={(e) => setCreditYear(e.target.value)}
+                    />
+                    <Input 
+                      placeholder="Company" 
+                      value={creditCompany}
+                      onChange={(e) => setCreditCompany(e.target.value)}
+                    />
+                    <Button className="w-full" onClick={handleAddCredit}>
+                      Add Credit
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           )}
         </div>
         
@@ -1644,35 +1649,12 @@ const ProfilePage: React.FC = () => {
             </thead>
             <tbody>
               {displayCredits.map((credit) => (
-                <tr key={credit.id} className="border-b border-border/50 hover:bg-muted/50 group">
-                  <td className="py-3 px-4 font-medium">{credit.project}</td>
-                  <td className="py-3 px-4">{credit.role}</td>
-                  <td className="py-3 px-4">{credit.year}</td>
-                  <td className="py-3 px-4">{credit.company || '-'}</td>
-                  <td className="py-3 px-4">
-                    {credit.verified ? (
-                      <span className="verified-badge">
-                        <Check className="w-3 h-3" />
-                      </span>
-                    ) : (
-                      <button className="unverified-badge" title="Request verification">
-                        <Clock className="w-3 h-3" />
-                      </button>
-                    )}
-                  </td>
-                  {isOwnProfile && (
-                    <td className="py-3 px-4">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => handleDeleteCredit(credit.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </td>
-                  )}
-                </tr>
+                <CreditRow
+                  key={credit.id}
+                  credit={credit}
+                  isOwnProfile={isOwnProfile}
+                  onDelete={handleDeleteCredit}
+                />
               ))}
               {displayCredits.length === 0 && (
                 <tr>

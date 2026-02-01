@@ -13,10 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv } from 'lucide-react';
+import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv, ShieldCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import BroadwayShowsManager from '@/components/admin/BroadwayShowsManager';
 import FilmContentManager from '@/components/admin/FilmContentManager';
+import CreditVerificationManager from '@/components/admin/CreditVerificationManager';
 
 const AdminPage: React.FC = () => {
   const navigate = useNavigate();
@@ -55,9 +56,13 @@ const AdminPage: React.FC = () => {
         <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
       </div>
 
-      <Tabs defaultValue="broadway" className="space-y-4">
+      <Tabs defaultValue="verification" className="space-y-4">
         <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 h-auto gap-1 p-1">
+            <TabsTrigger value="verification" className="gap-2 whitespace-nowrap">
+              <ShieldCheck className="w-4 h-4" />
+              <span className="hidden sm:inline">Verification</span>
+            </TabsTrigger>
             <TabsTrigger value="broadway" className="gap-2 whitespace-nowrap">
               <Theater className="w-4 h-4" />
               <span className="hidden sm:inline">⭐</span> Broadway
@@ -88,6 +93,10 @@ const AdminPage: React.FC = () => {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="verification">
+          <CreditVerificationManager />
+        </TabsContent>
 
         <TabsContent value="broadway">
           <BroadwayShowsManager category="broadway" />
