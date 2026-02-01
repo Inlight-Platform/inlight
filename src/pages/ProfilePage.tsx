@@ -48,7 +48,8 @@ import {
   FolderKanban,
   Instagram,
   Globe,
-  Link as LinkIcon
+  Link as LinkIcon,
+  GraduationCap
 } from 'lucide-react';
 import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
 import { WhyIStarted } from '@/components/profile/WhyIStarted';
@@ -87,6 +88,27 @@ interface Credit {
   year: number;
   company: string | null;
   verified: boolean;
+}
+
+interface ProfileData {
+  display_name: string | null;
+  avatar_url: string | null;
+  cover_url: string | null;
+  location: string | null;
+  pronouns: string | null;
+  role: string | null;
+  badges: string[] | null;
+  bio: string | null;
+  union_status: string | null;
+  representation: string | null;
+  gear_list: string[] | null;
+  headline: string | null;
+  user_id: string;
+  skills: string[] | null;
+  instagram_url: string | null;
+  website_url: string | null;
+  graduation_status: string | null;
+  graduation_year: number | null;
 }
 
 const ProfilePage: React.FC = () => {
@@ -189,9 +211,9 @@ const ProfilePage: React.FC = () => {
   const { fetchMedia } = useUserMedia(authUser?.id);
   
   // Fetch profile from database - for own profile use profiles table, for others use profiles_public view
-  const { data: dbProfile, isLoading: profileLoading, refetch: refetchProfile } = useQuery({
+  const { data: dbProfile, isLoading: profileLoading, refetch: refetchProfile } = useQuery<ProfileData | null>({
     queryKey: ['profile', resolvedUserId, isOwnProfile],
-    queryFn: async () => {
+    queryFn: async (): Promise<ProfileData | null> => {
       if (!resolvedUserId) return null;
       
       if (isOwnProfile) {
@@ -202,7 +224,7 @@ const ProfilePage: React.FC = () => {
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) return null;
-        return data;
+        return data as ProfileData | null;
       } else {
         // Other users - use public view (excludes email)
         const { data, error } = await supabase
@@ -211,7 +233,7 @@ const ProfilePage: React.FC = () => {
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) return null;
-        return data;
+        return data as unknown as ProfileData | null;
       }
     },
     enabled: !!resolvedUserId,
@@ -246,8 +268,10 @@ const ProfilePage: React.FC = () => {
   const displayRepresentation = dbProfile?.representation || user?.representation || '';
   const displayGearList = dbProfile?.gear_list || user?.gearList || [];
   const displaySkills = dbProfile?.skills || [];
-  const displayInstagram = (dbProfile as any)?.instagram_url || '';
-  const displayWebsite = (dbProfile as any)?.website_url || '';
+  const displayInstagram = dbProfile?.instagram_url || '';
+  const displayWebsite = dbProfile?.website_url || '';
+  const displayGraduationStatus = dbProfile?.graduation_status || null;
+  const displayGraduationYear = dbProfile?.graduation_year || null;
   const displayCredits = dbCredits;
   
   // Fetch user media from database
@@ -478,6 +502,45 @@ const ProfilePage: React.FC = () => {
     setEditWebsite(displayWebsite);
     setIsEditingWebsite(true);
   };
+
+  const handleSaveGradYear = async (status: string, year: number): Promise<boolean> => {
+    if (!authUser?.id) return false;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ graduation_status: status, graduation_year: year })
+        .eq('user_id', authUser.id);
+      
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ['profile', authUser.id] });
+      toast.success('Graduation year updated!');
+      return true;
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update graduation year');
+      return false;
+    }
+  };
+
+  const handleClearGradYear = async (): Promise<boolean> => {
+    if (!authUser?.id) return false;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ graduation_status: null, graduation_year: null })
+        .eq('user_id', authUser.id);
+      
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ['profile', authUser.id] });
+      toast.success('Graduation year cleared');
+      return true;
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to clear graduation year');
+      return false;
+    }
+  };
+
   // Studio badge options for the dropdown
   const studioBadgeOptions = [
     { tag: 'etw', label: 'Experimental Theatre Wing' },
@@ -913,6 +976,32 @@ const ProfilePage: React.FC = () => {
                   >
                     {displayRole || 'Add role'}
                     {isOwnProfile && <Pencil className="w-3 h-3 ml-1 inline" />}
+                  </Badge>
+                )}
+
+                {/* Graduation Year - show for own profile (editable) or if set on other profiles */}
+                {isOwnProfile ? (
+                  <GradYearDialog
+                    currentStatus={displayGraduationStatus}
+                    currentYear={displayGraduationYear}
+                    onSave={handleSaveGradYear}
+                    onClear={handleClearGradYear}
+                    trigger={
+                      <Badge 
+                        variant="outline" 
+                        className="text-sm font-medium cursor-pointer hover:bg-secondary/80 gap-1"
+                      >
+                        <GraduationCap className="w-3 h-3" />
+                        {displayGraduationStatus && displayGraduationYear 
+                          ? `${displayGraduationStatus === 'student' ? 'Student' : 'Alumni'} '${displayGraduationYear.toString().slice(-2)}`
+                          : 'Grad Year'}
+                      </Badge>
+                    }
+                  />
+                ) : displayGraduationStatus && displayGraduationYear && (
+                  <Badge variant="outline" className="text-sm font-medium gap-1">
+                    <GraduationCap className="w-3 h-3" />
+                    {displayGraduationStatus === 'student' ? 'Student' : 'Alumni'} '{displayGraduationYear.toString().slice(-2)}
                   </Badge>
                 )}
 
