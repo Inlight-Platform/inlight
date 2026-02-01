@@ -261,6 +261,10 @@ const ProfilePage: React.FC = () => {
   const displayName = dbProfile?.display_name || user?.name || '';
   const displayLocation = dbProfile?.location || user?.location || '';
   const displayRole = dbProfile?.role || user?.role || '';
+  // Parse roles from comma-separated string into array (max 4 roles)
+  const displayRoles = displayRole 
+    ? displayRole.split(',').map(r => r.trim()).filter(Boolean).slice(0, 4) 
+    : [];
   const displayPronouns = dbProfile?.pronouns || user?.pronouns || '';
   const displayBadges = dbProfile?.badges || user?.badges || [];
   const displayBio = dbProfile?.bio || user?.bio || '';
@@ -449,8 +453,37 @@ const ProfilePage: React.FC = () => {
   const handleSaveRole = async () => {
     const trimmed = editRole.trim() || null;
     if (trimmed && !validateProfileField('role', trimmed)) return;
+    // Parse and validate max 4 roles
+    if (trimmed) {
+      const roles = trimmed.split(',').map(r => r.trim()).filter(Boolean);
+      if (roles.length > 4) {
+        toast.error('Maximum 4 roles allowed');
+        return;
+      }
+    }
     const success = await saveProfileField('role', trimmed);
     if (success) setIsEditingRole(false);
+  };
+
+  const handleAddRole = async (newRole: string) => {
+    if (!authUser?.id || !newRole.trim()) return;
+    const currentRoles = displayRoles;
+    if (currentRoles.length >= 4) {
+      toast.error('Maximum 4 roles allowed');
+      return;
+    }
+    if (currentRoles.includes(newRole.trim())) {
+      toast.error('Role already exists');
+      return;
+    }
+    const updatedRoles = [...currentRoles, newRole.trim()].join(', ');
+    await saveProfileField('role', updatedRoles);
+  };
+
+  const handleRemoveRole = async (roleToRemove: string) => {
+    if (!authUser?.id) return;
+    const updatedRoles = displayRoles.filter(r => r !== roleToRemove).join(', ') || null;
+    await saveProfileField('role', updatedRoles);
   };
 
   const handleSavePronouns = async () => {
@@ -557,6 +590,8 @@ const ProfilePage: React.FC = () => {
     { tag: 'UGFTV', label: 'Film and TV' },
     { tag: 'p&d', label: 'Production and Design' },
     { tag: 'cinemastudies', label: 'Cinema Studies' },
+    { tag: 'clive-davis', label: 'Clive Davis Institute' },
+    { tag: 'photography', label: 'Photography' },
   ];
 
   const handleAddBadgeToDb = async (badgeTag?: string) => {
@@ -950,14 +985,14 @@ const ProfilePage: React.FC = () => {
               
               {/* Editable Role, Location, Pronouns */}
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                {/* Role Badge */}
+                {/* Role Badges - Multiple roles support (up to 4) */}
                 {isOwnProfile && isEditingRole ? (
                   <div className="flex items-center gap-1">
                     <Input
                       value={editRole}
                       onChange={(e) => setEditRole(e.target.value)}
-                      className="w-24 h-7 text-sm"
-                      placeholder="Role"
+                      className="w-48 h-7 text-sm"
+                      placeholder="Roles (comma separated)"
                       onKeyDown={(e) => e.key === 'Enter' && handleSaveRole()}
                       autoFocus
                     />
@@ -969,14 +1004,47 @@ const ProfilePage: React.FC = () => {
                     </Button>
                   </div>
                 ) : (
-                  <Badge 
-                    variant="secondary" 
-                    className={`text-sm font-medium ${isOwnProfile ? 'cursor-pointer hover:bg-secondary/80' : ''}`}
-                    onClick={isOwnProfile ? startEditingRole : undefined}
-                  >
-                    {displayRole || 'Add role'}
-                    {isOwnProfile && <Pencil className="w-3 h-3 ml-1 inline" />}
-                  </Badge>
+                  <>
+                    {displayRoles.length > 0 ? (
+                      displayRoles.map((role, index) => (
+                        <Badge 
+                          key={index}
+                          variant="secondary" 
+                          className={`text-sm font-medium ${isOwnProfile ? 'cursor-pointer hover:bg-secondary/80 group' : ''}`}
+                          onClick={isOwnProfile ? startEditingRole : undefined}
+                        >
+                          {role}
+                          {isOwnProfile && displayRoles.length > 1 && (
+                            <X 
+                              className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 cursor-pointer" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveRole(role);
+                              }}
+                            />
+                          )}
+                        </Badge>
+                      ))
+                    ) : (
+                      <Badge 
+                        variant="secondary" 
+                        className={`text-sm font-medium ${isOwnProfile ? 'cursor-pointer hover:bg-secondary/80' : ''}`}
+                        onClick={isOwnProfile ? startEditingRole : undefined}
+                      >
+                        Add role
+                        {isOwnProfile && <Pencil className="w-3 h-3 ml-1 inline" />}
+                      </Badge>
+                    )}
+                    {isOwnProfile && displayRoles.length > 0 && displayRoles.length < 4 && (
+                      <Badge 
+                        variant="outline" 
+                        className="text-sm font-medium cursor-pointer hover:bg-secondary/80"
+                        onClick={startEditingRole}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Badge>
+                    )}
+                  </>
                 )}
 
                 {/* Graduation Year - show for own profile (editable) or if set on other profiles */}
