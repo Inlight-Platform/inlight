@@ -1257,6 +1257,8 @@ export type Database = {
           created_at: string | null
           display_name: string | null
           gear_list: string[] | null
+          graduation_status: string | null
+          graduation_year: number | null
           headline: string | null
           id: string | null
           instagram_url: string | null
@@ -1278,6 +1280,8 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           gear_list?: string[] | null
+          graduation_status?: string | null
+          graduation_year?: number | null
           headline?: string | null
           id?: string | null
           instagram_url?: string | null
@@ -1299,6 +1303,8 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           gear_list?: string[] | null
+          graduation_status?: string | null
+          graduation_year?: number | null
           headline?: string | null
           id?: string | null
           instagram_url?: string | null
