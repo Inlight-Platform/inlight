@@ -24,7 +24,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Feed', icon: Home, path: '/feed' },
+  { label: 'Home', icon: Home, path: '/feed' },
   { label: 'People', icon: Users, path: '/people' },
   { label: 'Projects', icon: FolderKanban, path: '/projects' },
   { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },

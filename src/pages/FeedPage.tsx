@@ -257,7 +257,7 @@ const FeedPage: React.FC = () => {
             >
               <Home className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-2xl font-display font-bold">Feed</h1>
+            <h1 className="text-2xl font-display font-bold">Home</h1>
           </div>
           
           {user && (
