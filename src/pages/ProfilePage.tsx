@@ -164,28 +164,20 @@ const ProfilePage: React.FC = () => {
   const hasPendingRequest = resolvedUserId ? hasSentRequestTo(resolvedUserId) : false;
   const isConnected = resolvedUserId ? isMutual(resolvedUserId) : false;
   
-  // Fetch network counts for this profile (mutual connections and followers)
+  // Fetch network counts for this profile (connections only)
   const { data: networkCounts } = useQuery({
     queryKey: ['network-counts', resolvedUserId],
     queryFn: async () => {
-      if (!resolvedUserId) return { networkCount: 0, followerCount: 0 };
+      if (!resolvedUserId) return { networkCount: 0 };
       
       // Get mutual connections count (1st degree / network)
       const { data: mutualData, error: mutualError } = await supabase
         .rpc('get_mutual_connections', { target_user_id: resolvedUserId });
       
-      // Get follower count (people following this user)
-      const { count: followerCount, error: followerError } = await supabase
-        .from('connections')
-        .select('*', { count: 'exact', head: true })
-        .eq('following_id', resolvedUserId);
-      
       if (mutualError) console.error('Error fetching mutual connections:', mutualError);
-      if (followerError) console.error('Error fetching followers:', followerError);
       
       return {
-        networkCount: mutualData?.length || 0,
-        followerCount: followerCount || 0
+        networkCount: mutualData?.length || 0
       };
     },
     enabled: !!resolvedUserId,
@@ -980,7 +972,7 @@ const ProfilePage: React.FC = () => {
                 )}
               </div>
               
-              {/* Network and Follower Counts - LinkedIn style */}
+              {/* Network Counts */}
               <div className="flex items-center gap-4 mt-3">
                 <button
                   onClick={() => navigate(isOwnProfile ? '/network' : `/mutuals/${resolvedUserId}`)}
@@ -989,11 +981,6 @@ const ProfilePage: React.FC = () => {
                   <span className="font-semibold text-foreground">{networkCounts?.networkCount || 0}</span>
                   {' '}connection{networkCounts?.networkCount !== 1 ? 's' : ''}
                 </button>
-                <span className="text-muted-foreground">•</span>
-                <span className="text-sm text-muted-foreground">
-                  <span className="font-semibold text-foreground">{networkCounts?.followerCount || 0}</span>
-                  {' '}follower{networkCounts?.followerCount !== 1 ? 's' : ''}
-                </span>
               </div>
             </div>
             
@@ -1144,10 +1131,10 @@ const ProfilePage: React.FC = () => {
                 onClick={isOwnProfile ? startEditingBio : undefined}
               >
                 <p className="text-foreground text-base leading-relaxed whitespace-pre-wrap">
-                  {displayBio || (isOwnProfile ? 'Tell your story... Click to add your bio.' : '')}
+                  {displayBio || (isOwnProfile ? '' : '')}
                 </p>
                 {isOwnProfile && !displayBio && (
-                  <p className="text-muted-foreground text-sm mt-1 italic">
+                  <p className="text-muted-foreground text-sm italic">
                     Add a bio to let others know who you are
                   </p>
                 )}

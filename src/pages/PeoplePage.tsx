@@ -30,7 +30,7 @@ const PeoplePage: React.FC = () => {
   const getConnectionStatus = useStore((s) => s.getConnectionStatus);
   const sendConnectionRequest = useStore((s) => s.sendConnectionRequest);
   
-  const { following, followers, isMutual } = useNetworkConnections();
+  const { following, isMutual } = useNetworkConnections();
   const { sentRequests, cancelRequest } = useConnectionRequests();
   
   // Get pending sent requests
@@ -88,20 +88,6 @@ const PeoplePage: React.FC = () => {
     enabled: following.length > 0,
   });
   
-  // Get profiles for followers
-  const { data: followerProfiles = [] } = useQuery({
-    queryKey: ['follower-profiles', followers],
-    queryFn: async () => {
-      if (followers.length === 0) return [];
-      const { data, error } = await supabase
-        .from('profiles_public')
-        .select('*')
-        .in('user_id', followers);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: followers.length > 0,
-  });
   
   // Get profiles for pending sent requests
   const pendingReceiverIds = useMemo(() => 
@@ -380,10 +366,6 @@ const PeoplePage: React.FC = () => {
                 <UserPlus className="w-4 h-4" />
                 <span className="hidden sm:inline">Following</span> ({following.length})
               </TabsTrigger>
-              <TabsTrigger value="followers" className="data-[state=active]:bg-neon-insights/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
-                <UserCheck className="w-4 h-4" />
-                <span className="hidden sm:inline">Followers</span> ({followers.length})
-              </TabsTrigger>
               <TabsTrigger value="pending" className="data-[state=active]:bg-amber-500/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
                 <Clock className="w-4 h-4" />
                 <span className="hidden sm:inline">Pending</span> ({pendingSentRequests.length})
@@ -448,16 +430,6 @@ const PeoplePage: React.FC = () => {
             )}
           </TabsContent>
           
-          <TabsContent value="followers">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {followerProfiles.map((user) => renderProfileUserCard(user))}
-            </div>
-            {followerProfiles.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                No followers yet.
-              </p>
-            )}
-          </TabsContent>
           
           <TabsContent value="pending">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
