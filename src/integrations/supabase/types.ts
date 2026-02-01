@@ -101,6 +101,85 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_verification_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          credit_id: string
+          id: string
+          materials_urls: string[] | null
+          notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          credit_id: string
+          id?: string
+          materials_urls?: string[] | null
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          credit_id?: string
+          id?: string
+          materials_urls?: string[] | null
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_verification_requests_credit_id_fkey"
+            columns: ["credit_id"]
+            isOneToOne: false
+            referencedRelation: "credits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_vouches: {
+        Row: {
+          created_at: string
+          credit_id: string
+          id: string
+          voucher_id: string
+        }
+        Insert: {
+          created_at?: string
+          credit_id: string
+          id?: string
+          voucher_id: string
+        }
+        Update: {
+          created_at?: string
+          credit_id?: string
+          id?: string
+          voucher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_vouches_credit_id_fkey"
+            columns: ["credit_id"]
+            isOneToOne: false
+            referencedRelation: "credits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credits: {
         Row: {
           company: string | null
