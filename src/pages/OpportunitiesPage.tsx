@@ -120,9 +120,9 @@ const OpportunitiesPage: React.FC = () => {
               <Briefcase className="w-5 h-5 text-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-display font-bold">Opportunities</h1>
+              <h1 className="text-2xl font-display font-bold">Jobs</h1>
               <p className="text-sm text-muted-foreground">
-                {openOpportunities.length} open opportunities
+                {openOpportunities.length} open jobs
               </p>
             </div>
           </div>
