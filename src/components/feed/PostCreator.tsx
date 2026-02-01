@@ -201,11 +201,17 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                 <>
                   {/* Title field for events and jobs */}
                   {(postType === 'event' || postType === 'job') && (
-                    <Input
-                      placeholder={postType === 'event' ? 'Event title...' : 'Opportunity title...'}
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                    />
+                    <div className="space-y-1.5">
+                      <label className="text-sm text-muted-foreground">
+                        {postType === 'event' ? 'Event title' : 'Opportunity title'} <span className="text-destructive">*</span>
+                      </label>
+                      <Input
+                        placeholder={postType === 'event' ? 'Event title...' : 'Opportunity title...'}
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        required
+                      />
+                    </div>
                   )}
 
                   {/* Content textarea */}
@@ -226,12 +232,13 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                       <div className="space-y-1.5">
                         <label className="text-sm text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />
-                          Date & Time
+                          Date & Time <span className="text-destructive">*</span>
                         </label>
                         <Input
                           type="datetime-local"
                           value={eventDate}
                           onChange={(e) => setEventDate(e.target.value)}
+                          required
                         />
                       </div>
                       <div className="space-y-1.5">
