@@ -11,7 +11,7 @@ import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
 import { ConnectionSuggestions } from '@/components/feed/ConnectionSuggestions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-type NetworkFilter = 'all' | '1st' | '2nd' | '3rd+';
+type NetworkFilter = 'all' | '1st';
 type ContentFilter = 'all' | 'events' | 'jobs' | 'projects' | 'updates' | 'shows';
 
 const FeedPage: React.FC = () => {
@@ -20,7 +20,7 @@ const FeedPage: React.FC = () => {
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
   const [showPostCreator, setShowPostCreator] = useState(false);
-  const { firstDegree, secondDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
+  const { firstDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
 
   // Fetch current user's profile
   const { data: userProfile } = useQuery({
@@ -213,8 +213,6 @@ const FeedPage: React.FC = () => {
       
       const degree = getConnectionDegree(item.user_id);
       if (networkFilter === '1st') return degree === '1st';
-      if (networkFilter === '2nd') return degree === '2nd';
-      if (networkFilter === '3rd+') return degree === '3rd+';
       return true;
     });
   }, [posts, projects, events, shows, networkFilter, contentFilter, user?.id, getConnectionDegree]);
@@ -224,8 +222,6 @@ const FeedPage: React.FC = () => {
   const networkFilters: { value: NetworkFilter; label: string; count?: number }[] = [
     { value: 'all', label: 'All' },
     { value: '1st', label: 'My Network', count: firstDegree.length },
-    { value: '2nd', label: '2nd', count: secondDegree.length },
-    { value: '3rd+', label: '3rd+' },
   ];
 
   const contentFilters: { value: ContentFilter; label: string; icon: React.ReactNode }[] = [

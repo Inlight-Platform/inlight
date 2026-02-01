@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Compass, Users, UserPlus, UserCheck, GraduationCap, Clock, Check } from 'lucide-react';
+import { Search, Compass, Users, UserCheck, GraduationCap, Clock, Check } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -24,13 +24,11 @@ const PeoplePage: React.FC = () => {
   const navigate = useNavigate();
   const currentUserId = useStore((s) => s.currentUserId);
   const get1stDegree = useStore((s) => s.get1stDegree);
-  const get2ndDegree = useStore((s) => s.get2ndDegree);
-  const get3rdDegree = useStore((s) => s.get3rdDegree);
   const getMutualCount = useStore((s) => s.getMutualCount);
   const getConnectionStatus = useStore((s) => s.getConnectionStatus);
   const sendConnectionRequest = useStore((s) => s.sendConnectionRequest);
   
-  const { following, isMutual } = useNetworkConnections();
+  const { isMutual } = useNetworkConnections();
   const { sentRequests, cancelRequest } = useConnectionRequests();
   
   // Get pending sent requests
@@ -43,8 +41,6 @@ const PeoplePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   const firstDegree = useMemo(() => get1stDegree(currentUserId), [currentUserId, get1stDegree]);
-  const secondDegree = useMemo(() => get2ndDegree(currentUserId), [currentUserId, get2ndDegree]);
-  const thirdDegree = useMemo(() => get3rdDegree(currentUserId), [currentUserId, get3rdDegree]);
   
   // Fetch all users from the database
   const { data: allUsers = [], isLoading } = useQuery({
@@ -73,20 +69,7 @@ const PeoplePage: React.FC = () => {
     },
   });
   
-  // Get profiles for following users
-  const { data: followingProfiles = [] } = useQuery({
-    queryKey: ['following-profiles', following],
-    queryFn: async () => {
-      if (following.length === 0) return [];
-      const { data, error } = await supabase
-        .from('profiles_public')
-        .select('*')
-        .in('user_id', following);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: following.length > 0,
-  });
+  
   
   
   // Get profiles for pending sent requests
@@ -362,19 +345,9 @@ const PeoplePage: React.FC = () => {
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Network</span> ({firstDegree.length})
               </TabsTrigger>
-              <TabsTrigger value="following" className="data-[state=active]:bg-neon-messages/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
-                <UserPlus className="w-4 h-4" />
-                <span className="hidden sm:inline">Following</span> ({following.length})
-              </TabsTrigger>
               <TabsTrigger value="pending" className="data-[state=active]:bg-amber-500/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
                 <Clock className="w-4 h-4" />
                 <span className="hidden sm:inline">Pending</span> ({pendingSentRequests.length})
-              </TabsTrigger>
-              <TabsTrigger value="2nd" className="data-[state=active]:bg-neon-messages/20 flex-shrink-0 whitespace-nowrap">
-                2nd ({secondDegree.length})
-              </TabsTrigger>
-              <TabsTrigger value="3rd" className="data-[state=active]:bg-neon-insights/20 flex-shrink-0 whitespace-nowrap">
-                3rd ({thirdDegree.length})
               </TabsTrigger>
             </TabsList>
           </div>
@@ -419,17 +392,6 @@ const PeoplePage: React.FC = () => {
             )}
           </TabsContent>
           
-          <TabsContent value="following">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {followingProfiles.map((user) => renderProfileUserCard(user))}
-            </div>
-            {followingProfiles.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                You're not following anyone yet.
-              </p>
-            )}
-          </TabsContent>
-          
           
           <TabsContent value="pending">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -441,28 +403,6 @@ const PeoplePage: React.FC = () => {
             {pendingProfiles.length === 0 && (
               <p className="text-center text-muted-foreground py-8">
                 No pending connection requests.
-              </p>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="2nd">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {secondDegree.map((user) => renderUserCard(user, 2))}
-            </div>
-            {secondDegree.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                No 2nd-degree connections yet.
-              </p>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="3rd">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {thirdDegree.map((user) => renderUserCard(user, 3))}
-            </div>
-            {thirdDegree.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                No 3rd-degree connections yet.
               </p>
             )}
           </TabsContent>
