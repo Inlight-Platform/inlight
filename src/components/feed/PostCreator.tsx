@@ -117,7 +117,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       toast.success(
         postType === 'update' ? 'Post created!' : 
         postType === 'event' ? 'Event created!' : 
-        'Job opportunity posted!'
+        'Opportunity posted!'
       );
       onClose?.();
     },
@@ -180,7 +180,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   </TabsTrigger>
                   <TabsTrigger value="job" className="flex items-center gap-1.5">
                     <Briefcase className="h-4 w-4" />
-                    <span className="hidden sm:inline">Job</span>
+                    <span className="hidden sm:inline">Opportunity</span>
                   </TabsTrigger>
                   <TabsTrigger value="project" className="flex items-center gap-1.5">
                     <Film className="h-4 w-4" />
@@ -194,7 +194,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   {/* Title field for events and jobs */}
                   {(postType === 'event' || postType === 'job') && (
                     <Input
-                      placeholder={postType === 'event' ? 'Event title...' : 'Job title...'}
+                      placeholder={postType === 'event' ? 'Event title...' : 'Opportunity title...'}
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                     />
@@ -307,7 +307,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                         disabled={!isValid() || createPostMutation.isPending}
                       >
                         <Send className="h-4 w-4 mr-2" />
-                        {postType === 'update' ? 'Post' : postType === 'event' ? 'Create Event' : 'Post Job'}
+                        {postType === 'update' ? 'Post' : postType === 'event' ? 'Create Event' : 'Post Opportunity'}
                       </Button>
                     </div>
                   </div>
