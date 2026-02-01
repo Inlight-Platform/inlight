@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, UserPlus, ChevronRight } from 'lucide-react';
+import { Users, UserPlus, ChevronRight, ChevronLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface SuggestedUser {
   user_id: string;
@@ -20,6 +21,7 @@ export const ConnectionSuggestions: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { following, follow, isFollowPending } = useNetworkConnections();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Fetch suggested users (2nd degree connections or random users not followed)
   const { data: suggestions = [] } = useQuery({
@@ -68,13 +70,39 @@ export const ConnectionSuggestions: React.FC = () => {
     return null;
   }
 
+  // Collapsed state - show expand button
+  if (isCollapsed) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setIsCollapsed(false)}
+        className="h-10 w-10 rounded-full bg-card border border-border shadow-sm"
+        title="Expand suggestions"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </Button>
+    );
+  }
+
   return (
-    <Card className="bg-card border-border">
+    <Card className={cn("bg-card border-border transition-all duration-200")}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Users className="w-4 h-4 text-primary" />
-          Grow Your Community
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Users className="w-4 h-4 text-primary" />
+            Grow Your Community
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsCollapsed(true)}
+            className="h-6 w-6 -mr-2"
+            title="Collapse"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {suggestions.map((person) => (

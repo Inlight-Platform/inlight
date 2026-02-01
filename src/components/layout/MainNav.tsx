@@ -303,6 +303,13 @@ export const MainNav: React.FC = () => {
           (LinkedIn-style: compact items; no squeezing/overlap)
         */}
         <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide px-2 py-2">
+          {/* Notifications for mobile */}
+          {user && (
+            <div className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg text-muted-foreground flex-shrink-0 min-w-[72px]">
+              <NotificationBell collapsed={true} />
+            </div>
+          )}
+          
           {/* Messages for mobile */}
           {user && (
             <Link

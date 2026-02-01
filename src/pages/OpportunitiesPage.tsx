@@ -176,31 +176,14 @@ const OpportunitiesPage: React.FC = () => {
 
           {/* Discover Tab */}
           <TabsContent value="discover" className="space-y-6">
-            {/* Featured Section */}
-            {featuredOpportunities.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                  Featured Opportunities
-                </h2>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {featuredOpportunities.slice(0, 4).map((opportunity) => (
-                    <OpportunityCard key={opportunity.id} opportunity={opportunity} />
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* All Open Opportunities */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">All Opportunities</h2>
               {openOpportunities.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2">
-                  {openOpportunities
-                    .filter(o => !o.isFeatured)
-                    .map((opportunity) => (
-                      <OpportunityCard key={opportunity.id} opportunity={opportunity} />
-                    ))}
+                  {openOpportunities.map((opportunity) => (
+                    <OpportunityCard key={opportunity.id} opportunity={opportunity} />
+                  ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
