@@ -59,6 +59,7 @@ import { SavedProjects } from '@/components/profile/SavedProjects';
 import { supabase } from '@/integrations/supabase/client';
 import { PostCreator, PostType } from '@/components/feed/PostCreator';
 import { ProjectCreator } from '@/components/projects/ProjectCreator';
+import { GradYearDialog } from '@/components/profile/GradYearDialog';
 import { toast } from 'sonner';
 import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidation';
 import { useVouch } from '@/hooks/useVouch';
@@ -197,7 +198,7 @@ const ProfilePage: React.FC = () => {
         // Own profile - use full profiles table
         const { data, error } = await supabase
           .from('profiles')
-          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url')
+          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) return null;
@@ -206,7 +207,7 @@ const ProfilePage: React.FC = () => {
         // Other users - use public view (excludes email)
         const { data, error } = await supabase
           .from('profiles_public')
-          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url')
+          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) return null;

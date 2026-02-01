@@ -469,6 +469,8 @@ export type Database = {
           email: string
           email_notifications: boolean | null
           gear_list: string[] | null
+          graduation_status: string | null
+          graduation_year: number | null
           headline: string | null
           id: string
           instagram_url: string | null
@@ -494,6 +496,8 @@ export type Database = {
           email: string
           email_notifications?: boolean | null
           gear_list?: string[] | null
+          graduation_status?: string | null
+          graduation_year?: number | null
           headline?: string | null
           id?: string
           instagram_url?: string | null
@@ -519,6 +523,8 @@ export type Database = {
           email?: string
           email_notifications?: boolean | null
           gear_list?: string[] | null
+          graduation_status?: string | null
+          graduation_year?: number | null
           headline?: string | null
           id?: string
           instagram_url?: string | null
