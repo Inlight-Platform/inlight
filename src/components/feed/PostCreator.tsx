@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film } from 'lucide-react';
+import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [location, setLocation] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventType, setEventType] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
   const [showProjectWizard, setShowProjectWizard] = useState(false);
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
@@ -58,6 +60,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setLocation('');
     setEventDate('');
     setEventType('');
+    setLinkUrl('');
+    setLinkTitle('');
     setPostType('update');
   };
 
@@ -72,6 +76,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             user_id: user.id,
             content: content.trim(),
             image_url: imageUrl || null,
+            link_url: linkUrl.trim() || null,
+            link_title: linkTitle.trim() || null,
           });
         if (error) throw error;
       } else if (postType === 'event') {
@@ -264,6 +270,29 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                         value={eventType}
                         onChange={(e) => setEventType(e.target.value)}
                       />
+                    </div>
+                  )}
+
+                  {/* Link fields for updates */}
+                  {postType === 'update' && (
+                    <div className="space-y-2 p-3 rounded-lg bg-muted/50">
+                      <label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        <Link className="h-3.5 w-3.5" />
+                        Add a link (optional)
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <Input
+                          placeholder="Link title (e.g. Read more)"
+                          value={linkTitle}
+                          onChange={(e) => setLinkTitle(e.target.value)}
+                        />
+                        <Input
+                          type="url"
+                          placeholder="https://..."
+                          value={linkUrl}
+                          onChange={(e) => setLinkUrl(e.target.value)}
+                        />
+                      </div>
                     </div>
                   )}
                   
