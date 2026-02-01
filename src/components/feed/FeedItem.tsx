@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,6 +29,8 @@ export interface FeedItemData {
   title?: string;
   description?: string;
   image_url?: string | null;
+  link_url?: string | null;
+  link_title?: string | null;
   created_at: string;
   category?: string | null;
   event_date?: string;
@@ -243,6 +245,20 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
               className="w-full max-h-80 object-cover"
             />
           </div>
+        )}
+
+        {/* Link display for posts */}
+        {item.link_url && (
+          <a
+            href={item.link_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-primary hover:underline mb-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink className="h-4 w-4" />
+            {item.link_title || item.link_url}
+          </a>
         )}
 
         {/* Category badge for projects */}
