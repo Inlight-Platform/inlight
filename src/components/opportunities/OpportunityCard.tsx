@@ -209,14 +209,13 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
                 navigate(`/profile/${posterProfile.user_id}`);
               }}
             >
+              <div className="text-right">
+                <p className="text-sm font-medium">{posterProfile.display_name}</p>
+              </div>
               <Avatar className="h-10 w-10 border-2 border-border">
                 <AvatarImage src={posterProfile.avatar_url || undefined} alt={posterProfile.display_name || 'Poster'} />
                 <AvatarFallback>{posterProfile.display_name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
-              <div className="text-right">
-                <p className="text-sm font-medium">{posterProfile.display_name}</p>
-                <p className="text-xs text-muted-foreground">{posterProfile.role}</p>
-              </div>
             </div>
           )}
         </div>
