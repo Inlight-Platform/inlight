@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { OpportunityType, ExperienceLevel, UserRole, useStore } from '@/store/useStore';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 interface OpportunityCreatorProps {
   open: boolean;
@@ -27,7 +29,8 @@ interface OpportunityCreatorProps {
 }
 
 const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenChange }) => {
-  const { currentUserId, addOpportunity } = useStore();
+  const { user } = useAuth();
+  const { addOpportunity } = useStore();
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -68,13 +71,18 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
 
   const handleSubmit = () => {
     if (!title.trim() || !description.trim()) return;
+    
+    if (!user) {
+      toast.error('You must be logged in to post an opportunity');
+      return;
+    }
 
     addOpportunity({
       title: title.trim(),
       description: description.trim(),
       type,
       status: 'open',
-      postedBy: currentUserId,
+      postedBy: user.id, // Use actual authenticated user ID
       company: company.trim() || undefined,
       location: location.trim() || 'Remote',
       isRemote,
