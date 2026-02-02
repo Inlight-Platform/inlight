@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { 
@@ -18,6 +18,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Opportunity, useStore } from '@/store/useStore';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import ApplicationDialog from './ApplicationDialog';
 
 interface OpportunityCardProps {
   opportunity: Opportunity;
@@ -40,15 +43,42 @@ const experienceLevelLabels: Record<string, string> = {
 
 const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact = false }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { getUser, currentUserId } = useStore();
   const poster = getUser(opportunity.postedBy);
+  const [showApplicationDialog, setShowApplicationDialog] = useState(false);
+  const [hasAppliedDB, setHasAppliedDB] = useState(false);
   
   const isDeadlinePast = opportunity.deadline ? isPast(new Date(opportunity.deadline)) : false;
-  const hasApplied = opportunity.applicants.some(a => a.userId === currentUserId);
+  const hasApplied = opportunity.applicants.some(a => a.userId === currentUserId) || hasAppliedDB;
   const applicationStatus = opportunity.applicants.find(a => a.userId === currentUserId)?.status;
+  
+  // Check if user has already applied via database
+  useEffect(() => {
+    const checkExistingApplication = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from('opportunity_applications')
+        .select('id')
+        .eq('opportunity_id', opportunity.id)
+        .eq('applicant_id', user.id)
+        .maybeSingle();
+      
+      setHasAppliedDB(!!data);
+    };
+    
+    checkExistingApplication();
+  }, [user, opportunity.id]);
   
   const handleApply = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setShowApplicationDialog(true);
+  };
+
+  const handleApplicationSubmitted = () => {
+    setHasAppliedDB(true);
+    // Also update store for immediate UI feedback
     const { opportunities } = useStore.getState();
     useStore.setState({
       opportunities: opportunities.map(o => 
@@ -243,6 +273,15 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
           )}
         </div>
       </CardContent>
+
+      {/* Application Dialog */}
+      <ApplicationDialog
+        open={showApplicationDialog}
+        onOpenChange={setShowApplicationDialog}
+        opportunityId={opportunity.id}
+        opportunityTitle={opportunity.title}
+        onApplicationSubmitted={handleApplicationSubmitted}
+      />
     </Card>
   );
 };
