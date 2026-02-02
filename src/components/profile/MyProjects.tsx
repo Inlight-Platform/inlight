@@ -146,26 +146,16 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
 
   if (isLoading) {
     return (
-      <section className="px-4 sm:px-6 lg:px-8 py-6 border-t border-border">
-        <h2 className="text-xl font-display font-semibold mb-4 flex items-center gap-2">
-          <Folder className="w-5 h-5" />
-          Projects
-        </h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-        </div>
-      </section>
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   return (
-    <section className="px-4 sm:px-6 lg:px-8 py-6 border-t border-border">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-display font-semibold flex items-center gap-2">
-          <Folder className="w-5 h-5" />
-          Projects
-        </h2>
-        {isOwnProfile && (
+    <div>
+      {isOwnProfile && (
+        <div className="flex justify-end mb-4">
           <Button 
             variant="outline" 
             size="sm"
@@ -174,8 +164,8 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
             <Plus className="w-4 h-4 mr-2" />
             New Project
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {isOwnProfile ? (
         <Tabs defaultValue="my-projects" className="w-full">
@@ -224,6 +214,6 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
           </Button>
         </div>
       )}
-    </section>
+    </div>
   );
 };
