@@ -69,7 +69,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
       <div 
         className="h-24 relative"
         style={{
-          background: 'linear-gradient(135deg, hsl(264 100% 65%) 0%, hsl(280 100% 60%) 50%, hsl(300 85% 65%) 100%)',
+          background: 'linear-gradient(135deg, hsl(220 80% 55%) 0%, hsl(200 90% 50%) 50%, hsl(186 100% 50%) 100%)',
         }}
       >
         {/* Graduation Year Badge */}

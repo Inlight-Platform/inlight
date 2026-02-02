@@ -136,9 +136,21 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   });
 
   const handleSubmit = () => {
-    if (postType === 'update' && !content.trim()) return;
-    if (postType === 'event' && (!title.trim() || !eventDate)) return;
-    if (postType === 'job' && (!title.trim() || !content.trim())) return;
+    console.log('handleSubmit called', { postType, title, eventDate, content });
+    if (postType === 'update' && !content.trim()) {
+      console.log('Update validation failed');
+      return;
+    }
+    if (postType === 'event' && (!title.trim() || !eventDate)) {
+      console.log('Event validation failed', { title: title.trim(), eventDate });
+      toast.error('Please fill in the event title and date');
+      return;
+    }
+    if (postType === 'job' && (!title.trim() || !content.trim())) {
+      console.log('Job validation failed');
+      return;
+    }
+    console.log('Creating post/event...');
     createPostMutation.mutate();
   };
 
@@ -320,6 +332,17 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                     </div>
                   ) : null}
 
+                  {/* Validation helper */}
+                  {postType === 'event' && !isValid() && (title.trim() || eventDate) && (
+                    <p className="text-sm text-amber-500">
+                      {!title.trim() && !eventDate 
+                        ? 'Please add a title and date' 
+                        : !title.trim() 
+                          ? 'Please add an event title' 
+                          : 'Please select a date and time'}
+                    </p>
+                  )}
+
                   <div className="flex items-center justify-between">
                     <ImageUploader
                       userId={user.id}
@@ -343,9 +366,16 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                         size="sm"
                         onClick={handleSubmit}
                         disabled={!isValid() || createPostMutation.isPending}
+                        className={!isValid() ? 'opacity-50 cursor-not-allowed' : ''}
                       >
                         <Send className="h-4 w-4 mr-2" />
-                        {postType === 'update' ? 'Post' : postType === 'event' ? 'Create Event' : 'Post Opportunity'}
+                        {createPostMutation.isPending 
+                          ? 'Creating...' 
+                          : postType === 'update' 
+                            ? 'Post' 
+                            : postType === 'event' 
+                              ? 'Create Event' 
+                              : 'Post Opportunity'}
                       </Button>
                     </div>
                   </div>
