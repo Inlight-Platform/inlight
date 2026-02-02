@@ -347,7 +347,21 @@ const ProjectDetailPage: React.FC = () => {
     onError: () => toast.error('Failed to remove role'),
   });
 
-  // Handle cover image upload
+  // Remove member mutation
+  const removeMemberMutation = useMutation({
+    mutationFn: async (memberId: string) => {
+      const { error } = await supabase
+        .from('project_members')
+        .delete()
+        .eq('id', memberId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
+      toast.success('Team member removed');
+    },
+    onError: () => toast.error('Failed to remove team member'),
+  });
   const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !projectId || !user?.id) return;
@@ -723,21 +737,38 @@ const ProjectDetailPage: React.FC = () => {
                 .map(member => (
                   <div 
                     key={member.id}
-                    className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors"
-                    onClick={() => navigate(`/profile/${member.user_id}`)}
+                    className="flex items-center gap-2 group"
                   >
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={member.profile?.avatar_url || undefined} />
-                      <AvatarFallback>
-                        {member.profile?.display_name?.[0] || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium text-sm">{member.profile?.display_name || 'Unknown'}</p>
-                      {member.role && (
-                        <p className="text-xs text-muted-foreground">{member.role}</p>
-                      )}
+                    <div
+                      className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors flex-1"
+                      onClick={() => navigate(`/profile/${member.user_id}`)}
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={member.profile?.avatar_url || undefined} />
+                        <AvatarFallback>
+                          {member.profile?.display_name?.[0] || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-sm">{member.profile?.display_name || 'Unknown'}</p>
+                        {member.role && (
+                          <p className="text-xs text-muted-foreground">{member.role}</p>
+                        )}
+                      </div>
                     </div>
+                    {isCreator && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeMemberMutation.mutate(member.id);
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
             </div>
