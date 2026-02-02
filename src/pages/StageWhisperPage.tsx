@@ -356,16 +356,25 @@ const StageWhisperPage: React.FC = () => {
         {/* THEATRE CONTENT */}
         {industryTab === 'theatre' && (
           <>
-            {/* Creator Note */}
-            <div className="mb-4 p-3 bg-accent/50 rounded-lg border border-accent flex items-start justify-between gap-2">
-              <div className="flex items-start gap-2">
-                <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">Putting up a show or releasing a project?</span>{' '}
-                  It will appear here to the public!
-                </p>
-              </div>
-              {(activeTab === 'off-off-broadway' || activeTab === 'school') && viewTab === 'discover' && (
+            {/* Creator Note - Only show on off-off-broadway and school tabs */}
+            {(activeTab === 'off-off-broadway' || activeTab === 'school') && viewTab === 'discover' && (
+              <div className="mb-4 p-3 bg-accent/50 rounded-lg border border-accent flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-muted-foreground">
+                    {activeTab === 'school' ? (
+                      <>
+                        <span className="font-medium text-foreground">Putting up a show at school?</span>{' '}
+                        It will appear here to the public!
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-medium text-foreground">Putting up a show?</span>{' '}
+                        It will appear here to the public!
+                      </>
+                    )}
+                  </p>
+                </div>
                 <AddShowDialog 
                   category={activeTab as 'off-off-broadway' | 'school'}
                   trigger={
@@ -375,8 +384,8 @@ const StageWhisperPage: React.FC = () => {
                     </Button>
                   }
                 />
-              )}
-            </div>
+              </div>
+            )}
 
             {viewTab === 'discover' ? (
               <>
