@@ -2,15 +2,15 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Compass, Users, UserCheck, GraduationCap, Clock, Check } from 'lucide-react';
+import { Search, Compass, Users, GraduationCap, Clock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
+import PersonCard from '@/components/people/PersonCard';
 
 interface Studio {
   id: string;
@@ -23,12 +23,9 @@ interface Studio {
 const PeoplePage: React.FC = () => {
   const navigate = useNavigate();
   const currentUserId = useStore((s) => s.currentUserId);
-  const get1stDegree = useStore((s) => s.get1stDegree);
-  const getMutualCount = useStore((s) => s.getMutualCount);
-  const getConnectionStatus = useStore((s) => s.getConnectionStatus);
   const sendConnectionRequest = useStore((s) => s.sendConnectionRequest);
   
-  const { isMutual } = useNetworkConnections();
+  const { isMutual, firstDegree } = useNetworkConnections();
   const { sentRequests, cancelRequest } = useConnectionRequests();
   
   // Get pending sent requests
@@ -37,10 +34,14 @@ const PeoplePage: React.FC = () => {
     [sentRequests]
   );
   
+  // Get pending receiver IDs for quick lookup
+  const pendingReceiverIds = useMemo(() => 
+    new Set(pendingSentRequests.map(r => r.receiver_id)), 
+    [pendingSentRequests]
+  );
+  
   const [activeTab, setActiveTab] = useState('explore');
   const [searchQuery, setSearchQuery] = useState('');
-  
-  const firstDegree = useMemo(() => get1stDegree(currentUserId), [currentUserId, get1stDegree]);
   
   // Fetch all users from the database
   const { data: allUsers = [], isLoading } = useQuery({
@@ -69,35 +70,50 @@ const PeoplePage: React.FC = () => {
     },
   });
   
-  
-  
-  
   // Get profiles for pending sent requests
-  const pendingReceiverIds = useMemo(() => 
+  const pendingReceiverIdsList = useMemo(() => 
     pendingSentRequests.map(r => r.receiver_id), 
     [pendingSentRequests]
   );
   
   const { data: pendingProfiles = [] } = useQuery({
-    queryKey: ['pending-request-profiles', pendingReceiverIds],
+    queryKey: ['pending-request-profiles', pendingReceiverIdsList],
     queryFn: async () => {
-      if (pendingReceiverIds.length === 0) return [];
+      if (pendingReceiverIdsList.length === 0) return [];
       const { data, error } = await supabase
         .from('profiles_public')
         .select('*')
-        .in('user_id', pendingReceiverIds);
+        .in('user_id', pendingReceiverIdsList);
       if (error) throw error;
       return data || [];
     },
-    enabled: pendingReceiverIds.length > 0,
+    enabled: pendingReceiverIdsList.length > 0,
+  });
+
+  // Get profiles for 1st degree connections
+  const { data: networkProfiles = [] } = useQuery({
+    queryKey: ['network-profiles', firstDegree],
+    queryFn: async () => {
+      if (firstDegree.length === 0) return [];
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('*')
+        .in('user_id', firstDegree);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: firstDegree.length > 0,
   });
   
   // Filter users based on search query
   const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) return allUsers;
+    // Exclude current user
+    const usersExcludingSelf = allUsers.filter(u => u.user_id !== currentUserId);
+    
+    if (!searchQuery.trim()) return usersExcludingSelf;
     
     const query = searchQuery.toLowerCase();
-    return allUsers.filter((user) => {
+    return usersExcludingSelf.filter((user) => {
       const nameMatch = user.display_name?.toLowerCase().includes(query);
       const roleMatch = user.role?.toLowerCase().includes(query);
       const badgesMatch = user.badges?.some((badge: string) => 
@@ -108,14 +124,17 @@ const PeoplePage: React.FC = () => {
       );
       return nameMatch || roleMatch || badgesMatch || skillsMatch;
     });
-  }, [allUsers, searchQuery]);
+  }, [allUsers, searchQuery, currentUserId]);
+
+  // Get connection status for a user
+  const getConnectionStatus = (userId: string): 'none' | 'pending' | 'connected' => {
+    if (isMutual(userId)) return 'connected';
+    if (pendingReceiverIds.has(userId)) return 'pending';
+    return 'none';
+  };
   
   const handleConnect = (userId: string) => {
     sendConnectionRequest(userId);
-  };
-  
-  const handleUserClick = (userId: string) => {
-    navigate(`/profile/${userId}`);
   };
 
   const handleStudioClick = (badgeTag: string | null) => {
@@ -123,154 +142,8 @@ const PeoplePage: React.FC = () => {
       navigate(`/group?badge=${badgeTag}`);
     }
   };
-  
-  const renderUserCard = (user: ReturnType<typeof get1stDegree>[0], degree: number) => {
-    const connectionStatus = getConnectionStatus(user.id);
-    const mutualCount = getMutualCount(user.id);
-    
-    return (
-      <div
-        key={user.id}
-        className="bg-card rounded-xl border border-border shadow-card overflow-hidden hover:shadow-lg transition-shadow"
-      >
-        <div 
-          className="cursor-pointer"
-          onClick={() => handleUserClick(user.id)}
-        >
-          <div className="flex items-center gap-4 p-4">
-            <div className="relative">
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-14 h-14 rounded-full object-cover"
-              />
-              <span className={`absolute -bottom-1 -right-1 degree-badge degree-${degree}`}>
-                {degree}
-              </span>
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <h3 className="font-display font-semibold truncate">{user.name}</h3>
-              <p className="text-muted-foreground text-sm truncate">{user.role}</p>
-              {mutualCount > 0 && degree !== 1 && (
-                <p className="text-sm text-muted-foreground">
-                  {mutualCount} mutual connection{mutualCount !== 1 ? 's' : ''}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        {degree !== 1 && (
-          <div className="px-4 pb-4">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleConnect(user.id);
-              }}
-              disabled={connectionStatus === 'pending'}
-              className={`w-full h-9 rounded-full font-medium text-sm transition-all ${
-                connectionStatus === 'pending'
-                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                  : 'bg-primary text-primary-foreground hover:opacity-90'
-              }`}
-            >
-              {connectionStatus === 'pending' ? 'Pending' : 'Connect'}
-            </button>
-          </div>
-        )}
-        
-        {degree === 1 && (
-          <div className="px-4 pb-4">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate('/messages');
-              }}
-              className="w-full h-9 rounded-full font-medium text-sm bg-gradient-to-r from-[hsl(264,100%,71%)] to-[hsl(280,100%,65%)] text-white hover:opacity-90 transition-all"
-            >
-              Message
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  };
 
-  const renderProfileUserCard = (user: any, showCancelButton?: boolean, requestId?: string) => {
-    const userId = user.user_id;
-    const isUserConnected = userId ? isMutual(userId) : false;
-    
-    return (
-      <div
-        key={user.id}
-        className="bg-card rounded-xl border border-border shadow-card overflow-hidden hover:shadow-lg transition-shadow"
-      >
-        <div 
-          className="cursor-pointer"
-          onClick={() => userId && navigate(`/profile/${userId}`)}
-        >
-          <div className="flex items-center gap-4 p-4">
-            <Avatar className="w-14 h-14">
-              <AvatarImage src={user.avatar_url || undefined} />
-              <AvatarFallback>{user.display_name?.[0] || 'U'}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-display font-semibold truncate">
-                {user.display_name || 'Unknown User'}
-              </h3>
-              <p className="text-muted-foreground text-sm truncate">{user.role || 'No role'}</p>
-              {user.badges && user.badges.length > 0 && (
-                <div className="flex gap-1 mt-1 flex-wrap">
-                  {user.badges.slice(0, 2).map((badge: string, idx: number) => (
-                    <span 
-                      key={idx} 
-                      className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full"
-                    >
-                      {badge}
-                    </span>
-                  ))}
-                  {user.badges.length > 2 && (
-                    <span className="text-xs text-muted-foreground">
-                      +{user.badges.length - 2}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        {/* Show Connected button for mutual connections */}
-        {isUserConnected && !showCancelButton && (
-          <div className="px-4 pb-4">
-            <button
-              className="w-full h-9 rounded-full font-medium text-sm bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30 flex items-center justify-center gap-2 cursor-default"
-            >
-              <Check className="w-4 h-4" />
-              Connected
-            </button>
-          </div>
-        )}
-        
-        {showCancelButton && requestId && (
-          <div className="px-4 pb-4">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                cancelRequest.mutate(requestId);
-              }}
-              disabled={cancelRequest.isPending}
-              className="w-full h-9 rounded-full font-medium text-sm bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all flex items-center justify-center gap-2"
-            >
-              <Clock className="w-4 h-4" />
-              {cancelRequest.isPending ? 'Canceling...' : 'Cancel Request'}
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  };
+  const userCount = filteredUsers.length;
   
   return (
     <div className="w-full">
@@ -281,11 +154,11 @@ const PeoplePage: React.FC = () => {
             <div 
               className="w-10 h-10 rounded-full flex items-center justify-center"
               style={{ 
-                background: 'linear-gradient(135deg, hsl(186 100% 50%), hsl(200 100% 60%))',
-                boxShadow: '0 0 20px hsl(186 100% 50% / 0.4)'
+                background: 'linear-gradient(135deg, hsl(264 100% 65%), hsl(280 100% 60%))',
+                boxShadow: '0 0 20px hsl(264 100% 65% / 0.4)'
               }}
             >
-              <Users className="w-5 h-5 text-foreground" />
+              <Users className="w-5 h-5 text-white" />
             </div>
             <h1 className="text-2xl font-display font-bold">People</h1>
           </div>
@@ -341,7 +214,7 @@ const PeoplePage: React.FC = () => {
                 <Compass className="w-4 h-4" />
                 Explore
               </TabsTrigger>
-              <TabsTrigger value="mutuals" className="data-[state=active]:bg-neon-mutuals/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+              <TabsTrigger value="network" className="data-[state=active]:bg-green-500/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Network</span> ({firstDegree.length})
               </TabsTrigger>
@@ -353,55 +226,106 @@ const PeoplePage: React.FC = () => {
           </div>
           
           <TabsContent value="explore">
+            {/* Search and Count Header */}
             <div className="mb-6">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                <div>
+                  <h2 className="text-xl font-display font-semibold">Creators to Connect With</h2>
+                  <p className="text-sm text-muted-foreground">{userCount} creators found</p>
+                </div>
+              </div>
+              <div className="relative max-w-xl">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name, role, affiliation, or skill..."
+                  placeholder="Search by name, skills, or program..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-12 h-12 text-base rounded-full border-2 focus-visible:ring-primary/20"
                 />
               </div>
             </div>
             
             {isLoading ? (
-              <div className="text-center text-muted-foreground py-8">Loading users...</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="rounded-2xl overflow-hidden">
+                    <Skeleton className="h-24 w-full" />
+                    <div className="p-4 space-y-3">
+                      <Skeleton className="h-20 w-20 rounded-full mx-auto -mt-12" />
+                      <Skeleton className="h-5 w-32 mx-auto" />
+                      <Skeleton className="h-4 w-24 mx-auto" />
+                      <Skeleton className="h-10 w-full rounded-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredUsers.map((user) => renderProfileUserCard(user))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredUsers.map((user) => (
+                    <PersonCard
+                      key={user.id}
+                      user={user}
+                      connectionStatus={getConnectionStatus(user.user_id || '')}
+                      onConnect={handleConnect}
+                      onMessage={() => navigate('/messages')}
+                    />
+                  ))}
                 </div>
                 {filteredUsers.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    {searchQuery ? 'No users found matching your search.' : 'No users yet.'}
+                  <p className="text-center text-muted-foreground py-12">
+                    {searchQuery ? 'No creators found matching your search.' : 'No creators yet.'}
                   </p>
                 )}
               </>
             )}
           </TabsContent>
           
-          <TabsContent value="mutuals">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {firstDegree.map((user) => renderUserCard(user, 1))}
+          <TabsContent value="network">
+            <div className="mb-6">
+              <h2 className="text-xl font-display font-semibold">Your Network</h2>
+              <p className="text-sm text-muted-foreground">{networkProfiles.length} connections</p>
             </div>
-            {firstDegree.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {networkProfiles.map((user) => (
+                <PersonCard
+                  key={user.id}
+                  user={user}
+                  connectionStatus="connected"
+                  onMessage={() => navigate('/messages')}
+                />
+              ))}
+            </div>
+            {networkProfiles.length === 0 && (
+              <p className="text-center text-muted-foreground py-12">
                 No mutual connections yet. Start connecting with others!
               </p>
             )}
           </TabsContent>
           
-          
           <TabsContent value="pending">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="mb-6">
+              <h2 className="text-xl font-display font-semibold">Pending Requests</h2>
+              <p className="text-sm text-muted-foreground">{pendingProfiles.length} pending</p>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {pendingProfiles.map((user) => {
                 const request = pendingSentRequests.find(r => r.receiver_id === user.user_id);
-                return renderProfileUserCard(user, true, request?.id);
+                return (
+                  <PersonCard
+                    key={user.id}
+                    user={user}
+                    showCancelButton
+                    requestId={request?.id}
+                    onCancel={(id) => cancelRequest.mutate(id)}
+                  />
+                );
               })}
             </div>
             {pendingProfiles.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-muted-foreground py-12">
                 No pending connection requests.
               </p>
             )}
