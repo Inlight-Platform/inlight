@@ -11,7 +11,11 @@ import {
   Bookmark,
   BookmarkCheck,
   Upload,
-  Loader2
+  Loader2,
+  Pencil,
+  ChevronDown,
+  ChevronUp,
+  X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -64,7 +69,14 @@ const ProjectDetailPage: React.FC = () => {
   const [memberEmail, setMemberEmail] = useState('');
   const [memberRole, setMemberRole] = useState('');
   const [deleteProjectDialogOpen, setDeleteProjectDialogOpen] = useState(false);
+  const [rolesOpen, setRolesOpen] = useState(true);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editedDescription, setEditedDescription] = useState('');
+  const [addRoleOpen, setAddRoleOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   
   const { uploadPhoto, uploading, progress } = useProjectPhotoUpload();
 
@@ -283,6 +295,108 @@ const ProjectDetailPage: React.FC = () => {
     onError: () => toast.error('Failed to delete project'),
   });
 
+  // Update description mutation
+  const updateDescriptionMutation = useMutation({
+    mutationFn: async (newDescription: string) => {
+      if (!projectId) throw new Error('No project ID');
+      const { error } = await supabase
+        .from('projects')
+        .update({ description: newDescription })
+        .eq('id', projectId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      setIsEditingDescription(false);
+      toast.success('Description updated');
+    },
+    onError: () => toast.error('Failed to update description'),
+  });
+
+  // Add role mutation
+  const addRoleMutation = useMutation({
+    mutationFn: async (roleName: string) => {
+      if (!projectId) throw new Error('No project ID');
+      const { error } = await supabase
+        .from('project_roles')
+        .insert({ project_id: projectId, role_name: roleName });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });
+      setNewRoleName('');
+      setAddRoleOpen(false);
+      toast.success('Role added');
+    },
+    onError: () => toast.error('Failed to add role'),
+  });
+
+  // Delete role mutation
+  const deleteRoleMutation = useMutation({
+    mutationFn: async (roleId: string) => {
+      const { error } = await supabase
+        .from('project_roles')
+        .delete()
+        .eq('id', roleId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });
+      toast.success('Role removed');
+    },
+    onError: () => toast.error('Failed to remove role'),
+  });
+
+  // Handle cover image upload
+  const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !projectId || !user?.id) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size must be less than 10MB');
+      return;
+    }
+
+    setIsUploadingCover(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/projects/${projectId}/cover-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-media')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('profile-media')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('projects')
+        .update({ header_image_url: urlData.publicUrl })
+        .eq('id', projectId);
+
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Cover image updated');
+    } catch (error) {
+      console.error('Cover upload error:', error);
+      toast.error('Failed to upload cover image');
+    } finally {
+      setIsUploadingCover(false);
+      if (coverInputRef.current) {
+        coverInputRef.current.value = '';
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -346,15 +460,45 @@ const ProjectDetailPage: React.FC = () => {
 
       <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-8">
         {/* Header Image */}
-        {project.header_image_url && (
-          <div className="w-full h-48 sm:h-64 rounded-xl overflow-hidden">
+        <div className="relative w-full h-48 sm:h-64 rounded-xl overflow-hidden bg-muted">
+          {project.header_image_url ? (
             <img
               src={project.header_image_url}
               alt={project.title}
               className="w-full h-full object-cover"
             />
-          </div>
-        )}
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+              {isCreator ? 'Click to add a cover image' : 'No cover image'}
+            </div>
+          )}
+          {isCreator && (
+            <>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleCoverUpload}
+                className="hidden"
+                id="cover-upload"
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                className="absolute bottom-4 right-4"
+                onClick={() => coverInputRef.current?.click()}
+                disabled={isUploadingCover}
+              >
+                {isUploadingCover ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Pencil className="w-4 h-4 mr-2" />
+                )}
+                {project.header_image_url ? 'Change Cover' : 'Add Cover'}
+              </Button>
+            </>
+          )}
+        </div>
 
         {/* Project Timeline */}
         {project.status && (
@@ -399,18 +543,117 @@ const ProjectDetailPage: React.FC = () => {
             />
           )}
 
-          {project.description && (
-            <p className="text-muted-foreground">{project.description}</p>
-          )}
+          {/* Editable Description */}
+          <div className="space-y-2">
+            {isEditingDescription ? (
+              <div className="space-y-2">
+                <Textarea
+                  value={editedDescription}
+                  onChange={(e) => setEditedDescription(e.target.value)}
+                  placeholder="Describe your project..."
+                  rows={4}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => updateDescriptionMutation.mutate(editedDescription)}
+                    disabled={updateDescriptionMutation.isPending}
+                  >
+                    {updateDescriptionMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : null}
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsEditingDescription(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="group relative">
+                {project.description ? (
+                  <p className="text-muted-foreground">{project.description}</p>
+                ) : isCreator ? (
+                  <p className="text-muted-foreground italic">Click to add a description...</p>
+                ) : null}
+                {isCreator && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => {
+                      setEditedDescription(project.description || '');
+                      setIsEditingDescription(true);
+                    }}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </section>
 
-        {/* Open Roles */}
+        {/* Open Roles - Collapsible */}
         {project.is_public && (
-          <Card>
-            <CardContent className="pt-6">
-              <OpenRolesDisplay projectId={projectId!} creatorId={project.creator_id} />
-            </CardContent>
-          </Card>
+          <Collapsible open={rolesOpen} onOpenChange={setRolesOpen}>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between py-4">
+                <CollapsibleTrigger asChild>
+                  <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                    <CardTitle className="text-lg">Open Roles</CardTitle>
+                    {rolesOpen ? (
+                      <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </button>
+                </CollapsibleTrigger>
+                {isCreator && (
+                  <Dialog open={addRoleOpen} onOpenChange={setAddRoleOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Role
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add Open Role</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 pt-4">
+                        <Input
+                          placeholder="Role name (e.g., Gaffer, Sound Mixer)"
+                          value={newRoleName}
+                          onChange={(e) => setNewRoleName(e.target.value)}
+                        />
+                        <Button
+                          onClick={() => addRoleMutation.mutate(newRoleName)}
+                          disabled={!newRoleName.trim() || addRoleMutation.isPending}
+                          className="w-full"
+                        >
+                          Add Role
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent className="pt-0">
+                  <OpenRolesDisplay 
+                    projectId={projectId!} 
+                    creatorId={project.creator_id}
+                    onDeleteRole={isCreator ? (roleId) => deleteRoleMutation.mutate(roleId) : undefined}
+                  />
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         )}
 
         {/* Members Section */}

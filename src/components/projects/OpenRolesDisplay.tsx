@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Send, Link2, FileText, Loader2, Check, X, Clock } from 'lucide-react';
+import { Send, Link2, FileText, Loader2, Check, X, Clock, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -43,9 +43,10 @@ interface RoleApplication {
 interface OpenRolesDisplayProps {
   projectId: string;
   creatorId: string;
+  onDeleteRole?: (roleId: string) => void;
 }
 
-export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, creatorId }) => {
+export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, creatorId, onDeleteRole }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
@@ -216,22 +217,34 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
                   <p className="text-sm text-muted-foreground">Looking for candidates</p>
                 </div>
                 
-                {!isCreator && user && (
-                  applicationStatus ? (
-                    getStatusBadge(applicationStatus)
-                  ) : (
+                <div className="flex items-center gap-2">
+                  {isCreator && onDeleteRole && (
                     <Button
                       size="sm"
-                      onClick={() => {
-                        setSelectedRole(role);
-                        setApplyDialogOpen(true);
-                      }}
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => onDeleteRole(role.id)}
                     >
-                      <Send className="w-4 h-4 mr-2" />
-                      Apply
+                      <Trash2 className="w-4 h-4" />
                     </Button>
-                  )
-                )}
+                  )}
+                  {!isCreator && user && (
+                    applicationStatus ? (
+                      getStatusBadge(applicationStatus)
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedRole(role);
+                          setApplyDialogOpen(true);
+                        }}
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Apply
+                      </Button>
+                    )
+                  )}
+                </div>
               </div>
 
               {/* Show applications to creator */}
