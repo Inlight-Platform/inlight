@@ -22,7 +22,7 @@ interface ShowTip {
   helpful_count: number;
 }
 
-type ShowCategory = 'broadway' | 'off-broadway' | 'off-off-broadway';
+type ShowCategory = 'broadway' | 'off-broadway' | 'off-off-broadway' | 'school';
 
 interface ShowsManagerProps {
   category: ShowCategory;
@@ -32,6 +32,7 @@ const CATEGORY_LABELS: Record<ShowCategory, string> = {
   'broadway': 'Broadway',
   'off-broadway': 'Off-Broadway',
   'off-off-broadway': 'Off-Off-Broadway',
+  'school': 'School',
 };
 
 const BroadwayShowsManager: React.FC<ShowsManagerProps> = ({ category }) => {

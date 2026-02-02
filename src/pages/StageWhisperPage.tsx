@@ -146,6 +146,7 @@ const StageWhisperPage: React.FC = () => {
     broadway: shows.filter(s => s.category === 'broadway').length,
     'off-broadway': shows.filter(s => s.category === 'off-broadway').length,
     'off-off-broadway': shows.filter(s => s.category === 'off-off-broadway').length,
+    'school': shows.filter(s => s.category === 'school').length,
   }), [shows]);
 
   // Surprise Me
@@ -316,6 +317,10 @@ const StageWhisperPage: React.FC = () => {
                   ✨ Off-Off
                   <span className="ml-1 text-xs opacity-70">({showCounts['off-off-broadway']})</span>
                 </TabsTrigger>
+                <TabsTrigger value="school" className="flex-shrink-0 whitespace-nowrap">
+                  🎓 School
+                  <span className="ml-1 text-xs opacity-70">({showCounts['school']})</span>
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -360,8 +365,9 @@ const StageWhisperPage: React.FC = () => {
                   It will appear here to the public!
                 </p>
               </div>
-              {activeTab === 'off-off-broadway' && viewTab === 'discover' && (
+              {(activeTab === 'off-off-broadway' || activeTab === 'school') && viewTab === 'discover' && (
                 <AddShowDialog 
+                  category={activeTab as 'off-off-broadway' | 'school'}
                   trigger={
                     <Button size="sm" className="gap-1.5 shrink-0">
                       <Plus className="w-4 h-4" />

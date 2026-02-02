@@ -75,6 +75,10 @@ const AdminPage: React.FC = () => {
               <Theater className="w-4 h-4" />
               <span className="hidden sm:inline">✨</span> Off-Off
             </TabsTrigger>
+            <TabsTrigger value="school" className="gap-2 whitespace-nowrap">
+              <Theater className="w-4 h-4" />
+              <span className="hidden sm:inline">🎓</span> School
+            </TabsTrigger>
             <TabsTrigger value="film-theatres" className="gap-2 whitespace-nowrap">
               <Film className="w-4 h-4" />
               <span className="hidden sm:inline">🎬</span> Theatres
@@ -108,6 +112,10 @@ const AdminPage: React.FC = () => {
 
         <TabsContent value="off-off-broadway">
           <BroadwayShowsManager category="off-off-broadway" />
+        </TabsContent>
+
+        <TabsContent value="school">
+          <BroadwayShowsManager category="school" />
         </TabsContent>
 
         <TabsContent value="film-theatres">

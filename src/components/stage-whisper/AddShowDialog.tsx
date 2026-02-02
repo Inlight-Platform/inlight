@@ -36,6 +36,7 @@ import { TeammateSelector, Teammate } from './TeammateSelector';
 
 interface AddShowDialogProps {
   trigger?: React.ReactNode;
+  category?: 'off-off-broadway' | 'school';
 }
 
 const SHOW_TYPES = [
@@ -60,7 +61,7 @@ const BOROUGHS = [
   { value: 'Staten Island', label: 'Staten Island' },
 ];
 
-export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
+export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger, category = 'off-off-broadway' }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -185,7 +186,7 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
           borough,
           description: description.trim() || null,
           show_type: showType,
-          category: 'off-off-broadway',
+          category: category,
           price_tier: priceTier,
           run_start: runStart ? format(runStart, 'yyyy-MM-dd') : null,
           run_end: runEnd ? format(runEnd, 'yyyy-MM-dd') : null,
@@ -278,7 +279,9 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger }) => {
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Your Off-Off-Broadway Show</DialogTitle>
+          <DialogTitle>
+            Add Your {category === 'school' ? 'School' : 'Off-Off-Broadway'} Show
+          </DialogTitle>
           <DialogDescription>
             Share your performance with the NYC theatre community
           </DialogDescription>
