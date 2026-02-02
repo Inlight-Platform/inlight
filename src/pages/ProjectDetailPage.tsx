@@ -661,7 +661,7 @@ const ProjectDetailPage: React.FC = () => {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Team Members ({members.length + 1})
+              Team Members ({members.filter(m => m.user_id !== project.creator_id).length + 1})
             </CardTitle>
             {isCreator && (
               <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
@@ -717,27 +717,29 @@ const ProjectDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Other members */}
-              {members.map(member => (
-                <div 
-                  key={member.id}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors"
-                  onClick={() => navigate(`/profile/${member.user_id}`)}
-                >
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={member.profile?.avatar_url || undefined} />
-                    <AvatarFallback>
-                      {member.profile?.display_name?.[0] || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">{member.profile?.display_name || 'Unknown'}</p>
-                    {member.role && (
-                      <p className="text-xs text-muted-foreground">{member.role}</p>
-                    )}
+              {/* Other members (excluding creator to avoid duplicates) */}
+              {members
+                .filter(member => member.user_id !== project.creator_id)
+                .map(member => (
+                  <div 
+                    key={member.id}
+                    className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors"
+                    onClick={() => navigate(`/profile/${member.user_id}`)}
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={member.profile?.avatar_url || undefined} />
+                      <AvatarFallback>
+                        {member.profile?.display_name?.[0] || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-sm">{member.profile?.display_name || 'Unknown'}</p>
+                      {member.role && (
+                        <p className="text-xs text-muted-foreground">{member.role}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           </CardContent>
         </Card>
