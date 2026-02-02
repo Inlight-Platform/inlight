@@ -35,6 +35,7 @@ import {
   EyeOff,
   Users,
   ChevronLeft,
+  ChevronDown,
   Pencil,
   Camera,
   Loader2,
@@ -51,6 +52,7 @@ import {
   Link as LinkIcon,
   GraduationCap
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
 import { WhyIStarted } from '@/components/profile/WhyIStarted';
 import { MediaUploader } from '@/components/profile/MediaUploader';
@@ -143,6 +145,13 @@ const ProfilePage: React.FC = () => {
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [defaultPostType, setDefaultPostType] = useState<PostType>('update');
   const [showProjectCreator, setShowProjectCreator] = useState(false);
+  
+  // Collapsible section states (all open by default)
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [creditsOpen, setCreditsOpen] = useState(true);
+  const [projectsOpen, setProjectsOpen] = useState(true);
+  const [materialsOpen, setMaterialsOpen] = useState(true);
+  const [postsOpen, setPostsOpen] = useState(true);
   
   // Editing states
   const [isEditingName, setIsEditingName] = useState(false);
@@ -1505,70 +1514,193 @@ const ProfilePage: React.FC = () => {
           )}
         </div>
       </section>
-      
-      {/* C. Materials (own profile) */}
-      {isOwnProfile && authUser?.id && (
-        <section className="px-4 sm:px-6 lg:px-8 py-6">
-          <Tabs defaultValue="photos" className="w-full">
-            <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
-              <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 max-w-xl">
-                <TabsTrigger value="photos" className="flex-shrink-0 whitespace-nowrap">Photos {uploadedPhotos.length > 0 && `(${uploadedPhotos.length})`}</TabsTrigger>
-                <TabsTrigger value="reels" className="flex-shrink-0 whitespace-nowrap">Reels {uploadedVideos.length > 0 && `(${uploadedVideos.length})`}</TabsTrigger>
-                <TabsTrigger value="resume" className="flex-shrink-0 whitespace-nowrap">Résumé {uploadedDocuments.length > 0 && `(${uploadedDocuments.length})`}</TabsTrigger>
-                <TabsTrigger value="audio" className="flex-shrink-0 whitespace-nowrap">Audio {uploadedAudio.length > 0 && `(${uploadedAudio.length})`}</TabsTrigger>
-                <TabsTrigger value="why-i-started" className="flex-shrink-0 whitespace-nowrap">Why I Started</TabsTrigger>
-              </TabsList>
+
+      {/* Details - Collapsible (moved up after Skills) */}
+      <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="border-b border-border">
+        <section className="px-4 sm:px-6 lg:px-8 py-4">
+          <CollapsibleTrigger className="flex items-center justify-between w-full group">
+            <h2 className="text-lg font-display font-semibold">Details</h2>
+            <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${detailsOpen ? 'rotate-180' : ''}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Union Status */}
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Union Status</h3>
+                {isOwnProfile && isEditingUnionStatus ? (
+                  <div className="space-y-2">
+                    <Input
+                      value={editUnionStatus}
+                      onChange={(e) => setEditUnionStatus(e.target.value)}
+                      placeholder="e.g., SAG-AFTRA, AEA, Non-Union"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveUnionStatus}>
+                        <Save className="w-4 h-4 mr-1" /> Save
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setIsEditingUnionStatus(false)}>
+                        <X className="w-4 h-4 mr-1" /> Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p 
+                    className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
+                    onClick={isOwnProfile ? startEditingUnionStatus : undefined}
+                  >
+                    {displayUnionStatus || (isOwnProfile ? 'Click to add...' : 'Not specified')}
+                    {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
+                  </p>
+                )}
+              </div>
+              
+              {/* Representation */}
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Representation</h3>
+                {isOwnProfile && isEditingRepresentation ? (
+                  <div className="space-y-2">
+                    <Input
+                      value={editRepresentation}
+                      onChange={(e) => setEditRepresentation(e.target.value)}
+                      placeholder="e.g., Agency name"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveRepresentation}>
+                        <Save className="w-4 h-4 mr-1" /> Save
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setIsEditingRepresentation(false)}>
+                        <X className="w-4 h-4 mr-1" /> Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p 
+                    className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
+                    onClick={isOwnProfile ? startEditingRepresentation : undefined}
+                  >
+                    {displayRepresentation || (isOwnProfile ? 'Click to add...' : 'Not specified')}
+                    {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
+                  </p>
+                )}
+              </div>
+              
+              {/* Gear */}
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Gear</h3>
+                <div className="flex flex-wrap gap-2">
+                  {displayGearList.length > 0 ? (
+                    displayGearList.map((gear, i) => (
+                      <div key={i} className="relative group">
+                        <Badge variant="secondary">{gear}</Badge>
+                        {isOwnProfile && (
+                          <button
+                            onClick={() => handleRemoveGear(gear)}
+                            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label={`Remove ${gear}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground">{isOwnProfile ? 'Add your gear...' : 'None listed'}</span>
+                  )}
+                  
+                  {isOwnProfile && (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={newGear}
+                        onChange={(e) => setNewGear(e.target.value)}
+                        placeholder="Add gear"
+                        className="w-24 h-7 text-sm"
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddGear()}
+                      />
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleAddGear}>
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            
-            <TabsContent value="photos" className="mt-6">
-              <MediaUploader
-                userId={authUser.id}
-                mediaType="photo"
-                items={uploadedPhotos}
-                onUploadComplete={() => refetchMedia()}
-                onDelete={handleDeleteMedia}
-                onVisibilityChange={handleVisibilityChange}
-              />
-            </TabsContent>
-            
-            <TabsContent value="reels" className="mt-6">
-              <MediaUploader
-                userId={authUser.id}
-                mediaType="video"
-                items={uploadedVideos}
-                onUploadComplete={() => refetchMedia()}
-                onDelete={handleDeleteMedia}
-                onVisibilityChange={handleVisibilityChange}
-              />
-            </TabsContent>
-            
-            <TabsContent value="resume" className="mt-6">
-              <MediaUploader
-                userId={authUser.id}
-                mediaType="document"
-                items={uploadedDocuments}
-                onUploadComplete={() => refetchMedia()}
-                onDelete={handleDeleteMedia}
-                onVisibilityChange={handleVisibilityChange}
-              />
-            </TabsContent>
-            
-            <TabsContent value="audio" className="mt-6">
-              <MediaUploader
-                userId={authUser.id}
-                mediaType="audio"
-                items={uploadedAudio}
-                onUploadComplete={() => refetchMedia()}
-                onDelete={handleDeleteMedia}
-                onVisibilityChange={handleVisibilityChange}
-              />
-            </TabsContent>
-            
-            <TabsContent value="why-i-started" className="mt-6">
-              <WhyIStarted userId={authUser.id} isOwnProfile={true} />
-            </TabsContent>
-          </Tabs>
+          </CollapsibleContent>
         </section>
+      </Collapsible>
+      
+      {/* Materials - Collapsible (own profile) */}
+      {isOwnProfile && authUser?.id && (
+        <Collapsible open={materialsOpen} onOpenChange={setMaterialsOpen} className="border-b border-border">
+          <section className="px-4 sm:px-6 lg:px-8 py-4">
+            <CollapsibleTrigger className="flex items-center justify-between w-full group">
+              <h2 className="text-lg font-display font-semibold">Materials</h2>
+              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${materialsOpen ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <Tabs defaultValue="photos" className="w-full">
+                <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+                  <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 max-w-xl">
+                    <TabsTrigger value="photos" className="flex-shrink-0 whitespace-nowrap">Photos {uploadedPhotos.length > 0 && `(${uploadedPhotos.length})`}</TabsTrigger>
+                    <TabsTrigger value="reels" className="flex-shrink-0 whitespace-nowrap">Reels {uploadedVideos.length > 0 && `(${uploadedVideos.length})`}</TabsTrigger>
+                    <TabsTrigger value="resume" className="flex-shrink-0 whitespace-nowrap">Résumé {uploadedDocuments.length > 0 && `(${uploadedDocuments.length})`}</TabsTrigger>
+                    <TabsTrigger value="audio" className="flex-shrink-0 whitespace-nowrap">Audio {uploadedAudio.length > 0 && `(${uploadedAudio.length})`}</TabsTrigger>
+                    <TabsTrigger value="why-i-started" className="flex-shrink-0 whitespace-nowrap">Why I Started</TabsTrigger>
+                  </TabsList>
+                </div>
+                
+                <TabsContent value="photos" className="mt-6">
+                  <MediaUploader
+                    userId={authUser.id}
+                    mediaType="photo"
+                    items={uploadedPhotos}
+                    onUploadComplete={() => refetchMedia()}
+                    onDelete={handleDeleteMedia}
+                    onVisibilityChange={handleVisibilityChange}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="reels" className="mt-6">
+                  <MediaUploader
+                    userId={authUser.id}
+                    mediaType="video"
+                    items={uploadedVideos}
+                    onUploadComplete={() => refetchMedia()}
+                    onDelete={handleDeleteMedia}
+                    onVisibilityChange={handleVisibilityChange}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="resume" className="mt-6">
+                  <MediaUploader
+                    userId={authUser.id}
+                    mediaType="document"
+                    items={uploadedDocuments}
+                    onUploadComplete={() => refetchMedia()}
+                    onDelete={handleDeleteMedia}
+                    onVisibilityChange={handleVisibilityChange}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="audio" className="mt-6">
+                  <MediaUploader
+                    userId={authUser.id}
+                    mediaType="audio"
+                    items={uploadedAudio}
+                    onUploadComplete={() => refetchMedia()}
+                    onDelete={handleDeleteMedia}
+                    onVisibilityChange={handleVisibilityChange}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="why-i-started" className="mt-6">
+                  <WhyIStarted userId={authUser.id} isOwnProfile={true} />
+                </TabsContent>
+              </Tabs>
+            </CollapsibleContent>
+          </section>
+        </Collapsible>
       )}
 
       {/* Public Media Gallery (for other users' profiles) */}
@@ -1581,215 +1713,134 @@ const ProfilePage: React.FC = () => {
       
       {/* Why I Started (for other users' profiles) */}
       {!isOwnProfile && resolvedUserId && (
-        <section className="px-4 sm:px-6 lg:px-8 py-6 border-t border-border">
+        <section className="px-4 sm:px-6 lg:px-8 py-6 border-b border-border">
           <WhyIStarted userId={resolvedUserId} isOwnProfile={false} />
         </section>
       )}
       
-      {/* D. Credits */}
-      <section className="px-4 sm:px-6 lg:px-8 py-6 border-t border-border">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-display font-semibold">Credits</h2>
-          {isOwnProfile && (
+      {/* Credits - Collapsible */}
+      <Collapsible open={creditsOpen} onOpenChange={setCreditsOpen} className="border-b border-border">
+        <section className="px-4 sm:px-6 lg:px-8 py-4">
+          <CollapsibleTrigger className="flex items-center justify-between w-full group">
             <div className="flex items-center gap-2">
-              <VerifyCreditsDialog credits={displayCredits} />
-              <Dialog open={addCreditOpen} onOpenChange={setAddCreditOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Credit
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-card border-border">
-                  <DialogHeader>
-                    <DialogTitle>Add Credit</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <Input 
-                      placeholder="Project title *" 
-                      value={creditProject}
-                      onChange={(e) => setCreditProject(e.target.value)}
-                    />
-                    <Input 
-                      placeholder="Role *" 
-                      value={creditRole}
-                      onChange={(e) => setCreditRole(e.target.value)}
-                    />
-                    <Input 
-                      placeholder="Year *" 
-                      type="number" 
-                      value={creditYear}
-                      onChange={(e) => setCreditYear(e.target.value)}
-                    />
-                    <Input 
-                      placeholder="Company" 
-                      value={creditCompany}
-                      onChange={(e) => setCreditCompany(e.target.value)}
-                    />
-                    <Button className="w-full" onClick={handleAddCredit}>
-                      Add Credit
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          )}
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Project</th>
-                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Role</th>
-                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Year</th>
-                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Company</th>
-                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Verified</th>
-                {isOwnProfile && <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {displayCredits.map((credit) => (
-                <CreditRow
-                  key={credit.id}
-                  credit={credit}
-                  isOwnProfile={isOwnProfile}
-                  onDelete={handleDeleteCredit}
-                />
-              ))}
-              {displayCredits.length === 0 && (
-                <tr>
-                  <td colSpan={isOwnProfile ? 6 : 5} className="py-8 text-center text-muted-foreground">
-                    {isOwnProfile ? 'No credits yet. Add your first credit!' : 'No credits listed.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* My Projects */}
-      {resolvedUserId && (
-        <MyProjects userId={resolvedUserId} isOwnProfile={isOwnProfile} />
-      )}
-      
-      {/* Saved Projects (only visible on own profile) */}
-      {isOwnProfile && <SavedProjects />}
-      
-      {/* E. Details */}
-      <section className="px-4 sm:px-6 lg:px-8 py-6 border-t border-border">
-        <h2 className="text-xl font-display font-semibold mb-4">Details</h2>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Union Status */}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Union Status</h3>
-            {isOwnProfile && isEditingUnionStatus ? (
-              <div className="space-y-2">
-                <Input
-                  value={editUnionStatus}
-                  onChange={(e) => setEditUnionStatus(e.target.value)}
-                  placeholder="e.g., SAG-AFTRA, AEA, Non-Union"
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSaveUnionStatus}>
-                    <Save className="w-4 h-4 mr-1" /> Save
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setIsEditingUnionStatus(false)}>
-                    <X className="w-4 h-4 mr-1" /> Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p 
-                className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
-                onClick={isOwnProfile ? startEditingUnionStatus : undefined}
-              >
-                {displayUnionStatus || (isOwnProfile ? 'Click to add...' : 'Not specified')}
-                {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
-              </p>
-            )}
-          </div>
-          
-          {/* Representation */}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Representation</h3>
-            {isOwnProfile && isEditingRepresentation ? (
-              <div className="space-y-2">
-                <Input
-                  value={editRepresentation}
-                  onChange={(e) => setEditRepresentation(e.target.value)}
-                  placeholder="e.g., Agency name"
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSaveRepresentation}>
-                    <Save className="w-4 h-4 mr-1" /> Save
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setIsEditingRepresentation(false)}>
-                    <X className="w-4 h-4 mr-1" /> Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p 
-                className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
-                onClick={isOwnProfile ? startEditingRepresentation : undefined}
-              >
-                {displayRepresentation || (isOwnProfile ? 'Click to add...' : 'Not specified')}
-                {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
-              </p>
-            )}
-          </div>
-          
-          {/* Gear */}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Gear</h3>
-            <div className="flex flex-wrap gap-2">
-              {displayGearList.length > 0 ? (
-                displayGearList.map((gear, i) => (
-                  <div key={i} className="relative group">
-                    <Badge variant="secondary">{gear}</Badge>
-                    {isOwnProfile && (
-                      <button
-                        onClick={() => handleRemoveGear(gear)}
-                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        aria-label={`Remove ${gear}`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <span className="text-muted-foreground">{isOwnProfile ? 'Add your gear...' : 'None listed'}</span>
-              )}
-              
-              {isOwnProfile && (
-                <div className="flex items-center gap-1">
-                  <Input
-                    value={newGear}
-                    onChange={(e) => setNewGear(e.target.value)}
-                    placeholder="Add gear"
-                    className="w-24 h-7 text-sm"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddGear()}
-                  />
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleAddGear}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
+              <h2 className="text-lg font-display font-semibold">Credits</h2>
+              {displayCredits.length > 0 && (
+                <Badge variant="secondary" className="text-xs">{displayCredits.length}</Badge>
               )}
             </div>
-          </div>
-        </div>
-      </section>
+            <div className="flex items-center gap-2">
+              {isOwnProfile && creditsOpen && (
+                <>
+                  <VerifyCreditsDialog credits={displayCredits} />
+                  <Dialog open={addCreditOpen} onOpenChange={setAddCreditOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-card border-border">
+                      <DialogHeader>
+                        <DialogTitle>Add Credit</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <Input 
+                          placeholder="Project title *" 
+                          value={creditProject}
+                          onChange={(e) => setCreditProject(e.target.value)}
+                        />
+                        <Input 
+                          placeholder="Role *" 
+                          value={creditRole}
+                          onChange={(e) => setCreditRole(e.target.value)}
+                        />
+                        <Input 
+                          placeholder="Year *" 
+                          type="number" 
+                          value={creditYear}
+                          onChange={(e) => setCreditYear(e.target.value)}
+                        />
+                        <Input 
+                          placeholder="Company" 
+                          value={creditCompany}
+                          onChange={(e) => setCreditCompany(e.target.value)}
+                        />
+                        <Button className="w-full" onClick={handleAddCredit}>
+                          Add Credit
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </>
+              )}
+              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${creditsOpen ? 'rotate-180' : ''}`} />
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Project</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Role</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Year</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Company</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Verified</th>
+                    {isOwnProfile && <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayCredits.map((credit) => (
+                    <CreditRow
+                      key={credit.id}
+                      credit={credit}
+                      isOwnProfile={isOwnProfile}
+                      onDelete={handleDeleteCredit}
+                    />
+                  ))}
+                  {displayCredits.length === 0 && (
+                    <tr>
+                      <td colSpan={isOwnProfile ? 6 : 5} className="py-8 text-center text-muted-foreground">
+                        {isOwnProfile ? 'No credits yet. Add your first credit!' : 'No credits listed.'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CollapsibleContent>
+        </section>
+      </Collapsible>
 
-      {/* User Posts Section */}
-      {resolvedUserId && (
-        <UserPosts userId={resolvedUserId} />
-      )}
+      {/* Projects - Collapsible */}
+      <Collapsible open={projectsOpen} onOpenChange={setProjectsOpen} className="border-b border-border">
+        <section className="px-4 sm:px-6 lg:px-8 py-4">
+          <CollapsibleTrigger className="flex items-center justify-between w-full group">
+            <h2 className="text-lg font-display font-semibold">Projects</h2>
+            <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${projectsOpen ? 'rotate-180' : ''}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4">
+            {resolvedUserId && (
+              <MyProjects userId={resolvedUserId} isOwnProfile={isOwnProfile} />
+            )}
+          </CollapsibleContent>
+        </section>
+      </Collapsible>
+
+      {/* User Posts Section - Collapsible */}
+      <Collapsible open={postsOpen} onOpenChange={setPostsOpen}>
+        <section className="px-4 sm:px-6 lg:px-8 py-4">
+          <CollapsibleTrigger className="flex items-center justify-between w-full group">
+            <h2 className="text-lg font-display font-semibold">Posts</h2>
+            <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${postsOpen ? 'rotate-180' : ''}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4">
+            {resolvedUserId && (
+              <UserPosts userId={resolvedUserId} />
+            )}
+          </CollapsibleContent>
+        </section>
+      </Collapsible>
       
       {/* Lightbox */}
       {lightboxImage && (

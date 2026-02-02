@@ -89,25 +89,14 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
 
   if (isLoading) {
     return (
-      <section className="px-4 sm:px-6 lg:px-8 py-6 border-t border-border">
-        <h2 className="text-xl font-display font-semibold mb-4 flex items-center gap-2">
-          <MessageSquare className="w-5 h-5" />
-          Posts
-        </h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-        </div>
-      </section>
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   return (
-    <section className="px-4 sm:px-6 lg:px-8 py-6 border-t border-border">
-      <h2 className="text-xl font-display font-semibold mb-4 flex items-center gap-2">
-        <MessageSquare className="w-5 h-5" />
-        Posts ({posts.length})
-      </h2>
-
+    <div>
       {posts.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-muted-foreground">No posts yet</p>
@@ -119,6 +108,6 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 };
