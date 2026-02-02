@@ -45,13 +45,52 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
   const navigate = useNavigate();
   const { user } = useAuth();
   const { getUser, currentUserId } = useStore();
-  const poster = getUser(opportunity.postedBy);
   const [showApplicationDialog, setShowApplicationDialog] = useState(false);
   const [hasAppliedDB, setHasAppliedDB] = useState(false);
+  const [posterProfile, setPosterProfile] = useState<{
+    display_name: string | null;
+    avatar_url: string | null;
+    role: string | null;
+    user_id: string;
+  } | null>(null);
   
   const isDeadlinePast = opportunity.deadline ? isPast(new Date(opportunity.deadline)) : false;
   const hasApplied = opportunity.applicants.some(a => a.userId === currentUserId) || hasAppliedDB;
   const applicationStatus = opportunity.applicants.find(a => a.userId === currentUserId)?.status;
+  
+  // Fetch poster profile from database
+  useEffect(() => {
+    const fetchPosterProfile = async () => {
+      // Check if postedBy looks like a UUID (real user)
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opportunity.postedBy);
+      
+      if (isUUID) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('display_name, avatar_url, role, user_id')
+          .eq('user_id', opportunity.postedBy)
+          .maybeSingle();
+        
+        if (data) {
+          setPosterProfile(data);
+          return;
+        }
+      }
+      
+      // Fall back to stub data
+      const stubPoster = getUser(opportunity.postedBy);
+      if (stubPoster) {
+        setPosterProfile({
+          display_name: stubPoster.name,
+          avatar_url: stubPoster.avatar,
+          role: stubPoster.role,
+          user_id: stubPoster.id,
+        });
+      }
+    };
+    
+    fetchPosterProfile();
+  }, [opportunity.postedBy, getUser]);
   
   // Check if user has already applied via database
   useEffect(() => {
@@ -162,21 +201,21 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
               </p>
             )}
           </div>
-          {poster && (
+          {posterProfile && (
             <div 
               className="flex items-center gap-2 cursor-pointer hover:opacity-80"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/profile/${poster.id}`);
+                navigate(`/profile/${posterProfile.user_id}`);
               }}
             >
               <Avatar className="h-10 w-10 border-2 border-border">
-                <AvatarImage src={poster.avatar} alt={poster.name} />
-                <AvatarFallback>{poster.name[0]}</AvatarFallback>
+                <AvatarImage src={posterProfile.avatar_url || undefined} alt={posterProfile.display_name || 'Poster'} />
+                <AvatarFallback>{posterProfile.display_name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
               <div className="text-right">
-                <p className="text-sm font-medium">{poster.name}</p>
-                <p className="text-xs text-muted-foreground">{poster.role}</p>
+                <p className="text-sm font-medium">{posterProfile.display_name}</p>
+                <p className="text-xs text-muted-foreground">{posterProfile.role}</p>
               </div>
             </div>
           )}

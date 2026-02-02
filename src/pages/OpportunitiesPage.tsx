@@ -100,7 +100,9 @@ const OpportunitiesPage: React.FC = () => {
   }, [filteredOpportunities, currentUser]);
 
   const openOpportunities = useMemo(() => 
-    filteredOpportunities.filter(o => o.status === 'open'),
+    filteredOpportunities
+      .filter(o => o.status === 'open')
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [filteredOpportunities]
   );
 
