@@ -462,6 +462,48 @@ export type Database = {
         }
         Relationships: []
       }
+      opportunity_applications: {
+        Row: {
+          additional_materials: Json | null
+          applicant_id: string
+          created_at: string
+          id: string
+          include_profile: boolean
+          message: string | null
+          opportunity_id: string
+          portfolio_url: string | null
+          resume_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          additional_materials?: Json | null
+          applicant_id: string
+          created_at?: string
+          id?: string
+          include_profile?: boolean
+          message?: string | null
+          opportunity_id: string
+          portfolio_url?: string | null
+          resume_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          additional_materials?: Json | null
+          applicant_id?: string
+          created_at?: string
+          id?: string
+          include_profile?: boolean
+          message?: string | null
+          opportunity_id?: string
+          portfolio_url?: string | null
+          resume_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           content: string
