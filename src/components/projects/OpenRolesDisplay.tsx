@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Send, Link2, FileText, Loader2, Check, X, Clock, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,6 +49,7 @@ interface OpenRolesDisplayProps {
 
 export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, creatorId, onDeleteRole }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<OpenRole | null>(null);
@@ -152,17 +154,39 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
 
   // Update application status (for creator)
   const updateApplicationStatus = useMutation({
-    mutationFn: async ({ applicationId, status }: { applicationId: string; status: string }) => {
+    mutationFn: async ({ applicationId, status, applicantId, roleName }: { 
+      applicationId: string; 
+      status: string; 
+      applicantId?: string;
+      roleName?: string;
+    }) => {
       const { error } = await supabase
         .from('role_applications')
         .update({ status })
         .eq('id', applicationId);
 
       if (error) throw error;
+
+      // If accepted, add the applicant as a team member
+      if (status === 'accepted' && applicantId) {
+        const { error: memberError } = await supabase
+          .from('project_members')
+          .insert({
+            project_id: projectId,
+            user_id: applicantId,
+            role: roleName || null,
+          });
+        
+        // Ignore duplicate member errors
+        if (memberError && !memberError.message.includes('duplicate')) {
+          console.error('Error adding team member:', memberError);
+        }
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['role-applications', projectId] });
-      toast.success('Application updated');
+      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
+      toast.success(variables.status === 'accepted' ? 'Application accepted! Team member added.' : 'Application updated');
     },
   });
 
@@ -256,14 +280,17 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
                   {roleApplications.map((app) => (
                     <div key={app.id} className="p-3 bg-muted/50 rounded-lg space-y-2">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div 
+                          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => navigate(`/profile/${app.applicant_id}`)}
+                        >
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={app.applicant_profile?.avatar_url || undefined} />
                             <AvatarFallback>
                               {app.applicant_profile?.display_name?.[0] || 'U'}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium text-sm">
+                          <span className="font-medium text-sm hover:underline">
                             {app.applicant_profile?.display_name || 'Unknown'}
                           </span>
                         </div>
@@ -299,7 +326,12 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
                         <div className="flex gap-2 pt-2">
                           <Button
                             size="sm"
-                            onClick={() => updateApplicationStatus.mutate({ applicationId: app.id, status: 'accepted' })}
+                            onClick={() => updateApplicationStatus.mutate({ 
+                              applicationId: app.id, 
+                              status: 'accepted',
+                              applicantId: app.applicant_id,
+                              roleName: role.role_name
+                            })}
                           >
                             <Check className="w-4 h-4 mr-1" /> Accept
                           </Button>
