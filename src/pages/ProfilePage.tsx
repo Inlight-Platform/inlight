@@ -56,6 +56,7 @@ import { WhyIStarted } from '@/components/profile/WhyIStarted';
 import { MediaUploader } from '@/components/profile/MediaUploader';
 import { AvatarCropper } from '@/components/profile/AvatarCropper';
 import { MyProjects } from '@/components/profile/MyProjects';
+import { UserPosts } from '@/components/profile/UserPosts';
 import { SavedProjects } from '@/components/profile/SavedProjects';
 import { supabase } from '@/integrations/supabase/client';
 import { PostCreator, PostType } from '@/components/feed/PostCreator';
@@ -1784,6 +1785,11 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* User Posts Section */}
+      {resolvedUserId && (
+        <UserPosts userId={resolvedUserId} />
+      )}
       
       {/* Lightbox */}
       {lightboxImage && (
