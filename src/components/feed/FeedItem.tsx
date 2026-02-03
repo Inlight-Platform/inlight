@@ -256,8 +256,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
           </p>
         )}
 
-        {/* Image */}
-        {item.image_url && (
+        {/* Image - skip for open roles */}
+        {item.image_url && item.type !== 'open_role' && (
           <div className="rounded-lg overflow-hidden mb-3">
             <img 
               src={item.image_url} 
@@ -378,19 +378,46 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
 
         {/* Open Role details */}
         {item.type === 'open_role' && (
-          <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-green-500/10 mt-2">
-            <div className="flex items-center gap-2 text-sm">
-              <FolderKanban className="h-4 w-4 text-green-500" />
-              <span className="font-medium">{item.project_title}</span>
-            </div>
-            {item.project_status && (
-              <Badge variant="secondary" className="text-xs capitalize">
-                {item.project_status.replace('-', ' ')}
+          <div className="space-y-3 mt-2">
+            <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-green-500/10">
+              <div className="flex items-center gap-2 text-sm">
+                <FolderKanban className="h-4 w-4 text-green-500" />
+                <span className="font-medium">{item.project_title}</span>
+              </div>
+              {item.project_status && (
+                <Badge variant="secondary" className="text-xs capitalize">
+                  {item.project_status.replace('-', ' ')}
+                </Badge>
+              )}
+              <Badge className="bg-green-500/20 text-green-600 hover:bg-green-500/30 text-xs">
+                Open Role
               </Badge>
-            )}
-            <Badge className="bg-green-500/20 text-green-600 hover:bg-green-500/30 text-xs">
-              Open Role
-            </Badge>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/projects/${item.project_id}`);
+                }}
+              >
+                <FolderKanban className="h-4 w-4 mr-2" />
+                View Project
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/projects/${item.project_id}?apply=${item.role_id}`);
+                }}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Apply Now
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>
