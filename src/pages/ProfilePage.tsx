@@ -73,6 +73,7 @@ import { useConnectionRequests } from '@/hooks/useConnectionRequests';
 import { VerifyCreditsDialog } from '@/components/profile/VerifyCreditsDialog';
 import { CreditRow } from '@/components/profile/CreditRow';
 import { VouchDialog } from '@/components/profile/VouchDialog';
+import { SkillsCombobox } from '@/components/ui/skills-combobox';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';
@@ -199,10 +200,15 @@ const ProfilePage: React.FC = () => {
   
   // Follow/connection hooks
   const { isFollowing, follow, unfollow, isFollowPending, isUnfollowPending, isMutual } = useNetworkConnections();
-  const { sendRequest, hasSentRequestTo } = useConnectionRequests();
+  const { sendRequest, hasSentRequestTo, sentRequests, cancelRequest } = useConnectionRequests();
   
   const userIsFollowing = resolvedUserId ? isFollowing(resolvedUserId) : false;
   const hasPendingRequest = resolvedUserId ? hasSentRequestTo(resolvedUserId) : false;
+  
+  // Get pending request ID for this user
+  const pendingRequestId = resolvedUserId 
+    ? sentRequests.find(r => r.receiver_id === resolvedUserId && r.status === 'pending')?.id 
+    : undefined;
   const isConnected = resolvedUserId ? isMutual(resolvedUserId) : false;
   
   // Fetch network counts for this profile (connections only)
@@ -867,14 +873,27 @@ const ProfilePage: React.FC = () => {
   const getConnectButtonLabel = () => {
     if (isOwnProfile) return null;
     if (isConnected || connectionStatus === 'accepted') return 'Connected';
-    if (connectionStatus === 'pending' || hasPendingRequest) return 'Pending';
+    if (connectionStatus === 'pending' || hasPendingRequest) return 'Cancel Request';
     return 'Connect';
   };
   
   const getConnectButtonClass = () => {
     if (isConnected || connectionStatus === 'accepted') return 'btn-connect btn-connect-connected';
-    if (connectionStatus === 'pending' || hasPendingRequest) return 'btn-connect btn-connect-pending';
+    if (connectionStatus === 'pending' || hasPendingRequest) return 'btn-connect btn-connect-pending cursor-pointer';
     return 'btn-connect';
+  };
+  
+  const handleCancelRequest = () => {
+    if (pendingRequestId) {
+      cancelRequest.mutate(pendingRequestId, {
+        onSuccess: () => {
+          toast.success('Connection request cancelled');
+        },
+        onError: () => {
+          toast.error('Failed to cancel request');
+        },
+      });
+    }
   };
   
   const getVisibilityIcon = (visibility: Visibility) => {
@@ -999,45 +1018,13 @@ const ProfilePage: React.FC = () => {
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-3">
                     {/* Stage Name - shown above real name if present */}
-                    {displayStageName && !isOwnProfile && (
+                    {displayStageName && (
                       <h1 className="text-2xl sm:text-3xl font-display font-bold">
                         {displayStageName}
                       </h1>
                     )}
-                    {isOwnProfile && (
-                      <>
-                        {isEditingStageName ? (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={editStageName}
-                              onChange={(e) => setEditStageName(e.target.value)}
-                              placeholder="Stage name (optional)"
-                              className="text-2xl sm:text-3xl font-display font-bold h-auto py-1"
-                              onKeyDown={(e) => e.key === 'Enter' && handleSaveStageName()}
-                              autoFocus
-                            />
-                            <Button size="icon" variant="ghost" onClick={handleSaveStageName}>
-                              <Save className="w-4 h-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" onClick={() => setIsEditingStageName(false)}>
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <h1 
-                            className="text-2xl sm:text-3xl font-display font-bold cursor-pointer hover:text-primary transition-colors group"
-                            onClick={startEditingStageName}
-                          >
-                            {displayStageName || (
-                              <span className="text-muted-foreground text-lg italic">+ Add stage name</span>
-                            )}
-                            {displayStageName && <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />}
-                          </h1>
-                        )}
-                      </>
-                    )}
                     {/* Vouch count badge */}
-                    {vouchCount > 0 && (
+                    {vouchCount > 0 && displayStageName && (
                       <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
                         <Award className="w-4 h-4" />
                         <span className="text-sm font-medium">{vouchCount}</span>
@@ -1054,15 +1041,21 @@ const ProfilePage: React.FC = () => {
                       onClick={isOwnProfile ? startEditingName : undefined}
                     >
                       {displayName || 'Add your name'}
-                      {isOwnProfile && <Pencil className="w-3 h-3 inline ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                      {isOwnProfile && !displayStageName && <Pencil className="w-3 h-3 inline ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />}
                     </span>
-                    {!displayStageName && vouchCount > 0 && !isOwnProfile && (
+                    {!displayStageName && vouchCount > 0 && (
                       <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
                         <Award className="w-4 h-4" />
                         <span className="text-sm font-medium">{vouchCount}</span>
                       </div>
                     )}
                   </div>
+                  {/* Headline - displayed below name */}
+                  {dbProfile?.headline && (
+                    <p className="text-muted-foreground text-sm mt-1">
+                      {dbProfile.headline}
+                    </p>
+                  )}
                 </div>
               )}
               
@@ -1235,7 +1228,7 @@ const ProfilePage: React.FC = () => {
                     onClick={() => navigate('/network')}
                   >
                     <Users className="w-4 h-4 mr-2" />
-                    My Network
+                    My Community
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -1317,10 +1310,16 @@ const ProfilePage: React.FC = () => {
                     )}
                   </Button>
                   
-                  {/* Connect/Message Button */}
+                  {/* Connect/Cancel/Message Button */}
                   <button
-                    onClick={connectionStatus === 'accepted' ? handleMessage : handleConnect}
-                    disabled={connectionStatus === 'pending' || hasPendingRequest || sendRequest.isPending}
+                    onClick={
+                      connectionStatus === 'accepted' || isConnected
+                        ? handleMessage 
+                        : (connectionStatus === 'pending' || hasPendingRequest)
+                          ? handleCancelRequest
+                          : handleConnect
+                    }
+                    disabled={sendRequest.isPending || cancelRequest.isPending}
                     className={getConnectButtonClass()}
                     aria-label={getConnectButtonLabel() || undefined}
                   >
@@ -1329,28 +1328,49 @@ const ProfilePage: React.FC = () => {
                 </>
               )}
               
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="rounded-full">
-                    <MoreHorizontal className="w-5 h-5" />
-                    <span className="sr-only">More options</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-popover border-border">
-                  <DropdownMenuItem>
-                    <Flag className="w-4 h-4 mr-2" />
-                    Report
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Ban className="w-4 h-4 mr-2" />
-                    Block
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Share2 className="w-4 h-4 mr-2" />
-                    Share Profile
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Report/Block Menu - Only for other profiles */}
+              {!isOwnProfile && authUser && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="rounded-full">
+                      <MoreHorizontal className="w-5 h-5" />
+                      <span className="sr-only">More options</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-popover border-border">
+                    <DropdownMenuItem>
+                      <Flag className="w-4 h-4 mr-2" />
+                      Report
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Ban className="w-4 h-4 mr-2" />
+                      Block
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Share Profile
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              
+              {/* Share for own profile */}
+              {isOwnProfile && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="rounded-full">
+                      <MoreHorizontal className="w-5 h-5" />
+                      <span className="sr-only">More options</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-popover border-border">
+                    <DropdownMenuItem>
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Share Profile
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
         </div>
@@ -1583,19 +1603,17 @@ const ProfilePage: React.FC = () => {
           ))}
           
           {isOwnProfile && (
-            <div className="flex items-center gap-2">
-              <Input
-                value={newSkill}
-                onChange={(e) => setNewSkill(e.target.value)}
-                placeholder="Add a skill..."
-                className="w-32 h-8 text-sm"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddSkill()}
-                maxLength={50}
-              />
-              <Button size="sm" variant="outline" className="h-8" onClick={handleAddSkill} disabled={!newSkill.trim()}>
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
+            <SkillsCombobox
+              existingSkills={displaySkills}
+              onAddSkill={async (skill) => {
+                const currentSkills = displaySkills || [];
+                if (currentSkills.some(s => s.toLowerCase() === skill.toLowerCase())) {
+                  toast.error('Skill already exists');
+                  return;
+                }
+                await saveProfileField('skills', [...currentSkills, skill]);
+              }}
+            />
           )}
           
           {displaySkills.length === 0 && !isOwnProfile && (

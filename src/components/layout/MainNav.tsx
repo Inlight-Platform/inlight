@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Users, Briefcase, FolderKanban, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, MessageCircle, Bell, Shield, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +14,7 @@ import { useSidebarState } from '@/hooks/useSidebarState';
 import { useMessages } from '@/hooks/useMessages';
 import { Badge } from '@/components/ui/badge';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { SignOutDialog } from '@/components/ui/sign-out-dialog';
 
 interface NavItem {
   label: string;
@@ -49,6 +50,12 @@ export const MainNav: React.FC = () => {
   const { isAdmin } = useAdmin();
   const { collapsed, toggleCollapsed } = useSidebarState();
   const { totalUnread } = useMessages();
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+
+  const handleSignOut = () => {
+    setShowSignOutDialog(false);
+    signOut();
+  };
 
   const { data: profile } = useQuery({
     queryKey: ['nav-profile', user?.id],
@@ -276,7 +283,7 @@ export const MainNav: React.FC = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={signOut}
+                        onClick={() => setShowSignOutDialog(true)}
                         className="w-full flex items-center justify-center py-3 rounded-xl text-[hsl(220_15%_60%)] hover:bg-[hsl(0_75%_55%/0.1)] hover:text-[hsl(0_75%_60%)] transition-colors"
                       >
                         <LogOut className="w-5 h-5" />
@@ -318,7 +325,7 @@ export const MainNav: React.FC = () => {
                     </Link>
                   )}
                   <button
-                    onClick={signOut}
+                    onClick={() => setShowSignOutDialog(true)}
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(220_15%_60%)] hover:bg-[hsl(0_75%_55%/0.1)] hover:text-[hsl(0_75%_60%)] transition-colors"
                   >
                     <LogOut className="w-5 h-5" />
@@ -455,6 +462,13 @@ export const MainNav: React.FC = () => {
           )}
         </div>
       </nav>
+
+      {/* Sign Out Confirmation Dialog */}
+      <SignOutDialog
+        open={showSignOutDialog}
+        onOpenChange={setShowSignOutDialog}
+        onConfirm={handleSignOut}
+      />
     </TooltipProvider>
   );
 };
