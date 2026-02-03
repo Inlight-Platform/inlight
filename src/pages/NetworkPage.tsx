@@ -131,7 +131,7 @@ const NetworkPage: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `My-Network-${date}.csv`;
+    link.download = `My-Community-${date}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -225,7 +225,7 @@ const NetworkPage: React.FC = () => {
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
-              <h1 className="text-2xl font-display font-bold">My Network</h1>
+              <h1 className="text-2xl font-display font-bold">My Community</h1>
             </div>
             
             <Button 

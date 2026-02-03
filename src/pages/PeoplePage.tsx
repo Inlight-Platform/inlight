@@ -133,7 +133,21 @@ const PeoplePage: React.FC = () => {
   };
   
   const handleConnect = (userId: string) => {
+    // Prevent connecting with self
+    if (userId === currentUserId) {
+      return;
+    }
     sendRequest.mutate(userId);
+  };
+
+  // Get pending request ID for a user
+  const getPendingRequestId = (userId: string) => {
+    const request = pendingSentRequests.find(r => r.receiver_id === userId);
+    return request?.id;
+  };
+
+  const handleCancelRequest = (requestId: string) => {
+    cancelRequest.mutate(requestId);
   };
 
   const handleStudioClick = (badgeTag: string | null) => {
@@ -215,7 +229,7 @@ const PeoplePage: React.FC = () => {
               </TabsTrigger>
               <TabsTrigger value="network" className="data-[state=active]:bg-green-500/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
                 <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Network</span> ({firstDegree.length})
+                <span className="hidden sm:inline">Community</span> ({firstDegree.length})
               </TabsTrigger>
               <TabsTrigger value="pending" className="data-[state=active]:bg-amber-500/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
                 <Clock className="w-4 h-4" />
@@ -261,15 +275,24 @@ const PeoplePage: React.FC = () => {
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredUsers.map((user) => (
-                    <PersonCard
-                      key={user.id}
-                      user={user}
-                      connectionStatus={getConnectionStatus(user.user_id || '')}
-                      onConnect={handleConnect}
-                      onMessage={() => navigate('/messages')}
-                    />
-                  ))}
+                  {filteredUsers.map((user) => {
+                    const userId = user.user_id || '';
+                    const status = getConnectionStatus(userId);
+                    const pendingRequestId = status === 'pending' ? getPendingRequestId(userId) : undefined;
+                    
+                    return (
+                      <PersonCard
+                        key={user.id}
+                        user={user}
+                        connectionStatus={status}
+                        showCancelButton={status === 'pending'}
+                        requestId={pendingRequestId}
+                        onConnect={handleConnect}
+                        onCancel={handleCancelRequest}
+                        onMessage={() => navigate('/messages')}
+                      />
+                    );
+                  })}
                 </div>
                 {filteredUsers.length === 0 && (
                   <p className="text-center text-muted-foreground py-12">
@@ -282,7 +305,7 @@ const PeoplePage: React.FC = () => {
           
           <TabsContent value="network">
             <div className="mb-6">
-              <h2 className="text-xl font-display font-semibold">Your Network</h2>
+              <h2 className="text-xl font-display font-semibold">Your Community</h2>
               <p className="text-sm text-muted-foreground">{networkProfiles.length} connections</p>
             </div>
             

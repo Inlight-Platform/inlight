@@ -24,6 +24,7 @@ interface Profile {
   user_id: string;
   email: string;
   display_name: string | null;
+  stage_name: string | null;
   avatar_url: string | null;
   headline: string | null;
   message_privacy: string;
@@ -50,6 +51,7 @@ const ProfileSettingsPage: React.FC = () => {
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState('');
+  const [stageName, setStageName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [headline, setHeadline] = useState('');
   const [messagePrivacy, setMessagePrivacy] = useState('mutuals_only');
@@ -95,6 +97,7 @@ const ProfileSettingsPage: React.FC = () => {
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name || '');
+      setStageName(profile.stage_name || '');
       setAvatarUrl(profile.avatar_url || '');
       setHeadline(profile.headline || '');
       setMessagePrivacy(profile.message_privacy || 'mutuals_only');
@@ -196,13 +199,16 @@ const ProfileSettingsPage: React.FC = () => {
     
     // Validate before submitting
     const trimmedName = displayName.trim() || null;
+    const trimmedStageName = stageName.trim() || null;
     const trimmedHeadline = headline.trim() || null;
     
     if (trimmedName && !validateProfileField('display_name', trimmedName)) return;
+    if (trimmedStageName && !validateProfileField('stage_name', trimmedStageName)) return;
     if (trimmedHeadline && !validateProfileField('headline', trimmedHeadline)) return;
     
     updateProfile.mutate({
       display_name: trimmedName,
+      stage_name: trimmedStageName,
       avatar_url: avatarUrl.trim() || null,
       headline: trimmedHeadline,
       message_privacy: messagePrivacy,
@@ -323,6 +329,21 @@ const ProfileSettingsPage: React.FC = () => {
                 />
                 <p className="text-xs text-muted-foreground">
                   This is how your name will appear to others
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="stageName">Stage Name</Label>
+                <Input
+                  id="stageName"
+                  type="text"
+                  placeholder="Your stage or professional name (optional)"
+                  value={stageName}
+                  onChange={(e) => setStageName(e.target.value)}
+                  maxLength={100}
+                />
+                <p className="text-xs text-muted-foreground">
+                  If you have a stage name, it will display prominently on your profile
                 </p>
               </div>
 
