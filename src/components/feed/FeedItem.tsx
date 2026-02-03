@@ -270,31 +270,60 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
 
         {/* Event details */}
         {item.type === 'event' && (
-          <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-muted/50 mt-2">
+          <div className="space-y-3 mt-2">
+            <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-muted/50">
+              {item.event_date && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span className="font-medium">
+                    {new Date(item.event_date).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+              )}
+              {item.location && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span>{item.location}</span>
+                </div>
+              )}
+              {item.event_type && (
+                <Badge variant="secondary" className="text-xs capitalize">
+                  {item.event_type}
+                </Badge>
+              )}
+            </div>
             {item.event_date && (
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-primary" />
-                <span className="font-medium">
-                  {new Date(item.event_date).toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit'
-                  })}
-                </span>
-              </div>
-            )}
-            {item.location && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                <span>{item.location}</span>
-              </div>
-            )}
-            {item.event_type && (
-              <Badge variant="secondary" className="text-xs capitalize">
-                {item.event_type}
-              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const title = encodeURIComponent(item.title || 'Event');
+                  const location = encodeURIComponent(item.location || '');
+                  const details = encodeURIComponent(item.content || item.description || '');
+                  
+                  // Format date for Google Calendar
+                  const eventDate = new Date(item.event_date!);
+                  const startDate = eventDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                  // Add 2 hours for end time
+                  const endDate = new Date(eventDate.getTime() + 2 * 60 * 60 * 1000)
+                    .toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                  
+                  const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${details}&location=${location}`;
+                  
+                  window.open(calendarUrl, '_blank');
+                }}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Add to Calendar
+              </Button>
             )}
           </div>
         )}

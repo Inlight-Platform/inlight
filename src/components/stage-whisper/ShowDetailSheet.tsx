@@ -430,44 +430,16 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
           )}
 
           {/* Actions */}
-          <div className="flex gap-3">
-            {show.official_url && (
+          {show.official_url && (
+            <div className="flex gap-3">
               <Button className="flex-1" asChild>
                 <a href={show.official_url} target="_blank" rel="noopener noreferrer">
                   Get Tickets
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </a>
               </Button>
-            )}
-            <Button 
-              variant="outline" 
-              className="flex-1"
-              onClick={() => {
-                const title = encodeURIComponent(show.title);
-                const location = encodeURIComponent(`${show.venue}, ${show.borough}, NYC`);
-                const details = encodeURIComponent(
-                  `${show.description || ''}\n\n${show.rush_policy ? `Rush Policy: ${show.rush_policy}` : ''}${show.official_url ? `\n\nTickets: ${show.official_url}` : ''}`
-                );
-                
-                // Use run_start date or default to today
-                const startDate = show.run_start 
-                  ? new Date(show.run_start).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-                  : new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                
-                // For all-day event, format as YYYYMMDD
-                const dateOnly = show.run_start 
-                  ? show.run_start.replace(/-/g, '')
-                  : new Date().toISOString().split('T')[0].replace(/-/g, '');
-                
-                const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateOnly}/${dateOnly}&details=${details}&location=${location}`;
-                
-                window.open(calendarUrl, '_blank');
-              }}
-            >
-              <Calendar className="w-4 h-4 mr-2" />
-              Add to Calendar
-            </Button>
-          </div>
+            </div>
+          )}
 
           {/* Community Tips */}
           <Tabs defaultValue="tips" className="mt-6">
