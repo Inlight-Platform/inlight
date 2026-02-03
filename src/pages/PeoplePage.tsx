@@ -23,10 +23,9 @@ interface Studio {
 const PeoplePage: React.FC = () => {
   const navigate = useNavigate();
   const currentUserId = useStore((s) => s.currentUserId);
-  const sendConnectionRequest = useStore((s) => s.sendConnectionRequest);
   
   const { isMutual, firstDegree } = useNetworkConnections();
-  const { sentRequests, cancelRequest } = useConnectionRequests();
+  const { sentRequests, cancelRequest, sendRequest } = useConnectionRequests();
   
   // Get pending sent requests
   const pendingSentRequests = useMemo(() => 
@@ -134,7 +133,7 @@ const PeoplePage: React.FC = () => {
   };
   
   const handleConnect = (userId: string) => {
-    sendConnectionRequest(userId);
+    sendRequest.mutate(userId);
   };
 
   const handleStudioClick = (badgeTag: string | null) => {
