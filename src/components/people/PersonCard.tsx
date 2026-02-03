@@ -67,11 +67,11 @@ const PersonCard: React.FC<PersonCardProps> = ({
       className="group relative bg-card rounded-2xl border border-border overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
       onClick={handleClick}
     >
-      {/* Gradient Header - Regal gold gradient */}
+      {/* Gradient Header - Blue gradient */}
       <div 
         className="h-24 relative"
         style={{
-          background: 'linear-gradient(135deg, hsl(48 100% 50%) 0%, hsl(45 90% 42%) 50%, hsl(40 85% 32%) 100%)',
+          background: 'linear-gradient(135deg, hsl(200 100% 50%) 0%, hsl(220 85% 55%) 100%)',
         }}
       >
         {/* Graduation Year Badge */}
