@@ -119,6 +119,9 @@ interface ProfileData {
   website_url: string | null;
   graduation_status: string | null;
   graduation_year: number | null;
+  show_union_status?: boolean;
+  show_representation?: boolean;
+  show_gear_list?: boolean;
 }
 
 const ProfilePage: React.FC = () => {
@@ -152,7 +155,7 @@ const ProfilePage: React.FC = () => {
   const [showProjectCreator, setShowProjectCreator] = useState(false);
   
   // Collapsible section states (all open by default)
-  const [detailsOpen, setDetailsOpen] = useState(true);
+  // Removed detailsOpen - Details section moved to settings
   const [creditsOpen, setCreditsOpen] = useState(true);
   const [projectsOpen, setProjectsOpen] = useState(true);
   const [materialsOpen, setMaterialsOpen] = useState(true);
@@ -164,8 +167,6 @@ const ProfilePage: React.FC = () => {
   const [isEditingRole, setIsEditingRole] = useState(false);
   const [isEditingPronouns, setIsEditingPronouns] = useState(false);
   const [isEditingBio, setIsEditingBio] = useState(false);
-  const [isEditingUnionStatus, setIsEditingUnionStatus] = useState(false);
-  const [isEditingRepresentation, setIsEditingRepresentation] = useState(false);
   const [editName, setEditName] = useState('');
   const [editStageName, setEditStageName] = useState('');
   const [isEditingStageName, setIsEditingStageName] = useState(false);
@@ -173,9 +174,6 @@ const ProfilePage: React.FC = () => {
   const [editRole, setEditRole] = useState('');
   const [editPronouns, setEditPronouns] = useState('');
   const [editBio, setEditBio] = useState('');
-  const [editUnionStatus, setEditUnionStatus] = useState('');
-  const [editRepresentation, setEditRepresentation] = useState('');
-  const [newGear, setNewGear] = useState('');
   const [isEditingInstagram, setIsEditingInstagram] = useState(false);
   const [isEditingWebsite, setIsEditingWebsite] = useState(false);
   const [editInstagram, setEditInstagram] = useState('');
@@ -245,7 +243,7 @@ const ProfilePage: React.FC = () => {
         // Own profile - use full profiles table
         const { data, error } = await supabase
           .from('profiles')
-        .select('display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year')
+        .select('display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list')
         .eq('user_id', resolvedUserId)
         .maybeSingle();
       if (error) return null;
@@ -254,7 +252,7 @@ const ProfilePage: React.FC = () => {
         // Other users - use public view (excludes email)
         const { data, error } = await supabase
           .from('profiles_public')
-          .select('display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year')
+          .select('display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) return null;
@@ -538,19 +536,7 @@ const ProfilePage: React.FC = () => {
     if (success) setIsEditingBio(false);
   };
 
-  const handleSaveUnionStatus = async () => {
-    const trimmed = editUnionStatus.trim() || null;
-    if (trimmed && !validateProfileField('union_status', trimmed)) return;
-    const success = await saveProfileField('union_status', trimmed);
-    if (success) setIsEditingUnionStatus(false);
-  };
-
-  const handleSaveRepresentation = async () => {
-    const trimmed = editRepresentation.trim() || null;
-    if (trimmed && !validateProfileField('representation', trimmed)) return;
-    const success = await saveProfileField('representation', trimmed);
-    if (success) setIsEditingRepresentation(false);
-  };
+  // Union status, representation, gear handlers removed - now managed in settings
 
   const handleSaveInstagram = async () => {
     const trimmed = editInstagram.trim() || null;
@@ -655,28 +641,7 @@ const ProfilePage: React.FC = () => {
     await saveProfileField('badges', updatedBadges);
   };
 
-  const handleAddGear = async () => {
-    if (!newGear.trim() || !authUser?.id) return;
-    const gearTrimmed = newGear.trim();
-    if (gearTrimmed.length > 100) {
-      toast.error('Gear item must be 100 characters or less');
-      return;
-    }
-    const currentGear = displayGearList || [];
-    if (currentGear.includes(gearTrimmed)) {
-      toast.error('Gear already exists');
-      return;
-    }
-    await saveProfileField('gear_list', [...currentGear, gearTrimmed]);
-    setNewGear('');
-  };
-
-  const handleRemoveGear = async (gearToRemove: string) => {
-    if (!authUser?.id) return;
-    const currentGear = displayGearList || [];
-    const updatedGear = currentGear.filter(g => g !== gearToRemove);
-    await saveProfileField('gear_list', updatedGear);
-  };
+  // Gear handlers removed - now managed in settings
 
   // Skills handlers
   const handleAddSkill = async () => {
@@ -799,15 +764,7 @@ const ProfilePage: React.FC = () => {
     setIsEditingBio(true);
   };
 
-  const startEditingUnionStatus = () => {
-    setEditUnionStatus(displayUnionStatus);
-    setIsEditingUnionStatus(true);
-  };
-
-  const startEditingRepresentation = () => {
-    setEditRepresentation(displayRepresentation);
-    setIsEditingRepresentation(true);
-  };
+  // Union status and representation editing functions removed - now managed in settings
   
   // Loading state
   if (profileLoading) {
@@ -1622,121 +1579,7 @@ const ProfilePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Details - Collapsible (moved up after Skills) */}
-      <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="border-b border-border">
-        <section className="px-4 sm:px-6 lg:px-8 py-4">
-          <CollapsibleTrigger className="flex items-center justify-between w-full group">
-            <h2 className="text-lg font-display font-semibold">Details</h2>
-            <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${detailsOpen ? 'rotate-180' : ''}`} />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Union Status */}
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Union Status</h3>
-                {isOwnProfile && isEditingUnionStatus ? (
-                  <div className="space-y-2">
-                    <Input
-                      value={editUnionStatus}
-                      onChange={(e) => setEditUnionStatus(e.target.value)}
-                      placeholder="e.g., SAG-AFTRA, AEA, Non-Union"
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSaveUnionStatus}>
-                        <Save className="w-4 h-4 mr-1" /> Save
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setIsEditingUnionStatus(false)}>
-                        <X className="w-4 h-4 mr-1" /> Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <p 
-                    className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
-                    onClick={isOwnProfile ? startEditingUnionStatus : undefined}
-                  >
-                    {displayUnionStatus || (isOwnProfile ? 'Click to add...' : 'Not specified')}
-                    {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
-                  </p>
-                )}
-              </div>
-              
-              {/* Representation */}
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Representation</h3>
-                {isOwnProfile && isEditingRepresentation ? (
-                  <div className="space-y-2">
-                    <Input
-                      value={editRepresentation}
-                      onChange={(e) => setEditRepresentation(e.target.value)}
-                      placeholder="e.g., Agency name"
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSaveRepresentation}>
-                        <Save className="w-4 h-4 mr-1" /> Save
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setIsEditingRepresentation(false)}>
-                        <X className="w-4 h-4 mr-1" /> Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <p 
-                    className={`text-foreground ${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded transition-colors' : ''}`}
-                    onClick={isOwnProfile ? startEditingRepresentation : undefined}
-                  >
-                    {displayRepresentation || (isOwnProfile ? 'Click to add...' : 'Not specified')}
-                    {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-50" />}
-                  </p>
-                )}
-              </div>
-              
-              {/* Gear */}
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Gear</h3>
-                <div className="flex flex-wrap gap-2">
-                  {displayGearList.length > 0 ? (
-                    displayGearList.map((gear, i) => (
-                      <div key={i} className="relative group">
-                        <Badge variant="secondary">{gear}</Badge>
-                        {isOwnProfile && (
-                          <button
-                            onClick={() => handleRemoveGear(gear)}
-                            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            aria-label={`Remove ${gear}`}
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <span className="text-muted-foreground">{isOwnProfile ? 'Add your gear...' : 'None listed'}</span>
-                  )}
-                  
-                  {isOwnProfile && (
-                    <div className="flex items-center gap-1">
-                      <Input
-                        value={newGear}
-                        onChange={(e) => setNewGear(e.target.value)}
-                        placeholder="Add gear"
-                        className="w-24 h-7 text-sm"
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddGear()}
-                      />
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleAddGear}>
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CollapsibleContent>
-        </section>
-      </Collapsible>
-      
+      {/* Conditional Details Display - shown at the bottom if user opted in */}
       {/* Materials - Collapsible (own profile) */}
       {isOwnProfile && authUser?.id && (
         <Collapsible open={materialsOpen} onOpenChange={setMaterialsOpen} className="border-b border-border">
@@ -1948,6 +1791,41 @@ const ProfilePage: React.FC = () => {
           </CollapsibleContent>
         </section>
       </Collapsible>
+
+      {/* Conditional Professional Details - shown at bottom if user opted in */}
+      {((dbProfile?.show_union_status && displayUnionStatus) || 
+        (dbProfile?.show_representation && displayRepresentation) || 
+        (dbProfile?.show_gear_list && displayGearList && displayGearList.length > 0)) && (
+        <section className="px-4 sm:px-6 lg:px-8 py-4 border-t border-border">
+          <h2 className="text-lg font-display font-semibold mb-4">Professional Details</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {dbProfile?.show_union_status && displayUnionStatus && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Union Status</h3>
+                <p className="text-foreground">{displayUnionStatus}</p>
+              </div>
+            )}
+            
+            {dbProfile?.show_representation && displayRepresentation && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Representation</h3>
+                <p className="text-foreground">{displayRepresentation}</p>
+              </div>
+            )}
+            
+            {dbProfile?.show_gear_list && displayGearList && displayGearList.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Personal Gear</h3>
+                <div className="flex flex-wrap gap-2">
+                  {displayGearList.map((gear, i) => (
+                    <Badge key={i} variant="secondary">{gear}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
       
       {/* Lightbox */}
       {lightboxImage && (

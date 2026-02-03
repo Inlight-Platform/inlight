@@ -11,13 +11,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera, MessageCircle, Lock, Globe, Bell, Mail } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera, MessageCircle, Lock, Globe, Bell, Mail, Briefcase, X, Plus } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MediaUploader } from '@/components/profile/MediaUploader';
 import { AvatarCropper } from '@/components/profile/AvatarCropper';
 import { useMediaUpload, useUserMedia } from '@/hooks/useMediaUpload';
 import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidation';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Profile {
   id: string;
@@ -29,6 +30,12 @@ interface Profile {
   headline: string | null;
   message_privacy: string;
   email_notifications: boolean;
+  union_status: string | null;
+  representation: string | null;
+  gear_list: string[] | null;
+  show_union_status: boolean;
+  show_representation: boolean;
+  show_gear_list: boolean;
 }
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
@@ -59,6 +66,15 @@ const ProfileSettingsPage: React.FC = () => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
   const [cropperImageSrc, setCropperImageSrc] = useState('');
+  
+  // Professional details state
+  const [unionStatus, setUnionStatus] = useState('');
+  const [representation, setRepresentation] = useState('');
+  const [gearList, setGearList] = useState<string[]>([]);
+  const [newGear, setNewGear] = useState('');
+  const [showUnionStatus, setShowUnionStatus] = useState(false);
+  const [showRepresentation, setShowRepresentation] = useState(false);
+  const [showGearList, setShowGearList] = useState(false);
 
   const { deleteFile, updateVisibility } = useMediaUpload();
   const { fetchMedia } = useUserMedia(user?.id);
@@ -102,6 +118,13 @@ const ProfileSettingsPage: React.FC = () => {
       setHeadline(profile.headline || '');
       setMessagePrivacy(profile.message_privacy || 'mutuals_only');
       setEmailNotifications(profile.email_notifications ?? true);
+      // Professional details
+      setUnionStatus(profile.union_status || '');
+      setRepresentation(profile.representation || '');
+      setGearList(profile.gear_list || []);
+      setShowUnionStatus(profile.show_union_status ?? false);
+      setShowRepresentation(profile.show_representation ?? false);
+      setShowGearList(profile.show_gear_list ?? false);
     }
   }, [profile]);
 
@@ -472,6 +495,170 @@ const ProfileSettingsPage: React.FC = () => {
                   updateProfile.mutate({ email_notifications: checked });
                 }}
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Professional Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Briefcase className="h-5 w-5" />
+              Professional Details
+            </CardTitle>
+            <CardDescription>
+              Manage your union status, representation, and personal gear. Toggle which ones appear on your public profile.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Union Status */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="unionStatus">Union Status</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="showUnionStatus" className="text-sm text-muted-foreground">
+                    Display on profile
+                  </Label>
+                  <Checkbox
+                    id="showUnionStatus"
+                    checked={showUnionStatus}
+                    onCheckedChange={(checked) => {
+                      setShowUnionStatus(checked === true);
+                      updateProfile.mutate({ show_union_status: checked === true });
+                    }}
+                  />
+                </div>
+              </div>
+              <Input
+                id="unionStatus"
+                type="text"
+                placeholder="e.g., SAG-AFTRA, AEA, Non-Union"
+                value={unionStatus}
+                onChange={(e) => setUnionStatus(e.target.value)}
+                onBlur={() => {
+                  updateProfile.mutate({ union_status: unionStatus.trim() || null });
+                }}
+                maxLength={100}
+              />
+            </div>
+
+            {/* Representation */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="representation">Representation</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="showRepresentation" className="text-sm text-muted-foreground">
+                    Display on profile
+                  </Label>
+                  <Checkbox
+                    id="showRepresentation"
+                    checked={showRepresentation}
+                    onCheckedChange={(checked) => {
+                      setShowRepresentation(checked === true);
+                      updateProfile.mutate({ show_representation: checked === true });
+                    }}
+                  />
+                </div>
+              </div>
+              <Input
+                id="representation"
+                type="text"
+                placeholder="e.g., Agency name"
+                value={representation}
+                onChange={(e) => setRepresentation(e.target.value)}
+                onBlur={() => {
+                  updateProfile.mutate({ representation: representation.trim() || null });
+                }}
+                maxLength={200}
+              />
+            </div>
+
+            {/* Personal Gear */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Personal Gear</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="showGearList" className="text-sm text-muted-foreground">
+                    Display on profile
+                  </Label>
+                  <Checkbox
+                    id="showGearList"
+                    checked={showGearList}
+                    onCheckedChange={(checked) => {
+                      setShowGearList(checked === true);
+                      updateProfile.mutate({ show_gear_list: checked === true });
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {gearList.map((gear, i) => (
+                  <div key={i} className="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md">
+                    <span className="text-sm">{gear}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = gearList.filter((_, idx) => idx !== i);
+                        setGearList(updated);
+                        updateProfile.mutate({ gear_list: updated });
+                      }}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="Add gear item"
+                  value={newGear}
+                  onChange={(e) => setNewGear(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newGear.trim()) {
+                      e.preventDefault();
+                      if (newGear.trim().length > 100) {
+                        toast.error('Gear item must be 100 characters or less');
+                        return;
+                      }
+                      if (gearList.includes(newGear.trim())) {
+                        toast.error('Gear already exists');
+                        return;
+                      }
+                      const updated = [...gearList, newGear.trim()];
+                      setGearList(updated);
+                      setNewGear('');
+                      updateProfile.mutate({ gear_list: updated });
+                    }
+                  }}
+                  maxLength={100}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (!newGear.trim()) return;
+                    if (newGear.trim().length > 100) {
+                      toast.error('Gear item must be 100 characters or less');
+                      return;
+                    }
+                    if (gearList.includes(newGear.trim())) {
+                      toast.error('Gear already exists');
+                      return;
+                    }
+                    const updated = [...gearList, newGear.trim()];
+                    setGearList(updated);
+                    setNewGear('');
+                    updateProfile.mutate({ gear_list: updated });
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Press Enter or click + to add gear items
+              </p>
             </div>
           </CardContent>
         </Card>
