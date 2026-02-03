@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { PostCreator } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
 import { ConnectionSuggestions } from '@/components/feed/ConnectionSuggestions';
+import CreativeConnection from '@/components/feed/CreativeConnection';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type NetworkFilter = 'all' | '1st';
@@ -287,6 +288,9 @@ const FeedPage: React.FC = () => {
 
           {/* Main Feed Content */}
           <div className="flex-1 min-w-0 max-w-full lg:max-w-2xl mx-auto">
+            {/* Creative Connection */}
+            {user && <CreativeConnection />}
+
             {/* Content Type Filters */}
             <div className="mb-4">
               <div className="flex items-center gap-2 overflow-x-auto pb-2">
