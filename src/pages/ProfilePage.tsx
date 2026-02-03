@@ -74,6 +74,7 @@ import { VerifyCreditsDialog } from '@/components/profile/VerifyCreditsDialog';
 import { CreditRow } from '@/components/profile/CreditRow';
 import { VouchDialog } from '@/components/profile/VouchDialog';
 import { SkillsCombobox } from '@/components/ui/skills-combobox';
+import { LocationCombobox } from '@/components/ui/location-combobox';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';
@@ -627,7 +628,7 @@ const ProfilePage: React.FC = () => {
     { tag: 'UGFTV', label: 'Film and TV' },
     { tag: 'p&d', label: 'Production and Design' },
     { tag: 'cinemastudies', label: 'Cinema Studies' },
-    { tag: 'clive-davis', label: 'Clive Davis Institute' },
+    { tag: 'recordedmusic', label: 'Clive Davis Institute' },
     { tag: 'photography', label: 'Photography' },
   ];
 
@@ -1151,15 +1152,14 @@ const ProfilePage: React.FC = () => {
 
                 {/* Location */}
                 {isOwnProfile && isEditingLocation ? (
-                  <div className="flex items-center gap-1">
-                    <Input
-                      value={editLocation}
-                      onChange={(e) => setEditLocation(e.target.value)}
-                      className="w-32 h-7 text-sm"
-                      placeholder="Location"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSaveLocation()}
-                      autoFocus
-                    />
+                  <div className="flex items-center gap-1 min-w-[200px]">
+                    <div className="flex-1">
+                      <LocationCombobox
+                        value={editLocation}
+                        onChange={(val) => setEditLocation(val)}
+                        placeholder="Select location..."
+                      />
+                    </div>
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSaveLocation}>
                       <Save className="w-3 h-3" />
                     </Button>
