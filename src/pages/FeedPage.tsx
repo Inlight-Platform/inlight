@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Home, Filter, Plus, Calendar, Briefcase, FolderKanban, User, LayoutGrid, Users, Theater } from 'lucide-react';
+import { Filter, Plus, Calendar, Briefcase, FolderKanban, User, LayoutGrid, Users, Theater } from 'lucide-react';
+import inlightLogo from '@/assets/inlight-logo.png';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
@@ -252,14 +253,13 @@ const FeedPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ 
-                background: 'linear-gradient(135deg, hsl(330 100% 64%), hsl(350 100% 70%))',
-                boxShadow: '0 0 20px hsl(330 100% 64% / 0.4)'
-              }}
-            >
-              <Home className="w-5 h-5 text-white" />
+            <div className="relative">
+              <img 
+                src={inlightLogo} 
+                alt="Home" 
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-[hsl(45_95%_58%/0.3)]"
+              />
+              <div className="absolute inset-0 blur-lg bg-[hsl(45_95%_58%/0.2)] -z-10 rounded-full" />
             </div>
             <h1 className="text-2xl font-display font-bold">Home</h1>
           </div>
