@@ -408,7 +408,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
               </Button>
               <Button
                 size="sm"
-                className="flex-1 bg-green-600 hover:bg-green-700"
+                className="flex-1"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate(`/projects/${item.project_id}?apply=${item.role_id}`);
