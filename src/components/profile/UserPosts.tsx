@@ -34,6 +34,33 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
 
       if (eventsError) throw eventsError;
 
+      // Fetch open roles from user's projects
+      const { data: openRolesData, error: openRolesError } = await supabase
+        .from('project_roles')
+        .select(`
+          id,
+          role_name,
+          created_at,
+          project_id,
+          projects!inner (
+            id,
+            title,
+            status,
+            is_public,
+            creator_id,
+            main_image_url
+          )
+        `)
+        .is('assigned_user_id', null)
+        .order('created_at', { ascending: false });
+
+      if (openRolesError) throw openRolesError;
+
+      // Filter to only this user's projects
+      const userOpenRoles = openRolesData.filter(
+        role => (role.projects as any).creator_id === userId && (role.projects as any).is_public
+      );
+
       // Fetch user profile for creator info
       const { data: profile } = await supabase
         .from('profiles_public')
@@ -78,8 +105,26 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
         } : undefined,
       }));
 
+      // Transform open roles to FeedItemData format
+      const transformedOpenRoles: FeedItemData[] = userOpenRoles.map((role) => ({
+        id: role.id,
+        type: 'open_role' as const,
+        user_id: (role.projects as any).creator_id,
+        title: role.role_name,
+        role_id: role.id,
+        project_id: role.project_id,
+        project_title: (role.projects as any).title,
+        project_status: (role.projects as any).status,
+        image_url: (role.projects as any).main_image_url,
+        created_at: role.created_at,
+        creator_profile: profile ? {
+          display_name: profile.display_name,
+          avatar_url: profile.avatar_url,
+        } : undefined,
+      }));
+
       // Combine and sort by created_at
-      const allPosts = [...transformedPosts, ...transformedEvents];
+      const allPosts = [...transformedPosts, ...transformedEvents, ...transformedOpenRoles];
       allPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       return allPosts;
