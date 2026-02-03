@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, UserPlus, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Users, UserPlus, ChevronRight, ChevronLeft, Clock, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
+import { useConnectionRequests } from '@/hooks/useConnectionRequests';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,8 @@ interface SuggestedUser {
 export const ConnectionSuggestions: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { following, follow, isFollowPending } = useNetworkConnections();
+  const { following, isMutual } = useNetworkConnections();
+  const { sendRequest, hasSentRequestTo } = useConnectionRequests();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Fetch suggested users (2nd degree connections or random users not followed)
@@ -132,15 +134,35 @@ export const ConnectionSuggestions: React.FC = () => {
                 </p>
               )}
             </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 w-7 p-0"
-              onClick={() => follow(person.user_id)}
-              disabled={isFollowPending}
-            >
-              <UserPlus className="w-4 h-4" />
-            </Button>
+            {isMutual(person.user_id) ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 text-green-500"
+                disabled
+              >
+                <Check className="w-4 h-4" />
+              </Button>
+            ) : hasSentRequestTo(person.user_id) ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 text-amber-500"
+                disabled
+              >
+                <Clock className="w-4 h-4" />
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0"
+                onClick={() => sendRequest.mutate(person.user_id)}
+                disabled={sendRequest.isPending}
+              >
+                <UserPlus className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         ))}
 
