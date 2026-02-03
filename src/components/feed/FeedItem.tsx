@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
+import { EditPostDialog } from './EditPostDialog';
 import { toast } from 'sonner';
 import { NetworkDegree } from '@/hooks/useNetworkConnections';
 
@@ -59,8 +60,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const isOwner = user?.id === item.user_id;
+  const canEdit = isOwner && item.type !== 'show'; // Shows have their own edit flow
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -211,6 +214,12 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  {canEdit && (
+                    <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive"
                     onClick={() => setDeleteDialogOpen(true)}
@@ -365,6 +374,13 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
         title={`Delete this ${item.type === 'job' ? 'job post' : item.type}?`}
         description={`This will permanently delete this ${item.type}. This action cannot be undone.`}
         isPending={deleteMutation.isPending}
+      />
+
+      {/* Edit Post Dialog */}
+      <EditPostDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        item={item}
       />
     </Card>
   );
