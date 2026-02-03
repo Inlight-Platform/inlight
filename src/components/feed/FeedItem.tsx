@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,7 +20,7 @@ import { EditPostDialog } from './EditPostDialog';
 import { toast } from 'sonner';
 import { NetworkDegree } from '@/hooks/useNetworkConnections';
 
-export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show';
+export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show' | 'open_role';
 
 export interface FeedItemData {
   id: string;
@@ -44,6 +44,11 @@ export interface FeedItemData {
   run_start?: string | null;
   run_end?: string | null;
   is_anonymous?: boolean;
+  // Open role specific fields
+  role_id?: string;
+  project_id?: string;
+  project_title?: string;
+  project_status?: string;
   creator_profile?: {
     display_name: string | null;
     avatar_url: string | null;
@@ -100,13 +105,15 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const getTypeIcon = () => {
     switch (item.type) {
       case 'project':
-        return <Briefcase className="h-3 w-3" />;
+        return <FolderKanban className="h-3 w-3" />;
       case 'event':
         return <Calendar className="h-3 w-3" />;
       case 'job':
         return <Briefcase className="h-3 w-3 text-green-500" />;
       case 'show':
         return <Theater className="h-3 w-3 text-pink-500" />;
+      case 'open_role':
+        return <UserPlus className="h-3 w-3 text-green-500" />;
       default:
         return <MessageCircle className="h-3 w-3" />;
     }
@@ -122,6 +129,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
         return 'posted a job opportunity';
       case 'show':
         return 'added a show';
+      case 'open_role':
+        return `is looking for a ${item.title}`;
       default:
         return 'posted';
     }
@@ -132,6 +141,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
       navigate(`/projects/${item.id}`);
     } else if (item.type === 'show') {
       navigate('/stage-whisper');
+    } else if (item.type === 'open_role' && item.project_id) {
+      navigate(`/projects/${item.project_id}`);
     }
   };
 
@@ -146,7 +157,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
     }
   };
 
-  const isClickable = item.type === 'project' || item.type === 'event' || item.type === 'show';
+  const isClickable = item.type === 'project' || item.type === 'event' || item.type === 'show' || item.type === 'open_role';
   
   // For anonymous shows, hide the creator info
   const showAnonymous = item.type === 'show' && item.is_anonymous;
@@ -155,7 +166,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
 
   return (
     <Card 
-      className={`bg-card border-border ${isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${item.type === 'job' ? 'border-l-4 border-l-green-500' : ''} ${item.type === 'show' ? 'border-l-4 border-l-pink-500' : ''}`}
+      className={`bg-card border-border ${isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${item.type === 'job' || item.type === 'open_role' ? 'border-l-4 border-l-green-500' : ''} ${item.type === 'show' ? 'border-l-4 border-l-pink-500' : ''}`}
       onClick={isClickable ? handleClick : undefined}
     >
       <CardContent className="p-4">
@@ -362,6 +373,24 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
                 {item.category}
               </Badge>
             )}
+          </div>
+        )}
+
+        {/* Open Role details */}
+        {item.type === 'open_role' && (
+          <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-green-500/10 mt-2">
+            <div className="flex items-center gap-2 text-sm">
+              <FolderKanban className="h-4 w-4 text-green-500" />
+              <span className="font-medium">{item.project_title}</span>
+            </div>
+            {item.project_status && (
+              <Badge variant="secondary" className="text-xs capitalize">
+                {item.project_status.replace('-', ' ')}
+              </Badge>
+            )}
+            <Badge className="bg-green-500/20 text-green-600 hover:bg-green-500/30 text-xs">
+              Open Role
+            </Badge>
           </div>
         )}
       </CardContent>

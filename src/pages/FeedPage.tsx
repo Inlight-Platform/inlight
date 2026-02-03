@@ -186,15 +186,69 @@ const FeedPage: React.FC = () => {
     },
   });
 
+  // Fetch open roles from projects
+  const { data: openRoles = [], isLoading: openRolesLoading } = useQuery({
+    queryKey: ['feed-open-roles'],
+    queryFn: async () => {
+      // Get open roles from public projects
+      const { data, error } = await supabase
+        .from('project_roles')
+        .select(`
+          id,
+          role_name,
+          created_at,
+          project_id,
+          projects!inner (
+            id,
+            title,
+            status,
+            is_public,
+            creator_id,
+            main_image_url
+          )
+        `)
+        .is('assigned_user_id', null)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      
+      if (error) throw error;
+
+      // Get creator profiles
+      const userIds = [...new Set(data.map(r => (r.projects as any).creator_id))] as string[];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return data
+        .filter(role => (role.projects as any).is_public)
+        .map(role => ({
+          id: role.id,
+          type: 'open_role' as const,
+          user_id: (role.projects as any).creator_id,
+          title: role.role_name,
+          role_id: role.id,
+          project_id: role.project_id,
+          project_title: (role.projects as any).title,
+          project_status: (role.projects as any).status,
+          image_url: (role.projects as any).main_image_url,
+          created_at: role.created_at,
+          creator_profile: profileMap.get((role.projects as any).creator_id),
+        }));
+    },
+  });
+
   // Combine and filter feed items
   const feedItems = useMemo(() => {
-    let allItems: FeedItemData[] = [...posts, ...projects, ...events, ...shows];
+    let allItems: FeedItemData[] = [...posts, ...projects, ...events, ...shows, ...openRoles];
     
     // Filter by content type
     if (contentFilter !== 'all') {
       allItems = allItems.filter(item => {
         if (contentFilter === 'events') return item.type === 'event';
-        if (contentFilter === 'jobs') return item.type === 'job';
+        if (contentFilter === 'jobs') return item.type === 'job' || item.type === 'open_role';
         if (contentFilter === 'projects') return item.type === 'project';
         if (contentFilter === 'updates') return item.type === 'post';
         if (contentFilter === 'shows') return item.type === 'show';
@@ -220,9 +274,9 @@ const FeedPage: React.FC = () => {
       if (networkFilter === '1st') return degree === '1st';
       return true;
     });
-  }, [posts, projects, events, shows, networkFilter, contentFilter, user?.id, getConnectionDegree]);
+  }, [posts, projects, events, shows, openRoles, networkFilter, contentFilter, user?.id, getConnectionDegree]);
 
-  const isLoading = postsLoading || projectsLoading || eventsLoading || showsLoading || connectionsLoading;
+  const isLoading = postsLoading || projectsLoading || eventsLoading || showsLoading || openRolesLoading || connectionsLoading;
 
   const networkFilters: { value: NetworkFilter; label: string; count?: number }[] = [
     { value: 'all', label: 'All' },
@@ -241,11 +295,11 @@ const FeedPage: React.FC = () => {
   // Count items by type
   const itemCounts = useMemo(() => ({
     events: events.length,
-    jobs: posts.filter(p => p.type === 'job').length,
+    jobs: posts.filter(p => p.type === 'job').length + openRoles.length,
     projects: projects.length,
     updates: posts.filter(p => p.type === 'post').length,
     shows: shows.length,
-  }), [events, posts, projects, shows]);
+  }), [events, posts, projects, shows, openRoles]);
 
   return (
     <div className="w-full">
