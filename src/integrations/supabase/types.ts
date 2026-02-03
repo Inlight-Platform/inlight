@@ -1467,18 +1467,21 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          message: string | null
           vouched_for_id: string
           voucher_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          message?: string | null
           vouched_for_id: string
           voucher_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          message?: string | null
           vouched_for_id?: string
           voucher_id?: string
         }
