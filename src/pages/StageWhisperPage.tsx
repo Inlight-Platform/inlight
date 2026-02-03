@@ -1,9 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  Theater, Search, Shuffle, Heart, SlidersHorizontal,
-  Sparkles, Plus, Film, Tv, Music
-} from 'lucide-react';
+import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedShows } from '@/hooks/useSavedShows';
@@ -19,15 +16,13 @@ import { AddShowDialog } from '@/components/stage-whisper/AddShowDialog';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-
 const EMPTY_FILTERS: FilterState = {
   category: [],
   showType: [],
   priceTier: [],
   borough: [],
-  accessibility: [],
+  accessibility: []
 };
-
 interface FilmMetric {
   id: string;
   title: string;
@@ -40,7 +35,6 @@ interface FilmMetric {
   poster_url?: string;
   date: string;
 }
-
 interface StreamingContent {
   id: string;
   title: string;
@@ -52,11 +46,16 @@ interface StreamingContent {
   release_year?: number;
   rating: number;
 }
-
 const StageWhisperPage: React.FC = () => {
-  const { user } = useAuth();
-  const { isSaved, saveShow, unsaveShow, savedShowIds } = useSavedShows();
-  
+  const {
+    user
+  } = useAuth();
+  const {
+    isSaved,
+    saveShow,
+    unsaveShow,
+    savedShowIds
+  } = useSavedShows();
   const [industryTab, setIndustryTab] = useState<'theatre' | 'film' | 'music'>('theatre');
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
@@ -67,63 +66,69 @@ const StageWhisperPage: React.FC = () => {
   const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
 
   // Fetch all shows
-  const { data: shows = [], isLoading: loadingShows } = useQuery({
+  const {
+    data: shows = [],
+    isLoading: loadingShows
+  } = useQuery({
     queryKey: ['nyc-shows'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('nyc_shows')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+      const {
+        data,
+        error
+      } = await supabase.from('nyc_shows').select('*').eq('is_active', true).order('created_at', {
+        ascending: false
+      });
       if (error) throw error;
       return data as Show[];
-    },
+    }
   });
 
   // Fetch films in theatres
-  const { data: theatreFilms = [], isLoading: loadingTheatres } = useQuery({
+  const {
+    data: theatreFilms = [],
+    isLoading: loadingTheatres
+  } = useQuery({
     queryKey: ['film-metrics'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('film_metrics')
-        .select('*')
-        .order('weekend_gross', { ascending: false })
-        .limit(20);
+      const {
+        data,
+        error
+      } = await supabase.from('film_metrics').select('*').order('weekend_gross', {
+        ascending: false
+      }).limit(20);
       if (error) throw error;
       return data as FilmMetric[];
     },
-    enabled: industryTab === 'film',
+    enabled: industryTab === 'film'
   });
 
   // Fetch streaming content
-  const { data: streamingContent = [], isLoading: loadingStreaming } = useQuery({
+  const {
+    data: streamingContent = [],
+    isLoading: loadingStreaming
+  } = useQuery({
     queryKey: ['streaming-content'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('streaming_content')
-        .select('*')
-        .eq('is_active', true)
-        .order('rating', { ascending: false });
+      const {
+        data,
+        error
+      } = await supabase.from('streaming_content').select('*').eq('is_active', true).order('rating', {
+        ascending: false
+      });
       if (error) throw error;
       return data as StreamingContent[];
     },
-    enabled: industryTab === 'film',
+    enabled: industryTab === 'film'
   });
 
   // Filter shows based on active category tab
   const filteredShows = useMemo(() => {
     let result = shows;
     result = result.filter(show => show.category === activeTab);
-
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(show => 
-        show.title.toLowerCase().includes(query) ||
-        show.venue.toLowerCase().includes(query) ||
-        show.description?.toLowerCase().includes(query)
-      );
+      result = result.filter(show => show.title.toLowerCase().includes(query) || show.venue.toLowerCase().includes(query) || show.description?.toLowerCase().includes(query));
     }
-
     if (filters.showType.length > 0) {
       result = result.filter(show => filters.showType.includes(show.show_type));
     }
@@ -134,11 +139,8 @@ const StageWhisperPage: React.FC = () => {
       result = result.filter(show => filters.borough.includes(show.borough));
     }
     if (filters.accessibility.length > 0) {
-      result = result.filter(show => 
-        show.accessibility_features?.some(f => filters.accessibility.includes(f))
-      );
+      result = result.filter(show => show.accessibility_features?.some(f => filters.accessibility.includes(f)));
     }
-
     return result;
   }, [shows, searchQuery, filters, activeTab]);
 
@@ -147,7 +149,7 @@ const StageWhisperPage: React.FC = () => {
     broadway: shows.filter(s => s.category === 'broadway').length,
     'off-broadway': shows.filter(s => s.category === 'off-broadway').length,
     'off-off-broadway': shows.filter(s => s.category === 'off-off-broadway').length,
-    'school': shows.filter(s => s.category === 'school').length,
+    'school': shows.filter(s => s.category === 'school').length
   }), [shows]);
 
   // Surprise Me
@@ -171,37 +173,24 @@ const StageWhisperPage: React.FC = () => {
       toast.success(`🎲 How about "${randomItem.title}"?`);
     }
   };
-
   const hasActiveFilters = Object.values(filters).some(arr => arr.length > 0);
   const activeFilterCount = Object.values(filters).reduce((sum, arr) => sum + arr.length, 0);
-
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
     if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
     return `$${amount}`;
   };
-
-  return (
-    <div className="w-full">
+  return <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ 
-                  background: 'linear-gradient(135deg, hsl(350 90% 60%), hsl(30 90% 55%))',
-                  boxShadow: '0 0 20px hsl(350 90% 60% / 0.4)'
-                }}
-              >
-                {industryTab === 'theatre' ? (
-                  <Theater className="w-5 h-5 text-white" />
-                ) : industryTab === 'film' ? (
-                  <Film className="w-5 h-5 text-white" />
-                ) : (
-                  <Music className="w-5 h-5 text-white" />
-                )}
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{
+              background: 'linear-gradient(135deg, hsl(350 90% 60%), hsl(30 90% 55%))',
+              boxShadow: '0 0 20px hsl(350 90% 60% / 0.4)'
+            }}>
+                {industryTab === 'theatre' ? <Theater className="w-5 h-5 text-white" /> : industryTab === 'film' ? <Film className="w-5 h-5 text-white" /> : <Music className="w-5 h-5 text-white" />}
               </div>
               <div>
                 <h1 className="text-2xl font-display font-bold">Industry Now</h1>
@@ -211,18 +200,14 @@ const StageWhisperPage: React.FC = () => {
               </div>
             </div>
 
-            <Button 
-              variant="outline" 
-              onClick={handleSurpriseMe}
-              className="gap-2 border-primary/50 hover:bg-primary/10"
-            >
+            <Button variant="outline" onClick={handleSurpriseMe} className="gap-2 border-primary/50 hover:bg-primary/10">
               <Shuffle className="w-4 h-4" />
               <span className="hidden sm:inline">Surprise Me!</span>
             </Button>
           </div>
 
           {/* Industry Tabs */}
-          <Tabs value={industryTab} onValueChange={(v) => setIndustryTab(v as 'theatre' | 'film' | 'music')} className="mb-4">
+          <Tabs value={industryTab} onValueChange={v => setIndustryTab(v as 'theatre' | 'film' | 'music')} className="mb-4">
             <TabsList className="grid w-full max-w-md grid-cols-3">
               <TabsTrigger value="theatre" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
                 <Theater className="w-4 h-4" />
@@ -240,27 +225,19 @@ const StageWhisperPage: React.FC = () => {
           </Tabs>
 
           {/* Search Bar - Theatre only */}
-          {industryTab === 'theatre' && (
-            <div className="flex items-center gap-2">
+          {industryTab === 'theatre' && <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search shows, venues..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+                <Input placeholder="Search shows, venues..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
               </div>
 
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="icon" className="relative">
                     <SlidersHorizontal className="w-4 h-4" />
-                    {activeFilterCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                    {activeFilterCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
                         {activeFilterCount}
-                      </span>
-                    )}
+                      </span>}
                   </Button>
                 </SheetTrigger>
                 <SheetContent>
@@ -268,48 +245,28 @@ const StageWhisperPage: React.FC = () => {
                     <SheetTitle>Filter Shows</SheetTitle>
                   </SheetHeader>
                   <div className="mt-6">
-                    <ShowFilters 
-                      filters={filters}
-                      onFilterChange={setFilters}
-                      onClearAll={() => setFilters(EMPTY_FILTERS)}
-                    />
+                    <ShowFilters filters={filters} onFilterChange={setFilters} onClearAll={() => setFilters(EMPTY_FILTERS)} />
                   </div>
                 </SheetContent>
               </Sheet>
-            </div>
-          )}
+            </div>}
         </div>
 
         {/* Theatre View Toggle */}
-        {industryTab === 'theatre' && (
-          <div className="px-4 sm:px-6 lg:px-8 pb-2 flex gap-2">
-            <Button 
-              variant={viewTab === 'discover' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewTab('discover')}
-              className="gap-2"
-            >
+        {industryTab === 'theatre' && <div className="px-4 sm:px-6 lg:px-8 pb-2 flex gap-2">
+            <Button variant={viewTab === 'discover' ? 'default' : 'ghost'} size="sm" onClick={() => setViewTab('discover')} className="gap-2">
               <Sparkles className="w-4 h-4" />
               Discover
             </Button>
-            <Button 
-              variant={viewTab === 'my-list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewTab('my-list')}
-              className="gap-2"
-            >
+            <Button variant={viewTab === 'my-list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewTab('my-list')} className="gap-2">
               <Heart className="w-4 h-4" />
               My List
-              {savedShowIds.length > 0 && (
-                <span className="ml-1 text-xs opacity-70">({savedShowIds.length})</span>
-              )}
+              {savedShowIds.length > 0 && <span className="ml-1 text-xs opacity-70">({savedShowIds.length})</span>}
             </Button>
-          </div>
-        )}
+          </div>}
 
         {/* Theatre Category Tabs */}
-        {industryTab === 'theatre' && viewTab === 'discover' && (
-          <div className="overflow-x-auto scrollbar-thin px-4 sm:px-6 lg:px-8">
+        {industryTab === 'theatre' && viewTab === 'discover' && <div className="overflow-x-auto scrollbar-thin px-4 sm:px-6 lg:px-8">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
                 <TabsTrigger value="broadway" className="flex-shrink-0 whitespace-nowrap">
@@ -330,72 +287,46 @@ const StageWhisperPage: React.FC = () => {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-          </div>
-        )}
+          </div>}
 
         {/* Film View Toggle */}
-        {industryTab === 'film' && (
-          <div className="px-4 sm:px-6 lg:px-8 pb-2 flex gap-2">
-            <Button 
-              variant={filmViewTab === 'theatres' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setFilmViewTab('theatres')}
-              className="gap-2"
-            >
+        {industryTab === 'film' && <div className="px-4 sm:px-6 lg:px-8 pb-2 flex gap-2">
+            <Button variant={filmViewTab === 'theatres' ? 'default' : 'ghost'} size="sm" onClick={() => setFilmViewTab('theatres')} className="gap-2">
               <Film className="w-4 h-4" />
               In Theatres
             </Button>
-            <Button 
-              variant={filmViewTab === 'streaming' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setFilmViewTab('streaming')}
-              className="gap-2"
-            >
+            <Button variant={filmViewTab === 'streaming' ? 'default' : 'ghost'} size="sm" onClick={() => setFilmViewTab('streaming')} className="gap-2">
               <Tv className="w-4 h-4" />
               Streaming
             </Button>
-          </div>
-        )}
+          </div>}
       </header>
 
       {/* Content */}
       <div className="px-4 sm:px-6 lg:px-8 py-6">
         {/* THEATRE CONTENT */}
-        {industryTab === 'theatre' && (
-          <>
+        {industryTab === 'theatre' && <>
             {/* Creator Note - Only show on off-off-broadway and school tabs */}
-            {(activeTab === 'off-off-broadway' || activeTab === 'school') && viewTab === 'discover' && (
-              <div className="mb-4 p-3 bg-accent/50 rounded-lg border border-accent flex items-start justify-between gap-2">
+            {(activeTab === 'off-off-broadway' || activeTab === 'school') && viewTab === 'discover' && <div className="mb-4 p-3 bg-accent/50 rounded-lg border border-accent flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2">
                   <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                   <p className="text-sm text-muted-foreground">
-                    {activeTab === 'school' ? (
-                      <>
+                    {activeTab === 'school' ? <>
                         <span className="font-medium text-foreground">Putting up a show at school?</span>{' '}
                         It will appear here to the public!
-                      </>
-                    ) : (
-                      <>
+                      </> : <>
                         <span className="font-medium text-foreground">Putting up a show?</span>{' '}
                         It will appear here to the public!
-                      </>
-                    )}
+                      </>}
                   </p>
                 </div>
-                <AddShowDialog 
-                  category={activeTab as 'off-off-broadway' | 'school'}
-                  trigger={
-                    <Button size="sm" className="gap-1.5 shrink-0">
+                <AddShowDialog category={activeTab as 'off-off-broadway' | 'school'} trigger={<Button size="sm" className="gap-1.5 shrink-0">
                       <Plus className="w-4 h-4" />
                       Add Your Show
-                    </Button>
-                  }
-                />
-              </div>
-            )}
+                    </Button>} />
+              </div>}
 
-            {viewTab === 'discover' ? (
-              <>
+            {viewTab === 'discover' ? <>
                 {/* Welcome Message */}
                 <div className="mb-6 p-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl border border-primary/20">
                   <p className="text-sm">
@@ -408,134 +339,70 @@ const StageWhisperPage: React.FC = () => {
                 </div>
 
                 {/* Active Filters Display */}
-                {hasActiveFilters && (
-                  <div className="mb-4 flex items-center gap-2 flex-wrap">
+                {hasActiveFilters && <div className="mb-4 flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-muted-foreground">Filters:</span>
-                    {filters.showType.map(t => (
-                      <Button 
-                        key={t} 
-                        variant="secondary" 
-                        size="sm" 
-                        className="h-6 text-xs"
-                        onClick={() => setFilters({...filters, showType: filters.showType.filter(x => x !== t)})}
-                      >
+                    {filters.showType.map(t => <Button key={t} variant="secondary" size="sm" className="h-6 text-xs" onClick={() => setFilters({
+              ...filters,
+              showType: filters.showType.filter(x => x !== t)
+            })}>
                         {t} ×
-                      </Button>
-                    ))}
-                    {filters.priceTier.map(p => (
-                      <Button 
-                        key={p} 
-                        variant="secondary" 
-                        size="sm" 
-                        className="h-6 text-xs"
-                        onClick={() => setFilters({...filters, priceTier: filters.priceTier.filter(x => x !== p)})}
-                      >
+                      </Button>)}
+                    {filters.priceTier.map(p => <Button key={p} variant="secondary" size="sm" className="h-6 text-xs" onClick={() => setFilters({
+              ...filters,
+              priceTier: filters.priceTier.filter(x => x !== p)
+            })}>
                         {p} ×
-                      </Button>
-                    ))}
-                    {filters.borough.map(b => (
-                      <Button 
-                        key={b} 
-                        variant="secondary" 
-                        size="sm" 
-                        className="h-6 text-xs"
-                        onClick={() => setFilters({...filters, borough: filters.borough.filter(x => x !== b)})}
-                      >
+                      </Button>)}
+                    {filters.borough.map(b => <Button key={b} variant="secondary" size="sm" className="h-6 text-xs" onClick={() => setFilters({
+              ...filters,
+              borough: filters.borough.filter(x => x !== b)
+            })}>
                         {b} ×
-                      </Button>
-                    ))}
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-6 text-xs text-muted-foreground"
-                      onClick={() => setFilters(EMPTY_FILTERS)}
-                    >
+                      </Button>)}
+                    <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground" onClick={() => setFilters(EMPTY_FILTERS)}>
                       Clear all
                     </Button>
-                  </div>
-                )}
+                  </div>}
 
                 {/* Shows Grid */}
-                {loadingShows ? (
-                  <div className="flex items-center justify-center py-12">
+                {loadingShows ? <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                  </div>
-                ) : filteredShows.length === 0 ? (
-                  <div className="text-center py-12">
+                  </div> : filteredShows.length === 0 ? <div className="text-center py-12">
                     <Theater className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">
-                      {searchQuery || hasActiveFilters 
-                        ? 'No shows match your search. Try adjusting your filters!'
-                        : 'No shows available right now.'}
+                      {searchQuery || hasActiveFilters ? 'No shows match your search. Try adjusting your filters!' : 'No shows available right now.'}
                     </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {filteredShows.map((show) => (
-                      <ShowCard
-                        key={show.id}
-                        show={show}
-                        isSaved={isSaved(show.id)}
-                        onSave={saveShow}
-                        onUnsave={unsaveShow}
-                        onClick={setSelectedShow}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <MyShowList 
-                onShowClick={setSelectedShow}
-                onUnsave={unsaveShow}
-              />
-            )}
-          </>
-        )}
+                  </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {filteredShows.map(show => <ShowCard key={show.id} show={show} isSaved={isSaved(show.id)} onSave={saveShow} onUnsave={unsaveShow} onClick={setSelectedShow} />)}
+                  </div>}
+              </> : <MyShowList onShowClick={setSelectedShow} onUnsave={unsaveShow} />}
+          </>}
 
         {/* FILM CONTENT */}
-        {industryTab === 'film' && (
-          <>
+        {industryTab === 'film' && <>
             {/* Welcome Message */}
             <div className="mb-6 p-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl border border-primary/20">
               <p className="text-sm">
                 <span className="font-medium">What's playing? 🍿</span>{' '}
                 <span className="text-muted-foreground">
-                  {filmViewTab === 'theatres' 
-                    ? `${theatreFilms.length} films currently in theatres.`
-                    : `${streamingContent.length} top streaming titles to watch.`}
+                  {filmViewTab === 'theatres' ? `${theatreFilms.length} films currently in theatres.` : `${streamingContent.length} top streaming titles to watch.`}
                 </span>
               </p>
             </div>
 
             {/* Films In Theatres */}
-            {filmViewTab === 'theatres' && (
-              <>
-                {loadingTheatres ? (
-                  <div className="flex items-center justify-center py-12">
+            {filmViewTab === 'theatres' && <>
+                {loadingTheatres ? <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                  </div>
-                ) : theatreFilms.length === 0 ? (
-                  <div className="text-center py-12">
+                  </div> : theatreFilms.length === 0 ? <div className="text-center py-12">
                     <Film className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No films data available right now.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {theatreFilms.map((film) => (
-                      <Card key={film.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer">
+                  </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {theatreFilms.map(film => <Card key={film.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer">
                         <div className="aspect-[2/3] relative bg-muted">
-                          {film.poster_url ? (
-                            <img 
-                              src={film.poster_url} 
-                              alt={film.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
+                          {film.poster_url ? <img src={film.poster_url} alt={film.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
                               <Film className="w-12 h-12 text-muted-foreground" />
-                            </div>
-                          )}
+                            </div>}
                           <div className="absolute top-2 right-2">
                             <Badge className="bg-background/90 text-foreground">
                               ⭐ {film.rating.toFixed(1)}
@@ -552,45 +419,23 @@ const StageWhisperPage: React.FC = () => {
                             <span className="text-muted-foreground">Week {film.weeks_in_release}</span>
                           </div>
                         </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
+                      </Card>)}
+                  </div>}
+              </>}
 
             {/* Streaming Content */}
-            {filmViewTab === 'streaming' && (
-              <>
-                {loadingStreaming ? (
-                  <div className="flex items-center justify-center py-12">
+            {filmViewTab === 'streaming' && <>
+                {loadingStreaming ? <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                  </div>
-                ) : streamingContent.length === 0 ? (
-                  <div className="text-center py-12">
+                  </div> : streamingContent.length === 0 ? <div className="text-center py-12">
                     <Tv className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No streaming content available right now.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {streamingContent.map((content) => (
-                      <Card key={content.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer">
+                  </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {streamingContent.map(content => <Card key={content.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer">
                         <div className="aspect-[2/3] relative bg-muted">
-                          {content.poster_url ? (
-                            <img 
-                              src={content.poster_url} 
-                              alt={content.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              {content.content_type === 'tv' ? (
-                                <Tv className="w-12 h-12 text-muted-foreground" />
-                              ) : (
-                                <Film className="w-12 h-12 text-muted-foreground" />
-                              )}
-                            </div>
-                          )}
+                          {content.poster_url ? <img src={content.poster_url} alt={content.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
+                              {content.content_type === 'tv' ? <Tv className="w-12 h-12 text-muted-foreground" /> : <Film className="w-12 h-12 text-muted-foreground" />}
+                            </div>}
                           <div className="absolute top-2 left-2">
                             <Badge variant={content.content_type === 'tv' ? 'secondary' : 'outline'} className="text-xs">
                               {content.content_type === 'tv' ? 'TV' : 'Movie'}
@@ -607,43 +452,28 @@ const StageWhisperPage: React.FC = () => {
                             {content.title}
                           </h3>
                           <p className="text-xs text-muted-foreground">{content.platform}</p>
-                          {content.genre && (
-                            <Badge variant="outline" className="mt-2 text-xs">{content.genre}</Badge>
-                          )}
+                          {content.genre && <Badge variant="outline" className="mt-2 text-xs">{content.genre}</Badge>}
                         </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
+                      </Card>)}
+                  </div>}
+              </>}
+          </>}
 
         {/* MUSIC CONTENT */}
-        {industryTab === 'music' && (
-          <>
+        {industryTab === 'music' && <>
             {/* Music Category Tabs */}
             <div className="flex gap-2 mb-6">
-              <Button 
-                variant={musicTab === 'local-shows' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setMusicTab('local-shows')}
-                className="gap-2"
-              >
+              <Button variant={musicTab === 'local-shows' ? 'default' : 'ghost'} size="sm" onClick={() => setMusicTab('local-shows')} className="gap-2">
                 <Music className="w-4 h-4" />
                 Local Shows
               </Button>
             </div>
 
             {/* Local Shows Section */}
-            {musicTab === 'local-shows' && (
-              <div className="space-y-6">
+            {musicTab === 'local-shows' && <div className="space-y-6">
                 <div className="p-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl border border-primary/20">
                   <h2 className="text-xl font-display font-semibold mb-2">🎵 Local Shows by Students & Alumni</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Discover music performances and concerts by the community. More categories coming soon!
-                  </p>
+                  <p className="text-sm text-muted-foreground">Discover music performances and concerts by the community.</p>
                 </div>
 
                 <div className="text-center py-12">
@@ -651,23 +481,12 @@ const StageWhisperPage: React.FC = () => {
                   <p className="text-muted-foreground">No local shows listed yet.</p>
                   <p className="text-sm text-muted-foreground mt-1">Check back soon for upcoming performances!</p>
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              </div>}
+          </>}
       </div>
 
       {/* Show Detail Sheet */}
-      <ShowDetailSheet
-        show={selectedShow}
-        isOpen={!!selectedShow}
-        onClose={() => setSelectedShow(null)}
-        isSaved={selectedShow ? isSaved(selectedShow.id) : false}
-        onSave={saveShow}
-        onUnsave={unsaveShow}
-      />
-    </div>
-  );
+      <ShowDetailSheet show={selectedShow} isOpen={!!selectedShow} onClose={() => setSelectedShow(null)} isSaved={selectedShow ? isSaved(selectedShow.id) : false} onSave={saveShow} onUnsave={unsaveShow} />
+    </div>;
 };
-
 export default StageWhisperPage;
