@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { compressImage } from '@/lib/imageCompression';
 
 interface VideoCoverUploaderProps {
   mediaId: string;
@@ -35,22 +36,29 @@ export const VideoCoverUploader: React.FC<VideoCoverUploaderProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPreviewUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
     setUploading(true);
+    
     try {
+      // Compress the image first
+      const processedFile = await compressImage(file);
+
+      // Create preview from processed file
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(processedFile);
+
       // Upload cover image
-      const fileExt = file.name.split('.').pop();
+      const fileExt = processedFile.type === 'image/jpeg' ? 'jpg' : file.name.split('.').pop();
       const fileName = `${userId}/video-covers/${mediaId}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, processedFile, { 
+          upsert: true,
+          contentType: processedFile.type || 'image/jpeg',
+        });
 
       if (uploadError) throw uploadError;
 

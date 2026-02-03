@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { compressImage, isCompressibleImage } from '@/lib/imageCompression';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type Visibility = 'public' | 'connections' | 'private';
@@ -46,8 +47,16 @@ export const useMediaUpload = () => {
     setProgress({ loaded: 0, total: file.size, percentage: 0 });
 
     try {
+      // Compress images before upload
+      let processedFile = file;
+      if (isCompressibleImage(file)) {
+        processedFile = await compressImage(file);
+      }
+
       // Generate unique file path
-      const fileExt = file.name.split('.').pop();
+      const fileExt = processedFile.type === 'image/jpeg' 
+        ? 'jpg' 
+        : file.name.split('.').pop()?.toLowerCase() || 'jpg';
       const timestamp = Date.now();
       const randomId = Math.random().toString(36).substring(2, 9);
       const fileName = `${timestamp}-${randomId}.${fileExt}`;
@@ -56,9 +65,10 @@ export const useMediaUpload = () => {
       // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
-        .upload(filePath, file, {
+        .upload(filePath, processedFile, {
           cacheControl: '3600',
           upsert: false,
+          contentType: processedFile.type || file.type,
         });
 
       if (uploadError) {
