@@ -662,6 +662,9 @@ export type Database = {
           display_name: string | null
           email: string
           email_notifications: boolean | null
+          favorite_artist: string | null
+          favorite_movie: string | null
+          favorite_song: string | null
           gear_list: string[] | null
           graduation_status: string | null
           graduation_year: number | null
@@ -679,6 +682,7 @@ export type Database = {
           user_id: string
           vouch_count: number
           website_url: string | null
+          why_artist: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -689,6 +693,9 @@ export type Database = {
           display_name?: string | null
           email: string
           email_notifications?: boolean | null
+          favorite_artist?: string | null
+          favorite_movie?: string | null
+          favorite_song?: string | null
           gear_list?: string[] | null
           graduation_status?: string | null
           graduation_year?: number | null
@@ -706,6 +713,7 @@ export type Database = {
           user_id: string
           vouch_count?: number
           website_url?: string | null
+          why_artist?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -716,6 +724,9 @@ export type Database = {
           display_name?: string | null
           email?: string
           email_notifications?: boolean | null
+          favorite_artist?: string | null
+          favorite_movie?: string | null
+          favorite_song?: string | null
           gear_list?: string[] | null
           graduation_status?: string | null
           graduation_year?: number | null
@@ -733,6 +744,7 @@ export type Database = {
           user_id?: string
           vouch_count?: number
           website_url?: string | null
+          why_artist?: string | null
         }
         Relationships: []
       }
@@ -1482,6 +1494,9 @@ export type Database = {
           cover_url: string | null
           created_at: string | null
           display_name: string | null
+          favorite_artist: string | null
+          favorite_movie: string | null
+          favorite_song: string | null
           gear_list: string[] | null
           graduation_status: string | null
           graduation_year: number | null
@@ -1497,6 +1512,7 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
           website_url: string | null
+          why_artist: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -1505,6 +1521,9 @@ export type Database = {
           cover_url?: string | null
           created_at?: string | null
           display_name?: string | null
+          favorite_artist?: string | null
+          favorite_movie?: string | null
+          favorite_song?: string | null
           gear_list?: string[] | null
           graduation_status?: string | null
           graduation_year?: number | null
@@ -1520,6 +1539,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           website_url?: string | null
+          why_artist?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -1528,6 +1548,9 @@ export type Database = {
           cover_url?: string | null
           created_at?: string | null
           display_name?: string | null
+          favorite_artist?: string | null
+          favorite_movie?: string | null
+          favorite_song?: string | null
           gear_list?: string[] | null
           graduation_status?: string | null
           graduation_year?: number | null
@@ -1543,6 +1566,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           website_url?: string | null
+          why_artist?: string | null
         }
         Relationships: []
       }
