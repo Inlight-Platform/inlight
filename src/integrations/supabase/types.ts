@@ -570,6 +570,8 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          image_position_x: number | null
+          image_position_y: number | null
           image_url: string | null
           link_title: string | null
           link_url: string | null
@@ -580,6 +582,8 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          image_position_x?: number | null
+          image_position_y?: number | null
           image_url?: string | null
           link_title?: string | null
           link_url?: string | null
@@ -590,6 +594,8 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          image_position_x?: number | null
+          image_position_y?: number | null
           image_url?: string | null
           link_title?: string | null
           link_url?: string | null
@@ -677,6 +683,7 @@ export type Database = {
           representation: string | null
           role: string | null
           skills: string[] | null
+          stage_name: string | null
           union_status: string | null
           updated_at: string
           user_id: string
@@ -708,6 +715,7 @@ export type Database = {
           representation?: string | null
           role?: string | null
           skills?: string[] | null
+          stage_name?: string | null
           union_status?: string | null
           updated_at?: string
           user_id: string
@@ -739,6 +747,7 @@ export type Database = {
           representation?: string | null
           role?: string | null
           skills?: string[] | null
+          stage_name?: string | null
           union_status?: string | null
           updated_at?: string
           user_id?: string
@@ -1405,6 +1414,7 @@ export type Database = {
       }
       user_media: {
         Row: {
+          cover_url: string | null
           created_at: string
           file_name: string
           file_path: string
@@ -1412,11 +1422,14 @@ export type Database = {
           file_type: string
           id: string
           mime_type: string
+          position_x: number | null
+          position_y: number | null
           updated_at: string
           user_id: string
           visibility: string
         }
         Insert: {
+          cover_url?: string | null
           created_at?: string
           file_name: string
           file_path: string
@@ -1424,11 +1437,14 @@ export type Database = {
           file_type: string
           id?: string
           mime_type: string
+          position_x?: number | null
+          position_y?: number | null
           updated_at?: string
           user_id: string
           visibility?: string
         }
         Update: {
+          cover_url?: string | null
           created_at?: string
           file_name?: string
           file_path?: string
@@ -1436,6 +1452,8 @@ export type Database = {
           file_type?: string
           id?: string
           mime_type?: string
+          position_x?: number | null
+          position_y?: number | null
           updated_at?: string
           user_id?: string
           visibility?: string
