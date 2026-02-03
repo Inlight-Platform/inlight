@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { PostCreator } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
 
-import CreativeConnection from '@/components/feed/CreativeConnection';
 import { WelcomeMessage } from '@/components/feed/WelcomeMessage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -336,9 +335,6 @@ const FeedPage: React.FC = () => {
           <div className="w-full">
             {/* Welcome Message */}
             <WelcomeMessage />
-            
-            {/* Creative Connection */}
-            {user && <CreativeConnection />}
 
             {/* Content Type Filters */}
             <div className="mb-4">
