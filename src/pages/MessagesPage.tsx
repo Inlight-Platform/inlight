@@ -1,15 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, MessageSquare, Send, Loader2, Plus } from 'lucide-react';
+import { ChevronLeft, MessageSquare, Send, Loader2, Plus, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMessages } from '@/hooks/useMessages';
+import { useGroupChats } from '@/hooks/useGroupChats';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { NewMessageDialog } from '@/components/messages/NewMessageDialog';
+import GroupChatItem from '@/components/messages/GroupChatItem';
+import GroupChatThread from '@/components/messages/GroupChatThread';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+
+type ChatType = 'dm' | 'group';
 
 const MessagesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -17,7 +22,8 @@ const MessagesPage: React.FC = () => {
   const userIdParam = searchParams.get('user');
   const { user, loading: authLoading } = useAuth();
 
-  const [selectedPartnerId, setSelectedPartnerId] = useState<string | undefined>(userIdParam || undefined);
+  const [selectedId, setSelectedId] = useState<string | undefined>(userIdParam || undefined);
+  const [chatType, setChatType] = useState<ChatType>(userIdParam ? 'dm' : 'dm');
   const [showMobileChat, setShowMobileChat] = useState(!!userIdParam);
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -30,24 +36,29 @@ const MessagesPage: React.FC = () => {
     markAsRead 
   } = useMessages();
 
-  const { data: messages = [], isLoading: messagesLoading } = useConversation(selectedPartnerId);
+  const { groupChats, loadingGroupChats } = useGroupChats();
+
+  const { data: messages = [], isLoading: messagesLoading } = useConversation(
+    chatType === 'dm' ? selectedId : undefined
+  );
   
   // Get conversation from list OR fetch profile for new conversations
-  const existingConversation = conversations.find(c => c.user_id === selectedPartnerId);
+  const existingConversation = conversations.find(c => c.user_id === selectedId);
+  const selectedGroupChat = groupChats.find(gc => gc.id === selectedId);
   
   // Fetch profile for new conversations that aren't in the list yet
   const { data: newUserProfile } = useQuery({
-    queryKey: ['message-partner-profile', selectedPartnerId],
+    queryKey: ['message-partner-profile', selectedId],
     queryFn: async () => {
-      if (!selectedPartnerId) return null;
+      if (!selectedId) return null;
       const { data } = await supabase
         .from('profiles_public')
         .select('user_id, display_name, avatar_url')
-        .eq('user_id', selectedPartnerId)
+        .eq('user_id', selectedId)
         .maybeSingle();
       return data;
     },
-    enabled: !!selectedPartnerId && !existingConversation,
+    enabled: !!selectedId && !existingConversation && chatType === 'dm',
   });
 
   // Use existing conversation data or fetched profile
@@ -67,10 +78,10 @@ const MessagesPage: React.FC = () => {
 
   // Mark messages as read when conversation is selected
   useEffect(() => {
-    if (selectedPartnerId && existingConversation?.unread_count) {
-      markAsRead.mutate(selectedPartnerId);
+    if (chatType === 'dm' && selectedId && existingConversation?.unread_count) {
+      markAsRead.mutate(selectedId);
     }
-  }, [selectedPartnerId, existingConversation?.unread_count]);
+  }, [selectedId, existingConversation?.unread_count, chatType]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -78,12 +89,20 @@ const MessagesPage: React.FC = () => {
   }, [messages]);
 
   const handleSelectConversation = (partnerId: string) => {
-    setSelectedPartnerId(partnerId);
+    setSelectedId(partnerId);
+    setChatType('dm');
+    setShowMobileChat(true);
+  };
+
+  const handleSelectGroupChat = (groupChatId: string) => {
+    setSelectedId(groupChatId);
+    setChatType('group');
     setShowMobileChat(true);
   };
 
   const handleNewMessage = (userId: string) => {
-    setSelectedPartnerId(userId);
+    setSelectedId(userId);
+    setChatType('dm');
     setShowMobileChat(true);
   };
 
@@ -92,9 +111,9 @@ const MessagesPage: React.FC = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedPartnerId) return;
+    if (!messageText.trim() || !selectedId || chatType !== 'dm') return;
     
-    await sendMessage.mutateAsync({ receiverId: selectedPartnerId, content: messageText.trim() });
+    await sendMessage.mutateAsync({ receiverId: selectedId, content: messageText.trim() });
     setMessageText('');
   };
 
@@ -112,6 +131,34 @@ const MessagesPage: React.FC = () => {
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
+  // Combine and sort all chats by last activity
+  const allChats = [
+    ...conversations.map(c => ({
+      type: 'dm' as const,
+      id: c.user_id,
+      name: c.display_name || 'Unknown',
+      avatar_url: c.avatar_url,
+      last_activity: c.last_message?.created_at || '',
+      unread_count: c.unread_count,
+      last_message: c.last_message,
+    })),
+    ...groupChats.map(gc => ({
+      type: 'group' as const,
+      id: gc.id,
+      name: gc.name,
+      avatar_url: null,
+      last_activity: gc.last_message?.created_at || gc.updated_at,
+      unread_count: gc.unread_count,
+      last_message: gc.last_message,
+    })),
+  ].sort((a, b) => {
+    if (!a.last_activity) return 1;
+    if (!b.last_activity) return -1;
+    return new Date(b.last_activity).getTime() - new Date(a.last_activity).getTime();
+  });
+
+  const isLoading = loadingConversations || loadingGroupChats;
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -119,6 +166,228 @@ const MessagesPage: React.FC = () => {
       </div>
     );
   }
+
+  const renderHeader = () => {
+    if (showMobileChat) {
+      if (chatType === 'group' && selectedGroupChat) {
+        return (
+          <div className="flex items-center gap-3">
+            <Avatar className="w-10 h-10 bg-primary/10">
+              <AvatarFallback className="bg-primary/10">
+                <Users className="w-5 h-5 text-primary" />
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="font-semibold">{selectedGroupChat.name}</h1>
+              <p className="text-xs text-muted-foreground">Team Chat</p>
+            </div>
+          </div>
+        );
+      } else if (chatType === 'dm' && selectedConversation) {
+        return (
+          <div className="flex items-center gap-3">
+            <Avatar 
+              className="w-10 h-10 cursor-pointer" 
+              onClick={() => navigate(`/profile/${selectedId}`)}
+            >
+              <AvatarImage src={selectedConversation.avatar_url || undefined} />
+              <AvatarFallback>{selectedConversation.display_name?.[0] || 'U'}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 
+                className="font-semibold cursor-pointer hover:underline"
+                onClick={() => navigate(`/profile/${selectedId}`)}
+              >
+                {selectedConversation.display_name || 'Unknown'}
+              </h1>
+            </div>
+          </div>
+        );
+      }
+    }
+    return <h1 className="text-2xl font-display font-bold">Messages</h1>;
+  };
+
+  const renderChatList = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+
+    if (allChats.length === 0) {
+      return (
+        <div className="p-4 text-center text-muted-foreground">
+          <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p className="text-sm">No conversations yet</p>
+          <p className="text-xs mt-1 mb-3">Start a conversation with someone in your network</p>
+          <NewMessageDialog onSelectUser={handleNewMessage} />
+        </div>
+      );
+    }
+
+    return allChats.map((chat) => {
+      if (chat.type === 'group') {
+        return (
+          <GroupChatItem
+            key={`group-${chat.id}`}
+            name={chat.name}
+            lastMessage={chat.last_message ? {
+              content: chat.last_message.content,
+              sender_name: chat.last_message.sender_name,
+              created_at: chat.last_message.created_at,
+            } : undefined}
+            unreadCount={chat.unread_count}
+            isSelected={selectedId === chat.id && chatType === 'group'}
+            onClick={() => handleSelectGroupChat(chat.id)}
+          />
+        );
+      }
+
+      return (
+        <button
+          key={`dm-${chat.id}`}
+          onClick={() => handleSelectConversation(chat.id)}
+          className={cn(
+            'w-full p-4 flex items-center gap-3 hover:bg-accent/50 transition-colors text-left',
+            selectedId === chat.id && chatType === 'dm' && 'bg-accent'
+          )}
+        >
+          <div className="relative">
+            <Avatar className="w-12 h-12">
+              <AvatarImage src={chat.avatar_url || undefined} />
+              <AvatarFallback>{chat.name[0] || 'U'}</AvatarFallback>
+            </Avatar>
+            {chat.unread_count > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                {chat.unread_count}
+              </span>
+            )}
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <span className={cn(
+                'font-medium truncate',
+                chat.unread_count > 0 && 'font-semibold'
+              )}>
+                {chat.name}
+              </span>
+              {chat.last_message && (
+                <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                  {formatTime(chat.last_message.created_at)}
+                </span>
+              )}
+            </div>
+            <p className={cn(
+              'text-sm truncate',
+              chat.unread_count > 0 ? 'text-foreground' : 'text-muted-foreground'
+            )}>
+              {chat.last_message ? (
+                <>
+                  {chat.last_message.sender_id === user?.id && 'You: '}
+                  {chat.last_message.content}
+                </>
+              ) : (
+                'No messages yet'
+              )}
+            </p>
+          </div>
+        </button>
+      );
+    });
+  };
+
+  const renderChatArea = () => {
+    if (!selectedId) {
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium">Select a conversation</p>
+            <p className="text-sm">Choose from your existing conversations or team chats</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (chatType === 'group' && selectedGroupChat) {
+      return (
+        <GroupChatThread 
+          groupChatId={selectedGroupChat.id} 
+          groupName={selectedGroupChat.name} 
+        />
+      );
+    }
+
+    // DM chat
+    return (
+      <>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messagesLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={cn(
+                  'flex',
+                  msg.sender_id === user?.id ? 'justify-end' : 'justify-start'
+                )}
+              >
+                <div
+                  className={cn(
+                    'max-w-[70%] rounded-2xl px-4 py-2',
+                    msg.sender_id === user?.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  )}
+                >
+                  <p className="text-sm">{msg.content}</p>
+                  <p className={cn(
+                    'text-xs mt-1',
+                    msg.sender_id === user?.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                  )}>
+                    {formatTime(msg.created_at)}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="p-4 border-t border-border">
+          <form 
+            onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
+            className="flex gap-2"
+          >
+            <Input
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder="Type a message..."
+              className="flex-1"
+            />
+            <Button 
+              type="submit" 
+              size="icon"
+              disabled={!messageText.trim() || sendMessage.isPending}
+            >
+              {sendMessage.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </form>
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -131,27 +400,7 @@ const MessagesPage: React.FC = () => {
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
-          {showMobileChat && selectedConversation ? (
-            <div className="flex items-center gap-3">
-              <Avatar 
-                className="w-10 h-10 cursor-pointer" 
-                onClick={() => navigate(`/profile/${selectedPartnerId}`)}
-              >
-                <AvatarImage src={selectedConversation.avatar_url || undefined} />
-                <AvatarFallback>{selectedConversation.display_name?.[0] || 'U'}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 
-                  className="font-semibold cursor-pointer hover:underline"
-                  onClick={() => navigate(`/profile/${selectedPartnerId}`)}
-                >
-                  {selectedConversation.display_name || 'Unknown'}
-                </h1>
-              </div>
-            </div>
-          ) : (
-            <h1 className="text-2xl font-display font-bold">Messages</h1>
-          )}
+          {renderHeader()}
         </div>
       </header>
 
@@ -174,69 +423,26 @@ const MessagesPage: React.FC = () => {
             </div>
             
             <div className="flex-1 overflow-y-auto">
-              {loadingConversations ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : conversations.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  <p className="text-sm">No conversations yet</p>
-                  <p className="text-xs mt-1 mb-3">Start a conversation with someone in your network</p>
-                  <NewMessageDialog onSelectUser={handleNewMessage} />
-                </div>
-              ) : (
-                conversations.map((conv) => (
-                  <button
-                    key={conv.user_id}
-                    onClick={() => handleSelectConversation(conv.user_id)}
-                    className={cn(
-                      'w-full p-4 flex items-center gap-3 hover:bg-accent/50 transition-colors text-left',
-                      selectedPartnerId === conv.user_id && 'bg-accent'
-                    )}
-                  >
-                    <div className="relative">
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={conv.avatar_url || undefined} />
-                        <AvatarFallback>{conv.display_name?.[0] || 'U'}</AvatarFallback>
-                      </Avatar>
-                      {conv.unread_count > 0 && (
-                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
-                          {conv.unread_count}
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className={cn(
-                          'font-medium truncate',
-                          conv.unread_count > 0 && 'font-semibold'
-                        )}>
-                          {conv.display_name || 'Unknown'}
-                        </span>
-                        <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                          {formatTime(conv.last_message.created_at)}
-                        </span>
-                      </div>
-                      <p className={cn(
-                        'text-sm truncate',
-                        conv.unread_count > 0 ? 'text-foreground' : 'text-muted-foreground'
-                      )}>
-                        {conv.last_message.sender_id === user?.id && 'You: '}
-                        {conv.last_message.content}
-                      </p>
-                    </div>
-                  </button>
-                ))
-              )}
+              {renderChatList()}
             </div>
           </div>
 
           {/* Chat Area */}
           <div className="flex-1 flex flex-col">
-            {selectedPartnerId ? (
+            {renderChatArea()}
+          </div>
+        </div>
+
+        {/* Mobile Layout */}
+        <div className="md:hidden flex-1 flex flex-col">
+          {showMobileChat && selectedId ? (
+            chatType === 'group' && selectedGroupChat ? (
+              <GroupChatThread 
+                groupChatId={selectedGroupChat.id} 
+                groupName={selectedGroupChat.name} 
+              />
+            ) : (
               <>
-                {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {messagesLoading ? (
                     <div className="flex items-center justify-center h-full">
@@ -253,7 +459,7 @@ const MessagesPage: React.FC = () => {
                       >
                         <div
                           className={cn(
-                            'max-w-[70%] rounded-2xl px-4 py-2',
+                            'max-w-[80%] rounded-2xl px-4 py-2',
                             msg.sender_id === user?.id
                               ? 'bg-primary text-primary-foreground'
                               : 'bg-muted'
@@ -273,8 +479,7 @@ const MessagesPage: React.FC = () => {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input */}
-                <div className="p-4 border-t border-border">
+                <div className="p-4 border-t border-border pb-20">
                   <form 
                     onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
                     className="flex gap-2"
@@ -299,140 +504,10 @@ const MessagesPage: React.FC = () => {
                   </form>
                 </div>
               </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">Select a conversation</p>
-                  <p className="text-sm">Choose from your existing conversations</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Mobile Layout */}
-        <div className="md:hidden flex-1 flex flex-col">
-          {showMobileChat && selectedPartnerId ? (
-            <>
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messagesLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={cn(
-                        'flex',
-                        msg.sender_id === user?.id ? 'justify-end' : 'justify-start'
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          'max-w-[80%] rounded-2xl px-4 py-2',
-                          msg.sender_id === user?.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        )}
-                      >
-                        <p className="text-sm">{msg.content}</p>
-                        <p className={cn(
-                          'text-xs mt-1',
-                          msg.sender_id === user?.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                        )}>
-                          {formatTime(msg.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input */}
-              <div className="p-4 border-t border-border pb-20">
-                <form 
-                  onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-                  className="flex gap-2"
-                >
-                  <Input
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    placeholder="Type a message..."
-                    className="flex-1"
-                  />
-                  <Button 
-                    type="submit" 
-                    size="icon"
-                    disabled={!messageText.trim() || sendMessage.isPending}
-                  >
-                    {sendMessage.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                  </Button>
-                </form>
-              </div>
-            </>
+            )
           ) : (
-            <div className="flex-1 overflow-y-auto">
-              {loadingConversations ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : conversations.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-sm">No conversations yet</p>
-                  <p className="text-xs mt-1 mb-3">Start a conversation with someone in your network</p>
-                  <NewMessageDialog onSelectUser={handleNewMessage} />
-                </div>
-              ) : (
-                conversations.map((conv) => (
-                  <button
-                    key={conv.user_id}
-                    onClick={() => handleSelectConversation(conv.user_id)}
-                    className="w-full p-4 flex items-center gap-3 hover:bg-accent/50 transition-colors text-left border-b border-border"
-                  >
-                    <div className="relative">
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={conv.avatar_url || undefined} />
-                        <AvatarFallback>{conv.display_name?.[0] || 'U'}</AvatarFallback>
-                      </Avatar>
-                      {conv.unread_count > 0 && (
-                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
-                          {conv.unread_count}
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className={cn(
-                          'font-medium truncate',
-                          conv.unread_count > 0 && 'font-semibold'
-                        )}>
-                          {conv.display_name || 'Unknown'}
-                        </span>
-                        <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                          {formatTime(conv.last_message.created_at)}
-                        </span>
-                      </div>
-                      <p className={cn(
-                        'text-sm truncate',
-                        conv.unread_count > 0 ? 'text-foreground' : 'text-muted-foreground'
-                      )}>
-                        {conv.last_message.sender_id === user?.id && 'You: '}
-                        {conv.last_message.content}
-                      </p>
-                    </div>
-                  </button>
-                ))
-              )}
+            <div className="flex-1 overflow-y-auto pb-20">
+              {renderChatList()}
             </div>
           )}
         </div>
