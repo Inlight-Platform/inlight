@@ -10,6 +10,7 @@ import { PostCreator } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
 import { ConnectionSuggestions } from '@/components/feed/ConnectionSuggestions';
 import CreativeConnection from '@/components/feed/CreativeConnection';
+import { WelcomeMessage } from '@/components/feed/WelcomeMessage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type NetworkFilter = 'all' | '1st';
@@ -288,6 +289,9 @@ const FeedPage: React.FC = () => {
 
           {/* Main Feed Content */}
           <div className="flex-1 min-w-0 max-w-full lg:max-w-2xl mx-auto">
+            {/* Welcome Message */}
+            <WelcomeMessage />
+            
             {/* Creative Connection */}
             {user && <CreativeConnection />}
 

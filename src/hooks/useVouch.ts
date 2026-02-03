@@ -40,13 +40,17 @@ export const useVouch = (targetUserId: string | undefined) => {
     enabled: !!targetUserId,
   });
 
-  // Vouch mutation
+  // Vouch mutation - now accepts an optional message
   const vouchMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (message?: string) => {
       if (!user?.id || !targetUserId) throw new Error('Must be logged in');
       const { error } = await supabase
         .from('vouches')
-        .insert({ voucher_id: user.id, vouched_for_id: targetUserId });
+        .insert({ 
+          voucher_id: user.id, 
+          vouched_for_id: targetUserId,
+          message: message?.trim() || null
+        });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -82,20 +86,11 @@ export const useVouch = (targetUserId: string | undefined) => {
     onError: () => toast.error('Failed to remove vouch'),
   });
 
-  const toggleVouch = () => {
-    if (hasVouched) {
-      unvouchMutation.mutate();
-    } else {
-      vouchMutation.mutate();
-    }
-  };
-
   return {
     hasVouched,
     vouchCount,
     isLoading: checkingVouch || loadingCount,
     isPending: vouchMutation.isPending || unvouchMutation.isPending,
-    toggleVouch,
     vouch: vouchMutation.mutate,
     unvouch: unvouchMutation.mutate,
   };

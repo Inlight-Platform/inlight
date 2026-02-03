@@ -71,6 +71,7 @@ import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
 import { VerifyCreditsDialog } from '@/components/profile/VerifyCreditsDialog';
 import { CreditRow } from '@/components/profile/CreditRow';
+import { VouchDialog } from '@/components/profile/VouchDialog';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';
@@ -187,9 +188,10 @@ const ProfilePage: React.FC = () => {
   
   // Vouch hook - use actual auth user id for viewing other profiles
   const profileUserId = isOwnProfile ? authUser?.id : resolvedUserId;
-  const { hasVouched, vouchCount, toggleVouch, isPending: vouchPending } = useVouch(
+  const { hasVouched, vouchCount, vouch, unvouch, isPending: vouchPending } = useVouch(
     !isOwnProfile ? profileUserId : undefined
   );
+  const [vouchDialogOpen, setVouchDialogOpen] = useState(false);
   
   // Follow/connection hooks
   const { isFollowing, follow, unfollow, isFollowPending, isUnfollowPending, isMutual } = useNetworkConnections();
@@ -1200,13 +1202,31 @@ const ProfilePage: React.FC = () => {
                   <Button
                     variant={hasVouched ? "default" : "outline"}
                     size="sm"
-                    onClick={toggleVouch}
+                    onClick={() => {
+                      if (hasVouched) {
+                        unvouch();
+                      } else {
+                        setVouchDialogOpen(true);
+                      }
+                    }}
                     disabled={vouchPending}
                     className={hasVouched ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
                   >
                     <Award className="w-4 h-4 mr-1" />
                     {hasVouched ? 'Vouched' : 'Vouch'}
                   </Button>
+                  
+                  {/* Vouch Dialog */}
+                  <VouchDialog
+                    open={vouchDialogOpen}
+                    onOpenChange={setVouchDialogOpen}
+                    onSubmit={(message) => {
+                      vouch(message);
+                      setVouchDialogOpen(false);
+                    }}
+                    isPending={vouchPending}
+                    targetName={displayName}
+                  />
                   
                   {/* Follow Button */}
                   <Button
