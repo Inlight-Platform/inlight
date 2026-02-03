@@ -473,46 +473,6 @@ const ProjectDetailPage: React.FC = () => {
       </header>
 
       <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-8">
-        {/* Header Image */}
-        <div className="relative w-full h-48 sm:h-64 rounded-xl overflow-hidden bg-muted">
-          {project.header_image_url ? (
-            <img
-              src={project.header_image_url}
-              alt={project.title}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              {isCreator ? 'Click to add a cover image' : 'No cover image'}
-            </div>
-          )}
-          {isCreator && (
-            <>
-              <input
-                ref={coverInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleCoverUpload}
-                className="hidden"
-                id="cover-upload"
-              />
-              <Button
-                size="sm"
-                variant="secondary"
-                className="absolute bottom-4 right-4"
-                onClick={() => coverInputRef.current?.click()}
-                disabled={isUploadingCover}
-              >
-                {isUploadingCover ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Pencil className="w-4 h-4 mr-2" />
-                )}
-                {project.header_image_url ? 'Change Cover' : 'Add Cover'}
-              </Button>
-            </>
-          )}
-        </div>
 
         {/* Project Timeline */}
         {project.status && (
@@ -549,12 +509,41 @@ const ProjectDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {project.main_image_url && !project.header_image_url && (
-            <img
-              src={project.main_image_url}
-              alt={project.title}
-              className="w-full max-h-96 object-cover rounded-lg mb-4"
-            />
+          {/* Cover Image */}
+          {(project.main_image_url || project.header_image_url) && (
+            <div className="relative rounded-lg overflow-hidden mb-4">
+              <img
+                src={project.header_image_url || project.main_image_url}
+                alt={project.title}
+                className="w-full max-h-96 object-cover"
+              />
+              {isCreator && (
+                <>
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCoverUpload}
+                    className="hidden"
+                    id="cover-upload"
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="absolute bottom-4 right-4"
+                    onClick={() => coverInputRef.current?.click()}
+                    disabled={isUploadingCover}
+                  >
+                    {isUploadingCover ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Pencil className="w-4 h-4 mr-2" />
+                    )}
+                    Change Cover
+                  </Button>
+                </>
+              )}
+            </div>
           )}
 
           {/* Editable Description */}
