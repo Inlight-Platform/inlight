@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Plus, Upload, X, Loader2, Image, Video, Music, FileText, Eye, EyeOff, Users, Trash2 } from 'lucide-react';
+import { Plus, Upload, X, Loader2, Image, Video, Music, FileText, Eye, EyeOff, Users, Trash2, ImagePlus, Play, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/dialog';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { useQueryClient } from '@tanstack/react-query';
+import { VideoLinkUploader } from './VideoLinkUploader';
+import { VideoCoverUploader } from './VideoCoverUploader';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type Visibility = 'public' | 'connections' | 'private';
@@ -28,6 +30,7 @@ interface MediaItem {
   mime_type: string;
   visibility: Visibility;
   url: string;
+  cover_url?: string | null;
 }
 
 interface MediaUploaderProps {
@@ -152,19 +155,61 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     }
 
     if (mediaType === 'video') {
+      const isExternalLink = item.mime_type === 'video/external';
+      
       return (
         <div key={item.id} className="relative group aspect-[9/16] bg-muted rounded-lg overflow-hidden">
-          <video
-            src={item.url}
-            className="w-full h-full object-cover"
-            muted
-            playsInline
-            onClick={() => setLightboxItem(item)}
-          />
+          {/* Show cover image if available, otherwise show video thumbnail or placeholder */}
+          {item.cover_url ? (
+            <img
+              src={item.cover_url}
+              alt={item.file_name}
+              className="w-full h-full object-cover cursor-pointer"
+              onClick={() => setLightboxItem(item)}
+            />
+          ) : isExternalLink ? (
+            <div 
+              className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/20 cursor-pointer"
+              onClick={() => setLightboxItem(item)}
+            >
+              <ExternalLink className="w-8 h-8 text-muted-foreground" />
+            </div>
+          ) : (
+            <video
+              src={item.url}
+              className="w-full h-full object-cover cursor-pointer"
+              muted
+              playsInline
+              onClick={() => setLightboxItem(item)}
+            />
+          )}
+          
+          {/* Play indicator */}
           <div className="absolute inset-0 flex items-center justify-center bg-background/20 pointer-events-none">
-            <Video className="w-8 h-8 text-white" />
+            <Play className="w-8 h-8 text-white fill-white" />
           </div>
+          
+          {/* Video name */}
+          <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
+            <p className="text-xs text-white truncate">{item.file_name}</p>
+          </div>
+          
+          {/* Controls overlay */}
           <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <VideoCoverUploader
+              mediaId={item.id}
+              userId={userId}
+              currentCoverUrl={item.cover_url}
+              onUpdate={onUploadComplete}
+              trigger={
+                <button 
+                  className="p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background text-foreground"
+                  title="Set cover image"
+                >
+                  <ImagePlus className="w-4 h-4" />
+                </button>
+              }
+            />
             <button 
               className="p-1.5 rounded-full bg-destructive/80 backdrop-blur-sm hover:bg-destructive text-destructive-foreground"
               onClick={() => handleDelete(item)}
@@ -326,9 +371,14 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       )}
 
       {mediaType === 'video' && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {items.map(renderMediaItem)}
-          {renderUploadButton()}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <VideoLinkUploader userId={userId} onComplete={onUploadComplete} />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {items.map(renderMediaItem)}
+            {renderUploadButton()}
+          </div>
         </div>
       )}
 
@@ -354,12 +404,27 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
               />
             )}
             {lightboxItem?.file_type === 'video' && (
-              <video
-                src={lightboxItem.url}
-                controls
-                autoPlay
-                className="w-full max-h-[70vh] rounded-lg"
-              />
+              lightboxItem?.mime_type === 'video/external' ? (
+                <div className="flex flex-col items-center gap-4 p-8">
+                  <p className="text-muted-foreground">External video link</p>
+                  <a 
+                    href={lightboxItem.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Open Video
+                  </a>
+                </div>
+              ) : (
+                <video
+                  src={lightboxItem.url}
+                  controls
+                  autoPlay
+                  className="w-full max-h-[70vh] rounded-lg"
+                />
+              )
             )}
             {lightboxItem?.file_type === 'audio' && (
               <div className="p-8">

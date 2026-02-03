@@ -17,6 +17,7 @@ interface UploadedMedia {
   created_at: string;
   updated_at: string;
   url: string;
+  cover_url?: string | null;
 }
 
 interface UploadProgress {
@@ -185,10 +186,12 @@ export const useUserMedia = (userId: string | undefined) => {
       return [];
     }
 
-    // Add public URLs
+    // Add public URLs (handle external video links)
     return data.map((item) => ({
       ...item,
-      url: supabase.storage.from('profile-media').getPublicUrl(item.file_path).data.publicUrl,
+      url: item.mime_type === 'video/external' 
+        ? item.file_path 
+        : supabase.storage.from('profile-media').getPublicUrl(item.file_path).data.publicUrl,
     })) as UploadedMedia[];
   };
 

@@ -1529,6 +1529,7 @@ export type Database = {
           representation: string | null
           role: string | null
           skills: string[] | null
+          stage_name: string | null
           union_status: string | null
           updated_at: string | null
           user_id: string | null
@@ -1556,6 +1557,7 @@ export type Database = {
           representation?: string | null
           role?: string | null
           skills?: string[] | null
+          stage_name?: string | null
           union_status?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -1583,6 +1585,7 @@ export type Database = {
           representation?: string | null
           role?: string | null
           skills?: string[] | null
+          stage_name?: string | null
           union_status?: string | null
           updated_at?: string | null
           user_id?: string | null

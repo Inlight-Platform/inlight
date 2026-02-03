@@ -106,14 +106,15 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           throw error;
         }
       } else if (postType === 'job') {
-        // For now, jobs are stored as posts with a special format
-        // In the future, you could create a dedicated opportunities table
+        // Jobs are stored as posts with a special format and optional link
         const { error } = await supabase
           .from('posts')
           .insert({
             user_id: user.id,
             content: `🎯 **${title.trim()}**\n\n${content.trim()}${location ? `\n\n📍 ${location}` : ''}`,
             image_url: imageUrl || null,
+            link_url: linkUrl.trim() || null,
+            link_title: linkTitle.trim() || null,
           });
         if (error) throw error;
       }
@@ -269,16 +270,37 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
                   {/* Job-specific fields */}
                   {postType === 'job' && (
-                    <div className="space-y-1.5">
-                      <label className="text-sm text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5" />
-                        Location (optional)
-                      </label>
-                      <Input
-                        placeholder="Remote, NYC, LA..."
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                      />
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <label className="text-sm text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5" />
+                          Location (optional)
+                        </label>
+                        <Input
+                          placeholder="Remote, NYC, LA..."
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2 p-3 rounded-lg bg-muted/50">
+                        <label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                          <Link className="h-3.5 w-3.5" />
+                          Application link (optional)
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <Input
+                            placeholder="Link title (e.g. Apply here)"
+                            value={linkTitle}
+                            onChange={(e) => setLinkTitle(e.target.value)}
+                          />
+                          <Input
+                            type="url"
+                            placeholder="https://..."
+                            value={linkUrl}
+                            onChange={(e) => setLinkUrl(e.target.value)}
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
 

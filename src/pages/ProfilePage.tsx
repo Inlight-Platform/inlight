@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -98,6 +99,7 @@ interface Credit {
 
 interface ProfileData {
   display_name: string | null;
+  stage_name: string | null;
   avatar_url: string | null;
   cover_url: string | null;
   location: string | null;
@@ -163,6 +165,8 @@ const ProfilePage: React.FC = () => {
   const [isEditingUnionStatus, setIsEditingUnionStatus] = useState(false);
   const [isEditingRepresentation, setIsEditingRepresentation] = useState(false);
   const [editName, setEditName] = useState('');
+  const [editStageName, setEditStageName] = useState('');
+  const [isEditingStageName, setIsEditingStageName] = useState(false);
   const [editLocation, setEditLocation] = useState('');
   const [editRole, setEditRole] = useState('');
   const [editPronouns, setEditPronouns] = useState('');
@@ -234,18 +238,19 @@ const ProfilePage: React.FC = () => {
         // Own profile - use full profiles table
         const { data, error } = await supabase
           .from('profiles')
-          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year')
-          .eq('user_id', resolvedUserId)
-          .maybeSingle();
-        if (error) return null;
+        .select('display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year')
+        .eq('user_id', resolvedUserId)
+        .maybeSingle();
+      if (error) return null;
         return data as ProfileData | null;
       } else {
         // Other users - use public view (excludes email)
         const { data, error } = await supabase
           .from('profiles_public')
-          .select('display_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year')
+          .select('display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
+        if (error) return null;
         if (error) return null;
         return data as unknown as ProfileData | null;
       }
@@ -273,6 +278,7 @@ const ProfilePage: React.FC = () => {
   const user = getUser(resolvedUserId || '');
   const displayAvatar = dbProfile?.avatar_url || user?.avatar;
   const displayName = dbProfile?.display_name || user?.name || '';
+  const displayStageName = dbProfile?.stage_name || '';
   const displayLocation = dbProfile?.location || user?.location || '';
   const displayRole = dbProfile?.role || user?.role || '';
   // Parse roles from comma-separated string into array (max 4 roles)
@@ -455,6 +461,17 @@ const ProfilePage: React.FC = () => {
     if (!validateProfileField('display_name', trimmed)) return;
     const success = await saveProfileField('display_name', trimmed);
     if (success) setIsEditingName(false);
+  };
+
+  const startEditingStageName = () => {
+    setEditStageName(displayStageName);
+    setIsEditingStageName(true);
+  };
+
+  const handleSaveStageName = async () => {
+    const trimmed = editStageName.trim() || null;
+    const success = await saveProfileField('stage_name', trimmed);
+    if (success) setIsEditingStageName(false);
   };
 
   const handleSaveLocation = async () => {
@@ -979,21 +996,73 @@ const ProfilePage: React.FC = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
-                  <h1 
-                    className={`text-2xl sm:text-3xl font-display font-bold ${isOwnProfile ? 'cursor-pointer hover:text-primary transition-colors group' : ''}`}
-                    onClick={isOwnProfile ? startEditingName : undefined}
-                  >
-                    {displayName || 'Add your name'}
-                    {isOwnProfile && <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />}
-                  </h1>
-                  {/* Vouch count badge */}
-                  {vouchCount > 0 && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                      <Award className="w-4 h-4" />
-                      <span className="text-sm font-medium">{vouchCount}</span>
-                    </div>
-                  )}
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-3">
+                    {/* Stage Name - shown above real name if present */}
+                    {displayStageName && !isOwnProfile && (
+                      <h1 className="text-2xl sm:text-3xl font-display font-bold">
+                        {displayStageName}
+                      </h1>
+                    )}
+                    {isOwnProfile && (
+                      <>
+                        {isEditingStageName ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={editStageName}
+                              onChange={(e) => setEditStageName(e.target.value)}
+                              placeholder="Stage name (optional)"
+                              className="text-2xl sm:text-3xl font-display font-bold h-auto py-1"
+                              onKeyDown={(e) => e.key === 'Enter' && handleSaveStageName()}
+                              autoFocus
+                            />
+                            <Button size="icon" variant="ghost" onClick={handleSaveStageName}>
+                              <Save className="w-4 h-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => setIsEditingStageName(false)}>
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <h1 
+                            className="text-2xl sm:text-3xl font-display font-bold cursor-pointer hover:text-primary transition-colors group"
+                            onClick={startEditingStageName}
+                          >
+                            {displayStageName || (
+                              <span className="text-muted-foreground text-lg italic">+ Add stage name</span>
+                            )}
+                            {displayStageName && <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                          </h1>
+                        )}
+                      </>
+                    )}
+                    {/* Vouch count badge */}
+                    {vouchCount > 0 && (
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                        <Award className="w-4 h-4" />
+                        <span className="text-sm font-medium">{vouchCount}</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Real name - shown below stage name or as main name */}
+                  <div className="flex items-center gap-2">
+                    <span 
+                      className={cn(
+                        displayStageName ? "text-lg text-muted-foreground" : "text-2xl sm:text-3xl font-display font-bold",
+                        isOwnProfile && "cursor-pointer hover:text-primary transition-colors group"
+                      )}
+                      onClick={isOwnProfile ? startEditingName : undefined}
+                    >
+                      {displayName || 'Add your name'}
+                      {isOwnProfile && <Pencil className="w-3 h-3 inline ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                    </span>
+                    {!displayStageName && vouchCount > 0 && !isOwnProfile && (
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                        <Award className="w-4 h-4" />
+                        <span className="text-sm font-medium">{vouchCount}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               
