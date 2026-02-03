@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Theater, Search, Shuffle, Heart, SlidersHorizontal,
-  Sparkles, Plus, Film, Tv
+  Sparkles, Plus, Film, Tv, Music
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -57,13 +57,14 @@ const StageWhisperPage: React.FC = () => {
   const { user } = useAuth();
   const { isSaved, saveShow, unsaveShow, savedShowIds } = useSavedShows();
   
-  const [industryTab, setIndustryTab] = useState<'theatre' | 'film'>('theatre');
+  const [industryTab, setIndustryTab] = useState<'theatre' | 'film' | 'music'>('theatre');
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [activeTab, setActiveTab] = useState('broadway');
   const [viewTab, setViewTab] = useState<'discover' | 'my-list'>('discover');
   const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'streaming'>('theatres');
+  const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
 
   // Fetch all shows
   const { data: shows = [], isLoading: loadingShows } = useQuery({
@@ -196,14 +197,16 @@ const StageWhisperPage: React.FC = () => {
               >
                 {industryTab === 'theatre' ? (
                   <Theater className="w-5 h-5 text-white" />
-                ) : (
+                ) : industryTab === 'film' ? (
                   <Film className="w-5 h-5 text-white" />
+                ) : (
+                  <Music className="w-5 h-5 text-white" />
                 )}
               </div>
               <div>
                 <h1 className="text-2xl font-display font-bold">Industry Now</h1>
                 <p className="text-xs text-muted-foreground">
-                  {industryTab === 'theatre' ? 'Your NYC theatre companion 🎭' : 'Films & streaming highlights 🎬'}
+                  {industryTab === 'theatre' ? 'Your NYC theatre companion 🎭' : industryTab === 'film' ? 'Films & streaming highlights 🎬' : 'Music & local performances 🎵'}
                 </p>
               </div>
             </div>
@@ -219,8 +222,8 @@ const StageWhisperPage: React.FC = () => {
           </div>
 
           {/* Industry Tabs */}
-          <Tabs value={industryTab} onValueChange={(v) => setIndustryTab(v as 'theatre' | 'film')} className="mb-4">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+          <Tabs value={industryTab} onValueChange={(v) => setIndustryTab(v as 'theatre' | 'film' | 'music')} className="mb-4">
+            <TabsList className="grid w-full max-w-md grid-cols-3">
               <TabsTrigger value="theatre" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
                 <Theater className="w-4 h-4" />
                 Theatre
@@ -228,6 +231,10 @@ const StageWhisperPage: React.FC = () => {
               <TabsTrigger value="film" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
                 <Film className="w-4 h-4" />
                 Film
+              </TabsTrigger>
+              <TabsTrigger value="music" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
+                <Music className="w-4 h-4" />
+                Music
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -609,6 +616,42 @@ const StageWhisperPage: React.FC = () => {
                   </div>
                 )}
               </>
+            )}
+          </>
+        )}
+
+        {/* MUSIC CONTENT */}
+        {industryTab === 'music' && (
+          <>
+            {/* Music Category Tabs */}
+            <div className="flex gap-2 mb-6">
+              <Button 
+                variant={musicTab === 'local-shows' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setMusicTab('local-shows')}
+                className="gap-2"
+              >
+                <Music className="w-4 h-4" />
+                Local Shows
+              </Button>
+            </div>
+
+            {/* Local Shows Section */}
+            {musicTab === 'local-shows' && (
+              <div className="space-y-6">
+                <div className="p-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl border border-primary/20">
+                  <h2 className="text-xl font-display font-semibold mb-2">🎵 Local Shows by Students & Alumni</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Discover music performances and concerts by the community. More categories coming soon!
+                  </p>
+                </div>
+
+                <div className="text-center py-12">
+                  <Music className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No local shows listed yet.</p>
+                  <p className="text-sm text-muted-foreground mt-1">Check back soon for upcoming performances!</p>
+                </div>
+              </div>
             )}
           </>
         )}

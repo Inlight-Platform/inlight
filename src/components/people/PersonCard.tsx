@@ -22,6 +22,7 @@ interface PersonCardProps {
   connectionStatus?: 'none' | 'pending' | 'connected';
   showCancelButton?: boolean;
   requestId?: string;
+  isOwnProfile?: boolean;
   onConnect?: (userId: string) => void;
   onCancel?: (requestId: string) => void;
   onMessage?: () => void;
@@ -32,6 +33,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
   connectionStatus = 'none',
   showCancelButton = false,
   requestId,
+  isOwnProfile = false,
   onConnect,
   onCancel,
   onMessage,
@@ -65,11 +67,11 @@ const PersonCard: React.FC<PersonCardProps> = ({
       className="group relative bg-card rounded-2xl border border-border overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
       onClick={handleClick}
     >
-      {/* Gradient Header */}
+      {/* Gradient Header - Gold gradient matching Inlight title */}
       <div 
         className="h-24 relative"
         style={{
-          background: 'linear-gradient(135deg, hsl(220 80% 55%) 0%, hsl(200 90% 50%) 50%, hsl(186 100% 50%) 100%)',
+          background: 'linear-gradient(135deg, hsl(45 95% 58%) 0%, hsl(35 100% 50%) 50%, hsl(25 100% 55%) 100%)',
         }}
       >
         {/* Graduation Year Badge */}
@@ -137,10 +139,11 @@ const PersonCard: React.FC<PersonCardProps> = ({
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-center gap-2 mt-4">
-          {/* Connected State */}
-          {connectionStatus === 'connected' && (
+        {/* Action Buttons - Hide connect/pending for own profile */}
+        {!isOwnProfile && (
+          <div className="flex items-center justify-center gap-2 mt-4">
+            {/* Connected State */}
+            {connectionStatus === 'connected' && (
             <>
               <Button
                 variant="outline"
@@ -196,29 +199,30 @@ const PersonCard: React.FC<PersonCardProps> = ({
           )}
 
           {/* Connect State */}
-          {connectionStatus === 'none' && !showCancelButton && (
-            <>
-              <Button
-                className="flex-1 h-10 rounded-full bg-gradient-to-r from-[hsl(264,100%,65%)] to-[hsl(280,100%,60%)] text-white hover:opacity-90"
-                onClick={handleConnect}
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Connect
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 rounded-full"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (userId) navigate(`/profile/${userId}`);
-                }}
-              >
-                <ExternalLink className="w-4 h-4" />
-              </Button>
-            </>
-          )}
-        </div>
+            {connectionStatus === 'none' && !showCancelButton && (
+              <>
+                <Button
+                  className="flex-1 h-10 rounded-full bg-gradient-to-r from-[hsl(264,100%,65%)] to-[hsl(280,100%,60%)] text-white hover:opacity-90"
+                  onClick={handleConnect}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Connect
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 rounded-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (userId) navigate(`/profile/${userId}`);
+                  }}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

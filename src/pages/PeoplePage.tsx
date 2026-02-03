@@ -277,6 +277,7 @@ const PeoplePage: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredUsers.map((user) => {
                     const userId = user.user_id || '';
+                    const isOwnProfile = userId === currentUserId;
                     const status = getConnectionStatus(userId);
                     const pendingRequestId = status === 'pending' ? getPendingRequestId(userId) : undefined;
                     
@@ -287,6 +288,7 @@ const PeoplePage: React.FC = () => {
                         connectionStatus={status}
                         showCancelButton={status === 'pending'}
                         requestId={pendingRequestId}
+                        isOwnProfile={isOwnProfile}
                         onConnect={handleConnect}
                         onCancel={handleCancelRequest}
                         onMessage={() => navigate('/messages')}
