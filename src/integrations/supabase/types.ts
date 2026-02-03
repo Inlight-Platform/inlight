@@ -682,6 +682,9 @@ export type Database = {
           pronouns: string | null
           representation: string | null
           role: string | null
+          show_gear_list: boolean
+          show_representation: boolean
+          show_union_status: boolean
           skills: string[] | null
           stage_name: string | null
           union_status: string | null
@@ -714,6 +717,9 @@ export type Database = {
           pronouns?: string | null
           representation?: string | null
           role?: string | null
+          show_gear_list?: boolean
+          show_representation?: boolean
+          show_union_status?: boolean
           skills?: string[] | null
           stage_name?: string | null
           union_status?: string | null
@@ -746,6 +752,9 @@ export type Database = {
           pronouns?: string | null
           representation?: string | null
           role?: string | null
+          show_gear_list?: boolean
+          show_representation?: boolean
+          show_union_status?: boolean
           skills?: string[] | null
           stage_name?: string | null
           union_status?: string | null
@@ -1519,6 +1528,7 @@ export type Database = {
           favorite_movie: string | null
           favorite_song: string | null
           gear_list: string[] | null
+          gear_list_display: string[] | null
           graduation_status: string | null
           graduation_year: number | null
           headline: string | null
@@ -1528,6 +1538,9 @@ export type Database = {
           pronouns: string | null
           representation: string | null
           role: string | null
+          show_gear_list: boolean | null
+          show_representation: boolean | null
+          show_union_status: boolean | null
           skills: string[] | null
           stage_name: string | null
           union_status: string | null
@@ -1547,6 +1560,7 @@ export type Database = {
           favorite_movie?: string | null
           favorite_song?: string | null
           gear_list?: string[] | null
+          gear_list_display?: never
           graduation_status?: string | null
           graduation_year?: number | null
           headline?: string | null
@@ -1554,11 +1568,14 @@ export type Database = {
           instagram_url?: string | null
           location?: string | null
           pronouns?: string | null
-          representation?: string | null
+          representation?: never
           role?: string | null
+          show_gear_list?: boolean | null
+          show_representation?: boolean | null
+          show_union_status?: boolean | null
           skills?: string[] | null
           stage_name?: string | null
-          union_status?: string | null
+          union_status?: never
           updated_at?: string | null
           user_id?: string | null
           website_url?: string | null
@@ -1575,6 +1592,7 @@ export type Database = {
           favorite_movie?: string | null
           favorite_song?: string | null
           gear_list?: string[] | null
+          gear_list_display?: never
           graduation_status?: string | null
           graduation_year?: number | null
           headline?: string | null
@@ -1582,11 +1600,14 @@ export type Database = {
           instagram_url?: string | null
           location?: string | null
           pronouns?: string | null
-          representation?: string | null
+          representation?: never
           role?: string | null
+          show_gear_list?: boolean | null
+          show_representation?: boolean | null
+          show_union_status?: boolean | null
           skills?: string[] | null
           stage_name?: string | null
-          union_status?: string | null
+          union_status?: never
           updated_at?: string | null
           user_id?: string | null
           website_url?: string | null
