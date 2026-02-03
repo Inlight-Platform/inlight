@@ -9,7 +9,7 @@ import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { Button } from '@/components/ui/button';
 import { PostCreator } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
-import { ConnectionSuggestions } from '@/components/feed/ConnectionSuggestions';
+
 import CreativeConnection from '@/components/feed/CreativeConnection';
 import { WelcomeMessage } from '@/components/feed/WelcomeMessage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -331,18 +331,9 @@ const FeedPage: React.FC = () => {
       </header>
 
       <div className="px-3 sm:px-6 lg:px-8 py-6 w-full overflow-x-hidden">
-        <div className="flex gap-3 max-w-4xl mx-auto w-full">
-          {/* Left Sidebar - Connection Suggestions */}
-          {user && (
-            <div className="hidden lg:block flex-shrink-0">
-              <div className="sticky top-24">
-                <ConnectionSuggestions />
-              </div>
-            </div>
-          )}
-
+        <div className="max-w-3xl mx-auto w-full">
           {/* Main Feed Content */}
-          <div className="flex-1 min-w-0 max-w-full lg:max-w-2xl mx-auto">
+          <div className="w-full">
             {/* Welcome Message */}
             <WelcomeMessage />
             
