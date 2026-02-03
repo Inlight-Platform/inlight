@@ -21,10 +21,21 @@ interface NavItem {
   path: string;
   badge?: number;
   accent?: boolean;
+  useInlightIcon?: boolean;
 }
 
+// Custom Home icon component using Inlight logo
+const InlightHomeIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <img 
+    src={inlightLogo} 
+    alt="Home" 
+    className={cn("rounded-full object-cover", className)}
+    style={{ width: '1.25rem', height: '1.25rem' }}
+  />
+);
+
 const navItems: NavItem[] = [
-  { label: 'Home', icon: Home, path: '/feed' },
+  { label: 'Home', icon: Home, path: '/feed', useInlightIcon: true },
   { label: 'People', icon: Users, path: '/people' },
   { label: 'Projects', icon: FolderKanban, path: '/projects' },
   { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
@@ -74,12 +85,19 @@ export const MainNav: React.FC = () => {
         {/* Decorative gold line at top */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[hsl(45_95%_58%/0.5)] to-transparent" />
         
-        {/* Logo with gold accent */}
+        {/* Logo with gold accent - circular styling */}
         <div className={cn("border-b border-[hsl(45_95%_58%/0.1)] relative", collapsed ? "p-3" : "p-6")}>
           <Link to="/" className="flex items-center gap-3 group">
             <div className="relative">
-              <img src={inlightLogo} alt="Inlight" className={cn("transition-all relative z-10", collapsed ? "h-8 w-auto" : "h-10 w-auto")} />
-              <div className="absolute inset-0 blur-lg bg-[hsl(45_95%_58%/0.2)] opacity-0 group-hover:opacity-100 transition-opacity" />
+              <img 
+                src={inlightLogo} 
+                alt="Inlight" 
+                className={cn(
+                  "transition-all relative z-10 rounded-full object-cover ring-2 ring-[hsl(45_95%_58%/0.3)] group-hover:ring-[hsl(45_95%_58%/0.6)]", 
+                  collapsed ? "h-8 w-8" : "h-10 w-10"
+                )} 
+              />
+              <div className="absolute inset-0 blur-lg bg-[hsl(45_95%_58%/0.2)] opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
             </div>
             {!collapsed && (
               <span className="text-xl font-display font-bold tracking-wide bg-gradient-to-r from-white to-[hsl(45_95%_58%)] bg-clip-text text-transparent">
@@ -131,10 +149,17 @@ export const MainNav: React.FC = () => {
                 )}
                 
                 <div className="relative">
-                  <Icon className={cn(
-                    "w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110",
-                    item.accent && !active && "text-[hsl(45_95%_58%)]"
-                  )} />
+                  {item.useInlightIcon ? (
+                    <InlightHomeIcon className={cn(
+                      "transition-transform group-hover:scale-110",
+                      active && "ring-2 ring-white"
+                    )} />
+                  ) : (
+                    <Icon className={cn(
+                      "w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110",
+                      item.accent && !active && "text-[hsl(45_95%_58%)]"
+                    )} />
+                  )}
                   {item.badge && item.badge > 0 && (
                     <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold bg-[hsl(45_95%_58%)] text-[hsl(222_35%_8%)] rounded-full px-1 shadow-lg shadow-[hsl(45_95%_58%/0.4)]">
                       {item.badge > 99 ? '99+' : item.badge}
