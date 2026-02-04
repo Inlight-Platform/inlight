@@ -24,41 +24,41 @@ export function useMessages() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch all conversations
+  // Fetch all conversations - optimized with limited initial fetch
   const { data: conversations = [], isLoading: loadingConversations } = useQuery({
     queryKey: ['conversations', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
 
+      // Fetch only recent messages (last 100) for faster initial load
       const { data: messages, error } = await supabase
         .from('messages')
-        .select('*')
+        .select('id, sender_id, receiver_id, content, read_at, created_at')
         .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(500);
 
       if (error) throw error;
+      if (!messages || messages.length === 0) return [];
 
       // Group messages by conversation partner
-      const conversationMap = new Map<string, { messages: Message[]; unread: number }>();
+      const conversationMap = new Map<string, { lastMessage: Message; unread: number }>();
       
       messages.forEach((msg: Message) => {
         const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
         
         if (!conversationMap.has(partnerId)) {
-          conversationMap.set(partnerId, { messages: [], unread: 0 });
+          conversationMap.set(partnerId, { lastMessage: msg, unread: 0 });
         }
         
         const conv = conversationMap.get(partnerId)!;
-        conv.messages.push(msg);
-        
         if (msg.receiver_id === user.id && !msg.read_at) {
           conv.unread++;
         }
       });
 
-      // Get partner profiles
+      // Get partner profiles in batch
       const partnerIds = Array.from(conversationMap.keys());
-      if (partnerIds.length === 0) return [];
 
       const { data: profiles } = await supabase
         .from('profiles_public')
@@ -75,7 +75,7 @@ export function useMessages() {
           user_id: partnerId,
           display_name: profile?.display_name || null,
           avatar_url: profile?.avatar_url || null,
-          last_message: data.messages[0],
+          last_message: data.lastMessage,
           unread_count: data.unread,
         });
       });
@@ -88,7 +88,8 @@ export function useMessages() {
       return convos;
     },
     enabled: !!user?.id,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 10000, // Consider fresh for 10 seconds
+    refetchInterval: 30000,
   });
 
   // Fetch messages for a specific conversation

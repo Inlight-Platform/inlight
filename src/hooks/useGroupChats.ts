@@ -34,7 +34,7 @@ export function useGroupChats() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch all group chats the user is a member of
+  // Fetch all group chats the user is a member of - optimized
   const { data: groupChats = [], isLoading: loadingGroupChats } = useQuery({
     queryKey: ['group-chats', user?.id],
     queryFn: async () => {
@@ -59,47 +59,62 @@ export function useGroupChats() {
         .order('updated_at', { ascending: false });
 
       if (chatsError) throw chatsError;
-      if (!chats) return [];
+      if (!chats || chats.length === 0) return [];
 
-      // Get last message for each chat
-      const groupChatsWithMessages: GroupChat[] = await Promise.all(
-        chats.map(async (chat) => {
-          const { data: messages } = await supabase
-            .from('group_chat_messages')
-            .select('id, content, sender_id, created_at')
-            .eq('group_chat_id', chat.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
+      // Batch fetch last messages for all chats at once
+      const { data: allLastMessages } = await supabase
+        .from('group_chat_messages')
+        .select('id, group_chat_id, content, sender_id, created_at')
+        .in('group_chat_id', groupChatIds)
+        .order('created_at', { ascending: false });
 
-          const lastMessage = messages?.[0];
-          let senderName = null;
+      // Get unique last message per chat
+      const lastMessageMap = new Map<string, typeof allLastMessages[0]>();
+      allLastMessages?.forEach(msg => {
+        if (!lastMessageMap.has(msg.group_chat_id)) {
+          lastMessageMap.set(msg.group_chat_id, msg);
+        }
+      });
 
-          if (lastMessage) {
-            const { data: profile } = await supabase
-              .from('profiles_public')
-              .select('display_name')
-              .eq('user_id', lastMessage.sender_id)
-              .maybeSingle();
-            senderName = profile?.display_name;
-          }
+      // Batch fetch sender profiles
+      const senderIds = [...new Set(
+        Array.from(lastMessageMap.values()).map(m => m.sender_id)
+      )];
+      
+      const { data: senderProfiles } = senderIds.length > 0 
+        ? await supabase
+            .from('profiles_public')
+            .select('user_id, display_name')
+            .in('user_id', senderIds)
+        : { data: [] };
 
-          return {
-            id: chat.id,
-            name: chat.name,
-            project_id: chat.project_id,
-            updated_at: chat.updated_at,
-            last_message: lastMessage ? {
-              ...lastMessage,
-              sender_name: senderName,
-            } : undefined,
-            unread_count: 0, // Could implement read tracking later
-          };
-        })
+      const profileMap = new Map<string, string | null>(
+        senderProfiles?.map(p => [p.user_id, p.display_name] as [string, string | null]) || []
       );
+
+      // Build group chats with messages
+      const groupChatsWithMessages: GroupChat[] = chats.map(chat => {
+        const lastMessage = lastMessageMap.get(chat.id);
+        return {
+          id: chat.id,
+          name: chat.name,
+          project_id: chat.project_id,
+          updated_at: chat.updated_at,
+          last_message: lastMessage ? {
+            id: lastMessage.id,
+            content: lastMessage.content,
+            sender_id: lastMessage.sender_id,
+            sender_name: profileMap.get(lastMessage.sender_id) || null,
+            created_at: lastMessage.created_at,
+          } : undefined,
+          unread_count: 0,
+        };
+      });
 
       return groupChatsWithMessages;
     },
     enabled: !!user?.id,
+    staleTime: 10000,
     refetchInterval: 30000,
   });
 
