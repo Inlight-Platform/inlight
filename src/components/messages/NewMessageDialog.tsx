@@ -28,29 +28,37 @@ export const NewMessageDialog: React.FC<NewMessageDialogProps> = ({
   const [search, setSearch] = useState('');
   const { user } = useAuth();
 
-  // Fetch all users matching the search query
+  // Fetch mutual connections for messaging
   const { data: searchResults = [], isLoading } = useQuery({
-    queryKey: ['users-for-messaging', user?.id, search],
+    queryKey: ['connections-for-messaging', user?.id, search],
     queryFn: async () => {
       if (!user?.id) return [];
 
-      // If no search, show recent or suggested users
+      // Get mutual connections
+      const { data: mutuals } = await supabase
+        .rpc('get_mutual_connections', { target_user_id: user.id });
+      
+      if (!mutuals || mutuals.length === 0) return [];
+      
+      const mutualIds = mutuals.map((m: { user_id: string }) => m.user_id);
+
+      // Get profiles for mutual connections
       let query = supabase
         .from('profiles_public')
         .select('user_id, display_name, avatar_url, headline')
-        .neq('user_id', user.id)
-        .limit(50);
+        .in('user_id', mutualIds);
 
       // Apply search filter if provided
       if (search.trim()) {
         query = query.or(`display_name.ilike.%${search}%,headline.ilike.%${search}%`);
       }
 
-      const { data: profiles } = await query.order('display_name');
+      const { data: profiles } = await query.order('display_name').limit(50);
 
       return profiles || [];
     },
     enabled: !!user?.id && open,
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   const handleSelectUser = (userId: string) => {
@@ -93,12 +101,12 @@ export const NewMessageDialog: React.FC<NewMessageDialogProps> = ({
             ) : searchResults.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 {search ? (
-                  <p className="text-sm">No users match "{search}"</p>
+                  <p className="text-sm">No connections match "{search}"</p>
                 ) : (
                   <>
                     <MessageSquare className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Start typing to search</p>
-                    <p className="text-xs mt-1">Find anyone on the platform</p>
+                    <p className="text-sm">No connections yet</p>
+                    <p className="text-xs mt-1">Connect with people to message them</p>
                   </>
                 )}
               </div>
