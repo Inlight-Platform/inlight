@@ -69,7 +69,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
     >
       {/* Gradient Header - Blue gradient */}
       <div 
-        className="h-24 relative"
+        className="h-20 relative"
         style={{
           background: 'linear-gradient(135deg, hsl(200 100% 50%) 0%, hsl(220 85% 55%) 100%)',
         }}
@@ -83,10 +83,10 @@ const PersonCard: React.FC<PersonCardProps> = ({
       </div>
 
       {/* Avatar - Overlapping */}
-      <div className="flex justify-center -mt-12 relative z-10">
-        <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
+      <div className="flex justify-center -mt-10 relative z-10">
+        <Avatar className="w-[72px] h-[72px] border-[3px] border-background shadow-lg">
           <AvatarImage src={avatarUrl || undefined} className="object-cover" />
-          <AvatarFallback className="text-2xl bg-muted">
+          <AvatarFallback className="text-xl bg-muted">
             {displayName[0]?.toUpperCase() || 'U'}
           </AvatarFallback>
         </Avatar>
