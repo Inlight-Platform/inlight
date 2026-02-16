@@ -37,8 +37,8 @@ export function useAuth() {
 
   const signUp = async (email: string, password: string, displayName?: string) => {
     // Validate .edu email (admin email bypasses this check)
-    const adminEmail = 'info@inlight.social';
-    if (!email.toLowerCase().endsWith('.edu') && email.toLowerCase() !== adminEmail) {
+    const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com'];
+    if (!email.toLowerCase().endsWith('.edu') && !allowedEmails.includes(email.toLowerCase())) {
       return { error: { message: 'Only .edu email addresses are allowed to sign up.' } };
     }
 
