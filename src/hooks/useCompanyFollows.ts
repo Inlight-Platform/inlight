@@ -9,6 +9,7 @@ export interface Company {
   logo_url: string | null;
   website_url: string | null;
   location: string | null;
+  owner_user_id: string | null;
   created_at: string;
 }
 
