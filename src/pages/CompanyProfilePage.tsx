@@ -321,8 +321,8 @@ const CompanyProfilePage: React.FC = () => {
           </Card>
         )}
 
-        {/* Staff Section */}
-        {ownerProfile && (
+        {/* Staff Section - only visible to owner */}
+        {isOwner && ownerProfile && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="text-lg">Staff</CardTitle>
