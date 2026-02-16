@@ -52,8 +52,8 @@ const AuthPage: React.FC = () => {
   }, [mode]);
 
   const validateEduEmail = (email: string): boolean => {
-    const adminEmail = 'info@inlight.social';
-    return email.toLowerCase().endsWith('.edu') || email.toLowerCase() === adminEmail;
+    const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com'];
+    return email.toLowerCase().endsWith('.edu') || allowedEmails.includes(email.toLowerCase());
   };
 
   const handleLogin = async (e: React.FormEvent) => {
