@@ -262,8 +262,8 @@ const PeoplePage: React.FC = () => {
             </div>
             
             {isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Array.from({ length: 6 }).map((_, i) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="rounded-2xl overflow-hidden">
                     <Skeleton className="h-24 w-full" />
                     <div className="p-4 space-y-3">
@@ -277,7 +277,7 @@ const PeoplePage: React.FC = () => {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {filteredUsers.map((user) => {
                     const userId = user.user_id || '';
                     const isOwnProfile = userId === currentUserId;
@@ -346,7 +346,7 @@ const PeoplePage: React.FC = () => {
               <p className="text-sm text-muted-foreground">{networkProfiles.length} connections</p>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {networkProfiles.map((user) => (
                 <PersonCard
                   key={user.id}
@@ -369,7 +369,7 @@ const PeoplePage: React.FC = () => {
               <p className="text-sm text-muted-foreground">{pendingProfiles.length} pending</p>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {pendingProfiles.map((user) => {
                 const request = pendingSentRequests.find(r => r.receiver_id === user.user_id);
                 return (
