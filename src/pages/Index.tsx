@@ -1,10 +1,14 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { useStore } from '../store/useStore';
 import { stubUsers, stubConnections, stubMaterials, stubCredits, stubStories, stubMessages, stubThreads } from '../data/stubData';
+import LandingPage from './LandingPage';
+import { Loader2 } from 'lucide-react';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const users = useStore((s) => s.users);
   
   useEffect(() => {
@@ -22,11 +26,24 @@ const Index: React.FC = () => {
     }
   }, [users.length]);
 
-  // Redirect to feed as the main landing page
   useEffect(() => {
-    navigate('/feed', { replace: true });
-  }, [navigate]);
-  
+    if (!loading && user) {
+      navigate('/feed', { replace: true });
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LandingPage />;
+  }
+
   return null;
 };
 
