@@ -9,6 +9,8 @@ import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { Button } from '@/components/ui/button';
 import { PostCreator } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
+import { FeedGridCard } from '@/components/feed/FeedGridCard';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 import { WelcomeMessage } from '@/components/feed/WelcomeMessage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -22,6 +24,7 @@ const FeedPage: React.FC = () => {
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
   const [showPostCreator, setShowPostCreator] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
   const { firstDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
 
   // Fetch current user's profile
@@ -330,7 +333,7 @@ const FeedPage: React.FC = () => {
       </header>
 
       <div className="px-3 sm:px-6 lg:px-8 py-6 w-full overflow-x-hidden">
-        <div className="max-w-3xl mx-auto w-full">
+        <div className="max-w-5xl mx-auto w-full">
           {/* Main Feed Content */}
           <div className="w-full">
             {/* Welcome Message */}
@@ -407,12 +410,12 @@ const FeedPage: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {feedItems.map((item) => (
-              <FeedItem 
-                key={`${item.type}-${item.id}`} 
+              <FeedGridCard
+                key={`${item.type}-${item.id}`}
                 item={item}
-                networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
+                onClick={() => setSelectedItem(item)}
               />
             ))}
           </div>
@@ -434,6 +437,22 @@ const FeedPage: React.FC = () => {
           />
         </DialogContent>
       </Dialog>
+      {/* Expanded Item Sheet */}
+      <Sheet open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-left">Details</SheetTitle>
+          </SheetHeader>
+          {selectedItem && (
+            <div className="mt-4">
+              <FeedItem
+                item={selectedItem}
+                networkDegree={selectedItem.user_id === user?.id ? null : getConnectionDegree(selectedItem.user_id)}
+              />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
