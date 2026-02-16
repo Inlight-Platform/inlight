@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Building2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,8 +13,13 @@ interface CompanyCardProps {
 }
 
 const CompanyCard: React.FC<CompanyCardProps> = ({ company, isFollowing, onFollow, onUnfollow }) => {
+  const navigate = useNavigate();
+
   return (
-    <Card className="overflow-hidden">
+    <Card
+      className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+      onClick={() => navigate(`/company/${company.id}`)}
+    >
       {/* Header gradient */}
       <div 
         className="h-20 w-full"
@@ -40,7 +46,10 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, isFollowing, onFollo
           variant={isFollowing ? 'outline' : 'default'}
           size="sm"
           className="w-full rounded-full"
-          onClick={() => isFollowing ? onUnfollow(company.id) : onFollow(company.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            isFollowing ? onUnfollow(company.id) : onFollow(company.id);
+          }}
         >
           {isFollowing ? 'Following' : 'Follow'}
         </Button>
