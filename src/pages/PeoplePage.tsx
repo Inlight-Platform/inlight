@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Compass, Users, GraduationCap, Clock } from 'lucide-react';
+import { Search, Compass, Users, GraduationCap, Clock, Building2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
 import PersonCard from '@/components/people/PersonCard';
+import CompanyCard from '@/components/people/CompanyCard';
+import { useCompanyFollows } from '@/hooks/useCompanyFollows';
 
 interface Studio {
   id: string;
@@ -26,6 +28,7 @@ const PeoplePage: React.FC = () => {
   
   const { isMutual, firstDegree } = useNetworkConnections();
   const { sentRequests, cancelRequest, sendRequest } = useConnectionRequests();
+  const { companies, companiesLoading, isFollowingCompany, followCompany, unfollowCompany } = useCompanyFollows();
   
   // Get pending sent requests
   const pendingSentRequests = useMemo(() => 
@@ -302,6 +305,38 @@ const PeoplePage: React.FC = () => {
                   </p>
                 )}
               </>
+            )}
+
+            {/* Companies Section */}
+            {!searchQuery && (
+              <section className="mt-12">
+                <div className="flex items-center gap-2 mb-4">
+                  <Building2 className="w-5 h-5 text-primary" />
+                  <h2 className="text-xl font-display font-semibold">Companies to Connect With</h2>
+                </div>
+                <p className="text-sm text-muted-foreground mb-6">{companies.length} companies</p>
+                {companiesLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <Skeleton key={i} className="h-48 rounded-xl" />
+                    ))}
+                  </div>
+                ) : companies.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {companies.map((company) => (
+                      <CompanyCard
+                        key={company.id}
+                        company={company}
+                        isFollowing={isFollowingCompany(company.id)}
+                        onFollow={(id) => followCompany.mutate(id)}
+                        onUnfollow={(id) => unfollowCompany.mutate(id)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No companies yet.</p>
+                )}
+              </section>
             )}
           </TabsContent>
           
