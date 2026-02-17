@@ -108,7 +108,7 @@ export const MainNav: React.FC = () => {
             </div>
             {!collapsed && (
               <span className="text-xl font-display font-bold tracking-wide bg-gradient-to-r from-white to-[hsl(45_95%_58%)] bg-clip-text text-transparent">
-                Inlight
+                InLight
               </span>
             )}
           </Link>
