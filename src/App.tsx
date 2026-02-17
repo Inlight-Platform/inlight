@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
+import RequireAuth from "@/components/layout/RequireAuth";
 import Index from "./pages/Index";
 import ProfilePage from "./pages/ProfilePage";
 import DirectoryPage from "./pages/DirectoryPage";
@@ -29,9 +30,11 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const AppShell = () => (
-  <PageLayout>
-    <Outlet />
-  </PageLayout>
+  <RequireAuth>
+    <PageLayout>
+      <Outlet />
+    </PageLayout>
+  </RequireAuth>
 );
 
 const App = () => (
@@ -41,11 +44,12 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Public routes - no shell */}
+          <Route path="/" element={<Index />} />
           <Route path="/auth" element={<AuthPage />} />
 
           {/* App shell (sidebar on desktop, bottom nav on mobile) */}
           <Route element={<AppShell />}>
-            <Route path="/" element={<Index />} />
             <Route path="/settings" element={<ProfileSettingsPage />} />
             <Route path="/profile/:userId" element={<ProfilePage />} />
             <Route path="/directory/:badgeSlug" element={<DirectoryPage />} />

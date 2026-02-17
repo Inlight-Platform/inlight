@@ -58,8 +58,7 @@ const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="w-full px-6 py-4 flex items-center justify-between max-w-5xl mx-auto">
-        <img src={inlightLogo} alt="InLight" className="h-8" />
+      <header className="w-full px-6 py-4 flex items-center justify-end max-w-5xl mx-auto">
         <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
           Log in
         </Button>
@@ -71,10 +70,10 @@ const LandingPage: React.FC = () => {
           {/* Hero text */}
           <div className="space-y-6 text-center">
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground font-['Space_Grotesk']">
-              Welcome to InLight
+            Welcome to InLight
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              Inlight is an interactive community platform for entertainment professionals in university programs.
+              InLight is an interactive community platform for entertainment professionals in university programs.
             </p>
           </div>
 
