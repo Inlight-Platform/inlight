@@ -616,6 +616,7 @@ const ProfilePage: React.FC = () => {
     { tag: 'cinemastudies', label: 'Cinema Studies' },
     { tag: 'recordedmusic', label: 'Clive Davis Institute' },
     { tag: 'photography', label: 'Photography' },
+    { tag: 'collabarts', label: 'Collaborative Arts' },
   ];
 
   const handleAddBadgeToDb = async (badgeTag?: string) => {
