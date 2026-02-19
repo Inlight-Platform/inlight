@@ -9,6 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -43,6 +48,11 @@ const ProjectNewPage: React.FC = () => {
   const [status, setStatus] = useState<ProjectStatus>('planning');
   const [isPublic, setIsPublic] = useState(false);
   const [roles, setRoles] = useState<RoleSlot[]>([]);
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
+
+  // Auto-set status to archived if end date is in the past
+  const effectiveStatus = endDate && endDate < new Date(new Date().toDateString()) ? 'archived' : status;
 
   const createProjectMutation = useMutation({
     mutationFn: async () => {
@@ -58,8 +68,10 @@ const ProjectNewPage: React.FC = () => {
           header_image_url: headerImageUrl.trim() || null,
           creator_id: user.id,
           category,
-          status,
+          status: effectiveStatus,
           is_public: isPublic,
+          start_date: startDate ? startDate.toISOString().split('T')[0] : null,
+          end_date: endDate ? endDate.toISOString().split('T')[0] : null,
         })
         .select('id, title')
         .single();
@@ -214,6 +226,67 @@ const ProjectNewPage: React.FC = () => {
                 </Select>
               </div>
             </div>
+
+            {/* Date pickers */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={setStartDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>End Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={setEndDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {endDate && endDate < new Date(new Date().toDateString()) && (
+              <p className="text-sm text-amber-500 font-medium">
+                ⚠ End date is in the past — this project will be automatically archived.
+              </p>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="mainImage">Main Image URL</Label>

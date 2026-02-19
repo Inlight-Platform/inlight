@@ -71,9 +71,16 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
       <div className="p-3 space-y-2">
         {/* Type badge */}
         <div className="flex items-center justify-between">
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-            {getTypeLabel()}
-          </Badge>
+          <div className="flex items-center gap-1">
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              {getTypeLabel()}
+            </Badge>
+            {item.type === 'project' && item.project_status === 'archived' && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500 text-amber-500">
+                Completed
+              </Badge>
+            )}
+          </div>
           <span className="text-[10px] text-muted-foreground">
             {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
           </span>
