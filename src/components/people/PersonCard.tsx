@@ -21,10 +21,13 @@ interface PersonCardProps {
   };
   connectionStatus?: 'none' | 'pending' | 'connected';
   showCancelButton?: boolean;
+  showIncomingActions?: boolean;
   requestId?: string;
   isOwnProfile?: boolean;
   onConnect?: (userId: string) => void;
   onCancel?: (requestId: string) => void;
+  onAccept?: (requestId: string) => void;
+  onDecline?: (requestId: string) => void;
   onMessage?: () => void;
 }
 
@@ -32,10 +35,13 @@ const PersonCard: React.FC<PersonCardProps> = ({
   user,
   connectionStatus = 'none',
   showCancelButton = false,
+  showIncomingActions = false,
   requestId,
   isOwnProfile = false,
   onConnect,
   onCancel,
+  onAccept,
+  onDecline,
   onMessage
 }) => {
   const navigate = useNavigate();
@@ -55,6 +61,16 @@ const PersonCard: React.FC<PersonCardProps> = ({
   const handleCancel = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (requestId && onCancel) onCancel(requestId);
+  };
+
+  const handleAccept = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (requestId && onAccept) onAccept(requestId);
+  };
+
+  const handleDecline = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (requestId && onDecline) onDecline(requestId);
   };
 
   const handleMessage = (e: React.MouseEvent) => {
@@ -196,6 +212,24 @@ const PersonCard: React.FC<PersonCardProps> = ({
               <Clock className="w-4 h-4 mr-2" />
               Cancel Request
             </Button>
+          }
+
+          {/* Incoming Request Actions */}
+          {showIncomingActions && requestId &&
+          <div className="flex gap-2 w-full">
+              <Button
+                className="flex-1 h-10 rounded-full"
+                onClick={handleAccept}>
+                <Check className="w-4 h-4 mr-1" />
+                Accept
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 h-10 rounded-full"
+                onClick={handleDecline}>
+                Decline
+              </Button>
+            </div>
           }
 
           {/* Connect State */}
