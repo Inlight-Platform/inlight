@@ -14,23 +14,23 @@ interface FeedGridCardProps {
 export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => {
   const getTypeIcon = () => {
     switch (item.type) {
-      case 'project':return <FolderKanban className="h-3 w-3" />;
-      case 'event':return <Calendar className="h-3 w-3" />;
-      case 'job':return <Briefcase className="h-3 w-3 text-green-500" />;
-      case 'show':return <Theater className="h-3 w-3 text-pink-500" />;
-      case 'open_role':return <UserPlus className="h-3 w-3 text-green-500" />;
-      default:return <MessageCircle className="h-3 w-3" />;
+      case 'project': return <FolderKanban className="h-4 w-4" />;
+      case 'event': return <Calendar className="h-4 w-4" />;
+      case 'job': return <Briefcase className="h-4 w-4 text-green-500" />;
+      case 'show': return <Theater className="h-4 w-4 text-pink-500" />;
+      case 'open_role': return <UserPlus className="h-4 w-4 text-green-500" />;
+      default: return <MessageCircle className="h-4 w-4" />;
     }
   };
 
   const getTypeLabel = () => {
     switch (item.type) {
-      case 'project':return 'Project';
-      case 'event':return 'Event';
-      case 'job':return 'Opportunity';
-      case 'show':return 'Show';
-      case 'open_role':return 'Open Role';
-      default:return 'Update';
+      case 'project': return 'Project';
+      case 'event': return 'Event';
+      case 'job': return 'Opportunity';
+      case 'show': return 'Show';
+      case 'open_role': return 'Open Role';
+      default: return 'Update';
     }
   };
 
@@ -42,44 +42,38 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
 
   return (
     <Card
-      className="overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] bg-card border-border group"
-      onClick={onClick}>
-
-      {/* Image or colored header */}
-      {item.image_url && item.type !== 'open_role' ?
-      <div className="w-full h-28 overflow-hidden">
+      className="overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] bg-card border-border group h-[280px] flex flex-col"
+      onClick={onClick}
+    >
+      {/* Image or placeholder header - always same height */}
+      <div className="w-full h-32 overflow-hidden flex-shrink-0">
+        {item.image_url ? (
           <img
-          src={item.image_url}
-          alt={item.title || 'Feed image'}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-
-        </div> :
-
-      <div className="">
-
-
-
-
-
-
-          <div className="p-2 rounded-full bg-background/80">
-            {getTypeIcon()}
+            src={item.image_url}
+            alt={item.title || 'Feed image'}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="w-full h-full bg-muted/50 flex items-center justify-center">
+            <div className="p-3 rounded-full bg-background/80">
+              {getTypeIcon()}
+            </div>
           </div>
-        </div>
-      }
+        )}
+      </div>
 
-      <div className="p-3 space-y-2">
+      <div className="p-3 space-y-1.5 flex-1 flex flex-col min-h-0">
         {/* Type badge */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
               {getTypeLabel()}
             </Badge>
-            {item.type === 'project' && item.project_status === 'archived' &&
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500 text-amber-500">
+            {item.type === 'project' && item.project_status === 'archived' && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500 text-amber-500">
                 Completed
               </Badge>
-            }
+            )}
             {item.visibility && item.visibility !== 'public' && (item.type === 'post' || item.type === 'job') && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5">
                 {item.visibility === 'network' ? <Users className="h-2.5 w-2.5" /> : <UserCheck className="h-2.5 w-2.5" />}
@@ -97,14 +91,14 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
         </h3>
 
         {/* Subtitle preview */}
-        {subtitle && subtitle !== title &&
-        <p className="text-xs text-muted-foreground line-clamp-2">
+        {subtitle && subtitle !== title && (
+          <p className="text-xs text-muted-foreground line-clamp-1">
             {subtitle}
           </p>
-        }
+        )}
 
-        {/* Creator */}
-        <div className="flex items-center gap-1.5 pt-1">
+        {/* Creator - pushed to bottom */}
+        <div className="flex items-center gap-1.5 mt-auto pt-1">
           <Avatar className="h-5 w-5">
             <AvatarImage src={avatarUrl || undefined} />
             <AvatarFallback className="text-[9px]">
@@ -116,6 +110,6 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
           </span>
         </div>
       </div>
-    </Card>);
-
+    </Card>
+  );
 };
