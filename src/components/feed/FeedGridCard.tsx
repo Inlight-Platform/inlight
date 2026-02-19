@@ -47,12 +47,20 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
     >
       {/* Image or placeholder header - always same height */}
       <div className="w-full h-32 overflow-hidden flex-shrink-0">
-        {item.image_url ? (
+        {item.image_url && item.type !== 'open_role' ? (
           <img
             src={item.image_url}
             alt={item.title || 'Feed image'}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
+        ) : item.type === 'open_role' ? (
+          <div className="w-full h-full bg-primary flex items-center justify-center">
+            <UserPlus className="h-8 w-8 text-primary-foreground" />
+          </div>
+        ) : item.type === 'post' ? (
+          <div className="w-full h-full bg-[hsl(45_95%_58%)] flex items-center justify-center">
+            <MessageCircle className="h-8 w-8 text-[hsl(222_35%_6%)]" />
+          </div>
         ) : (
           <div className="w-full h-full bg-muted/50 flex items-center justify-center">
             <div className="p-3 rounded-full bg-background/80">
