@@ -665,6 +665,35 @@ export type Database = {
         }
         Relationships: []
       }
+      post_recipients: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          recipient_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          recipient_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          recipient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_recipients_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           content: string
@@ -677,6 +706,7 @@ export type Database = {
           link_url: string | null
           updated_at: string
           user_id: string
+          visibility: string
         }
         Insert: {
           content: string
@@ -689,6 +719,7 @@ export type Database = {
           link_url?: string | null
           updated_at?: string
           user_id: string
+          visibility?: string
         }
         Update: {
           content?: string
@@ -701,6 +732,7 @@ export type Database = {
           link_url?: string | null
           updated_at?: string
           user_id?: string
+          visibility?: string
         }
         Relationships: []
       }
@@ -1731,6 +1763,10 @@ export type Database = {
       }
     }
     Functions: {
+      can_view_post: {
+        Args: { post_row: Database["public"]["Tables"]["posts"]["Row"] }
+        Returns: boolean
+      }
       get_2nd_degree_connections: {
         Args: { target_user_id: string }
         Returns: {

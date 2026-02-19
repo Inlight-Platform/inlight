@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -49,6 +49,7 @@ export interface FeedItemData {
   project_id?: string;
   project_title?: string;
   project_status?: string;
+  visibility?: string;
   creator_profile?: {
     display_name: string | null;
     avatar_url: string | null;
@@ -281,7 +282,19 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
           </a>
         )}
 
-        {/* Category badge and completed badge for projects */}
+        {/* Visibility badge for non-public posts */}
+        {item.visibility && item.visibility !== 'public' && (item.type === 'post' || item.type === 'job') && (
+          <div className="mb-3">
+            <Badge variant="outline" className="text-xs gap-1">
+              {item.visibility === 'network' ? (
+                <><Users className="h-3 w-3" /> Network Only</>
+              ) : (
+                <><UserCheck className="h-3 w-3" /> Specific People</>
+              )}
+            </Badge>
+          </div>
+        )}
+
         {item.type === 'project' && (
           <div className="flex items-center gap-2 mb-3">
             {item.category && (
