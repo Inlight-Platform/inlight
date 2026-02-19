@@ -104,6 +104,7 @@ const FeedPage: React.FC = () => {
         image_url: project.main_image_url,
         created_at: project.created_at,
         category: project.category,
+        project_status: project.status,
         creator_profile: profileMap.get(project.creator_id),
       }));
     },

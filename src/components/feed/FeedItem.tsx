@@ -281,11 +281,20 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
           </a>
         )}
 
-        {/* Category badge for projects */}
-        {item.category && item.type === 'project' && (
-          <Badge variant="outline" className="text-xs mb-3">
-            {item.category}
-          </Badge>
+        {/* Category badge and completed badge for projects */}
+        {item.type === 'project' && (
+          <div className="flex items-center gap-2 mb-3">
+            {item.category && (
+              <Badge variant="outline" className="text-xs">
+                {item.category}
+              </Badge>
+            )}
+            {item.project_status === 'archived' && (
+              <Badge variant="outline" className="text-xs border-amber-500 text-amber-500">
+                Completed
+              </Badge>
+            )}
+          </div>
         )}
 
         {/* Event details */}
