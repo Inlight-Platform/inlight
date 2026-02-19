@@ -92,7 +92,7 @@ const AuthPage: React.FC = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Account created! Welcome to InLight.');
+      toast.success('Account created! Welcome to Inlight.');
       navigate('/');
     }
 
@@ -313,7 +313,7 @@ const AuthPage: React.FC = () => {
           <div className="mx-auto w-12 h-12 bg-primary rounded-full flex items-center justify-center">
             <GraduationCap className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-bold">InLight</CardTitle>
+          <CardTitle className="text-2xl font-bold">Inlight</CardTitle>
           <CardDescription>
             Connect with your creative community
           </CardDescription>

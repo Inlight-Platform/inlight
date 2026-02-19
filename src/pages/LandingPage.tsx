@@ -43,7 +43,7 @@ const LandingPage: React.FC = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Account created! Welcome to InLight.');
+      toast.success('Account created! Welcome to Inlight.');
       navigate('/');
     }
     setIsLoading(false);
@@ -70,10 +70,10 @@ const LandingPage: React.FC = () => {
           {/* Hero text */}
           <div className="space-y-6 text-center">
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground font-['Space_Grotesk']">
-            Welcome to InLight
+            Welcome to Inlight
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              InLight is an interactive community platform for entertainment professionals in university programs.
+              Inlight is an interactive community platform for entertainment professionals in university programs.
             </p>
           </div>
 
