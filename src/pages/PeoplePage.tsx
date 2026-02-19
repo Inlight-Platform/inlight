@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Compass, Users, GraduationCap, Clock, Building2, ChevronDown } from 'lucide-react';
+import { Search, Compass, Users, GraduationCap, Clock, Building2, ChevronDown, Inbox } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -91,7 +91,7 @@ const PeoplePage: React.FC = () => {
   const currentUserId = useStore((s) => s.currentUserId);
   
   const { isMutual, firstDegree } = useNetworkConnections();
-  const { sentRequests, cancelRequest, sendRequest } = useConnectionRequests();
+  const { sentRequests, pendingRequests, cancelRequest, sendRequest, acceptRequest, rejectRequest } = useConnectionRequests();
   const { companies, companiesLoading, isFollowingCompany, followCompany, unfollowCompany } = useCompanyFollows();
   
   // Get pending sent requests
@@ -154,6 +154,26 @@ const PeoplePage: React.FC = () => {
       return data || [];
     },
     enabled: pendingReceiverIdsList.length > 0,
+  });
+
+  // Get profiles for incoming request senders
+  const incomingSenderIds = useMemo(() => 
+    pendingRequests.map(r => r.sender_id), 
+    [pendingRequests]
+  );
+  
+  const { data: incomingProfiles = [] } = useQuery({
+    queryKey: ['incoming-request-profiles', incomingSenderIds],
+    queryFn: async () => {
+      if (incomingSenderIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('*')
+        .in('user_id', incomingSenderIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: incomingSenderIds.length > 0,
   });
 
   // Get profiles for 1st degree connections
@@ -223,6 +243,14 @@ const PeoplePage: React.FC = () => {
     }
   };
 
+  const handleAcceptRequest = (requestId: string) => {
+    acceptRequest.mutate(requestId);
+  };
+
+  const handleDeclineRequest = (requestId: string) => {
+    rejectRequest.mutate(requestId);
+  };
+
   const userCount = filteredUsers.length;
   
   return (
@@ -261,9 +289,18 @@ const PeoplePage: React.FC = () => {
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Community</span> ({firstDegree.length})
               </TabsTrigger>
+              <TabsTrigger value="incoming" className="data-[state=active]:bg-blue-500/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+                <Inbox className="w-4 h-4" />
+                <span className="hidden sm:inline">Incoming</span>
+                {pendingRequests.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+                    {pendingRequests.length}
+                  </span>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="pending" className="data-[state=active]:bg-amber-500/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
                 <Clock className="w-4 h-4" />
-                <span className="hidden sm:inline">Pending</span> ({pendingSentRequests.length})
+                <span className="hidden sm:inline">Sent</span> ({pendingSentRequests.length})
               </TabsTrigger>
             </TabsList>
           </div>
@@ -389,12 +426,41 @@ const PeoplePage: React.FC = () => {
               </p>
             )}
           </TabsContent>
+
+          <TabsContent value="incoming">
+            <div className="mb-6">
+              <h2 className="text-xl font-display font-semibold">Incoming Requests</h2>
+              <p className="text-sm text-muted-foreground">{incomingProfiles.length} incoming</p>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {incomingProfiles.map((user) => {
+                const request = pendingRequests.find(r => r.sender_id === user.user_id);
+                return (
+                  <PersonCard
+                    key={user.id}
+                    user={user}
+                    showIncomingActions
+                    requestId={request?.id}
+                    onAccept={handleAcceptRequest}
+                    onDecline={handleDeclineRequest}
+                  />
+                );
+              })}
+            </div>
+            {incomingProfiles.length === 0 && (
+              <p className="text-center text-muted-foreground py-12">
+                No incoming connection requests.
+              </p>
+            )}
+          </TabsContent>
           
           <TabsContent value="pending">
             <div className="mb-6">
-              <h2 className="text-xl font-display font-semibold">Pending Requests</h2>
+              <h2 className="text-xl font-display font-semibold">Sent Requests</h2>
               <p className="text-sm text-muted-foreground">{pendingProfiles.length} pending</p>
             </div>
+            
             
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {pendingProfiles.map((user) => {
