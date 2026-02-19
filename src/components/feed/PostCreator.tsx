@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { ImageUploader } from './ImageUploader';
+import { AudienceSelector, PostVisibility } from './AudienceSelector';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
 
@@ -43,6 +44,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [eventDate, setEventDate] = useState('');
   const [eventType, setEventType] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  const [visibility, setVisibility] = useState<PostVisibility>('public');
+  const [selectedRecipients, setSelectedRecipients] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
   const [linkTitle, setLinkTitle] = useState('');
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
@@ -64,6 +67,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setLinkUrl('');
     setLinkTitle('');
     setPostType('update');
+    setVisibility('public');
+    setSelectedRecipients([]);
   };
 
   const createPostMutation = useMutation({
@@ -71,7 +76,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       if (!user?.id) throw new Error('Must be logged in');
       
       if (postType === 'update') {
-        const { error } = await supabase
+        const { data: postData, error } = await supabase
           .from('posts')
           .insert({
             user_id: user.id,
@@ -79,8 +84,24 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             image_url: imageUrl || null,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
-          });
+            visibility,
+          })
+          .select('id')
+          .single();
         if (error) throw error;
+        
+        // Insert recipients for specific visibility
+        if (visibility === 'specific' && selectedRecipients.length > 0 && postData) {
+          const { error: recError } = await supabase
+            .from('post_recipients')
+            .insert(
+              selectedRecipients.map((r) => ({
+                post_id: postData.id,
+                recipient_id: r.user_id,
+              }))
+            );
+          if (recError) console.error('Failed to add recipients:', recError);
+        }
       } else if (postType === 'event') {
         // Convert datetime-local to ISO format for Supabase
         const eventDateValue = eventDate ? new Date(eventDate).toISOString() : null;
@@ -108,7 +129,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
         }
       } else if (postType === 'job') {
         // Jobs are stored as posts with a special format and optional link
-        const { error } = await supabase
+        const { data: jobData, error } = await supabase
           .from('posts')
           .insert({
             user_id: user.id,
@@ -116,8 +137,24 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             image_url: imageUrl || null,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
-          });
+            visibility,
+          })
+          .select('id')
+          .single();
         if (error) throw error;
+        
+        // Insert recipients for specific visibility
+        if (visibility === 'specific' && selectedRecipients.length > 0 && jobData) {
+          const { error: recError } = await supabase
+            .from('post_recipients')
+            .insert(
+              selectedRecipients.map((r) => ({
+                post_id: jobData.id,
+                recipient_id: r.user_id,
+              }))
+            );
+          if (recError) console.error('Failed to add recipients:', recError);
+        }
       }
     },
     onSuccess: () => {
@@ -157,6 +194,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   };
 
   const isValid = () => {
+    if (visibility === 'specific' && selectedRecipients.length === 0 && (postType === 'update' || postType === 'job')) return false;
     if (postType === 'update') return content.trim().length > 0;
     if (postType === 'event') return title.trim().length > 0 && eventDate.length > 0;
     if (postType === 'job') return title.trim().length > 0 && content.trim().length > 0;
@@ -359,6 +397,17 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                           ? 'Please add an event title' 
                           : 'Please select a date and time'}
                     </p>
+                  )}
+
+                  {/* Audience Selector for posts and jobs */}
+                  {(postType === 'update' || postType === 'job') && (
+                    <AudienceSelector
+                      visibility={visibility}
+                      onVisibilityChange={setVisibility}
+                      selectedUsers={selectedRecipients}
+                      onSelectedUsersChange={setSelectedRecipients}
+                      currentUserId={user.id}
+                    />
                   )}
 
                   <div className="flex items-center justify-between">

@@ -69,6 +69,7 @@ const FeedPage: React.FC = () => {
         return {
           ...post,
           type: isJob ? 'job' as const : 'post' as const,
+          visibility: post.visibility,
           creator_profile: profileMap.get(post.user_id),
         };
       });
