@@ -15,7 +15,9 @@ import {
   Pencil,
   ChevronDown,
   ChevronUp,
-  X
+  X,
+  FolderOpen,
+  ExternalLink
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -77,6 +79,8 @@ const ProjectDetailPage: React.FC = () => {
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const [driveUrl, setDriveUrl] = useState('');
+  const [isEditingDrive, setIsEditingDrive] = useState(false);
   
   const { uploadPhoto, uploading, progress } = useProjectPhotoUpload();
 
@@ -362,6 +366,24 @@ const ProjectDetailPage: React.FC = () => {
     },
     onError: () => toast.error('Failed to remove team member'),
   });
+  // Update Google Drive URL mutation
+  const updateDriveUrlMutation = useMutation({
+    mutationFn: async (url: string) => {
+      if (!projectId) throw new Error('No project ID');
+      const { error } = await supabase
+        .from('projects')
+        .update({ google_drive_url: url || null })
+        .eq('id', projectId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      setIsEditingDrive(false);
+      toast.success('Google Drive link updated');
+    },
+    onError: () => toast.error('Failed to update Google Drive link'),
+  });
+
   const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !projectId || !user?.id) return;
@@ -859,6 +881,93 @@ const ProjectDetailPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Google Drive Link - Only visible to team members */}
+        {isMember && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <FolderOpen className="w-5 h-5" />
+                Google Drive
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isEditingDrive ? (
+                <div className="space-y-3">
+                  <Input
+                    type="url"
+                    placeholder="https://drive.google.com/drive/folders/..."
+                    value={driveUrl}
+                    onChange={(e) => setDriveUrl(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => updateDriveUrlMutation.mutate(driveUrl)}
+                      disabled={updateDriveUrlMutation.isPending}
+                    >
+                      {updateDriveUrlMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : null}
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditingDrive(false);
+                        setDriveUrl(project.google_drive_url || '');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : project.google_drive_url ? (
+                <div className="flex items-center justify-between gap-4">
+                  <a
+                    href={project.google_drive_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-primary hover:underline truncate"
+                  >
+                    <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">{project.google_drive_url}</span>
+                  </a>
+                  {isCreator && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setDriveUrl(project.google_drive_url || '');
+                        setIsEditingDrive(true);
+                      }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              ) : isCreator ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDriveUrl('');
+                    setIsEditingDrive(true);
+                  }}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Google Drive Link
+                </Button>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No Google Drive folder linked yet
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </main>
 
       {/* Delete Project Confirmation Dialog */}
