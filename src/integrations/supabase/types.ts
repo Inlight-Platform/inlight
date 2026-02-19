@@ -1046,6 +1046,7 @@ export type Database = {
           creator_id: string
           description: string | null
           end_date: string | null
+          google_drive_url: string | null
           header_image_url: string | null
           id: string
           is_public: boolean | null
@@ -1063,6 +1064,7 @@ export type Database = {
           creator_id: string
           description?: string | null
           end_date?: string | null
+          google_drive_url?: string | null
           header_image_url?: string | null
           id?: string
           is_public?: boolean | null
@@ -1080,6 +1082,7 @@ export type Database = {
           creator_id?: string
           description?: string | null
           end_date?: string | null
+          google_drive_url?: string | null
           header_image_url?: string | null
           id?: string
           is_public?: boolean | null
