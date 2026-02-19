@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +17,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ProjectWizard } from './ProjectWizard';
 import { ImageUploader } from './ImageUploader';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
@@ -33,6 +33,7 @@ interface PostCreatorProps {
 
 export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOpen = false, defaultPostType = 'update', onClose }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [postType, setPostType] = useState<PostType>(defaultPostType);
   const [content, setContent] = useState('');
@@ -43,13 +44,13 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [eventType, setEventType] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
-  const [showProjectWizard, setShowProjectWizard] = useState(false);
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
   useEffect(() => {
     setPostType(defaultPostType);
     if (defaultPostType === 'project') {
-      setShowProjectWizard(true);
+      navigate('/projects/new');
+      onClose?.();
     }
   }, [defaultPostType]);
 
@@ -166,14 +167,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     const newType = value as PostType;
     setPostType(newType);
     if (newType === 'project') {
-      setShowProjectWizard(true);
+      navigate('/projects/new');
+      onClose?.();
     }
-  };
-
-  const handleProjectWizardClose = () => {
-    setShowProjectWizard(false);
-    setPostType('update');
-    onClose?.();
   };
 
   if (!user) return null;
@@ -409,9 +405,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   <p className="text-sm text-muted-foreground mb-3">
                     Create a project to collaborate with your team
                   </p>
-                  <Button onClick={() => setShowProjectWizard(true)}>
+                  <Button onClick={() => { navigate('/projects/new'); onClose?.(); }}>
                     <Film className="h-4 w-4 mr-2" />
-                    Start Project Wizard
+                    Create New Project
                   </Button>
                 </div>
               )}
@@ -419,16 +415,6 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           </div>
         </CardContent>
       </Card>
-
-      {/* Project Wizard Dialog */}
-      <Dialog open={showProjectWizard} onOpenChange={setShowProjectWizard}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create a Project</DialogTitle>
-          </DialogHeader>
-          <ProjectWizard onClose={handleProjectWizardClose} />
-        </DialogContent>
-      </Dialog>
     </>
   );
 };
