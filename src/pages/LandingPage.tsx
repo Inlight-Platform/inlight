@@ -123,35 +123,16 @@ const LandingPage: React.FC = () => {
             </Card>
           </div>
 
-          {/* Signup section */}
-          <Card className="border-border bg-card">
-            <CardContent className="pt-6">
-              {mode === 'info' ? (
-                <div className="flex flex-col items-center gap-3">
-                  <Button className="w-full max-w-xs" onClick={() => setMode('signup')}>
-                    Create an Account <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" className="w-full max-w-xs" onClick={() => navigate('/auth')}>
-                    Log in
-                  </Button>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                    <GraduationCap className="h-3 w-3" />
-                    Only .edu emails are allowed
-                  </p>
-                </div>
-              ) : (
-                <form onSubmit={handleSignup} className="space-y-4 max-w-sm mx-auto">
-                  <button type="button" onClick={() => setMode('info')} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
-                    <ArrowLeft className="h-3.5 w-3.5" /> Back
-                  </button>
-{/* ... keep existing code (form fields) */}
-                  <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => setMode('info')}>
-                    Cancel
-                  </Button>
-                </form>
-              )}
-            </CardContent>
-          </Card>
+          {/* Auth section */}
+          <div className="flex flex-col items-center gap-3">
+            <Button className="w-full max-w-xs" onClick={() => navigate('/auth')}>
+              Log in or Sign Up <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <GraduationCap className="h-3 w-3" />
+              Only .edu emails are allowed
+            </p>
+          </div>
 
           {/* Disclaimer */}
           <p className="text-xs text-muted-foreground text-center leading-relaxed max-w-lg mx-auto">
