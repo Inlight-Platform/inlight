@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2, GraduationCap, Briefcase, Users, Film, ArrowRight, ArrowLeft } from 'lucide-react';
-import inlightLogo from '@/assets/inlight-logo.png';
+import inlightLogo from '@/assets/inlight-new-logo.png';
 
 const LandingPage: React.FC = () => {
   const [email, setEmail] = useState('');
