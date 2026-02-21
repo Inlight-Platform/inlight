@@ -104,7 +104,7 @@ const LandingPage: React.FC = () => {
       `}</style>
 
       {/* Left film reel */}
-      <div className="hidden lg:block absolute left-0 top-0 bottom-0 w-[140px] overflow-hidden opacity-30 pointer-events-none" style={{ maskImage: 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' }}>
+      <div className="hidden lg:block absolute left-6 top-0 bottom-0 w-[140px] overflow-hidden opacity-50 pointer-events-none" style={{ maskImage: 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' }}>
         <div className="film-reel-up">
           <img src={filmReel1} alt="" className="w-full" />
           <img src={filmReel1} alt="" className="w-full" />
@@ -112,7 +112,7 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Right film reel */}
-      <div className="hidden lg:block absolute right-0 top-0 bottom-0 w-[140px] overflow-hidden opacity-30 pointer-events-none" style={{ maskImage: 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' }}>
+      <div className="hidden lg:block absolute right-6 top-0 bottom-0 w-[140px] overflow-hidden opacity-50 pointer-events-none" style={{ maskImage: 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' }}>
         <div className="film-reel-down">
           <img src={filmReel2} alt="" className="w-full" />
           <img src={filmReel2} alt="" className="w-full" />
