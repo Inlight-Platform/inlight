@@ -387,14 +387,7 @@ export const MainNav: React.FC = () => {
               'text-[hsl(220_15%_60%)]'
             )}>
 
-              <div className="relative">
-                <MessageCircle className="w-5 h-5" />
-                {totalUnread > 0 &&
-              <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-bold bg-[hsl(45_95%_58%)] text-[hsl(222_35%_8%)] rounded-full shadow-lg shadow-[hsl(45_95%_58%/0.4)]">
-                    {totalUnread > 9 ? '9+' : totalUnread}
-                  </span>
-              }
-              </div>
+              <MessageCircle className="w-5 h-5" />
               <span className="text-[10px] leading-none whitespace-nowrap">Messages</span>
             </Link>
           }

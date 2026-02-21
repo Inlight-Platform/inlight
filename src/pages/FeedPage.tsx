@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Filter, Plus, Calendar, Briefcase, FolderKanban, User, LayoutGrid, Users, Theater } from 'lucide-react';
+import { Filter, Plus, Calendar, Briefcase, FolderKanban, User, Users, Theater } from 'lucide-react';
 import inlightLogo from '@/assets/inlight-logo.png';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -292,8 +292,7 @@ const FeedPage: React.FC = () => {
   { value: 'jobs', label: 'Opportunities', icon: <Briefcase className="h-4 w-4" /> },
   { value: 'events', label: 'Events', icon: <Calendar className="h-4 w-4" /> },
   { value: 'updates', label: 'Updates', icon: <User className="h-4 w-4" /> },
-  { value: 'shows', label: 'Shows', icon: <Theater className="h-4 w-4" /> },
-  { value: 'all', label: 'All', icon: <LayoutGrid className="h-4 w-4" /> }];
+  { value: 'shows', label: 'Shows', icon: <Theater className="h-4 w-4" /> }];
 
 
   // Count items by type

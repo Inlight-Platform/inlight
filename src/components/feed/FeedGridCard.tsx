@@ -4,6 +4,7 @@ import { Calendar, Briefcase, FolderKanban, MessageCircle, Theater, UserPlus, Us
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { FeedItemData } from './FeedItem';
 
 interface FeedGridCardProps {
@@ -34,6 +35,8 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
     }
   };
 
+  // Only show image area for projects, events, and shows
+  const showImage = item.type === 'project' || item.type === 'event' || item.type === 'show';
   const showAnonymous = item.type === 'show' && item.is_anonymous;
   const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
@@ -42,33 +45,30 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
 
   return (
     <Card
-      className="overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] bg-card border-border group h-[280px] flex flex-col"
+      className={cn(
+        "overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] bg-card border-border group flex flex-col",
+        showImage ? "h-[280px]" : "h-[180px]"
+      )}
       onClick={onClick}
     >
-      {/* Image or placeholder header - always same height */}
-      <div className="w-full h-32 overflow-hidden flex-shrink-0">
-        {item.image_url && item.type !== 'open_role' ? (
-          <img
-            src={item.image_url}
-            alt={item.title || 'Feed image'}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        ) : item.type === 'open_role' ? (
-          <div className="w-full h-full bg-primary flex items-center justify-center">
-            <UserPlus className="h-8 w-8 text-primary-foreground" />
-          </div>
-        ) : item.type === 'post' ? (
-          <div className="w-full h-full bg-[hsl(45_95%_58%)] flex items-center justify-center">
-            <MessageCircle className="h-8 w-8 text-[hsl(222_35%_6%)]" />
-          </div>
-        ) : (
-          <div className="w-full h-full bg-muted/50 flex items-center justify-center">
-            <div className="p-3 rounded-full bg-background/80">
-              {getTypeIcon()}
+      {/* Image header - only for projects, events, and shows */}
+      {showImage && (
+        <div className="w-full h-32 overflow-hidden flex-shrink-0">
+          {item.image_url ? (
+            <img
+              src={item.image_url}
+              alt={item.title || 'Feed image'}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <div className="w-full h-full bg-muted/50 flex items-center justify-center">
+              <div className="p-3 rounded-full bg-background/80">
+                {getTypeIcon()}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <div className="p-3 space-y-1.5 flex-1 flex flex-col min-h-0">
         {/* Type badge */}
