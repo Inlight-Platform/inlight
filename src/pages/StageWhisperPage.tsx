@@ -187,8 +187,8 @@ const StageWhisperPage: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{
-              background: 'linear-gradient(135deg, hsl(350 90% 60%), hsl(30 90% 55%))',
-              boxShadow: '0 0 20px hsl(350 90% 60% / 0.4)'
+              background: 'linear-gradient(135deg, hsl(264 100% 71%), hsl(280 100% 65%))',
+              boxShadow: '0 0 20px hsl(264 100% 71% / 0.4)'
             }}>
                 {industryTab === 'theatre' ? <Theater className="w-5 h-5 text-white" /> : industryTab === 'film' ? <Film className="w-5 h-5 text-white" /> : <Music className="w-5 h-5 text-white" />}
               </div>
