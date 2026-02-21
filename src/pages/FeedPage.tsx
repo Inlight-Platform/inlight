@@ -22,7 +22,7 @@ const FeedPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
-  const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
+  const [contentFilter, setContentFilter] = useState<ContentFilter>('jobs');
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
   const { firstDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
@@ -288,12 +288,12 @@ const FeedPage: React.FC = () => {
 
 
   const contentFilters: {value: ContentFilter;label: string;icon: React.ReactNode;}[] = [
-  { value: 'all', label: 'All', icon: <LayoutGrid className="h-4 w-4" /> },
-  { value: 'events', label: 'Events', icon: <Calendar className="h-4 w-4" /> },
   { value: 'jobs', label: 'Opportunities', icon: <Briefcase className="h-4 w-4" /> },
   { value: 'projects', label: 'Projects', icon: <FolderKanban className="h-4 w-4" /> },
+  { value: 'events', label: 'Events', icon: <Calendar className="h-4 w-4" /> },
   { value: 'updates', label: 'Updates', icon: <User className="h-4 w-4" /> },
-  { value: 'shows', label: 'Shows', icon: <Theater className="h-4 w-4" /> }];
+  { value: 'shows', label: 'Shows', icon: <Theater className="h-4 w-4" /> },
+  { value: 'all', label: 'All', icon: <LayoutGrid className="h-4 w-4" /> }];
 
 
   // Count items by type
