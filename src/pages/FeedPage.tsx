@@ -409,13 +409,12 @@ const FeedPage: React.FC = () => {
           </div> :
 
             contentFilter === 'updates' ?
-            <div className="flex gap-3 overflow-x-auto pb-4 -mx-3 px-3 snap-x snap-mandatory">
+            <div className="flex flex-col gap-4 max-w-xl mx-auto">
               {feedItems.map((item) =>
-                <div key={`${item.type}-${item.id}`} className="flex-shrink-0 w-[280px] snap-start">
-                  <FeedGridCard
-                    item={item}
-                    onClick={() => setSelectedItem(item)} />
-                </div>
+                <FeedItem
+                  key={`${item.type}-${item.id}`}
+                  item={item}
+                  networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)} />
               )}
             </div> :
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
