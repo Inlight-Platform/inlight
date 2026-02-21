@@ -22,7 +22,7 @@ const FeedPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
-  const [contentFilter, setContentFilter] = useState<ContentFilter>('jobs');
+  const [contentFilter, setContentFilter] = useState<ContentFilter>('projects');
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
   const { firstDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
@@ -311,13 +311,16 @@ const FeedPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="relative">
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ 
+                background: 'linear-gradient(135deg, hsl(264 100% 71%), hsl(280 100% 65%))',
+                boxShadow: '0 0 20px hsl(264 100% 71% / 0.4)'
+              }}
+            >
               <img
-
                 alt="Home"
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-[hsl(45_95%_58%/0.3)]" src="/lovable-uploads/93be88bc-6d7b-48b5-8a62-e166ac7c3060.png" />
-
-              <div className="absolute inset-0 blur-lg bg-[hsl(45_95%_58%/0.2)] -z-10 rounded-full" />
+                className="w-6 h-6 rounded-full object-cover" src="/lovable-uploads/93be88bc-6d7b-48b5-8a62-e166ac7c3060.png" />
             </div>
             <h1 className="text-2xl font-display font-bold">Home</h1>
           </div>

@@ -43,8 +43,8 @@ const InsightsPage: React.FC = () => {
             <div 
               className="w-10 h-10 rounded-full flex items-center justify-center"
               style={{ 
-                background: 'linear-gradient(135deg, hsl(48, 100%, 50%), hsl(38, 100%, 55%))',
-                boxShadow: '0 0 20px hsl(48 100% 50% / 0.4)'
+                background: 'linear-gradient(135deg, hsl(264 100% 71%), hsl(280 100% 65%))',
+                boxShadow: '0 0 20px hsl(264 100% 71% / 0.4)'
               }}
             >
               <span className="text-lg">📊</span>

@@ -23,8 +23,8 @@
     --popover: 220 20% 98%;
     --popover-foreground: 220 30% 10%;
 
-    /* Primary - Deep royal blue */
-    --primary: 220 80% 50%;
+    /* Primary - Bright neon blue (matches landing page) */
+    --primary: 200 100% 50%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary - Slate blue */
@@ -86,13 +86,13 @@
     /* Sidebar */
     --sidebar-background: 220 25% 98%;
     --sidebar-foreground: 220 30% 10%;
-    --sidebar-primary: 220 80% 50%;
+    --sidebar-primary: 200 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 45 90% 55%;
     --sidebar-accent-foreground: 220 30% 10%;
     --sidebar-border: 220 20% 90%;
     --sidebar-ring: 45 90% 55%;
-    --chart-1: 220 80% 50%;
+    --chart-1: 200 100% 50%;
     --chart-2: 45 90% 55%;
     --chart-3: 200 80% 50%;
     --chart-4: 160 80% 45%;
@@ -125,8 +125,8 @@
     --popover: 222 28% 12%;
     --popover-foreground: 220 15% 95%;
 
-    /* Primary - Royal blue */
-    --primary: 220 85% 55%;
+    /* Primary - Bright neon blue (matches landing page) */
+    --primary: 200 100% 50%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary - Muted blue-gray */
@@ -166,13 +166,13 @@
 
     --sidebar-background: 222 32% 8%;
     --sidebar-foreground: 220 15% 95%;
-    --sidebar-primary: 220 85% 55%;
+    --sidebar-primary: 200 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 45 95% 58%;
     --sidebar-accent-foreground: 222 35% 8%;
     --sidebar-border: 222 25% 15%;
     --sidebar-ring: 45 95% 58%;
-    --chart-1: 220 85% 60%;
+    --chart-1: 200 100% 55%;
     --chart-2: 45 95% 58%;
     --chart-3: 200 90% 55%;
     --chart-4: 160 85% 50%;
