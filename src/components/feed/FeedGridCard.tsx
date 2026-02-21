@@ -47,7 +47,7 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
     <Card
       className={cn(
         "overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] bg-card border-border group flex flex-col",
-        showImage ? "h-[280px]" : "h-[180px]"
+        showImage ? "h-[280px]" : ""
       )}
       onClick={onClick}
     >
