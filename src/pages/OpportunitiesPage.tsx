@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Briefcase, Star, TrendingUp } from 'lucide-react';
+import { Plus, Briefcase, Star, TrendingUp, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStore, OpportunityType, ExperienceLevel, UserRole, Opportunity } from '@/store/useStore';
@@ -101,9 +101,16 @@ const OpportunitiesPage: React.FC = () => {
 
   const openOpportunities = useMemo(() => 
     filteredOpportunities
-      .filter(o => o.status === 'open')
+      .filter(o => o.status === 'open' && !(o.deadline && new Date(o.deadline) < new Date()))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [filteredOpportunities]
+  );
+
+  const expiredOpportunities = useMemo(() => 
+    allOpportunities
+      .filter(o => o.deadline && new Date(o.deadline) < new Date())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [allOpportunities]
   );
 
   return (
@@ -155,6 +162,10 @@ const OpportunitiesPage: React.FC = () => {
               </TabsTrigger>
               <TabsTrigger value="posted" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20 whitespace-nowrap">
                 <span className="hidden sm:inline">My </span>Posts ({myOpportunities.length})
+              </TabsTrigger>
+              <TabsTrigger value="expired" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20 whitespace-nowrap">
+                <Clock className="w-4 h-4 mr-2" />
+                Expired ({expiredOpportunities.length})
               </TabsTrigger>
             </TabsList>
           </div>
@@ -264,6 +275,25 @@ const OpportunitiesPage: React.FC = () => {
                 <Button onClick={() => setShowCreator(true)}>
                   Post Your First Opportunity
                 </Button>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Expired Tab */}
+          <TabsContent value="expired" className="space-y-4">
+            {expiredOpportunities.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {expiredOpportunities.map((opportunity) => (
+                  <OpportunityCard key={opportunity.id} opportunity={opportunity} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Clock className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No expired opportunities</h3>
+                <p className="text-muted-foreground">
+                  Past-deadline opportunities will appear here
+                </p>
               </div>
             )}
           </TabsContent>
