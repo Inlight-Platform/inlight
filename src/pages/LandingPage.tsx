@@ -8,6 +8,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2, GraduationCap, Briefcase, Users, Film, ArrowRight, ArrowLeft } from 'lucide-react';
 import inlightLogo from '@/assets/inlight-new-logo.png';
+import filmReel1 from '@/assets/film-reel-1.png';
+import filmReel2 from '@/assets/film-reel-2.png';
 
 const LandingPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -66,6 +68,20 @@ const LandingPage: React.FC = () => {
           0%, 100% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
         }
+        @keyframes scroll-up {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(-50%); }
+        }
+        @keyframes scroll-down {
+          0% { transform: translateY(-50%); }
+          100% { transform: translateY(0); }
+        }
+        .film-reel-up {
+          animation: scroll-up 30s linear infinite;
+        }
+        .film-reel-down {
+          animation: scroll-down 30s linear infinite;
+        }
         .spotlight-card {
           position: relative;
           overflow: hidden;
@@ -87,8 +103,24 @@ const LandingPage: React.FC = () => {
         }
       `}</style>
 
+      {/* Left film reel */}
+      <div className="hidden lg:block absolute left-0 top-0 bottom-0 w-[140px] overflow-hidden opacity-30 pointer-events-none" style={{ maskImage: 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' }}>
+        <div className="film-reel-up">
+          <img src={filmReel1} alt="" className="w-full" />
+          <img src={filmReel1} alt="" className="w-full" />
+        </div>
+      </div>
+
+      {/* Right film reel */}
+      <div className="hidden lg:block absolute right-0 top-0 bottom-0 w-[140px] overflow-hidden opacity-30 pointer-events-none" style={{ maskImage: 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' }}>
+        <div className="film-reel-down">
+          <img src={filmReel2} alt="" className="w-full" />
+          <img src={filmReel2} alt="" className="w-full" />
+        </div>
+      </div>
+
       {/* Main content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-16">
+      <main className="flex-1 flex items-center justify-center px-4 py-16 relative z-10">
         <div className="w-full max-w-2xl space-y-10">
           {/* Hero text */}
           <div className="space-y-4 text-center">
