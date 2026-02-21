@@ -375,10 +375,11 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
           <div className="flex items-center gap-2">
             <VideoLinkUploader userId={userId} onComplete={onUploadComplete} />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {items.map(renderMediaItem)}
-            {renderUploadButton()}
-          </div>
+          {items.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {items.map(renderMediaItem)}
+            </div>
+          )}
         </div>
       )}
 
