@@ -136,6 +136,10 @@ const ProjectNewPage: React.FC = () => {
       toast.error('Please enter a project title');
       return;
     }
+    if (!mainImageUrl.trim() && !headerImageUrl.trim()) {
+      toast.error('Please add an image for your project');
+      return;
+    }
     createProjectMutation.mutate();
   };
 
@@ -289,7 +293,7 @@ const ProjectNewPage: React.FC = () => {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="mainImage">Main Image URL</Label>
+              <Label htmlFor="mainImage">Main Image URL *</Label>
               <Input
                 id="mainImage"
                 placeholder="https://example.com/image.jpg"

@@ -180,9 +180,10 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       console.log('Update validation failed');
       return;
     }
-    if (postType === 'event' && (!title.trim() || !eventDate)) {
-      console.log('Event validation failed', { title: title.trim(), eventDate });
-      toast.error('Please fill in the event title and date');
+    if (postType === 'event' && (!title.trim() || !eventDate || !imageUrl)) {
+      console.log('Event validation failed', { title: title.trim(), eventDate, imageUrl });
+      if (!imageUrl) toast.error('Please add an image for your event');
+      else toast.error('Please fill in the event title and date');
       return;
     }
     if (postType === 'job' && (!title.trim() || !content.trim() || !imageUrl)) {
@@ -197,7 +198,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const isValid = () => {
     if (visibility === 'specific' && selectedRecipients.length === 0 && (postType === 'update' || postType === 'job')) return false;
     if (postType === 'update') return content.trim().length > 0;
-    if (postType === 'event') return title.trim().length > 0 && eventDate.length > 0;
+    if (postType === 'event') return title.trim().length > 0 && eventDate.length > 0 && imageUrl.length > 0;
     if (postType === 'job') return title.trim().length > 0 && content.trim().length > 0 && imageUrl.length > 0;
     return false;
   };
