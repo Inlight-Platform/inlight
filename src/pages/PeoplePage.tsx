@@ -259,15 +259,11 @@ const PeoplePage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ 
-                background: 'linear-gradient(135deg, hsl(264 100% 71%), hsl(280 100% 65%))',
-                boxShadow: '0 0 20px hsl(264 100% 71% / 0.4)'
-              }}
-            >
-              <Users className="w-5 h-5 text-white" />
-            </div>
+            <img
+              src="/lovable-uploads/c3205623-a05c-42d3-98bc-f6f58256bf08.png"
+              alt="Inlight"
+              className="w-10 h-10 rounded-full object-cover"
+            />
             <h1 className="text-2xl font-display font-bold">People</h1>
           </div>
         </div>
