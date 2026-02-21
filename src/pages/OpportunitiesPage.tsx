@@ -119,15 +119,11 @@ const OpportunitiesPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ 
-                background: 'linear-gradient(135deg, hsl(264 100% 71%), hsl(280 100% 65%))',
-                boxShadow: '0 0 20px hsl(264 100% 71% / 0.4)'
-              }}
-            >
-              <Briefcase className="w-5 h-5 text-foreground" />
-            </div>
+            <img
+              src="/lovable-uploads/c3205623-a05c-42d3-98bc-f6f58256bf08.png"
+              alt="Inlight"
+              className="w-10 h-10 rounded-full object-cover"
+            />
             <div>
               <h1 className="text-2xl font-display font-bold">Jobs</h1>
               <p className="text-sm text-muted-foreground">
@@ -137,7 +133,7 @@ const OpportunitiesPage: React.FC = () => {
           </div>
           <Button 
             onClick={() => setShowCreator(true)}
-            className="bg-[hsl(var(--neon-opportunities))] text-foreground hover:opacity-90"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="w-4 h-4 mr-2" />
             Post Opportunity

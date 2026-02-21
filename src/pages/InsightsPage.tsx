@@ -40,15 +40,11 @@ const InsightsPage: React.FC = () => {
             <ChevronLeft className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-3">
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ 
-                background: 'linear-gradient(135deg, hsl(264 100% 71%), hsl(280 100% 65%))',
-                boxShadow: '0 0 20px hsl(264 100% 71% / 0.4)'
-              }}
-            >
-              <span className="text-lg">📊</span>
-            </div>
+            <img
+              src="/lovable-uploads/c3205623-a05c-42d3-98bc-f6f58256bf08.png"
+              alt="Inlight"
+              className="w-10 h-10 rounded-full object-cover"
+            />
             <h1 className="text-2xl font-display font-bold">Industry Insights</h1>
           </div>
         </div>

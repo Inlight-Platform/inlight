@@ -304,7 +304,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
               size="sm"
               disabled={isDeadlinePast || opportunity.status !== 'open'}
               onClick={handleApply}
-              className="bg-[hsl(var(--neon-opportunities))] text-foreground hover:opacity-90"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Apply Now
             </Button>
