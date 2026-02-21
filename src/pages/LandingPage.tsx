@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2, GraduationCap, Briefcase, Users, Film, ArrowRight, ArrowLeft } from 'lucide-react';
-import inlightLogo from '@/assets/inlight-new-logo.png';
+import inlightLogo from '@/assets/inlight-logo.png';
 
 const LandingPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -92,14 +92,16 @@ const LandingPage: React.FC = () => {
         <div className="w-full max-w-2xl space-y-10">
           {/* Hero text */}
           <div className="space-y-4 text-center">
-            <img src={inlightLogo} alt="Inlight logo" className="w-24 h-24 rounded-2xl mx-auto mb-4" />
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground font-['Space_Grotesk']">
+            <div className="w-20 h-20 rounded-full mx-auto mb-6 overflow-hidden" style={{ boxShadow: '0 0 20px hsl(195 80% 60% / 0.4), 0 0 40px hsl(195 80% 60% / 0.2)' }}>
+              <img src={inlightLogo} alt="Inlight logo" className="w-full h-full object-cover" />
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-accent font-['Dancing_Script']">
               Welcome to Inlight
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
               Where university creatives connect, collaborate, and come to life.
             </p>
-            <p className="text-sm font-medium text-accent font-['Dancing_Script'] text-lg">Made for the makers.</p>
+            <p className="text-sm font-medium text-accent italic">Made for the makers.</p>
           </div>
 
           {/* Features */}
