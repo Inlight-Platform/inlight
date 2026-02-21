@@ -140,19 +140,19 @@ const LandingPage: React.FC = () => {
           <div className="grid gap-4 sm:grid-cols-3">
             <Card className="spotlight-card border-border bg-card">
               <CardContent className="pt-6 text-center space-y-2">
-                <Briefcase className="h-6 w-6 mx-auto text-primary" />
+                <Briefcase className="h-6 w-6 mx-auto" style={{ color: 'hsl(200 100% 50%)' }} />
                 <p className="text-sm text-foreground">Find and post jobs, events, and projects.</p>
               </CardContent>
             </Card>
             <Card className="spotlight-card border-border bg-card">
               <CardContent className="pt-6 text-center space-y-2">
-                <Users className="h-6 w-6 mx-auto text-primary" />
+                <Users className="h-6 w-6 mx-auto" style={{ color: 'hsl(200 100% 50%)' }} />
                 <p className="text-sm text-foreground">Look up people at your school.</p>
               </CardContent>
             </Card>
             <Card className="spotlight-card border-border bg-card">
               <CardContent className="pt-6 text-center space-y-2">
-                <Film className="h-6 w-6 mx-auto text-primary" />
+                <Film className="h-6 w-6 mx-auto" style={{ color: 'hsl(200 100% 50%)' }} />
                 <p className="text-sm text-foreground">Discover professional shows, films, and companies.</p>
               </CardContent>
             </Card>
@@ -160,7 +160,11 @@ const LandingPage: React.FC = () => {
 
           {/* Auth section */}
           <div className="flex flex-col items-center gap-3">
-            <Button className="w-full max-w-xs" onClick={() => navigate('/auth')}>
+            <Button
+              className="w-full max-w-xs text-background font-semibold"
+              style={{ background: 'hsl(200 100% 50%)' }}
+              onClick={() => navigate('/auth')}
+            >
               Log in or Sign Up <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
