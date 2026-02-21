@@ -291,8 +291,8 @@ const FeedPage: React.FC = () => {
   { value: 'projects', label: 'Projects', icon: <FolderKanban className="h-4 w-4" /> },
   { value: 'jobs', label: 'Opportunities', icon: <Briefcase className="h-4 w-4" /> },
   { value: 'events', label: 'Events', icon: <Calendar className="h-4 w-4" /> },
-  { value: 'updates', label: 'Updates', icon: <User className="h-4 w-4" /> },
-  { value: 'shows', label: 'Shows', icon: <Theater className="h-4 w-4" /> }];
+  { value: 'shows', label: 'Shows', icon: <Theater className="h-4 w-4" /> },
+  { value: 'updates', label: 'Updates', icon: <User className="h-4 w-4" /> }];
 
 
   // Count items by type
@@ -408,6 +408,16 @@ const FeedPage: React.FC = () => {
               }
           </div> :
 
+            contentFilter === 'updates' ?
+            <div className="flex gap-3 overflow-x-auto pb-4 -mx-3 px-3 snap-x snap-mandatory">
+              {feedItems.map((item) =>
+                <div key={`${item.type}-${item.id}`} className="flex-shrink-0 w-[280px] snap-start">
+                  <FeedGridCard
+                    item={item}
+                    onClick={() => setSelectedItem(item)} />
+                </div>
+              )}
+            </div> :
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {feedItems.map((item) =>
               <FeedGridCard
