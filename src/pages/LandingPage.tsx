@@ -92,6 +92,7 @@ const LandingPage: React.FC = () => {
         <div className="w-full max-w-2xl space-y-10">
           {/* Hero text */}
           <div className="space-y-4 text-center">
+            <img src={inlightLogo} alt="Inlight logo" className="w-20 h-20 rounded-full mx-auto" />
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground font-['Space_Grotesk']">
               Welcome to Inlight
             </h1>
