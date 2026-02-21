@@ -1567,6 +1567,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_films: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_anonymous: boolean | null
+          link_url: string
+          poster_url: string | null
+          submitted_by: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_anonymous?: boolean | null
+          link_url: string
+          poster_url?: string | null
+          submitted_by: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_anonymous?: boolean | null
+          link_url?: string
+          poster_url?: string | null
+          submitted_by?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_media: {
         Row: {
           cover_url: string | null
@@ -1612,6 +1651,54 @@ export type Database = {
           updated_at?: string
           user_id?: string
           visibility?: string
+        }
+        Relationships: []
+      }
+      user_music_shows: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_anonymous: boolean | null
+          is_free: boolean | null
+          poster_url: string | null
+          show_date: string | null
+          submitted_by: string
+          ticket_url: string | null
+          title: string
+          updated_at: string
+          venue: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_anonymous?: boolean | null
+          is_free?: boolean | null
+          poster_url?: string | null
+          show_date?: string | null
+          submitted_by: string
+          ticket_url?: string | null
+          title: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_anonymous?: boolean | null
+          is_free?: boolean | null
+          poster_url?: string | null
+          show_date?: string | null
+          submitted_by?: string
+          ticket_url?: string | null
+          title?: string
+          updated_at?: string
+          venue?: string | null
         }
         Relationships: []
       }

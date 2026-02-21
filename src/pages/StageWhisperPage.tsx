@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music } from 'lucide-react';
+import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedShows } from '@/hooks/useSavedShows';
@@ -13,6 +13,8 @@ import { ShowFilters, FilterState } from '@/components/stage-whisper/ShowFilters
 import { ShowDetailSheet } from '@/components/stage-whisper/ShowDetailSheet';
 import { MyShowList } from '@/components/stage-whisper/MyShowList';
 import { AddShowDialog } from '@/components/stage-whisper/AddShowDialog';
+import { AddFilmDialog } from '@/components/stage-whisper/AddFilmDialog';
+import { AddMusicShowDialog } from '@/components/stage-whisper/AddMusicShowDialog';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +48,29 @@ interface StreamingContent {
   release_year?: number;
   rating: number;
 }
+interface UserFilm {
+  id: string;
+  title: string;
+  description?: string;
+  link_url: string;
+  poster_url?: string;
+  submitted_by: string;
+  is_anonymous?: boolean;
+  created_at: string;
+}
+interface UserMusicShow {
+  id: string;
+  title: string;
+  description?: string;
+  venue?: string;
+  show_date?: string;
+  ticket_url?: string;
+  is_free?: boolean;
+  poster_url?: string;
+  submitted_by: string;
+  is_anonymous?: boolean;
+  created_at: string;
+}
 const StageWhisperPage: React.FC = () => {
   const {
     user
@@ -62,7 +87,7 @@ const StageWhisperPage: React.FC = () => {
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [activeTab, setActiveTab] = useState('broadway');
   const [viewTab, setViewTab] = useState<'discover' | 'my-list'>('discover');
-  const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'streaming'>('theatres');
+  const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'streaming' | 'student'>('theatres');
   const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
 
   // Fetch all shows
@@ -119,6 +144,42 @@ const StageWhisperPage: React.FC = () => {
       return data as StreamingContent[];
     },
     enabled: industryTab === 'film'
+  });
+
+  // Fetch user-submitted films
+  const {
+    data: userFilms = [],
+    isLoading: loadingUserFilms
+  } = useQuery({
+    queryKey: ['user-films'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_films')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as UserFilm[];
+    },
+    enabled: industryTab === 'film'
+  });
+
+  // Fetch user-submitted music shows
+  const {
+    data: userMusicShows = [],
+    isLoading: loadingMusicShows
+  } = useQuery({
+    queryKey: ['user-music-shows'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_music_shows')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as UserMusicShow[];
+    },
+    enabled: industryTab === 'music'
   });
 
   // Filter shows based on active category tab
@@ -298,6 +359,10 @@ const StageWhisperPage: React.FC = () => {
               <Tv className="w-4 h-4" />
               Streaming
             </Button>
+            <Button variant={filmViewTab === 'student' ? 'default' : 'ghost'} size="sm" onClick={() => setFilmViewTab('student')} className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              Community
+            </Button>
           </div>}
       </header>
 
@@ -456,6 +521,55 @@ const StageWhisperPage: React.FC = () => {
                       </Card>)}
                   </div>}
               </>}
+
+            {/* Community / Student Films */}
+            {filmViewTab === 'student' && <>
+                {/* Creator Note */}
+                <div className="mb-4 p-3 bg-accent/50 rounded-lg border border-accent flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Released a student film or want to advertise a film you worked on?</span>{' '}
+                      Share it with the community!
+                    </p>
+                  </div>
+                  <AddFilmDialog trigger={
+                    <Button size="sm" className="gap-1.5 shrink-0">
+                      <Plus className="w-4 h-4" />
+                      Add Film
+                    </Button>
+                  } />
+                </div>
+
+                {loadingUserFilms ? <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                  </div> : userFilms.length === 0 ? <div className="text-center py-12">
+                    <Film className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No community films yet.</p>
+                    <p className="text-sm text-muted-foreground mt-1">Be the first to share your work!</p>
+                  </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {userFilms.map(film => <a key={film.id} href={film.link_url} target="_blank" rel="noopener noreferrer">
+                        <Card className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer">
+                          <div className="aspect-[2/3] relative bg-muted">
+                            {film.poster_url ? <img src={film.poster_url} alt={film.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
+                                <Film className="w-12 h-12 text-muted-foreground" />
+                              </div>}
+                            <div className="absolute top-2 right-2">
+                              <Badge className="bg-background/90 text-foreground text-xs">
+                                <ExternalLink className="w-3 h-3" />
+                              </Badge>
+                            </div>
+                          </div>
+                          <CardContent className="p-3">
+                            <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
+                              {film.title}
+                            </h3>
+                            {film.description && <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{film.description}</p>}
+                          </CardContent>
+                        </Card>
+                      </a>)}
+                  </div>}
+              </>}
           </>}
 
         {/* MUSIC CONTENT */}
@@ -475,11 +589,52 @@ const StageWhisperPage: React.FC = () => {
                   <p className="text-sm text-muted-foreground">Discover music performances and concerts by the community.</p>
                 </div>
 
-                <div className="text-center py-12">
-                  <Music className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No local shows listed yet.</p>
-                  <p className="text-sm text-muted-foreground mt-1">Check back soon for upcoming performances!</p>
+                {/* Creator Note */}
+                <div className="p-3 bg-accent/50 rounded-lg border border-accent flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Performing in an upcoming show?</span>{' '}
+                      Let your community know!
+                    </p>
+                  </div>
+                  <AddMusicShowDialog trigger={
+                    <Button size="sm" className="gap-1.5 shrink-0">
+                      <Plus className="w-4 h-4" />
+                      Add Show
+                    </Button>
+                  } />
                 </div>
+
+                {loadingMusicShows ? <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                  </div> : userMusicShows.length === 0 ? <div className="text-center py-12">
+                    <Music className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No local shows listed yet.</p>
+                    <p className="text-sm text-muted-foreground mt-1">Be the first to share your performance!</p>
+                  </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {userMusicShows.map(show => <Card key={show.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer" onClick={() => {
+                        if (show.ticket_url) window.open(show.ticket_url, '_blank');
+                      }}>
+                        <div className="aspect-[2/3] relative bg-muted">
+                          {show.poster_url ? <img src={show.poster_url} alt={show.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
+                              <Music className="w-12 h-12 text-muted-foreground" />
+                            </div>}
+                          <div className="absolute top-2 right-2">
+                            <Badge className="bg-background/90 text-foreground text-xs">
+                              {show.is_free ? 'Free' : 'Tickets'}
+                            </Badge>
+                          </div>
+                        </div>
+                        <CardContent className="p-3">
+                          <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
+                            {show.title}
+                          </h3>
+                          {show.venue && <p className="text-xs text-muted-foreground line-clamp-1">{show.venue}</p>}
+                          {show.show_date && <p className="text-xs text-muted-foreground mt-1">{new Date(show.show_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>}
+                        </CardContent>
+                      </Card>)}
+                  </div>}
               </div>}
           </>}
       </div>
