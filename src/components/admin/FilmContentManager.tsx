@@ -106,7 +106,15 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
   // Theatre mutations
   const createTheatreMutation = useMutation({
     mutationFn: async (data: typeof theatreForm) => {
-      const { error } = await supabase.from('film_metrics').insert(data);
+      const { error } = await supabase.from('film_metrics').insert({
+        title: data.title,
+        studio: data.studio,
+        rating: data.rating,
+        poster_url: data.poster_url || null,
+        date: data.date,
+        weekend_gross: 0,
+        total_gross: 0,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -120,7 +128,13 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
 
   const updateTheatreMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: typeof theatreForm }) => {
-      const { error } = await supabase.from('film_metrics').update(data).eq('id', id);
+      const { error } = await supabase.from('film_metrics').update({
+        title: data.title,
+        studio: data.studio,
+        rating: data.rating,
+        poster_url: data.poster_url || null,
+        date: data.date,
+      } as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
