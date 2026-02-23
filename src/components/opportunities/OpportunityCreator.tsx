@@ -234,26 +234,40 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
               />
             </div>
             <div>
-              <Label htmlFor="startTime">Start Time</Label>
-              <Input
-                id="startTime"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="mt-1"
-                disabled={!deadlineDate}
-              />
+              <Label>Start Time</Label>
+              <Select value={startTime} onValueChange={setStartTime} disabled={!deadlineDate}>
+                <SelectTrigger className="mt-1 bg-background">
+                  <SelectValue placeholder="Select time" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border max-h-60 z-50">
+                  {Array.from({ length: 48 }, (_, i) => {
+                    const h = Math.floor(i / 2);
+                    const m = i % 2 === 0 ? '00' : '30';
+                    const val = `${String(h).padStart(2, '0')}:${m}`;
+                    const ampm = h === 0 ? '12' : h > 12 ? String(h - 12) : String(h);
+                    const label = `${ampm}:${m} ${h < 12 ? 'AM' : 'PM'}`;
+                    return <SelectItem key={val} value={val}>{label}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <Label htmlFor="endTime">End Time</Label>
-              <Input
-                id="endTime"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="mt-1"
-                disabled={!deadlineDate}
-              />
+              <Label>End Time</Label>
+              <Select value={endTime} onValueChange={setEndTime} disabled={!deadlineDate}>
+                <SelectTrigger className="mt-1 bg-background">
+                  <SelectValue placeholder="Select time" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border max-h-60 z-50">
+                  {Array.from({ length: 48 }, (_, i) => {
+                    const h = Math.floor(i / 2);
+                    const m = i % 2 === 0 ? '00' : '30';
+                    const val = `${String(h).padStart(2, '0')}:${m}`;
+                    const ampm = h === 0 ? '12' : h > 12 ? String(h - 12) : String(h);
+                    const label = `${ampm}:${m} ${h < 12 ? 'AM' : 'PM'}`;
+                    return <SelectItem key={val} value={val}>{label}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
