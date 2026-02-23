@@ -21,6 +21,7 @@ import { Opportunity, useStore } from '@/store/useStore';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import ApplicationDialog from './ApplicationDialog';
+import OpportunityDetailSheet from './OpportunityDetailSheet';
 
 interface OpportunityCardProps {
   opportunity: Opportunity;
@@ -46,6 +47,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
   const { user } = useAuth();
   const { getUser, currentUserId } = useStore();
   const [showApplicationDialog, setShowApplicationDialog] = useState(false);
+  const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [hasAppliedDB, setHasAppliedDB] = useState(false);
   const [posterProfile, setPosterProfile] = useState<{
     display_name: string | null;
@@ -181,7 +183,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
   }
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border-border/50 hover:border-primary/30">
+    <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border-border/50 hover:border-primary/30 cursor-pointer" onClick={() => setShowDetailSheet(true)}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -319,6 +321,20 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
         opportunityId={opportunity.id}
         opportunityTitle={opportunity.title}
         onApplicationSubmitted={handleApplicationSubmitted}
+      />
+
+      {/* Detail Sheet */}
+      <OpportunityDetailSheet
+        opportunity={opportunity}
+        open={showDetailSheet}
+        onOpenChange={setShowDetailSheet}
+        posterProfile={posterProfile ? { display_name: posterProfile.display_name, avatar_url: posterProfile.avatar_url, user_id: posterProfile.user_id } : null}
+        hasApplied={hasApplied}
+        applicationStatus={applicationStatus}
+        onApply={() => {
+          setShowDetailSheet(false);
+          setShowApplicationDialog(true);
+        }}
       />
     </Card>
   );
