@@ -419,6 +419,7 @@ export type Database = {
           poster_url: string | null
           rating: number
           studio: string
+          ticket_url: string | null
           title: string
           total_gross: number
           week_change: number
@@ -432,10 +433,11 @@ export type Database = {
           poster_url?: string | null
           rating?: number
           studio: string
+          ticket_url?: string | null
           title: string
-          total_gross: number
+          total_gross?: number
           week_change?: number
-          weekend_gross: number
+          weekend_gross?: number
           weeks_in_release?: number
         }
         Update: {
@@ -445,6 +447,7 @@ export type Database = {
           poster_url?: string | null
           rating?: number
           studio?: string
+          ticket_url?: string | null
           title?: string
           total_gross?: number
           week_change?: number
