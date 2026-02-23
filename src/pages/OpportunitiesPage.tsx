@@ -14,6 +14,7 @@ type ExperienceLevel = 'entry' | 'intermediate' | 'senior' | 'any';
 
 const OpportunitiesPage: React.FC = () => {
   const { user } = useAuth();
+  const isAdmin = user?.email === 'info@inlight.social';
   const { opportunities: allOpportunities, isLoading } = useOpportunities();
   
   const [showCreator, setShowCreator] = useState(false);
@@ -102,13 +103,15 @@ const OpportunitiesPage: React.FC = () => {
               </p>
             </div>
           </div>
-          <Button 
-            onClick={() => setShowCreator(true)}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Post Opportunity
-          </Button>
+          {isAdmin && (
+            <Button 
+              onClick={() => setShowCreator(true)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Post Opportunity
+            </Button>
+          )}
         </div>
       </header>
 
@@ -164,9 +167,11 @@ const OpportunitiesPage: React.FC = () => {
                   <p className="text-muted-foreground mb-4">
                     Try adjusting your filters or check back later
                   </p>
-                  <Button onClick={() => setShowCreator(true)}>
-                    Post an Opportunity
-                  </Button>
+                   {isAdmin && (
+                     <Button onClick={() => setShowCreator(true)}>
+                       Post an Opportunity
+                     </Button>
+                   )}
                 </div>
               )}
             </div>
@@ -187,9 +192,11 @@ const OpportunitiesPage: React.FC = () => {
                 <p className="text-muted-foreground mb-4">
                   Share opportunities with the creative community
                 </p>
-                <Button onClick={() => setShowCreator(true)}>
-                  Post Your First Opportunity
-                </Button>
+                 {isAdmin && (
+                   <Button onClick={() => setShowCreator(true)}>
+                     Post Your First Opportunity
+                   </Button>
+                 )}
               </div>
             )}
           </TabsContent>
