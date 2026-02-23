@@ -70,12 +70,23 @@ Deno.serve(async (req) => {
         .single();
 
       const senderName = senderProfile?.display_name || "Someone";
-      emailSubject = `New message from ${senderName}`;
 
-      emailBody = `
-        <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">You got a new message from ${senderName}!</h2>
-        <a href="https://inlight.lovable.app/messages" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
-      `;
+      // Check if this is a shared item message
+      const isSharedItem = body && body.startsWith("Shared: ");
+      if (isSharedItem) {
+        const itemTitle = body.replace("Shared: ", "");
+        emailSubject = `${senderName} shared something with you`;
+        emailBody = `
+          <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${senderName} shared "${itemTitle}" with you!</h2>
+          <a href="https://inlight.lovable.app/messages" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View</a>
+        `;
+      } else {
+        emailSubject = `New message from ${senderName}`;
+        emailBody = `
+          <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">You got a new message from ${senderName}!</h2>
+          <a href="https://inlight.lovable.app/messages" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
+        `;
+      }
     } else if (notificationType === "application" && data.applicant_id && data.project_id) {
       // Fetch applicant name
       const { data: applicantProfile } = await supabase
