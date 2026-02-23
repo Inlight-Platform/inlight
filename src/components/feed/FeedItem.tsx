@@ -142,6 +142,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const handleClick = () => {
     if (item.type === 'project') {
       navigate(`/projects/${item.id}`);
+    } else if (item.type === 'event') {
+      navigate(`/events/${item.id}`);
     } else if (item.type === 'show') {
       navigate('/stage-whisper');
     } else if (item.type === 'open_role' && item.project_id) {

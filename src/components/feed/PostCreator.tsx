@@ -48,6 +48,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [visibility, setVisibility] = useState<PostVisibility>('public');
   const [selectedRecipients, setSelectedRecipients] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
   const [linkTitle, setLinkTitle] = useState('');
+  const [customQuestion, setCustomQuestion] = useState('');
   const [positionX, setPositionX] = useState(50);
   const [positionY, setPositionY] = useState(50);
 
@@ -69,6 +70,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setEventType('');
     setLinkUrl('');
     setLinkTitle('');
+    setCustomQuestion('');
     setPostType('update');
     setVisibility('public');
     setSelectedRecipients([]);
@@ -129,6 +131,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             image_url: imageUrl || null,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
+            custom_question: customQuestion.trim() || null,
           });
         if (error) {
           console.error('Event creation error:', error);
@@ -351,14 +354,26 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
                   {/* Event type for events */}
                   {postType === 'event' && (
-                    <div className="space-y-1.5">
-                      <label className="text-sm text-muted-foreground">Event Type</label>
-                      <Input
-                        placeholder="Workshop, Networking, Performance..."
-                        value={eventType}
-                        onChange={(e) => setEventType(e.target.value)}
-                      />
-                    </div>
+                    <>
+                      <div className="space-y-1.5">
+                        <label className="text-sm text-muted-foreground">Event Type</label>
+                        <Input
+                          placeholder="Workshop, Networking, Performance..."
+                          value={eventType}
+                          onChange={(e) => setEventType(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm text-muted-foreground">Custom RSVP Question (optional)</label>
+                        <Input
+                          placeholder="e.g. What scene will you be performing?"
+                          value={customQuestion}
+                          onChange={(e) => setCustomQuestion(e.target.value)}
+                          maxLength={200}
+                        />
+                        <p className="text-xs text-muted-foreground">This question will appear on the RSVP form</p>
+                      </div>
+                    </>
                   )}
 
                   {/* Link fields for updates and events */}
