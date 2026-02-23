@@ -107,7 +107,20 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
         {opportunity.deadline && (
           <div className={`flex items-center gap-2 text-sm pb-4 ${isDeadlinePast ? 'text-destructive' : 'text-muted-foreground'}`}>
             <Clock className="w-4 h-4" />
-            <span>{isDeadlinePast ? 'Deadline passed' : `Apply by ${format(new Date(opportunity.deadline), 'MMM d, yyyy')}`}</span>
+            <span>
+              {isDeadlinePast 
+                ? 'Deadline passed' 
+                : (() => {
+                    const dl = opportunity.deadline!;
+                    const hasTime = dl.includes('T');
+                    const dateFormatted = format(new Date(dl), 'MMM d, yyyy');
+                    const startFormatted = hasTime ? format(new Date(dl), 'h:mm a') : '';
+                    const endFormatted = opportunity.startDate ? format(new Date(`2000-01-01T${opportunity.startDate}`), 'h:mm a') : '';
+                    if (startFormatted && endFormatted) return `${dateFormatted} · ${startFormatted} – ${endFormatted}`;
+                    if (startFormatted) return `${dateFormatted} · ${startFormatted}`;
+                    return `Apply by ${dateFormatted}`;
+                  })()}
+            </span>
           </div>
         )}
 
@@ -175,7 +188,13 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
                 const loc = encodeURIComponent(opportunity.isRemote ? 'Remote' : (opportunity.location || ''));
                 const deadlineDate = opportunity.deadline ? new Date(opportunity.deadline) : new Date();
                 const dateStr = deadlineDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                const endDate = new Date(deadlineDate.getTime() + 2 * 60 * 60 * 1000);
+                let endDate: Date;
+                if (opportunity.startDate && opportunity.deadline) {
+                  const baseDateStr = opportunity.deadline.split('T')[0];
+                  endDate = new Date(`${baseDateStr}T${opportunity.startDate}`);
+                } else {
+                  endDate = new Date(deadlineDate.getTime() + 2 * 60 * 60 * 1000);
+                }
                 const endStr = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
                 const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${loc}&dates=${dateStr}/${endStr}`;
                 window.open(calUrl, '_blank');

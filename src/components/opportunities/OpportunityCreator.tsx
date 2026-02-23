@@ -44,7 +44,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
   const [experienceLevel, setExperienceLevel] = useState('any');
   const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([]);
   const [deadlineDate, setDeadlineDate] = useState('');
-  const [deadlineTime, setDeadlineTime] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [duration, setDuration] = useState('');
   const [actionType, setActionType] = useState('apply');
 
@@ -78,7 +79,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       experience_level: experienceLevel,
       roles: selectedRoles,
       requirements: [],
-      deadline: deadlineDate ? (deadlineTime ? `${deadlineDate}T${deadlineTime}` : deadlineDate) : undefined,
+      deadline: deadlineDate ? (startTime ? `${deadlineDate}T${startTime}` : deadlineDate) : undefined,
+      start_date: endTime || undefined,
       duration: duration.trim() || undefined,
       tags: [],
       is_featured: false,
@@ -95,7 +97,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
         setExperienceLevel('any');
         setSelectedRoles([]);
         setDeadlineDate('');
-        setDeadlineTime('');
+        setStartTime('');
+        setEndTime('');
         setDuration('');
         setActionType('apply');
         onOpenChange(false);
@@ -221,7 +224,7 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
             </div>
 
             <div>
-              <Label htmlFor="deadline">Deadline Date</Label>
+              <Label htmlFor="deadline">Date</Label>
               <Input
                 id="deadline"
                 type="date"
@@ -231,12 +234,23 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
               />
             </div>
             <div>
-              <Label htmlFor="deadlineTime">Deadline Time</Label>
+              <Label htmlFor="startTime">Start Time</Label>
               <Input
-                id="deadlineTime"
+                id="startTime"
                 type="time"
-                value={deadlineTime}
-                onChange={(e) => setDeadlineTime(e.target.value)}
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="mt-1"
+                disabled={!deadlineDate}
+              />
+            </div>
+            <div>
+              <Label htmlFor="endTime">End Time</Label>
+              <Input
+                id="endTime"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
                 className="mt-1"
                 disabled={!deadlineDate}
               />
