@@ -623,6 +623,75 @@ export type Database = {
         }
         Relationships: []
       }
+      opportunities: {
+        Row: {
+          company: string | null
+          compensation: string | null
+          created_at: string
+          deadline: string | null
+          description: string
+          duration: string | null
+          experience_level: string
+          id: string
+          is_featured: boolean
+          is_remote: boolean
+          location: string | null
+          posted_by: string
+          requirements: string[]
+          roles: string[]
+          start_date: string | null
+          status: string
+          tags: string[]
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          company?: string | null
+          compensation?: string | null
+          created_at?: string
+          deadline?: string | null
+          description: string
+          duration?: string | null
+          experience_level?: string
+          id?: string
+          is_featured?: boolean
+          is_remote?: boolean
+          location?: string | null
+          posted_by: string
+          requirements?: string[]
+          roles?: string[]
+          start_date?: string | null
+          status?: string
+          tags?: string[]
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          company?: string | null
+          compensation?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string
+          duration?: string | null
+          experience_level?: string
+          id?: string
+          is_featured?: boolean
+          is_remote?: boolean
+          location?: string | null
+          posted_by?: string
+          requirements?: string[]
+          roles?: string[]
+          start_date?: string | null
+          status?: string
+          tags?: string[]
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       opportunity_applications: {
         Row: {
           additional_materials: Json | null

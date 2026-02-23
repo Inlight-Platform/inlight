@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import {
-  MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2, CheckCircle2, Calendar
+  MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2, CheckCircle2
 } from 'lucide-react';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Opportunity } from '@/store/useStore';
+import { OpportunityView } from '@/hooks/useOpportunities';
 
 const opportunityTypeColors: Record<string, string> = {
   job: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -28,7 +28,7 @@ const experienceLevelLabels: Record<string, string> = {
 };
 
 interface OpportunityDetailSheetProps {
-  opportunity: Opportunity | null;
+  opportunity: OpportunityView | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   posterProfile: {
@@ -58,28 +58,21 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
             <Badge variant="outline" className={opportunityTypeColors[opportunity.type]}>
               {opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}
             </Badge>
-            {opportunity.status === 'closed' && (
-              <Badge variant="destructive">Closed</Badge>
-            )}
+            {opportunity.status === 'closed' && <Badge variant="destructive">Closed</Badge>}
           </div>
           <SheetTitle className="text-xl">{opportunity.title}</SheetTitle>
           {opportunity.company && (
             <SheetDescription className="flex items-center gap-1.5 text-sm">
-              <Building2 className="w-4 h-4" />
-              {opportunity.company}
+              <Building2 className="w-4 h-4" />{opportunity.company}
             </SheetDescription>
           )}
         </SheetHeader>
 
-        {/* Poster */}
         {posterProfile && (
           <>
             <div
               className="flex items-center gap-3 py-3 cursor-pointer hover:opacity-80"
-              onClick={() => {
-                onOpenChange(false);
-                navigate(`/profile/${posterProfile.user_id}`);
-              }}
+              onClick={() => { onOpenChange(false); navigate(`/profile/${posterProfile.user_id}`); }}
             >
               <Avatar className="h-10 w-10 border-2 border-border">
                 <AvatarImage src={posterProfile.avatar_url || undefined} />
@@ -94,7 +87,6 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
           </>
         )}
 
-        {/* Key details */}
         <div className="grid grid-cols-2 gap-3 py-4 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
             {opportunity.isRemote ? <Globe className="w-4 h-4 flex-shrink-0" /> : <MapPin className="w-4 h-4 flex-shrink-0" />}
@@ -102,40 +94,29 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
           </div>
           {opportunity.compensation && (
             <div className="flex items-center gap-2 text-primary font-medium">
-              <DollarSign className="w-4 h-4 flex-shrink-0" />
-              <span>{opportunity.compensation}</span>
+              <DollarSign className="w-4 h-4 flex-shrink-0" /><span>{opportunity.compensation}</span>
             </div>
           )}
           <div className="flex items-center gap-2 text-muted-foreground">
             <Briefcase className="w-4 h-4 flex-shrink-0" />
-            <span>{experienceLevelLabels[opportunity.experienceLevel]}</span>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Users className="w-4 h-4 flex-shrink-0" />
-            <span>{opportunity.applicants.length} applicant{opportunity.applicants.length !== 1 ? 's' : ''}</span>
+            <span>{experienceLevelLabels[opportunity.experienceLevel] || 'Any Level'}</span>
           </div>
         </div>
 
         {opportunity.deadline && (
           <div className={`flex items-center gap-2 text-sm pb-4 ${isDeadlinePast ? 'text-destructive' : 'text-muted-foreground'}`}>
             <Clock className="w-4 h-4" />
-            <span>
-              {isDeadlinePast
-                ? 'Deadline passed'
-                : `Apply by ${format(new Date(opportunity.deadline), 'MMM d, yyyy')}`}
-            </span>
+            <span>{isDeadlinePast ? 'Deadline passed' : `Apply by ${format(new Date(opportunity.deadline), 'MMM d, yyyy')}`}</span>
           </div>
         )}
 
         <Separator />
 
-        {/* Full description */}
         <div className="py-4">
           <h3 className="text-sm font-semibold mb-2">Description</h3>
           <p className="text-sm text-muted-foreground whitespace-pre-wrap">{opportunity.description}</p>
         </div>
 
-        {/* Roles */}
         {opportunity.roles.length > 0 && (
           <>
             <Separator />
@@ -150,7 +131,6 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
           </>
         )}
 
-        {/* Tags */}
         {opportunity.tags.length > 0 && (
           <>
             <Separator />
@@ -167,7 +147,6 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
 
         <Separator />
 
-        {/* Footer */}
         <div className="flex items-center justify-between pt-4">
           <span className="text-xs text-muted-foreground">
             Posted {formatDistanceToNow(new Date(opportunity.createdAt), { addSuffix: true })}
@@ -186,10 +165,7 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
             <Button
               size="sm"
               disabled={isDeadlinePast || opportunity.status !== 'open'}
-              onClick={(e) => {
-                e.stopPropagation();
-                onApply();
-              }}
+              onClick={(e) => { e.stopPropagation(); onApply(); }}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Apply Now
