@@ -11,8 +11,11 @@ import {
   Calendar,
   CheckCircle2,
   Globe,
-  Building2
+  Building2,
+  Bookmark,
+  BookmarkCheck
 } from 'lucide-react';
+import { useSavedItems } from '@/hooks/useSavedItems';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +49,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
   const navigate = useNavigate();
   const { user } = useAuth();
   const { getUser, currentUserId } = useStore();
+  const { isSaved, toggleSave } = useSavedItems();
   const [showApplicationDialog, setShowApplicationDialog] = useState(false);
   const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [hasAppliedDB, setHasAppliedDB] = useState(false);
@@ -288,9 +292,34 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
         )}
         
         <div className="flex items-center justify-between pt-2 border-t border-border/50">
-          <span className="text-xs text-muted-foreground">
-            Posted {formatDistanceToNow(new Date(opportunity.createdAt), { addSuffix: true })}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              Posted {formatDistanceToNow(new Date(opportunity.createdAt), { addSuffix: true })}
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleSave({
+                  item_type: 'job',
+                  item_title: opportunity.title,
+                  item_metadata: {
+                    company: opportunity.company,
+                    type: opportunity.type,
+                    location: opportunity.isRemote ? 'Remote' : opportunity.location,
+                    description: opportunity.description?.slice(0, 200),
+                    compensation: opportunity.compensation,
+                  },
+                });
+              }}
+              className="p-1 rounded-full hover:bg-accent transition-colors"
+            >
+              {isSaved('job', opportunity.title) ? (
+                <BookmarkCheck className="w-4 h-4 text-primary" />
+              ) : (
+                <Bookmark className="w-4 h-4 text-muted-foreground" />
+              )}
+            </button>
+          </div>
           
           {hasApplied ? (
             <div className="flex items-center gap-2 text-sm">

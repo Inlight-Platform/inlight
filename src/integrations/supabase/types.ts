@@ -1182,6 +1182,39 @@ export type Database = {
           },
         ]
       }
+      saved_items: {
+        Row: {
+          id: string
+          item_id: string | null
+          item_metadata: Json | null
+          item_title: string
+          item_type: string
+          item_url: string | null
+          saved_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          item_id?: string | null
+          item_metadata?: Json | null
+          item_title: string
+          item_type: string
+          item_url?: string | null
+          saved_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          item_id?: string | null
+          item_metadata?: Json | null
+          item_title?: string
+          item_type?: string
+          item_url?: string | null
+          saved_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_projects: {
         Row: {
           id: string

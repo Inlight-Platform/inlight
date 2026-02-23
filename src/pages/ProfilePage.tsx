@@ -51,7 +51,8 @@ import {
   Instagram,
   Globe,
   Link as LinkIcon,
-  GraduationCap
+  GraduationCap,
+  Bookmark
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
@@ -1181,6 +1182,14 @@ const ProfilePage: React.FC = () => {
             <div className="flex items-center gap-3">
               {isOwnProfile && authUser && (
                 <>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate('/saves')}
+                  >
+                    <Bookmark className="w-4 h-4 mr-2" />
+                    My Saves
+                  </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
