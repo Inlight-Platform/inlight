@@ -44,8 +44,6 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
   const [experienceLevel, setExperienceLevel] = useState('any');
   const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([]);
   const [deadlineDate, setDeadlineDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
   const [duration, setDuration] = useState('');
   const [actionType, setActionType] = useState('apply');
 
@@ -79,8 +77,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       experience_level: experienceLevel,
       roles: selectedRoles,
       requirements: [],
-      deadline: deadlineDate ? (startTime ? `${deadlineDate}T${startTime}` : deadlineDate) : undefined,
-      start_date: endTime || undefined,
+      deadline: deadlineDate || undefined,
+      start_date: undefined,
       duration: duration.trim() || undefined,
       tags: [],
       is_featured: false,
@@ -97,8 +95,6 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
         setExperienceLevel('any');
         setSelectedRoles([]);
         setDeadlineDate('');
-        setStartTime('');
-        setEndTime('');
         setDuration('');
         setActionType('apply');
         onOpenChange(false);
@@ -232,42 +228,6 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
                 onChange={(e) => setDeadlineDate(e.target.value)}
                 className="mt-1"
               />
-            </div>
-            <div>
-              <Label>Start Time</Label>
-              <Select value={startTime} onValueChange={setStartTime} disabled={!deadlineDate}>
-                <SelectTrigger className="mt-1 bg-background">
-                  <SelectValue placeholder="Select time" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border max-h-60 z-[200] pointer-events-auto" position="popper" side="bottom" align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
-                  {Array.from({ length: 48 }, (_, i) => {
-                    const h = Math.floor(i / 2);
-                    const m = i % 2 === 0 ? '00' : '30';
-                    const val = `${String(h).padStart(2, '0')}:${m}`;
-                    const ampm = h === 0 ? '12' : h > 12 ? String(h - 12) : String(h);
-                    const label = `${ampm}:${m} ${h < 12 ? 'AM' : 'PM'}`;
-                    return <SelectItem key={val} value={val}>{label}</SelectItem>;
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>End Time</Label>
-              <Select value={endTime} onValueChange={setEndTime} disabled={!deadlineDate}>
-                <SelectTrigger className="mt-1 bg-background">
-                  <SelectValue placeholder="Select time" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border max-h-60 z-[200] pointer-events-auto" position="popper" side="bottom" align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
-                  {Array.from({ length: 48 }, (_, i) => {
-                    const h = Math.floor(i / 2);
-                    const m = i % 2 === 0 ? '00' : '30';
-                    const val = `${String(h).padStart(2, '0')}:${m}`;
-                    const ampm = h === 0 ? '12' : h > 12 ? String(h - 12) : String(h);
-                    const label = `${ampm}:${m} ${h < 12 ? 'AM' : 'PM'}`;
-                    return <SelectItem key={val} value={val}>{label}</SelectItem>;
-                  })}
-                </SelectContent>
-              </Select>
             </div>
 
             <div>
