@@ -207,7 +207,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
             <span>
               {isDeadlinePast 
                 ? 'Deadline passed' 
-                : `Apply by ${format(new Date(opportunity.deadline), 'MMM d, yyyy')}`}
+                : `Apply by ${format(new Date(opportunity.deadline), opportunity.deadline.includes('T') ? 'MMM d, yyyy h:mm a' : 'MMM d, yyyy')}`}
             </span>
           </div>
         )}
