@@ -96,9 +96,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
         navigate(`/messages?user=${data.sender_id}`);
         break;
       case 'application':
-        // Navigate to specific project with application
+        // Navigate to specific project with application highlighted
         if (data.project_id) {
-          navigate(`/projects/${data.project_id}`);
+          navigate(`/projects/${data.project_id}?application=${data.application_id || ''}`);
         } else {
           navigate('/projects');
         }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Send, Link2, FileText, Loader2, Check, X, Clock, Trash2, User } from 'lucide-react';
+import { Send, Link2, FileText, Loader2, Check, X, Clock, Trash2, User, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { ApplicationDetailSheet } from './ApplicationDetailSheet';
 
 interface OpenRole {
   id: string;
@@ -52,6 +53,7 @@ interface OpenRolesDisplayProps {
 export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, creatorId, onDeleteRole }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<OpenRole | null>(null);
@@ -59,6 +61,7 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
   const [reelUrl, setReelUrl] = useState('');
   const [resumeUrl, setResumeUrl] = useState('');
   const [includeProfile, setIncludeProfile] = useState(true);
+  const [viewingApplication, setViewingApplication] = useState<(RoleApplication & { role_name?: string }) | null>(null);
   const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null; headline: string | null; role: string | null } | null>(null);
 
   // Fetch user profile for the preview card
@@ -141,6 +144,20 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
     },
     enabled: isCreator && openRoles.length > 0,
   });
+
+  // Auto-open application from URL param (e.g., from notification click)
+  useEffect(() => {
+    const applicationId = searchParams.get('application');
+    if (applicationId && allApplications.length > 0) {
+      const app = allApplications.find(a => a.id === applicationId);
+      if (app) {
+        const role = openRoles.find(r => r.id === app.project_role_id);
+        setViewingApplication({ ...app, role_name: role?.role_name });
+        searchParams.delete('application');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [allApplications, searchParams, openRoles]);
 
   // Submit application
   const submitApplication = useMutation({
@@ -314,7 +331,18 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
                             {app.applicant_profile?.display_name || 'Unknown'}
                           </span>
                         </div>
-                        {getStatusBadge(app.status)}
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => setViewingApplication({ ...app, role_name: role.role_name } as any)}
+                          >
+                            <Eye className="w-3 h-3" />
+                            View Application
+                          </Button>
+                          {getStatusBadge(app.status)}
+                        </div>
                       </div>
                       
                       <p className="text-sm text-muted-foreground">{app.message}</p>
@@ -480,6 +508,21 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
           </div>
         </DialogContent>
       </Dialog>
+      {/* Application Detail Sheet */}
+      <ApplicationDetailSheet
+        open={!!viewingApplication}
+        onOpenChange={(open) => { if (!open) setViewingApplication(null); }}
+        application={viewingApplication}
+        isCreator={isCreator}
+        onAccept={(applicationId, applicantId, roleName) => {
+          updateApplicationStatus.mutate({ applicationId, status: 'accepted', applicantId, roleName });
+          setViewingApplication(null);
+        }}
+        onDecline={(applicationId) => {
+          updateApplicationStatus.mutate({ applicationId, status: 'rejected' });
+          setViewingApplication(null);
+        }}
+      />
     </div>
   );
 };
