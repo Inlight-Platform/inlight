@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -345,33 +345,41 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
                 </Badge>
               )}
             </div>
-            {item.event_date && (
+            <div className="flex gap-2">
               <Button
-                variant="outline"
                 size="sm"
-                className="w-full"
+                className="flex-1"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const title = encodeURIComponent(item.title || 'Event');
-                  const location = encodeURIComponent(item.location || '');
-                  const details = encodeURIComponent(item.content || item.description || '');
-                  
-                  // Format date for Google Calendar
-                  const eventDate = new Date(item.event_date!);
-                  const startDate = eventDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                  // Add 2 hours for end time
-                  const endDate = new Date(eventDate.getTime() + 2 * 60 * 60 * 1000)
-                    .toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                  
-                  const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${details}&location=${location}`;
-                  
-                  window.open(calendarUrl, '_blank');
+                  navigate(`/events/${item.id}`);
                 }}
               >
-                <Calendar className="h-4 w-4 mr-2" />
-                Add to Calendar
+                <PartyPopper className="h-4 w-4 mr-2" />
+                RSVP
               </Button>
-            )}
+              {item.event_date && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const title = encodeURIComponent(item.title || 'Event');
+                    const location = encodeURIComponent(item.location || '');
+                    const details = encodeURIComponent(item.content || item.description || '');
+                    const eventDate = new Date(item.event_date!);
+                    const startDate = eventDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                    const endDate = new Date(eventDate.getTime() + 2 * 60 * 60 * 1000)
+                      .toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                    const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${details}&location=${location}`;
+                    window.open(calendarUrl, '_blank');
+                  }}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Add to Calendar
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
