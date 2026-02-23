@@ -55,13 +55,10 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
   const [theatreForm, setTheatreForm] = useState({
     title: '',
     studio: '',
-    weekend_gross: 0,
-    total_gross: 0,
-    week_change: 0,
     rating: 0,
-    weeks_in_release: 1,
     poster_url: '',
     date: new Date().toISOString().split('T')[0],
+    ticket_url: '',
   });
 
   // Form state for streaming
@@ -194,13 +191,10 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
     setTheatreForm({
       title: '',
       studio: '',
-      weekend_gross: 0,
-      total_gross: 0,
-      week_change: 0,
       rating: 0,
-      weeks_in_release: 1,
       poster_url: '',
       date: new Date().toISOString().split('T')[0],
+      ticket_url: '',
     });
     setStreamingForm({
       title: '',
@@ -222,13 +216,10 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
       setTheatreForm({
         title: item.title || '',
         studio: item.studio || '',
-        weekend_gross: Number(item.weekend_gross) || 0,
-        total_gross: Number(item.total_gross) || 0,
-        week_change: Number(item.week_change) || 0,
         rating: Number(item.rating) || 0,
-        weeks_in_release: item.weeks_in_release || 1,
         poster_url: item.poster_url || '',
         date: item.date || new Date().toISOString().split('T')[0],
+        ticket_url: item.ticket_url || '',
       });
     } else {
       setStreamingForm({
@@ -418,41 +409,12 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Weekend Gross ($)</Label>
+                      <Label>Ticket URL</Label>
                       <Input
-                        type="number"
-                        value={theatreForm.weekend_gross}
-                        onChange={(e) => setTheatreForm({ ...theatreForm, weekend_gross: Number(e.target.value) })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Total Gross ($)</Label>
-                      <Input
-                        type="number"
-                        value={theatreForm.total_gross}
-                        onChange={(e) => setTheatreForm({ ...theatreForm, total_gross: Number(e.target.value) })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label>Week Change (%)</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={theatreForm.week_change}
-                        onChange={(e) => setTheatreForm({ ...theatreForm, week_change: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Weeks</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={theatreForm.weeks_in_release}
-                        onChange={(e) => setTheatreForm({ ...theatreForm, weeks_in_release: Number(e.target.value) })}
+                        type="url"
+                        value={theatreForm.ticket_url}
+                        onChange={(e) => setTheatreForm({ ...theatreForm, ticket_url: e.target.value })}
+                        placeholder="https://..."
                       />
                     </div>
                     <div className="space-y-2">
@@ -564,8 +526,7 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
                 {isTheatres ? (
                   <>
                     <TableHead>Studio</TableHead>
-                    <TableHead>Weekend</TableHead>
-                    <TableHead>Total</TableHead>
+                    <TableHead>Ticket URL</TableHead>
                   </>
                 ) : (
                   <>
@@ -594,8 +555,11 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
                   {isTheatres ? (
                     <>
                       <TableCell>{item.studio}</TableCell>
-                      <TableCell>{formatCurrency(item.weekend_gross)}</TableCell>
-                      <TableCell>{formatCurrency(item.total_gross)}</TableCell>
+                      <TableCell>
+                        {item.ticket_url ? (
+                          <a href={item.ticket_url} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs truncate max-w-[120px] block">Link</a>
+                        ) : '—'}
+                      </TableCell>
                     </>
                   ) : (
                     <>
