@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Briefcase } from 'lucide-react';
+import { Briefcase } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -45,23 +45,9 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
   const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([]);
   const [deadline, setDeadline] = useState('');
   const [duration, setDuration] = useState('');
-  const [tagInput, setTagInput] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [isFeatured, setIsFeatured] = useState(false);
+  const [actionType, setActionType] = useState('apply');
 
   const allRoles: UserRole[] = ['Actor', 'Director', 'Producer', 'Musician'];
-
-  const handleAddTag = () => {
-    const trimmed = tagInput.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (trimmed && !tags.includes(trimmed)) {
-      setTags([...tags, trimmed]);
-      setTagInput('');
-    }
-  };
-
-  const handleRemoveTag = (tag: string) => {
-    setTags(tags.filter(t => t !== tag));
-  };
 
   const toggleRole = (role: UserRole) => {
     if (selectedRoles.includes(role)) {
@@ -93,11 +79,11 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       requirements: [],
       deadline: deadline || undefined,
       duration: duration.trim() || undefined,
-      tags,
-      is_featured: isFeatured,
+      tags: [],
+      is_featured: false,
+      action_type: actionType,
     }, {
       onSuccess: () => {
-        // Reset form
         setTitle('');
         setDescription('');
         setType('job');
@@ -109,8 +95,7 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
         setSelectedRoles([]);
         setDeadline('');
         setDuration('');
-        setTags([]);
-        setIsFeatured(false);
+        setActionType('apply');
         onOpenChange(false);
       },
     });
@@ -214,7 +199,6 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
               />
               <Label htmlFor="remote">Remote opportunity</Label>
             </div>
-
           </div>
 
           {/* Experience & Timeline */}
@@ -255,6 +239,19 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
                 className="mt-1"
               />
             </div>
+
+            <div>
+              <Label htmlFor="actionType">Response Type</Label>
+              <Select value={actionType} onValueChange={setActionType}>
+                <SelectTrigger className="mt-1 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="apply">Apply Online</SelectItem>
+                  <SelectItem value="calendar">In-Person (Add to Calendar)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Roles Needed */}
@@ -272,35 +269,6 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
                 </Badge>
               ))}
             </div>
-          </div>
-
-          {/* Tags */}
-          <div>
-            <Label htmlFor="tags">Tags</Label>
-            <div className="flex gap-2 mt-1">
-              <Input
-                id="tags"
-                placeholder="Add a tag..."
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-              />
-              <Button type="button" variant="outline" onClick={handleAddTag}>
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="gap-1">
-                    #{tag}
-                    <button onClick={() => handleRemoveTag(tag)}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Actions */}

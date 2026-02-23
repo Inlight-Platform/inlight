@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import {
-  MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2, CheckCircle2
+  MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2, CheckCircle2, CalendarPlus
 } from 'lucide-react';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
@@ -23,7 +23,7 @@ const opportunityTypeColors: Record<string, string> = {
 const experienceLevelLabels: Record<string, string> = {
   entry: 'Entry Level',
   intermediate: 'Intermediate',
-  senior: 'Senior',
+  senior: 'Professional',
   any: 'Any Level',
 };
 
@@ -152,7 +152,28 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
             Posted {formatDistanceToNow(new Date(opportunity.createdAt), { addSuffix: true })}
           </span>
 
-          {hasApplied ? (
+          {opportunity.actionType === 'calendar' ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                const title = encodeURIComponent(opportunity.title);
+                const details = encodeURIComponent(opportunity.description);
+                const loc = encodeURIComponent(opportunity.isRemote ? 'Remote' : (opportunity.location || ''));
+                const deadlineDate = opportunity.deadline ? new Date(opportunity.deadline) : new Date();
+                const dateStr = deadlineDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                const endDate = new Date(deadlineDate.getTime() + 2 * 60 * 60 * 1000);
+                const endStr = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${loc}&dates=${dateStr}/${endStr}`;
+                window.open(calUrl, '_blank');
+              }}
+              className="gap-1.5"
+            >
+              <CalendarPlus className="w-4 h-4" />
+              Add to Calendar
+            </Button>
+          ) : hasApplied ? (
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
               <span className="text-green-500 font-medium">

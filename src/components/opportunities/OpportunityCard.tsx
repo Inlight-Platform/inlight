@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { 
   MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2,
-  CheckCircle2, Bookmark, BookmarkCheck
+  CheckCircle2, Bookmark, BookmarkCheck, CalendarPlus
 } from 'lucide-react';
 import { useSavedItems } from '@/hooks/useSavedItems';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -31,7 +31,7 @@ const opportunityTypeColors: Record<string, string> = {
 const experienceLevelLabels: Record<string, string> = {
   entry: 'Entry Level',
   intermediate: 'Intermediate',
-  senior: 'Senior',
+  senior: 'Professional',
   any: 'Any Level',
 };
 
@@ -85,7 +85,24 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
   
   const handleApply = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowApplicationDialog(true);
+    if (opportunity.actionType === 'calendar') {
+      handleAddToCalendar(e);
+    } else {
+      setShowApplicationDialog(true);
+    }
+  };
+
+  const handleAddToCalendar = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const title = encodeURIComponent(opportunity.title);
+    const details = encodeURIComponent(opportunity.description);
+    const location = encodeURIComponent(opportunity.isRemote ? 'Remote' : (opportunity.location || ''));
+    const deadlineDate = opportunity.deadline ? new Date(opportunity.deadline) : new Date();
+    const dateStr = deadlineDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const endDate = new Date(deadlineDate.getTime() + 2 * 60 * 60 * 1000);
+    const endStr = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}&dates=${dateStr}/${endStr}`;
+    window.open(calUrl, '_blank');
   };
 
   const handleApplicationSubmitted = () => {
@@ -239,7 +256,17 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
             </button>
           </div>
           
-          {hasApplied ? (
+          {opportunity.actionType === 'calendar' ? (
+            <Button 
+              size="sm"
+              variant="outline"
+              onClick={handleAddToCalendar}
+              className="gap-1.5"
+            >
+              <CalendarPlus className="w-4 h-4" />
+              Add to Calendar
+            </Button>
+          ) : hasApplied ? (
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
               <span className="text-green-500 font-medium">Applied</span>
