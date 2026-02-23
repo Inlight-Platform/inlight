@@ -242,6 +242,14 @@ const StageWhisperPage: React.FC = () => {
     return `$${amount}`;
   };
   return <div className="w-full">
+      {/* Promo Banner */}
+      <a
+        href="mailto:info@inlight.social"
+        className="block w-full bg-primary/10 border-b border-primary/20 px-4 py-2.5 text-center text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
+      >
+        Build a website for your project. Inquire about pricing here →
+      </a>
+
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
