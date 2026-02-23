@@ -619,6 +619,7 @@ const ProfilePage: React.FC = () => {
     { tag: 'recordedmusic', label: 'Clive Davis Institute' },
     { tag: 'photography', label: 'Photography' },
     { tag: 'collabarts', label: 'Collaborative Arts' },
+    { tag: 'dance', label: 'Dance' },
   ];
 
   const handleAddBadgeToDb = async (badgeTag?: string) => {
