@@ -44,7 +44,8 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
   const [experienceLevel, setExperienceLevel] = useState('any');
   const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([]);
   const [deadlineDate, setDeadlineDate] = useState('');
-  const [deadlineTime, setDeadlineTime] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [duration, setDuration] = useState('');
   const [actionType, setActionType] = useState('apply');
 
@@ -63,11 +64,12 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
       const dl = opportunity.deadline || '';
       if (dl.includes('T')) {
         setDeadlineDate(dl.split('T')[0]);
-        setDeadlineTime(dl.split('T')[1]);
+        setStartTime(dl.split('T')[1]);
       } else {
         setDeadlineDate(dl);
-        setDeadlineTime('');
+        setStartTime('');
       }
+      setEndTime(opportunity.startDate || '');
       setDuration(opportunity.duration || '');
       setActionType(opportunity.actionType || 'apply');
     }
@@ -94,7 +96,8 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
       compensation: compensation.trim() || undefined,
       experience_level: experienceLevel,
       roles: selectedRoles,
-      deadline: deadlineDate ? (deadlineTime ? `${deadlineDate}T${deadlineTime}` : deadlineDate) : undefined,
+      deadline: deadlineDate ? (startTime ? `${deadlineDate}T${startTime}` : deadlineDate) : undefined,
+      start_date: endTime || undefined,
       duration: duration.trim() || undefined,
       action_type: actionType,
     }, {
@@ -174,12 +177,16 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
               </Select>
             </div>
             <div>
-              <Label htmlFor="edit-deadline">Deadline Date</Label>
+              <Label htmlFor="edit-deadline">Date</Label>
               <Input id="edit-deadline" type="date" value={deadlineDate} onChange={(e) => setDeadlineDate(e.target.value)} className="mt-1" />
             </div>
             <div>
-              <Label htmlFor="edit-deadlineTime">Deadline Time</Label>
-              <Input id="edit-deadlineTime" type="time" value={deadlineTime} onChange={(e) => setDeadlineTime(e.target.value)} className="mt-1" disabled={!deadlineDate} />
+              <Label htmlFor="edit-startTime">Start Time</Label>
+              <Input id="edit-startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="mt-1" disabled={!deadlineDate} />
+            </div>
+            <div>
+              <Label htmlFor="edit-endTime">End Time</Label>
+              <Input id="edit-endTime" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="mt-1" disabled={!deadlineDate} />
             </div>
             <div>
               <Label htmlFor="edit-duration">Duration</Label>

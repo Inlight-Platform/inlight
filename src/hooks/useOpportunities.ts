@@ -109,6 +109,7 @@ export function useOpportunities() {
       roles: string[];
       requirements: string[];
       deadline?: string;
+      start_date?: string;
       duration?: string;
       tags: string[];
       is_featured: boolean;
@@ -130,6 +131,7 @@ export function useOpportunities() {
         roles: input.roles,
         requirements: input.requirements,
         deadline: input.deadline || null,
+        start_date: input.start_date || null,
         duration: input.duration || null,
         tags: input.tags,
         is_featured: input.is_featured,
@@ -161,6 +163,7 @@ export function useOpportunities() {
       experience_level: string;
       roles: string[];
       deadline?: string;
+      start_date?: string;
       duration?: string;
       action_type: string;
     }) => {
@@ -180,6 +183,7 @@ export function useOpportunities() {
           experience_level: input.experience_level,
           roles: input.roles,
           deadline: input.deadline || null,
+          start_date: input.start_date || null,
           duration: input.duration || null,
           action_type: input.action_type,
         })
