@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft } from 'lucide-react';
+import { buildSharedItemMessage } from '@/components/messages/SharedItemCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedShows } from '@/hooks/useSavedShows';
@@ -42,7 +43,8 @@ const ShareDialog: React.FC<{
   itemTitle: string;
   itemUrl?: string;
   itemType: string;
-}> = ({ open, onOpenChange, itemTitle, itemUrl, itemType }) => {
+  imageUrl?: string;
+}> = ({ open, onOpenChange, itemTitle, itemUrl, itemType, imageUrl }) => {
   const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [sending, setSending] = useState(false);
@@ -72,7 +74,12 @@ const ShareDialog: React.FC<{
     if (!user?.id) return;
     setSending(true);
     try {
-      const shareMessage = `📌 Shared ${itemType}: ${itemTitle}${itemUrl ? `\n🔗 ${itemUrl}` : ''}`;
+      const shareMessage = buildSharedItemMessage({
+        type: itemType,
+        title: itemTitle,
+        url: itemUrl,
+        image_url: imageUrl,
+      });
       
       const { error } = await supabase
         .from('messages')
@@ -140,6 +147,7 @@ const MySavesPage: React.FC = () => {
     title: string;
     url?: string;
     type: string;
+    imageUrl?: string;
   }>({ open: false, title: '', type: '' });
 
   // Fetch saved projects
@@ -286,7 +294,7 @@ const MySavesPage: React.FC = () => {
                         <div className="flex items-center justify-between">
                           {project.category && <Badge variant="secondary" className="text-xs">{project.category}</Badge>}
                           <div className="flex gap-1">
-                            <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: project.title, url: `${window.location.origin}/projects/${project.id}`, type: 'Project' }); }} className="p-1.5 rounded-full hover:bg-accent">
+                            <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: project.title, url: `/projects/${project.id}`, type: 'Project', imageUrl: project.main_image_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
                               <MessageSquare className="w-4 h-4 text-muted-foreground" />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); unsaveProject(project.id); }} className="p-1.5 rounded-full hover:bg-accent">
@@ -322,7 +330,7 @@ const MySavesPage: React.FC = () => {
                         <div className="flex items-center justify-between">
                           <Badge variant="secondary" className="text-xs">{show.category}</Badge>
                           <div className="flex gap-1">
-                            <button onClick={() => setShareDialog({ open: true, title: show.title, type: 'Show' })} className="p-1.5 rounded-full hover:bg-accent">
+                            <button onClick={() => setShareDialog({ open: true, title: show.title, type: 'Show', imageUrl: show.poster_url || undefined })} className="p-1.5 rounded-full hover:bg-accent">
                               <MessageSquare className="w-4 h-4 text-muted-foreground" />
                             </button>
                             <button onClick={() => unsaveShow(show.id)} className="p-1.5 rounded-full hover:bg-accent">
@@ -419,6 +427,7 @@ const MySavesPage: React.FC = () => {
         itemTitle={shareDialog.title}
         itemUrl={shareDialog.url}
         itemType={shareDialog.type}
+        imageUrl={shareDialog.imageUrl}
       />
     </div>
   );

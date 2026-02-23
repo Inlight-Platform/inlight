@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { NewMessageDialog } from '@/components/messages/NewMessageDialog';
 import GroupChatItem from '@/components/messages/GroupChatItem';
 import GroupChatThread from '@/components/messages/GroupChatThread';
+import SharedItemCard, { parseSharedItem } from '@/components/messages/SharedItemCard';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -288,7 +289,10 @@ const MessagesPage: React.FC = () => {
               {chat.last_message ? (
                 <>
                   {chat.last_message.sender_id === user?.id && 'You: '}
-                  {chat.last_message.content}
+                  {(() => {
+                    const shared = parseSharedItem(chat.last_message.content);
+                    return shared ? `📌 Shared a ${shared.type}: ${shared.title}` : chat.last_message.content;
+                  })()}
                 </>
               ) : (
                 'No messages yet'
@@ -331,32 +335,42 @@ const MessagesPage: React.FC = () => {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={cn(
-                  'flex',
-                  msg.sender_id === user?.id ? 'justify-end' : 'justify-start'
-                )}
-              >
+            messages.map((msg) => {
+              const sharedItem = parseSharedItem(msg.content);
+              const isOwn = msg.sender_id === user?.id;
+              return (
                 <div
+                  key={msg.id}
                   className={cn(
-                    'max-w-[70%] rounded-2xl px-4 py-2',
-                    msg.sender_id === user?.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
+                    'flex',
+                    isOwn ? 'justify-end' : 'justify-start'
                   )}
                 >
-                  <p className="text-sm">{msg.content}</p>
-                  <p className={cn(
-                    'text-xs mt-1',
-                    msg.sender_id === user?.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                  )}>
-                    {formatTime(msg.created_at)}
-                  </p>
+                  <div
+                    className={cn(
+                      'max-w-[70%] rounded-2xl',
+                      sharedItem ? 'p-1' : 'px-4 py-2',
+                      isOwn
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    )}
+                  >
+                    {sharedItem ? (
+                      <SharedItemCard data={sharedItem} isOwn={isOwn} />
+                    ) : (
+                      <p className="text-sm">{msg.content}</p>
+                    )}
+                    <p className={cn(
+                      'text-xs mt-1',
+                      sharedItem ? 'px-3 pb-1' : '',
+                      isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                    )}>
+                      {formatTime(msg.created_at)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
           <div ref={messagesEndRef} />
         </div>
@@ -449,32 +463,42 @@ const MessagesPage: React.FC = () => {
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
                   ) : (
-                    messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={cn(
-                          'flex',
-                          msg.sender_id === user?.id ? 'justify-end' : 'justify-start'
-                        )}
-                      >
+                    messages.map((msg) => {
+                      const sharedItem = parseSharedItem(msg.content);
+                      const isOwn = msg.sender_id === user?.id;
+                      return (
                         <div
+                          key={msg.id}
                           className={cn(
-                            'max-w-[80%] rounded-2xl px-4 py-2',
-                            msg.sender_id === user?.id
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
+                            'flex',
+                            isOwn ? 'justify-end' : 'justify-start'
                           )}
                         >
-                          <p className="text-sm">{msg.content}</p>
-                          <p className={cn(
-                            'text-xs mt-1',
-                            msg.sender_id === user?.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                          )}>
-                            {formatTime(msg.created_at)}
-                          </p>
+                          <div
+                            className={cn(
+                              'max-w-[80%] rounded-2xl',
+                              sharedItem ? 'p-1' : 'px-4 py-2',
+                              isOwn
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted'
+                            )}
+                          >
+                            {sharedItem ? (
+                              <SharedItemCard data={sharedItem} isOwn={isOwn} />
+                            ) : (
+                              <p className="text-sm">{msg.content}</p>
+                            )}
+                            <p className={cn(
+                              'text-xs mt-1',
+                              sharedItem ? 'px-3 pb-1' : '',
+                              isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                            )}>
+                              {formatTime(msg.created_at)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                   <div ref={messagesEndRef} />
                 </div>
