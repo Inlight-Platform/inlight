@@ -30,6 +30,8 @@ export interface FeedItemData {
   title?: string;
   description?: string;
   image_url?: string | null;
+  image_position_x?: number | null;
+  image_position_y?: number | null;
   link_url?: string | null;
   link_title?: string | null;
   created_at: string;
@@ -264,6 +266,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
               src={item.image_url} 
               alt={item.title || 'Post image'} 
               className="w-full max-h-80 object-cover"
+              style={{ objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` }}
             />
           </div>
         )}
