@@ -132,6 +132,27 @@ Deno.serve(async (req) => {
         <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${senderName} wants to connect with you!</h2>
         <a href="${profileUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
       `;
+    } else if (notificationType === "application_accepted" && data.sender_id && data.project_id) {
+      // Fetch the acceptor's display name
+      const { data: senderProfile } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", data.sender_id)
+        .single();
+
+      const senderName = senderProfile?.display_name || "Someone";
+      const roleName = data.role_name || "a role";
+      const projectTitle = data.project_title || "a project";
+      const projectUrl = `https://inlight.lovable.app/projects/${data.project_id}`;
+
+      emailSubject = `CONGRATULATIONS! You've just been hired!`;
+
+      emailBody = `
+        <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:22px;font-weight:700;">🎉 CONGRATULATIONS!</h2>
+        <h3 style="margin:0 0 16px;color:#1a1a2e;font-size:18px;font-weight:600;">You've just been hired!</h3>
+        <p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${senderName} has offered you the role of <strong>${roleName}</strong> on <strong>${projectTitle}</strong>.</p>
+        <a href="${projectUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
+      `;
     } else {
       emailBody = `
         <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${title}</h2>
