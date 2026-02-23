@@ -15,6 +15,7 @@ import ResourcesPage from "./pages/ResourcesPage";
 import InsightsPage from "./pages/InsightsPage";
 import OpportunitiesPage from "./pages/OpportunitiesPage";
 import EventsPage from "./pages/EventsPage";
+import EventDetailPage from "./pages/EventDetailPage";
 import MessagesPage from "./pages/MessagesPage";
 import AuthPage from "./pages/AuthPage";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/mutuals" element={<PeoplePage />} />
             <Route path="/insights" element={<InsightsPage />} />
             <Route path="/events" element={<EventsPage />} />
+            <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/opportunities" element={<OpportunitiesPage />} />
             <Route path="/messages" element={<MessagesPage />} />
             <Route path="/network" element={<NetworkPage />} />
