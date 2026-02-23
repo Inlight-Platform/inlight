@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Send, Link2, FileText, Loader2, Check, X, Clock, Trash2 } from 'lucide-react';
+import { Send, Link2, FileText, Loader2, Check, X, Clock, Trash2, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Dialog,
@@ -56,6 +58,22 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
   const [applicationMessage, setApplicationMessage] = useState('');
   const [reelUrl, setReelUrl] = useState('');
   const [resumeUrl, setResumeUrl] = useState('');
+  const [includeProfile, setIncludeProfile] = useState(true);
+  const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null; headline: string | null; role: string | null } | null>(null);
+
+  // Fetch user profile for the preview card
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url, headline, role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      setProfile(data);
+    };
+    if (applyDialogOpen && user) fetchProfile();
+  }, [applyDialogOpen, user]);
 
   const isCreator = user?.id === creatorId;
 
@@ -137,6 +155,7 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
           message: applicationMessage.trim(),
           reel_url: reelUrl.trim() || null,
           resume_url: resumeUrl.trim() || null,
+          include_profile: includeProfile,
         });
 
       if (error) throw error;
@@ -194,6 +213,7 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
     setApplicationMessage('');
     setReelUrl('');
     setResumeUrl('');
+    setIncludeProfile(true);
     setSelectedRole(null);
   };
 
@@ -364,6 +384,49 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
           </DialogHeader>
 
           <div className="space-y-4 pt-4">
+            {/* Include Profile Section */}
+            <Card className="p-4 bg-muted/30">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="include-profile"
+                  checked={includeProfile}
+                  onCheckedChange={(checked) => setIncludeProfile(checked as boolean)}
+                />
+                <div className="flex-1">
+                  <Label 
+                    htmlFor="include-profile" 
+                    className="text-sm font-medium cursor-pointer flex items-center gap-2"
+                  >
+                    <User className="h-4 w-4" />
+                    Include your Inlight profile
+                  </Label>
+                  {profile && includeProfile && (
+                    <div className="flex items-center gap-3 mt-3 p-3 bg-background rounded-lg border border-border">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={profile.avatar_url || undefined} />
+                        <AvatarFallback>
+                          {profile.display_name?.[0] || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{profile.display_name}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {profile.headline || profile.role || 'Inlight Member'}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/profile/${user?.id}`)}
+                      >
+                        View
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
+
             <div className="space-y-2">
               <Label htmlFor="message">Message *</Label>
               <Textarea

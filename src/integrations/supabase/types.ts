@@ -1140,6 +1140,7 @@ export type Database = {
           applicant_id: string
           created_at: string
           id: string
+          include_profile: boolean
           message: string
           project_role_id: string
           reel_url: string | null
@@ -1151,6 +1152,7 @@ export type Database = {
           applicant_id: string
           created_at?: string
           id?: string
+          include_profile?: boolean
           message: string
           project_role_id: string
           reel_url?: string | null
@@ -1162,6 +1164,7 @@ export type Database = {
           applicant_id?: string
           created_at?: string
           id?: string
+          include_profile?: boolean
           message?: string
           project_role_id?: string
           reel_url?: string | null
