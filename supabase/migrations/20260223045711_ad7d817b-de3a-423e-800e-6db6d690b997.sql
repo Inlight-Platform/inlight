@@ -1,0 +1,1 @@
+ALTER TABLE public.role_applications ADD COLUMN include_profile boolean NOT NULL DEFAULT true;
