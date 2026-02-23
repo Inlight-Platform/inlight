@@ -104,6 +104,23 @@ Deno.serve(async (req) => {
         <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${applicantName} applied for ${roleName} in ${projectTitle}!</h2>
         <a href="${reviewUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Review</a>
       `;
+    } else if (notificationType === "connection_request" && data.sender_id) {
+      // Fetch sender's display name
+      const { data: senderProfile } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", data.sender_id)
+        .single();
+
+      const senderName = senderProfile?.display_name || "Someone";
+      emailSubject = `${senderName} wants to connect with you!`;
+
+      const profileUrl = `https://inlight.lovable.app/profile/${data.sender_id}`;
+
+      emailBody = `
+        <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${senderName} wants to connect with you!</h2>
+        <a href="${profileUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
+      `;
     } else {
       emailBody = `
         <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${title}</h2>
