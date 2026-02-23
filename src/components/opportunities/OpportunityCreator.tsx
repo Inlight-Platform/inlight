@@ -239,7 +239,7 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
                 <SelectTrigger className="mt-1 bg-background">
                   <SelectValue placeholder="Select time" />
                 </SelectTrigger>
-                <SelectContent className="bg-popover border-border max-h-60 z-[200] pointer-events-auto">
+                <SelectContent className="bg-popover border-border max-h-60 z-[200] pointer-events-auto" position="popper" side="bottom" align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
                   {Array.from({ length: 48 }, (_, i) => {
                     const h = Math.floor(i / 2);
                     const m = i % 2 === 0 ? '00' : '30';
@@ -257,7 +257,7 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
                 <SelectTrigger className="mt-1 bg-background">
                   <SelectValue placeholder="Select time" />
                 </SelectTrigger>
-                <SelectContent className="bg-popover border-border max-h-60 z-[200] pointer-events-auto">
+                <SelectContent className="bg-popover border-border max-h-60 z-[200] pointer-events-auto" position="popper" side="bottom" align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
                   {Array.from({ length: 48 }, (_, i) => {
                     const h = Math.floor(i / 2);
                     const m = i % 2 === 0 ? '00' : '30';
