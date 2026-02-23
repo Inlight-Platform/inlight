@@ -83,6 +83,7 @@ const FeedPage: React.FC = () => {
       const { data, error } = await supabase.
       from('projects').
       select('*').
+      neq('status', 'archived').
       order('created_at', { ascending: false }).
       limit(100);
       if (error) throw error;
