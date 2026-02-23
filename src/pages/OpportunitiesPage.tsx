@@ -1,18 +1,20 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Briefcase, Star, TrendingUp, Clock } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Briefcase, Star, TrendingUp, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useStore, OpportunityType, ExperienceLevel, UserRole, Opportunity } from '@/store/useStore';
 import OpportunityCard from '@/components/opportunities/OpportunityCard';
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters';
 import OpportunityCreator from '@/components/opportunities/OpportunityCreator';
-import { stubOpportunities } from '@/data/stubData';
+import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
+import { useAuth } from '@/hooks/useAuth';
+
+type OpportunityType = 'job' | 'casting' | 'gig' | 'collaboration';
+type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician';
+type ExperienceLevel = 'entry' | 'intermediate' | 'senior' | 'any';
 
 const OpportunitiesPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { currentUserId, getOpportunities, opportunities, getUser } = useStore();
-  const currentUser = getUser(currentUserId);
+  const { user } = useAuth();
+  const { opportunities: allOpportunities, isLoading } = useOpportunities();
   
   const [showCreator, setShowCreator] = useState(false);
   const [search, setSearch] = useState('');
@@ -22,15 +24,6 @@ const OpportunitiesPage: React.FC = () => {
   const [remoteOnly, setRemoteOnly] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [activeTab, setActiveTab] = useState('discover');
-
-  // Initialize opportunities from stub data if empty
-  useEffect(() => {
-    if (opportunities.length === 0) {
-      useStore.setState({ opportunities: stubOpportunities });
-    }
-  }, [opportunities.length]);
-
-  const allOpportunities = getOpportunities();
 
   // Get unique locations
   const locations = useMemo(() => {
@@ -46,7 +39,6 @@ const OpportunitiesPage: React.FC = () => {
   // Filter opportunities
   const filteredOpportunities = useMemo(() => {
     return allOpportunities.filter(o => {
-      // Search filter
       if (search) {
         const searchLower = search.toLowerCase();
         const matchesSearch = 
@@ -56,48 +48,19 @@ const OpportunitiesPage: React.FC = () => {
           o.tags.some(t => t.includes(searchLower));
         if (!matchesSearch) return false;
       }
-
-      // Type filter
       if (selectedType !== 'all' && o.type !== selectedType) return false;
-
-      // Role filter
       if (selectedRole !== 'all' && !o.roles.includes(selectedRole)) return false;
-
-      // Experience filter
       if (selectedExperience !== 'all' && o.experienceLevel !== selectedExperience && o.experienceLevel !== 'any') return false;
-
-      // Remote filter
       if (remoteOnly && !o.isRemote) return false;
-
-      // Location filter
       if (selectedLocation !== 'all' && o.location !== selectedLocation) return false;
-
       return true;
     });
   }, [allOpportunities, search, selectedType, selectedRole, selectedExperience, remoteOnly, selectedLocation]);
 
-  // Get opportunities by category
-  const featuredOpportunities = useMemo(() => 
-    filteredOpportunities.filter(o => o.isFeatured && o.status === 'open'),
-    [filteredOpportunities]
-  );
-
   const myOpportunities = useMemo(() => 
-    allOpportunities.filter(o => o.postedBy === currentUserId),
-    [allOpportunities, currentUserId]
+    allOpportunities.filter(o => user && o.postedBy === user.id),
+    [allOpportunities, user]
   );
-
-  const appliedOpportunities = useMemo(() => 
-    allOpportunities.filter(o => o.applicants.some(a => a.userId === currentUserId)),
-    [allOpportunities, currentUserId]
-  );
-
-  const matchingOpportunities = useMemo(() => {
-    if (!currentUser) return [];
-    return filteredOpportunities.filter(o => 
-      o.status === 'open' && o.roles.includes(currentUser.role)
-    );
-  }, [filteredOpportunities, currentUser]);
 
   const openOpportunities = useMemo(() => 
     filteredOpportunities
@@ -112,6 +75,14 @@ const OpportunitiesPage: React.FC = () => {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [allOpportunities]
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -149,13 +120,6 @@ const OpportunitiesPage: React.FC = () => {
                 <TrendingUp className="w-4 h-4 mr-2" />
                 Discover
               </TabsTrigger>
-              <TabsTrigger value="matching" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20 whitespace-nowrap">
-                <Star className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">For You </span>({matchingOpportunities.length})
-              </TabsTrigger>
-              <TabsTrigger value="applied" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20 whitespace-nowrap">
-                Applied ({appliedOpportunities.length})
-              </TabsTrigger>
               <TabsTrigger value="posted" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20 whitespace-nowrap">
                 <span className="hidden sm:inline">My </span>Posts ({myOpportunities.length})
               </TabsTrigger>
@@ -185,7 +149,6 @@ const OpportunitiesPage: React.FC = () => {
 
           {/* Discover Tab */}
           <TabsContent value="discover" className="space-y-6">
-            {/* All Open Opportunities */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">All Opportunities</h2>
               {openOpportunities.length > 0 ? (
@@ -207,50 +170,6 @@ const OpportunitiesPage: React.FC = () => {
                 </div>
               )}
             </div>
-          </TabsContent>
-
-          {/* Matching Tab */}
-          <TabsContent value="matching" className="space-y-4">
-            <p className="text-muted-foreground">
-              Opportunities matching your role as <span className="font-medium text-foreground">{currentUser?.role}</span>
-            </p>
-            {matchingOpportunities.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {matchingOpportunities.map((opportunity) => (
-                  <OpportunityCard key={opportunity.id} opportunity={opportunity} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Star className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No matching opportunities</h3>
-                <p className="text-muted-foreground">
-                  We'll notify you when opportunities for {currentUser?.role}s are posted
-                </p>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Applied Tab */}
-          <TabsContent value="applied" className="space-y-4">
-            {appliedOpportunities.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {appliedOpportunities.map((opportunity) => (
-                  <OpportunityCard key={opportunity.id} opportunity={opportunity} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No applications yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Start applying to opportunities to track them here
-                </p>
-                <Button onClick={() => setActiveTab('discover')}>
-                  Browse Opportunities
-                </Button>
-              </div>
-            )}
           </TabsContent>
 
           {/* Posted Tab */}

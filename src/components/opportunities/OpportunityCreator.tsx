@@ -19,8 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { OpportunityType, ExperienceLevel, UserRole, useStore } from '@/store/useStore';
 import { useAuth } from '@/hooks/useAuth';
+import { useOpportunities } from '@/hooks/useOpportunities';
 import { toast } from 'sonner';
 
 interface OpportunityCreatorProps {
@@ -28,18 +28,20 @@ interface OpportunityCreatorProps {
   onOpenChange: (open: boolean) => void;
 }
 
+type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician';
+
 const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenChange }) => {
   const { user } = useAuth();
-  const { addOpportunity } = useStore();
+  const { createOpportunity } = useOpportunities();
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [type, setType] = useState<OpportunityType>('job');
+  const [type, setType] = useState('job');
   const [company, setCompany] = useState('');
   const [location, setLocation] = useState('');
   const [isRemote, setIsRemote] = useState(false);
   const [compensation, setCompensation] = useState('');
-  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('any');
+  const [experienceLevel, setExperienceLevel] = useState('any');
   const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([]);
   const [deadline, setDeadline] = useState('');
   const [duration, setDuration] = useState('');
@@ -77,41 +79,41 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       return;
     }
 
-    addOpportunity({
+    createOpportunity.mutate({
       title: title.trim(),
       description: description.trim(),
       type,
       status: 'open',
-      postedBy: user.id, // Use actual authenticated user ID
       company: company.trim() || undefined,
       location: location.trim() || 'Remote',
-      isRemote,
+      is_remote: isRemote,
       compensation: compensation.trim() || undefined,
-      experienceLevel,
+      experience_level: experienceLevel,
       roles: selectedRoles,
       requirements: [],
       deadline: deadline || undefined,
       duration: duration.trim() || undefined,
       tags,
-      isFeatured,
+      is_featured: isFeatured,
+    }, {
+      onSuccess: () => {
+        // Reset form
+        setTitle('');
+        setDescription('');
+        setType('job');
+        setCompany('');
+        setLocation('');
+        setIsRemote(false);
+        setCompensation('');
+        setExperienceLevel('any');
+        setSelectedRoles([]);
+        setDeadline('');
+        setDuration('');
+        setTags([]);
+        setIsFeatured(false);
+        onOpenChange(false);
+      },
     });
-
-    // Reset form
-    setTitle('');
-    setDescription('');
-    setType('job');
-    setCompany('');
-    setLocation('');
-    setIsRemote(false);
-    setCompensation('');
-    setExperienceLevel('any');
-    setSelectedRoles([]);
-    setDeadline('');
-    setDuration('');
-    setTags([]);
-    setIsFeatured(false);
-    
-    onOpenChange(false);
   };
 
   return (
@@ -141,7 +143,7 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
 
               <div>
                 <Label htmlFor="type">Type *</Label>
-                <Select value={type} onValueChange={(v) => setType(v as OpportunityType)}>
+                <Select value={type} onValueChange={setType}>
                   <SelectTrigger className="mt-1 bg-background">
                     <SelectValue />
                   </SelectTrigger>
@@ -227,7 +229,7 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="experience">Experience Level</Label>
-              <Select value={experienceLevel} onValueChange={(v) => setExperienceLevel(v as ExperienceLevel)}>
+              <Select value={experienceLevel} onValueChange={setExperienceLevel}>
                 <SelectTrigger className="mt-1 bg-background">
                   <SelectValue />
                 </SelectTrigger>
@@ -316,10 +318,10 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
             </Button>
             <Button 
               onClick={handleSubmit}
-              disabled={!title.trim() || !description.trim()}
+              disabled={!title.trim() || !description.trim() || createOpportunity.isPending}
               className="bg-[hsl(var(--neon-opportunities))] text-foreground hover:opacity-90"
             >
-              Post Opportunity
+              {createOpportunity.isPending ? 'Posting...' : 'Post Opportunity'}
             </Button>
           </div>
         </div>
