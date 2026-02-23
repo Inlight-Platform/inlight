@@ -625,6 +625,7 @@ export type Database = {
       }
       opportunities: {
         Row: {
+          action_type: string
           company: string | null
           compensation: string | null
           created_at: string
@@ -647,6 +648,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          action_type?: string
           company?: string | null
           compensation?: string | null
           created_at?: string
@@ -669,6 +671,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          action_type?: string
           company?: string | null
           compensation?: string | null
           created_at?: string

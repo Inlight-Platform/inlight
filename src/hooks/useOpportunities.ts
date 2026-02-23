@@ -22,6 +22,7 @@ export interface DBOpportunity {
   duration: string | null;
   tags: string[];
   is_featured: boolean;
+  action_type: string;
   created_at: string;
   updated_at: string;
 }
@@ -47,6 +48,7 @@ export interface OpportunityView {
   tags: string[];
   createdAt: string;
   isFeatured: boolean;
+  actionType: string;
   applicants: { userId: string; appliedAt: string; status: string }[];
 }
 
@@ -71,6 +73,7 @@ function toView(row: DBOpportunity): OpportunityView {
     tags: row.tags || [],
     createdAt: row.created_at,
     isFeatured: row.is_featured,
+    actionType: row.action_type || 'apply',
     applicants: [], // Will be enriched separately if needed
   };
 }
@@ -109,6 +112,7 @@ export function useOpportunities() {
       duration?: string;
       tags: string[];
       is_featured: boolean;
+      action_type: string;
     }) => {
       if (!user) throw new Error('Not authenticated');
 
@@ -129,6 +133,7 @@ export function useOpportunities() {
         duration: input.duration || null,
         tags: input.tags,
         is_featured: input.is_featured,
+        action_type: input.action_type,
       });
 
       if (error) throw error;

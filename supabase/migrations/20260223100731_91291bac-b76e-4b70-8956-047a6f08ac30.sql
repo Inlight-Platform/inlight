@@ -1,0 +1,1 @@
+ALTER TABLE public.opportunities ADD COLUMN action_type text NOT NULL DEFAULT 'apply';
