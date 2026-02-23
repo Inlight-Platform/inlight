@@ -52,7 +52,7 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-lg overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <SheetHeader className="space-y-3 pb-4">
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={opportunityTypeColors[opportunity.type]}>

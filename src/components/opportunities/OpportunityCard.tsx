@@ -183,7 +183,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
   }
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border-border/50 hover:border-primary/30 cursor-pointer" onClick={() => setShowDetailSheet(true)}>
+    <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border-border/50 hover:border-primary/30 cursor-pointer" onClick={(e) => { e.stopPropagation(); setShowDetailSheet(true); }}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
