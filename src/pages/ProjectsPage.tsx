@@ -345,12 +345,6 @@ const ProjectsPage: React.FC = () => {
             <h1 className="text-2xl font-display font-bold">Projects</h1>
           </div>
 
-          {user && (
-            <Button onClick={() => setShowCreator(true)} size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              New Project
-            </Button>
-          )}
         </div>
       </header>
 

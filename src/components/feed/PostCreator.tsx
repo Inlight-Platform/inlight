@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link } from 'lucide-react';
+import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { ImageUploader } from './ImageUploader';
 import { AudienceSelector, PostVisibility } from './AudienceSelector';
+import { ImagePositioner } from '@/components/profile/ImagePositioner';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
 
@@ -47,6 +48,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [visibility, setVisibility] = useState<PostVisibility>('public');
   const [selectedRecipients, setSelectedRecipients] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
   const [linkTitle, setLinkTitle] = useState('');
+  const [positionX, setPositionX] = useState(50);
+  const [positionY, setPositionY] = useState(50);
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
   useEffect(() => {
@@ -69,6 +72,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setPostType('update');
     setVisibility('public');
     setSelectedRecipients([]);
+    setPositionX(50);
+    setPositionY(50);
   };
 
   const createPostMutation = useMutation({
@@ -82,6 +87,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             user_id: user.id,
             content: content.trim(),
             image_url: imageUrl || null,
+            image_position_x: positionX,
+            image_position_y: positionY,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -135,6 +142,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             user_id: user.id,
             content: `🎯 **${title.trim()}**\n\n${content.trim()}${location ? `\n\n📍 ${location}` : ''}`,
             image_url: imageUrl || null,
+            image_position_x: positionX,
+            image_position_y: positionY,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -378,15 +387,41 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   {/* Image Upload Section */}
                   {imageUrl ? (
                     <div className="relative rounded-lg overflow-hidden max-h-48">
-                      <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2 h-8 w-8"
-                        onClick={() => setImageUrl('')}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <img
+                        src={imageUrl}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        style={{ objectPosition: `${positionX}% ${positionY}%` }}
+                      />
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        <ImagePositioner
+                          imageUrl={imageUrl}
+                          initialPositionX={positionX}
+                          initialPositionY={positionY}
+                          aspectRatio={16 / 9}
+                          onSave={(x, y) => {
+                            setPositionX(x);
+                            setPositionY(y);
+                          }}
+                          trigger={
+                            <Button variant="secondary" size="icon" className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background">
+                              <Move className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setImageUrl('');
+                            setPositionX(50);
+                            setPositionY(50);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ) : null}
 
