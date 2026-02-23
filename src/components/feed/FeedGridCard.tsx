@@ -59,6 +59,7 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
               src={item.image_url}
               alt={item.title || 'Feed image'}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              style={{ objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` }}
             />
           ) : (
             <div className="w-full h-full bg-muted/50 flex items-center justify-center">
