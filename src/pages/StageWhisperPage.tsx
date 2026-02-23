@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music, ExternalLink } from 'lucide-react';
+import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music, ExternalLink, Archive } from 'lucide-react';
+import { isPast } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedShows } from '@/hooks/useSavedShows';
@@ -89,6 +90,7 @@ const StageWhisperPage: React.FC = () => {
   const [viewTab, setViewTab] = useState<'discover' | 'my-list'>('discover');
   const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'streaming' | 'student'>('theatres');
   const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
+  const [archiveMode, setArchiveMode] = useState(false);
 
   // Fetch all shows
   const {
@@ -205,6 +207,41 @@ const StageWhisperPage: React.FC = () => {
     return result;
   }, [shows, searchQuery, filters, activeTab]);
 
+  // Split shows into active and archived
+  const activeShows = useMemo(() => 
+    filteredShows.filter(s => !s.run_end || !isPast(new Date(s.run_end))),
+    [filteredShows]
+  );
+  const archivedShows = useMemo(() => 
+    filteredShows.filter(s => s.run_end && isPast(new Date(s.run_end))),
+    [filteredShows]
+  );
+
+  // Split films into active/archived by date (older than 30 days = archived)
+  const activeTheatreFilms = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    return theatreFilms.filter(f => new Date(f.date) >= cutoff);
+  }, [theatreFilms]);
+  const archivedTheatreFilms = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    return theatreFilms.filter(f => new Date(f.date) < cutoff);
+  }, [theatreFilms]);
+
+  // Split streaming into active/archived (using is_active which is already filtered, so archive from all)
+  // For streaming, we don't have expiry - archive will just be empty for now
+  
+  // Split music shows into active/archived by show_date
+  const activeMusicShows = useMemo(() => 
+    userMusicShows.filter(s => !s.show_date || !isPast(new Date(s.show_date))),
+    [userMusicShows]
+  );
+  const archivedMusicShows = useMemo(() => 
+    userMusicShows.filter(s => s.show_date && isPast(new Date(s.show_date))),
+    [userMusicShows]
+  );
+
   // Count shows by category
   const showCounts = useMemo(() => ({
     broadway: shows.filter(s => s.category === 'broadway').length,
@@ -241,6 +278,34 @@ const StageWhisperPage: React.FC = () => {
     if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
     return `$${amount}`;
   };
+  // Reset archive mode when switching tabs
+  const handleTabSwitch = (setter: Function, value: any) => {
+    setter(value);
+    setArchiveMode(false);
+  };
+
+  const ArchiveToggle = ({ archiveCount }: { archiveCount: number }) => (
+    <div className="flex items-center gap-2 mb-4">
+      <Button 
+        variant={!archiveMode ? 'default' : 'ghost'} 
+        size="sm" 
+        onClick={() => setArchiveMode(false)}
+      >
+        Active
+      </Button>
+      <Button 
+        variant={archiveMode ? 'default' : 'ghost'} 
+        size="sm" 
+        onClick={() => setArchiveMode(true)} 
+        className="gap-1.5"
+      >
+        <Archive className="w-3.5 h-3.5" />
+        Archive
+        {archiveCount > 0 && <span className="text-xs opacity-70">({archiveCount})</span>}
+      </Button>
+    </div>
+  );
+
   return <div className="w-full">
       {/* Promo Banner */}
       <a
@@ -275,7 +340,7 @@ const StageWhisperPage: React.FC = () => {
           </div>
 
           {/* Industry Tabs */}
-          <Tabs value={industryTab} onValueChange={v => setIndustryTab(v as 'theatre' | 'film' | 'music')} className="mb-4">
+          <Tabs value={industryTab} onValueChange={v => handleTabSwitch(setIndustryTab, v)} className="mb-4">
             <TabsList className="grid w-full max-w-md grid-cols-3">
               <TabsTrigger value="theatre" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
                 <Theater className="w-4 h-4" />
@@ -335,7 +400,7 @@ const StageWhisperPage: React.FC = () => {
 
         {/* Theatre Category Tabs */}
         {industryTab === 'theatre' && viewTab === 'discover' && <div className="overflow-x-auto scrollbar-thin px-4 sm:px-6 lg:px-8">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs value={activeTab} onValueChange={v => handleTabSwitch(setActiveTab, v)}>
               <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
                 <TabsTrigger value="broadway" className="flex-shrink-0 whitespace-nowrap">
                   ⭐ Broadway
@@ -359,15 +424,15 @@ const StageWhisperPage: React.FC = () => {
 
         {/* Film View Toggle */}
         {industryTab === 'film' && <div className="px-4 sm:px-6 lg:px-8 pb-2 flex gap-2">
-            <Button variant={filmViewTab === 'theatres' ? 'default' : 'ghost'} size="sm" onClick={() => setFilmViewTab('theatres')} className="gap-2">
+            <Button variant={filmViewTab === 'theatres' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setFilmViewTab, 'theatres')} className="gap-2">
               <Film className="w-4 h-4" />
               In Theatres
             </Button>
-            <Button variant={filmViewTab === 'streaming' ? 'default' : 'ghost'} size="sm" onClick={() => setFilmViewTab('streaming')} className="gap-2">
+            <Button variant={filmViewTab === 'streaming' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setFilmViewTab, 'streaming')} className="gap-2">
               <Tv className="w-4 h-4" />
               Streaming
             </Button>
-            <Button variant={filmViewTab === 'student' ? 'default' : 'ghost'} size="sm" onClick={() => setFilmViewTab('student')} className="gap-2">
+            <Button variant={filmViewTab === 'student' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setFilmViewTab, 'student')} className="gap-2">
               <Sparkles className="w-4 h-4" />
               Community
             </Button>
@@ -399,54 +464,68 @@ const StageWhisperPage: React.FC = () => {
               </div>}
 
             {viewTab === 'discover' ? <>
-                {/* Welcome Message */}
-                <div className="mb-6 p-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl border border-primary/20">
-                  <p className="text-sm">
-                    <span className="font-medium">Hey theatre lover! 👋</span>{' '}
-                    <span className="text-muted-foreground">
-                      {filteredShows.length} shows currently playing in NYC. 
-                      Tap a show for details, community tips, and tickets.
-                    </span>
-                  </p>
-                </div>
+                {/* Archive Toggle */}
+                <ArchiveToggle archiveCount={archivedShows.length} />
 
-                {/* Active Filters Display */}
-                {hasActiveFilters && <div className="mb-4 flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-muted-foreground">Filters:</span>
-                    {filters.showType.map(t => <Button key={t} variant="secondary" size="sm" className="h-6 text-xs" onClick={() => setFilters({
-              ...filters,
-              showType: filters.showType.filter(x => x !== t)
-            })}>
-                        {t} ×
-                      </Button>)}
-                    {filters.priceTier.map(p => <Button key={p} variant="secondary" size="sm" className="h-6 text-xs" onClick={() => setFilters({
-              ...filters,
-              priceTier: filters.priceTier.filter(x => x !== p)
-            })}>
-                        {p} ×
-                      </Button>)}
-                    {filters.borough.map(b => <Button key={b} variant="secondary" size="sm" className="h-6 text-xs" onClick={() => setFilters({
-              ...filters,
-              borough: filters.borough.filter(x => x !== b)
-            })}>
-                        {b} ×
-                      </Button>)}
-                    <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground" onClick={() => setFilters(EMPTY_FILTERS)}>
-                      Clear all
-                    </Button>
-                  </div>}
-
-                {/* Shows Grid */}
-                {loadingShows ? <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                  </div> : filteredShows.length === 0 ? <div className="text-center py-12">
-                    <Theater className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">
-                      {searchQuery || hasActiveFilters ? 'No shows match your search. Try adjusting your filters!' : 'No shows available right now.'}
+                {!archiveMode && <>
+                  {/* Welcome Message */}
+                  <div className="mb-6 p-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl border border-primary/20">
+                    <p className="text-sm">
+                      <span className="font-medium">Hey theatre lover! 👋</span>{' '}
+                      <span className="text-muted-foreground">
+                        {activeShows.length} shows currently playing in NYC. 
+                        Tap a show for details, community tips, and tickets.
+                      </span>
                     </p>
-                  </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {filteredShows.map(show => <ShowCard key={show.id} show={show} isSaved={isSaved(show.id)} onSave={saveShow} onUnsave={unsaveShow} onClick={setSelectedShow} />)}
-                  </div>}
+                  </div>
+
+                  {/* Active Filters Display */}
+                  {hasActiveFilters && <div className="mb-4 flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-muted-foreground">Filters:</span>
+                      {filters.showType.map(t => <Button key={t} variant="secondary" size="sm" className="h-6 text-xs" onClick={() => setFilters({
+                ...filters,
+                showType: filters.showType.filter(x => x !== t)
+              })}>
+                          {t} ×
+                        </Button>)}
+                      {filters.priceTier.map(p => <Button key={p} variant="secondary" size="sm" className="h-6 text-xs" onClick={() => setFilters({
+                ...filters,
+                priceTier: filters.priceTier.filter(x => x !== p)
+              })}>
+                          {p} ×
+                        </Button>)}
+                      {filters.borough.map(b => <Button key={b} variant="secondary" size="sm" className="h-6 text-xs" onClick={() => setFilters({
+                ...filters,
+                borough: filters.borough.filter(x => x !== b)
+              })}>
+                          {b} ×
+                        </Button>)}
+                      <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground" onClick={() => setFilters(EMPTY_FILTERS)}>
+                        Clear all
+                      </Button>
+                    </div>}
+
+                  {/* Shows Grid */}
+                  {loadingShows ? <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                    </div> : activeShows.length === 0 ? <div className="text-center py-12">
+                      <Theater className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        {searchQuery || hasActiveFilters ? 'No shows match your search. Try adjusting your filters!' : 'No shows available right now.'}
+                      </p>
+                    </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                      {activeShows.map(show => <ShowCard key={show.id} show={show} isSaved={isSaved(show.id)} onSave={saveShow} onUnsave={unsaveShow} onClick={setSelectedShow} />)}
+                    </div>}
+                </>}
+
+                {archiveMode && <>
+                  {archivedShows.length === 0 ? <div className="text-center py-12">
+                      <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No archived shows yet.</p>
+                    </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                      {archivedShows.map(show => <ShowCard key={show.id} show={show} isSaved={isSaved(show.id)} onSave={saveShow} onUnsave={unsaveShow} onClick={setSelectedShow} />)}
+                    </div>}
+                </>}
               </> : <MyShowList onShowClick={setSelectedShow} onUnsave={unsaveShow} />}
           </>}
 
@@ -464,13 +543,16 @@ const StageWhisperPage: React.FC = () => {
 
             {/* Films In Theatres */}
             {filmViewTab === 'theatres' && <>
-                {loadingTheatres ? <div className="flex items-center justify-center py-12">
+                <ArchiveToggle archiveCount={archivedTheatreFilms.length} />
+                {(() => {
+                  const filmsToShow = archiveMode ? archivedTheatreFilms : activeTheatreFilms;
+                  return loadingTheatres ? <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                  </div> : theatreFilms.length === 0 ? <div className="text-center py-12">
-                    <Film className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No films data available right now.</p>
+                  </div> : filmsToShow.length === 0 ? <div className="text-center py-12">
+                    {archiveMode ? <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" /> : <Film className="w-12 h-12 text-muted-foreground mx-auto mb-4" />}
+                    <p className="text-muted-foreground">{archiveMode ? 'No archived films.' : 'No films data available right now.'}</p>
                   </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {theatreFilms.map(film => <Card key={film.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer">
+                    {filmsToShow.map(film => <Card key={film.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer">
                         <div className="aspect-[2/3] relative bg-muted">
                           {film.poster_url ? <img src={film.poster_url} alt={film.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
                               <Film className="w-12 h-12 text-muted-foreground" />
@@ -491,11 +573,17 @@ const StageWhisperPage: React.FC = () => {
                           </div>
                         </CardContent>
                       </Card>)}
-                  </div>}
+                  </div>;
+                })()}
               </>}
 
             {/* Streaming Content */}
             {filmViewTab === 'streaming' && <>
+                <ArchiveToggle archiveCount={0} />
+                {archiveMode ? <div className="text-center py-12">
+                    <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No archived streaming content.</p>
+                  </div> : <>
                 {loadingStreaming ? <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                   </div> : streamingContent.length === 0 ? <div className="text-center py-12">
@@ -527,10 +615,16 @@ const StageWhisperPage: React.FC = () => {
                         </CardContent>
                       </Card>)}
                   </div>}
+                </>}
               </>}
 
             {/* Community / Student Films */}
             {filmViewTab === 'student' && <>
+                <ArchiveToggle archiveCount={0} />
+                {archiveMode ? <div className="text-center py-12">
+                    <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No archived community films.</p>
+                  </div> : <>
                 {/* Creator Note */}
                 <div className="mb-4 p-3 bg-accent/50 rounded-lg border border-accent flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2">
@@ -576,6 +670,7 @@ const StageWhisperPage: React.FC = () => {
                         </Card>
                       </a>)}
                   </div>}
+                </>}
               </>}
           </>}
 
@@ -583,7 +678,7 @@ const StageWhisperPage: React.FC = () => {
         {industryTab === 'music' && <>
             {/* Music Category Tabs */}
             <div className="flex gap-2 mb-6">
-              <Button variant={musicTab === 'local-shows' ? 'default' : 'ghost'} size="sm" onClick={() => setMusicTab('local-shows')} className="gap-2">
+              <Button variant={musicTab === 'local-shows' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setMusicTab, 'local-shows')} className="gap-2">
                 <Music className="w-4 h-4" />
                 Local Shows
               </Button>
@@ -596,52 +691,85 @@ const StageWhisperPage: React.FC = () => {
                   <p className="text-sm text-muted-foreground">Discover music performances and concerts by the community.</p>
                 </div>
 
-                {/* Creator Note */}
-                <div className="p-3 bg-accent/50 rounded-lg border border-accent flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium text-foreground">Performing in an upcoming show?</span>{' '}
-                      Let your community know!
-                    </p>
-                  </div>
-                  <AddMusicShowDialog trigger={
-                    <Button size="sm" className="gap-1.5 shrink-0">
-                      <Plus className="w-4 h-4" />
-                      Add Show
-                    </Button>
-                  } />
-                </div>
+                <ArchiveToggle archiveCount={archivedMusicShows.length} />
 
-                {loadingMusicShows ? <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                  </div> : userMusicShows.length === 0 ? <div className="text-center py-12">
-                    <Music className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No local shows listed yet.</p>
-                    <p className="text-sm text-muted-foreground mt-1">Be the first to share your performance!</p>
-                  </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {userMusicShows.map(show => <Card key={show.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer" onClick={() => {
-                        if (show.ticket_url) window.open(show.ticket_url, '_blank');
-                      }}>
-                        <div className="aspect-[2/3] relative bg-muted">
-                          {show.poster_url ? <img src={show.poster_url} alt={show.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
-                              <Music className="w-12 h-12 text-muted-foreground" />
-                            </div>}
-                          <div className="absolute top-2 right-2">
-                            <Badge className="bg-background/90 text-foreground text-xs">
-                              {show.is_free ? 'Free' : 'Tickets'}
-                            </Badge>
+                {!archiveMode && <>
+                  {/* Creator Note */}
+                  <div className="p-3 bg-accent/50 rounded-lg border border-accent flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">Performing in an upcoming show?</span>{' '}
+                        Let your community know!
+                      </p>
+                    </div>
+                    <AddMusicShowDialog trigger={
+                      <Button size="sm" className="gap-1.5 shrink-0">
+                        <Plus className="w-4 h-4" />
+                        Add Show
+                      </Button>
+                    } />
+                  </div>
+
+                  {loadingMusicShows ? <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                    </div> : activeMusicShows.length === 0 ? <div className="text-center py-12">
+                      <Music className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No local shows listed yet.</p>
+                      <p className="text-sm text-muted-foreground mt-1">Be the first to share your performance!</p>
+                    </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                      {activeMusicShows.map(show => <Card key={show.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer" onClick={() => {
+                          if (show.ticket_url) window.open(show.ticket_url, '_blank');
+                        }}>
+                          <div className="aspect-[2/3] relative bg-muted">
+                            {show.poster_url ? <img src={show.poster_url} alt={show.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
+                                <Music className="w-12 h-12 text-muted-foreground" />
+                              </div>}
+                            <div className="absolute top-2 right-2">
+                              <Badge className="bg-background/90 text-foreground text-xs">
+                                {show.is_free ? 'Free' : 'Tickets'}
+                              </Badge>
+                            </div>
                           </div>
-                        </div>
-                        <CardContent className="p-3">
-                          <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
-                            {show.title}
-                          </h3>
-                          {show.venue && <p className="text-xs text-muted-foreground line-clamp-1">{show.venue}</p>}
-                          {show.show_date && <p className="text-xs text-muted-foreground mt-1">{new Date(show.show_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>}
-                        </CardContent>
-                      </Card>)}
-                  </div>}
+                          <CardContent className="p-3">
+                            <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
+                              {show.title}
+                            </h3>
+                            {show.venue && <p className="text-xs text-muted-foreground line-clamp-1">{show.venue}</p>}
+                            {show.show_date && <p className="text-xs text-muted-foreground mt-1">{new Date(show.show_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>}
+                          </CardContent>
+                        </Card>)}
+                    </div>}
+                </>}
+
+                {archiveMode && <>
+                  {archivedMusicShows.length === 0 ? <div className="text-center py-12">
+                      <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No archived shows yet.</p>
+                    </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                      {archivedMusicShows.map(show => <Card key={show.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer" onClick={() => {
+                          if (show.ticket_url) window.open(show.ticket_url, '_blank');
+                        }}>
+                          <div className="aspect-[2/3] relative bg-muted">
+                            {show.poster_url ? <img src={show.poster_url} alt={show.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
+                                <Music className="w-12 h-12 text-muted-foreground" />
+                              </div>}
+                            <div className="absolute top-2 right-2">
+                              <Badge className="bg-background/90 text-foreground text-xs">
+                                {show.is_free ? 'Free' : 'Tickets'}
+                              </Badge>
+                            </div>
+                          </div>
+                          <CardContent className="p-3">
+                            <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
+                              {show.title}
+                            </h3>
+                            {show.venue && <p className="text-xs text-muted-foreground line-clamp-1">{show.venue}</p>}
+                            {show.show_date && <p className="text-xs text-muted-foreground mt-1">{new Date(show.show_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>}
+                          </CardContent>
+                        </Card>)}
+                    </div>}
+                </>}
               </div>}
           </>}
       </div>
