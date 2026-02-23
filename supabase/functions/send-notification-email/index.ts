@@ -56,6 +56,33 @@ Deno.serve(async (req) => {
     const notificationType = record.type || "notification";
     const title = record.title || "New Notification";
     const body = record.body || "";
+    const data = record.data || {};
+
+    let emailSubject = title;
+    let emailBody = "";
+
+    if (notificationType === "message" && data.sender_id) {
+      // Fetch sender's display name
+      const { data: senderProfile } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", data.sender_id)
+        .single();
+
+      const senderName = senderProfile?.display_name || "Someone";
+      emailSubject = `New message from ${senderName}`;
+
+      emailBody = `
+        <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">You got a new message from ${senderName}!</h2>
+        <a href="https://inlight.lovable.app/messages" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
+      `;
+    } else {
+      emailBody = `
+        <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${title}</h2>
+        ${body ? `<p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${body}</p>` : ""}
+        <a href="https://inlight.lovable.app" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View on Inlight</a>
+      `;
+    }
 
     const html = `
       <!DOCTYPE html>
@@ -76,9 +103,7 @@ Deno.serve(async (req) => {
                 </tr>
                 <tr>
                   <td style="padding:32px;">
-                    <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${title}</h2>
-                    ${body ? `<p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${body}</p>` : ""}
-                    <a href="https://inlight.lovable.app" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View on Inlight</a>
+                    ${emailBody}
                   </td>
                 </tr>
                 <tr>
@@ -97,7 +122,7 @@ Deno.serve(async (req) => {
     const { error: emailError } = await resend.emails.send({
       from: "Inlight <notifications@inlight.social>",
       to: [profile.email],
-      subject: title,
+      subject: emailSubject,
       html,
     });
 
