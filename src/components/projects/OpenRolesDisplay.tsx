@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { ApplicationDetailSheet } from './ApplicationDetailSheet';
+import { AcceptApplicationDialog } from './AcceptApplicationDialog';
 
 interface OpenRole {
   id: string;
@@ -65,6 +66,8 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
   const [includeProfile, setIncludeProfile] = useState(true);
   const [viewingApplication, setViewingApplication] = useState<(RoleApplication & { role_name?: string }) | null>(null);
   const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null; headline: string | null; role: string | null } | null>(null);
+  const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
+  const [pendingAccept, setPendingAccept] = useState<{ applicationId: string; applicantId: string; applicantName: string; roleName: string } | null>(null);
 
   // Fetch user profile for the preview card
   useEffect(() => {
@@ -81,6 +84,20 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
   }, [applyDialogOpen, user]);
 
   const isCreator = user?.id === creatorId;
+
+  // Fetch project title
+  const { data: projectData } = useQuery({
+    queryKey: ['project-title', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('title')
+        .eq('id', projectId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Fetch open roles (unassigned)
   const { data: openRoles = [] } = useQuery({
@@ -235,6 +252,50 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
     setResumeFile(null);
     setIncludeProfile(true);
     setSelectedRole(null);
+  };
+
+  const handleAcceptClick = (applicationId: string, applicantId: string, applicantName: string, roleName: string) => {
+    setPendingAccept({ applicationId, applicantId, applicantName, roleName });
+    setAcceptDialogOpen(true);
+  };
+
+  const handleAcceptConfirm = async (welcomeMessage: string) => {
+    if (!pendingAccept || !user?.id) return;
+
+    // Accept the application (adds to team, group chat, etc.)
+    updateApplicationStatus.mutate(
+      { applicationId: pendingAccept.applicationId, status: 'accepted', applicantId: pendingAccept.applicantId, roleName: pendingAccept.roleName },
+      {
+        onSuccess: async () => {
+          // Send welcome DM if provided
+          if (welcomeMessage.trim()) {
+            await supabase.from('messages').insert({
+              sender_id: user.id,
+              receiver_id: pendingAccept.applicantId,
+              content: welcomeMessage.trim(),
+            });
+          }
+
+          // Create acceptance notification (triggers email via DB trigger)
+          await supabase.from('notifications').insert({
+            user_id: pendingAccept.applicantId,
+            type: 'application_accepted',
+            title: 'Congratulations! You\'ve been accepted!',
+            body: `You've been offered the role of ${pendingAccept.roleName} on ${projectData?.title || 'a project'}`,
+            data: {
+              sender_id: user.id,
+              project_id: projectId,
+              role_name: pendingAccept.roleName,
+              project_title: projectData?.title || '',
+            },
+          });
+
+          setAcceptDialogOpen(false);
+          setViewingApplication(null);
+          setPendingAccept(null);
+        },
+      }
+    );
   };
 
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -414,12 +475,12 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
                         <div className="flex gap-2 pt-2">
                           <Button
                             size="sm"
-                            onClick={() => updateApplicationStatus.mutate({ 
-                              applicationId: app.id, 
-                              status: 'accepted',
-                              applicantId: app.applicant_id,
-                              roleName: role.role_name
-                            })}
+                            onClick={() => handleAcceptClick(
+                              app.id,
+                              app.applicant_id,
+                              app.applicant_profile?.display_name || 'Unknown',
+                              role.role_name
+                            )}
                           >
                             <Check className="w-4 h-4 mr-1" /> Accept
                           </Button>
@@ -593,13 +654,27 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
         application={viewingApplication}
         isCreator={isCreator}
         onAccept={(applicationId, applicantId, roleName) => {
-          updateApplicationStatus.mutate({ applicationId, status: 'accepted', applicantId, roleName });
-          setViewingApplication(null);
+          const applicantName = viewingApplication?.applicant_profile?.display_name || 'Unknown';
+          handleAcceptClick(applicationId, applicantId, applicantName, roleName);
         }}
         onDecline={(applicationId) => {
           updateApplicationStatus.mutate({ applicationId, status: 'rejected' });
           setViewingApplication(null);
         }}
+      />
+
+      {/* Accept Confirmation Dialog */}
+      <AcceptApplicationDialog
+        open={acceptDialogOpen}
+        onOpenChange={(open) => {
+          setAcceptDialogOpen(open);
+          if (!open) setPendingAccept(null);
+        }}
+        applicantName={pendingAccept?.applicantName || ''}
+        roleName={pendingAccept?.roleName || ''}
+        projectName={projectData?.title || ''}
+        isPending={updateApplicationStatus.isPending}
+        onConfirm={handleAcceptConfirm}
       />
     </div>
   );
