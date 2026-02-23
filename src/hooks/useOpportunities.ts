@@ -147,5 +147,55 @@ export function useOpportunities() {
     },
   });
 
-  return { opportunities, isLoading, createOpportunity };
+  const updateOpportunity = useMutation({
+    mutationFn: async (input: {
+      id: string;
+      title: string;
+      description: string;
+      type: string;
+      status: string;
+      company?: string;
+      location?: string;
+      is_remote: boolean;
+      compensation?: string;
+      experience_level: string;
+      roles: string[];
+      deadline?: string;
+      duration?: string;
+      action_type: string;
+    }) => {
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('opportunities')
+        .update({
+          title: input.title,
+          description: input.description,
+          type: input.type,
+          status: input.status,
+          company: input.company || null,
+          location: input.location || 'Remote',
+          is_remote: input.is_remote,
+          compensation: input.compensation || null,
+          experience_level: input.experience_level,
+          roles: input.roles,
+          deadline: input.deadline || null,
+          duration: input.duration || null,
+          action_type: input.action_type,
+        })
+        .eq('id', input.id)
+        .eq('posted_by', user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      toast.success('Opportunity updated successfully!');
+    },
+    onError: () => {
+      toast.error('Failed to update opportunity. Please try again.');
+    },
+  });
+
+  return { opportunities, isLoading, createOpportunity, updateOpportunity };
 }
