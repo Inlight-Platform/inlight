@@ -25,6 +25,7 @@ import StageWhisperPage from "./pages/StageWhisperPage";
 import GroupMembersPage from "./pages/GroupMembersPage";
 import AdminPage from "./pages/AdminPage";
 import CompanyProfilePage from "./pages/CompanyProfilePage";
+import MySavesPage from "./pages/MySavesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
             <Route path="/stage-whisper" element={<StageWhisperPage />} />
             <Route path="/company/:companyId" element={<CompanyProfilePage />} />
+            <Route path="/saves" element={<MySavesPage />} />
             <Route path="/group" element={<GroupMembersPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />

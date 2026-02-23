@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { BookOpen, ExternalLink, GraduationCap, Mic, Music, Video, Theater, Building2, Film, Newspaper, Users, FileText, Shield } from 'lucide-react';
+import { BookOpen, ExternalLink, GraduationCap, Mic, Music, Video, Theater, Building2, Film, Newspaper, Users, FileText, Shield, Bookmark, BookmarkCheck } from 'lucide-react';
+import { useSavedItems } from '@/hooks/useSavedItems';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -123,6 +124,7 @@ const ResourcesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'theatre' | 'film'>('theatre');
   const [selectedCategory, setSelectedCategory] = useState<ResourceCategory | null>(null);
   const [educationFilter, setEducationFilter] = useState<EducationProgram['type'] | 'all'>('all');
+  const { isSaved, toggleSave } = useSavedItems();
 
   const currentResources = activeTab === 'theatre' ? theatreResources : filmResources;
   // Filter out education from regular resources since it has its own section
@@ -253,40 +255,39 @@ const ResourcesPage: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredEducation.map((program) => (
-                    <a 
-                      key={program.name}
-                      href={program.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="block group"
-                    >
-                      <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h3 className="font-semibold group-hover:text-primary transition-colors">
-                              {program.name}
-                            </h3>
-                            <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                            {program.description}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                              {getEducationTypeIcon(program.type)}
-                              {getEducationTypeName(program.type)}
-                            </Badge>
-                            {program.industry !== 'both' && (
-                              <Badge variant="outline" className="text-xs">
-                                {program.industry === 'theatre' ? 'Theatre' : 'Film'}
-                              </Badge>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </a>
-                  ))}
+                  {filteredEducation.map((program) => {
+                    const saved = isSaved('resource', program.name, program.url);
+                    return (
+                      <div key={program.name} className="relative block group">
+                        <a href={program.url} target="_blank" rel="noopener noreferrer" className="block">
+                          <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <h3 className="font-semibold group-hover:text-primary transition-colors">{program.name}</h3>
+                                <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{program.description}</p>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                                  {getEducationTypeIcon(program.type)}
+                                  {getEducationTypeName(program.type)}
+                                </Badge>
+                                {program.industry !== 'both' && (
+                                  <Badge variant="outline" className="text-xs">{program.industry === 'theatre' ? 'Theatre' : 'Film'}</Badge>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </a>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave({ item_type: 'resource', item_title: program.name, item_url: program.url, item_metadata: { description: program.description, category: 'education' } }); }}
+                          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
+                        >
+                          {saved ? <BookmarkCheck className="w-4 h-4 text-primary" /> : <Bookmark className="w-4 h-4 text-muted-foreground" />}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -311,32 +312,57 @@ const ResourcesPage: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredResources.map((resource) => (
-                    <a 
-                      key={resource.name}
-                      href={resource.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="block group"
-                    >
-                      <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h3 className="font-semibold group-hover:text-primary transition-colors">
-                              {resource.name}
-                            </h3>
-                            <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                            {resource.description}
-                          </p>
-                          <Badge variant="secondary" className="text-xs">
-                            {resourceCategories.find(c => c.id === resource.category)?.name}
-                          </Badge>
-                        </CardContent>
-                      </Card>
-                    </a>
-                  ))}
+                  {filteredResources.map((resource) => {
+                    const saved = isSaved('resource', resource.name, resource.url);
+                    return (
+                      <div key={resource.name} className="relative block group">
+                        <a 
+                          href={resource.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <h3 className="font-semibold group-hover:text-primary transition-colors">
+                                  {resource.name}
+                                </h3>
+                                <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                                {resource.description}
+                              </p>
+                              <div className="flex items-center justify-between">
+                                <Badge variant="secondary" className="text-xs">
+                                  {resourceCategories.find(c => c.id === resource.category)?.name}
+                                </Badge>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </a>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleSave({
+                              item_type: 'resource',
+                              item_title: resource.name,
+                              item_url: resource.url,
+                              item_metadata: { description: resource.description, category: resource.category },
+                            });
+                          }}
+                          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
+                        >
+                          {saved ? (
+                            <BookmarkCheck className="w-4 h-4 text-primary" />
+                          ) : (
+                            <Bookmark className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -425,40 +451,39 @@ const ResourcesPage: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredEducation.map((program) => (
-                    <a 
-                      key={program.name}
-                      href={program.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="block group"
-                    >
-                      <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h3 className="font-semibold group-hover:text-primary transition-colors">
-                              {program.name}
-                            </h3>
-                            <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                            {program.description}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                              {getEducationTypeIcon(program.type)}
-                              {getEducationTypeName(program.type)}
-                            </Badge>
-                            {program.industry !== 'both' && (
-                              <Badge variant="outline" className="text-xs">
-                                {program.industry === 'theatre' ? 'Theatre' : 'Film'}
-                              </Badge>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </a>
-                  ))}
+                  {filteredEducation.map((program) => {
+                    const saved = isSaved('resource', program.name, program.url);
+                    return (
+                      <div key={program.name} className="relative block group">
+                        <a href={program.url} target="_blank" rel="noopener noreferrer" className="block">
+                          <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <h3 className="font-semibold group-hover:text-primary transition-colors">{program.name}</h3>
+                                <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{program.description}</p>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                                  {getEducationTypeIcon(program.type)}
+                                  {getEducationTypeName(program.type)}
+                                </Badge>
+                                {program.industry !== 'both' && (
+                                  <Badge variant="outline" className="text-xs">{program.industry === 'theatre' ? 'Theatre' : 'Film'}</Badge>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </a>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave({ item_type: 'resource', item_title: program.name, item_url: program.url, item_metadata: { description: program.description, category: 'education' } }); }}
+                          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
+                        >
+                          {saved ? <BookmarkCheck className="w-4 h-4 text-primary" /> : <Bookmark className="w-4 h-4 text-muted-foreground" />}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -483,32 +508,33 @@ const ResourcesPage: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredResources.map((resource) => (
-                    <a 
-                      key={resource.name}
-                      href={resource.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="block group"
-                    >
-                      <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h3 className="font-semibold group-hover:text-primary transition-colors">
-                              {resource.name}
-                            </h3>
-                            <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                            {resource.description}
-                          </p>
-                          <Badge variant="secondary" className="text-xs">
-                            {resourceCategories.find(c => c.id === resource.category)?.name}
-                          </Badge>
-                        </CardContent>
-                      </Card>
-                    </a>
-                  ))}
+                  {filteredResources.map((resource) => {
+                    const saved = isSaved('resource', resource.name, resource.url);
+                    return (
+                      <div key={resource.name} className="relative block group">
+                        <a href={resource.url} target="_blank" rel="noopener noreferrer" className="block">
+                          <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <h3 className="font-semibold group-hover:text-primary transition-colors">{resource.name}</h3>
+                                <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{resource.description}</p>
+                              <Badge variant="secondary" className="text-xs">
+                                {resourceCategories.find(c => c.id === resource.category)?.name}
+                              </Badge>
+                            </CardContent>
+                          </Card>
+                        </a>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave({ item_type: 'resource', item_title: resource.name, item_url: resource.url, item_metadata: { description: resource.description, category: resource.category } }); }}
+                          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
+                        >
+                          {saved ? <BookmarkCheck className="w-4 h-4 text-primary" /> : <Bookmark className="w-4 h-4 text-muted-foreground" />}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
             )}
