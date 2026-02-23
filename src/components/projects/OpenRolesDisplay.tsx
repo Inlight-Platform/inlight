@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Send, Link2, FileText, Loader2, Check, X, Clock, Trash2, User, Eye } from 'lucide-react';
+import { Send, Link2, FileText, Loader2, Check, X, Clock, Trash2, User, Eye, Upload, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -60,6 +60,8 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
   const [applicationMessage, setApplicationMessage] = useState('');
   const [reelUrl, setReelUrl] = useState('');
   const [resumeUrl, setResumeUrl] = useState('');
+  const [resumeFile, setResumeFile] = useState<{ name: string; url: string } | null>(null);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [includeProfile, setIncludeProfile] = useState(true);
   const [viewingApplication, setViewingApplication] = useState<(RoleApplication & { role_name?: string }) | null>(null);
   const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null; headline: string | null; role: string | null } | null>(null);
@@ -171,7 +173,7 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
           applicant_id: user.id,
           message: applicationMessage.trim(),
           reel_url: reelUrl.trim() || null,
-          resume_url: resumeUrl.trim() || null,
+          resume_url: resumeFile?.url || null,
           include_profile: includeProfile,
         });
 
@@ -230,8 +232,46 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
     setApplicationMessage('');
     setReelUrl('');
     setResumeUrl('');
+    setResumeFile(null);
     setIncludeProfile(true);
     setSelectedRole(null);
+  };
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File is too large. Max size is 10MB.');
+      return;
+    }
+
+    setIsUploadingResume(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/applications/${selectedRole?.id || 'general'}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-media')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        toast.error('Failed to upload resume');
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('profile-media')
+        .getPublicUrl(fileName);
+
+      setResumeFile({ name: file.name, url: urlData.publicUrl });
+      toast.success('Resume uploaded');
+    } catch {
+      toast.error('Failed to upload resume');
+    } finally {
+      setIsUploadingResume(false);
+      e.target.value = '';
+    }
   };
 
   const getApplicationStatus = (roleId: string) => {
@@ -467,25 +507,63 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="reel">Reel/Portfolio URL (optional)</Label>
+              <Label htmlFor="reel" className="flex items-center gap-2">
+                <Video className="h-4 w-4" />
+                Reel / Portfolio Link (optional)
+              </Label>
               <Input
                 id="reel"
                 type="url"
-                placeholder="https://vimeo.com/..."
+                placeholder="YouTube, Vimeo, or Google Drive link"
                 value={reelUrl}
                 onChange={(e) => setReelUrl(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">Accepts YouTube, Vimeo, or Google Drive links</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="resume">Resume URL (optional)</Label>
-              <Input
-                id="resume"
-                type="url"
-                placeholder="https://drive.google.com/..."
-                value={resumeUrl}
-                onChange={(e) => setResumeUrl(e.target.value)}
-              />
+              <Label className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Resume (optional)
+              </Label>
+              {resumeFile ? (
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm truncate">{resumeFile.name}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 flex-shrink-0"
+                    onClick={() => setResumeFile(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
+                  <input
+                    type="file"
+                    id="resume-upload"
+                    accept=".pdf,.doc,.docx"
+                    onChange={handleResumeUpload}
+                    className="hidden"
+                    disabled={isUploadingResume}
+                  />
+                  <label htmlFor="resume-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                    {isUploadingResume ? (
+                      <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+                    ) : (
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                    )}
+                    <span className="text-sm text-muted-foreground">
+                      {isUploadingResume ? 'Uploading...' : 'Upload resume (PDF, DOC)'}
+                    </span>
+                    <span className="text-xs text-muted-foreground">Max 10MB</span>
+                  </label>
+                </div>
+              )}
             </div>
 
             <Button

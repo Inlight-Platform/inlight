@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Link2, FileText, User, Clock, Check, X } from 'lucide-react';
+import { Link2, FileText, User, Clock, Check, X, Video, Download } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -134,7 +134,7 @@ export const ApplicationDetailSheet: React.FC<ApplicationDetailSheetProps> = ({
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-sm text-primary hover:underline"
                   >
-                    <Link2 className="w-4 h-4" />
+                    <Video className="w-4 h-4" />
                     Reel / Portfolio
                   </a>
                 )}
@@ -145,8 +145,8 @@ export const ApplicationDetailSheet: React.FC<ApplicationDetailSheetProps> = ({
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-sm text-primary hover:underline"
                   >
-                    <FileText className="w-4 h-4" />
-                    Resume / CV
+                    <Download className="w-4 h-4" />
+                    Download Resume
                   </a>
                 )}
               </div>
