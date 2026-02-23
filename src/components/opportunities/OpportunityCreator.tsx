@@ -215,14 +215,6 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
               <Label htmlFor="remote">Remote opportunity</Label>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Switch
-                id="featured"
-                checked={isFeatured}
-                onCheckedChange={setIsFeatured}
-              />
-              <Label htmlFor="featured">Featured listing</Label>
-            </div>
           </div>
 
           {/* Experience & Timeline */}
@@ -237,7 +229,7 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
                   <SelectItem value="any">Any Level</SelectItem>
                   <SelectItem value="entry">Entry Level</SelectItem>
                   <SelectItem value="intermediate">Intermediate</SelectItem>
-                  <SelectItem value="senior">Senior</SelectItem>
+                  <SelectItem value="senior">Professional</SelectItem>
                 </SelectContent>
               </Select>
             </div>
