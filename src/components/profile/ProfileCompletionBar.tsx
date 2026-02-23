@@ -90,10 +90,11 @@ const ProfileCompletionBar: React.FC<ProfileCompletionBarProps> = ({ userId, pro
 
   return (
     <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-4 rounded-xl bg-card border border-border">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-1">
         <h3 className="text-sm font-semibold">Profile Completion</h3>
         <span className="text-sm font-medium text-primary">{percentage}%</span>
       </div>
+      <p className="text-xs text-muted-foreground mb-2">Completed profiles get viewed 7x more</p>
       <Progress value={percentage} className="h-2 mb-3" />
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (
