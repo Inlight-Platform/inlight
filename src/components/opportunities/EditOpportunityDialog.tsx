@@ -184,7 +184,7 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
               <Label>Start Time</Label>
               <Select value={startTime} onValueChange={setStartTime} disabled={!deadlineDate}>
                 <SelectTrigger className="mt-1 bg-background"><SelectValue placeholder="Select time" /></SelectTrigger>
-                <SelectContent className="bg-popover border-border max-h-60 z-50">
+                <SelectContent className="bg-popover border-border max-h-60 z-[200] pointer-events-auto">
                   {Array.from({ length: 48 }, (_, i) => {
                     const h = Math.floor(i / 2);
                     const m = i % 2 === 0 ? '00' : '30';
@@ -200,7 +200,7 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
               <Label>End Time</Label>
               <Select value={endTime} onValueChange={setEndTime} disabled={!deadlineDate}>
                 <SelectTrigger className="mt-1 bg-background"><SelectValue placeholder="Select time" /></SelectTrigger>
-                <SelectContent className="bg-popover border-border max-h-60 z-50">
+                <SelectContent className="bg-popover border-border max-h-60 z-[200] pointer-events-auto">
                   {Array.from({ length: 48 }, (_, i) => {
                     const h = Math.floor(i / 2);
                     const m = i % 2 === 0 ? '00' : '30';
