@@ -488,7 +488,6 @@ const StageWhisperPage: React.FC = () => {
                           <p className="text-xs text-muted-foreground line-clamp-1">{film.studio}</p>
                           <div className="flex items-center justify-between mt-2 text-xs">
                             <span className="text-primary font-medium">{formatCurrency(film.weekend_gross)}</span>
-                            <span className="text-muted-foreground">Week {film.weeks_in_release}</span>
                           </div>
                         </CardContent>
                       </Card>)}
