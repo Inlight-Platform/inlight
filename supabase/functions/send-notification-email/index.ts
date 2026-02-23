@@ -76,6 +76,34 @@ Deno.serve(async (req) => {
         <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">You got a new message from ${senderName}!</h2>
         <a href="https://inlight.lovable.app/messages" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
       `;
+    } else if (notificationType === "application" && data.applicant_id && data.project_id) {
+      // Fetch applicant name
+      const { data: applicantProfile } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", data.applicant_id)
+        .single();
+
+      // Fetch project title and role name
+      const { data: roleData } = data.role_id
+        ? await supabase
+            .from("project_roles")
+            .select("role_name, projects(title)")
+            .eq("id", data.role_id)
+            .single()
+        : { data: null };
+
+      const applicantName = applicantProfile?.display_name || "Someone";
+      const roleName = roleData?.role_name || "a role";
+      const projectTitle = (roleData?.projects as any)?.title || "your project";
+      const reviewUrl = `https://inlight.lovable.app/projects/${data.project_id}?application=${data.application_id}`;
+
+      emailSubject = `${applicantName} applied for ${roleName}`;
+
+      emailBody = `
+        <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${applicantName} applied for ${roleName} in ${projectTitle}!</h2>
+        <a href="${reviewUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Review</a>
+      `;
     } else {
       emailBody = `
         <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${title}</h2>
