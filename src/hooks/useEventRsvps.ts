@@ -65,6 +65,7 @@ export function useEventRsvps(eventId: string) {
       email: string;
       role_type: string;
       status: string;
+      custom_answer?: string | null;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from('event_rsvps').insert({

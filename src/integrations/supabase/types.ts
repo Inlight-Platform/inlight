@@ -319,6 +319,7 @@ export type Database = {
       event_rsvps: {
         Row: {
           created_at: string
+          custom_answer: string | null
           email: string
           event_id: string
           id: string
@@ -330,6 +331,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_answer?: string | null
           email: string
           event_id: string
           id?: string
@@ -341,6 +343,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_answer?: string | null
           email?: string
           event_id?: string
           id?: string
@@ -363,6 +366,7 @@ export type Database = {
       events: {
         Row: {
           created_at: string
+          custom_question: string | null
           description: string | null
           event_date: string
           event_type: string | null
@@ -377,6 +381,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_question?: string | null
           description?: string | null
           event_date: string
           event_type?: string | null
@@ -391,6 +396,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_question?: string | null
           description?: string | null
           event_date?: string
           event_type?: string | null
