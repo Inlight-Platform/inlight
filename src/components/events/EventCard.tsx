@@ -83,7 +83,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
   }
 
   return (
-    <div className="rounded-xl overflow-hidden bg-card border border-border hover:border-primary/50 transition-colors">
+    <div className="rounded-xl overflow-hidden bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate(`/events/${event.id}`)}>
       {/* Cover Image */}
       <div className="relative h-40 overflow-hidden">
         <img 
