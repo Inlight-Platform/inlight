@@ -75,6 +75,7 @@ import { CreditRow } from '@/components/profile/CreditRow';
 import { VouchDialog } from '@/components/profile/VouchDialog';
 import { SkillsCombobox } from '@/components/ui/skills-combobox';
 import { LocationCombobox } from '@/components/ui/location-combobox';
+import ProfileCompletionBar from '@/components/profile/ProfileCompletionBar';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';
@@ -1333,6 +1334,25 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
       </header>
+
+      {/* Profile Completion Bar - only visible to profile owner */}
+      {isOwnProfile && dbProfile && (
+        <ProfileCompletionBar
+          userId={authUser!.id}
+          profile={{
+            role: dbProfile.role,
+            graduation_year: dbProfile.graduation_year,
+            location: dbProfile.location,
+            pronouns: dbProfile.pronouns,
+            instagram_url: dbProfile.instagram_url,
+            website_url: dbProfile.website_url,
+            badges: dbProfile.badges,
+            skills: dbProfile.skills,
+            bio: dbProfile.bio,
+          }}
+          creditsCount={dbCredits.length}
+        />
+      )}
 
       {/* A. Bio & Social Links - Prominent Section */}
       <section className="px-4 sm:px-6 lg:px-8 py-6 border-b border-border bg-gradient-to-b from-muted/30 to-transparent">
