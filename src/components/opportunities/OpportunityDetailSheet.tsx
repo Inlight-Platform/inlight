@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import {
-  MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2, CheckCircle2, CalendarPlus
+  MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2, CheckCircle2, CalendarPlus, Pencil
 } from 'lucide-react';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
@@ -39,10 +39,11 @@ interface OpportunityDetailSheetProps {
   hasApplied: boolean;
   applicationStatus?: string;
   onApply: () => void;
+  onEdit?: () => void;
 }
 
 const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
-  opportunity, open, onOpenChange, posterProfile, hasApplied, applicationStatus, onApply
+  opportunity, open, onOpenChange, posterProfile, hasApplied, applicationStatus, onApply, onEdit
 }) => {
   const navigate = useNavigate();
 
@@ -148,9 +149,20 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
         <Separator />
 
         <div className="flex items-center justify-between pt-4">
-          <span className="text-xs text-muted-foreground">
-            Posted {formatDistanceToNow(new Date(opportunity.createdAt), { addSuffix: true })}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              Posted {formatDistanceToNow(new Date(opportunity.createdAt), { addSuffix: true })}
+            </span>
+            {onEdit && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                className="p-1 rounded-full hover:bg-accent transition-colors"
+                title="Edit opportunity"
+              >
+                <Pencil className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
 
           {opportunity.actionType === 'calendar' ? (
             <Button

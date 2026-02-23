@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { 
   MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2,
-  CheckCircle2, Bookmark, BookmarkCheck, CalendarPlus
+  CheckCircle2, Bookmark, BookmarkCheck, CalendarPlus, Pencil
 } from 'lucide-react';
 import { useSavedItems } from '@/hooks/useSavedItems';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { OpportunityView } from '@/hooks/useOpportunities';
 import ApplicationDialog from './ApplicationDialog';
 import OpportunityDetailSheet from './OpportunityDetailSheet';
+import EditOpportunityDialog from './EditOpportunityDialog';
 
 interface OpportunityCardProps {
   opportunity: OpportunityView;
@@ -41,6 +42,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
   const { isSaved, toggleSave } = useSavedItems();
   const [showApplicationDialog, setShowApplicationDialog] = useState(false);
   const [showDetailSheet, setShowDetailSheet] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [hasAppliedDB, setHasAppliedDB] = useState(false);
   const [posterProfile, setPosterProfile] = useState<{
     display_name: string | null;
@@ -254,6 +256,15 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
                 <Bookmark className="w-4 h-4 text-muted-foreground" />
               )}
             </button>
+            {user && user.id === opportunity.postedBy && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowEditDialog(true); }}
+                className="p-1 rounded-full hover:bg-accent transition-colors"
+                title="Edit opportunity"
+              >
+                <Pencil className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
           </div>
           
           {opportunity.actionType === 'calendar' ? (
@@ -299,6 +310,13 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
         posterProfile={posterProfile}
         hasApplied={hasApplied}
         onApply={() => { setShowDetailSheet(false); setShowApplicationDialog(true); }}
+        onEdit={user && user.id === opportunity.postedBy ? () => { setShowDetailSheet(false); setShowEditDialog(true); } : undefined}
+      />
+
+      <EditOpportunityDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        opportunity={opportunity}
       />
     </Card>
   );
