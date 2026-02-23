@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,6 +19,11 @@ import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 import { EditPostDialog } from './EditPostDialog';
 import { toast } from 'sonner';
 import { NetworkDegree } from '@/hooks/useNetworkConnections';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useEventRsvps } from '@/hooks/useEventRsvps';
+import { cn } from '@/lib/utils';
 
 export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show' | 'open_role';
 
@@ -69,6 +74,14 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [rsvpDialogOpen, setRsvpDialogOpen] = useState(false);
+  const [rsvpName, setRsvpName] = useState('');
+  const [rsvpEmail, setRsvpEmail] = useState('');
+  const [rsvpSubmitted, setRsvpSubmitted] = useState(false);
+  const [showAttendees, setShowAttendees] = useState(false);
+
+  const isEventItem = item.type === 'event';
+  const { goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
 
   const isOwner = user?.id === item.user_id;
   const canEdit = isOwner && item.type !== 'show'; // Shows have their own edit flow
@@ -346,17 +359,24 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
               )}
             </div>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="flex-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/events/${item.id}`);
-                }}
-              >
-                <PartyPopper className="h-4 w-4 mr-2" />
-                RSVP
-              </Button>
+              {!rsvpSubmitted ? (
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRsvpDialogOpen(true);
+                  }}
+                >
+                  <PartyPopper className="h-4 w-4 mr-2" />
+                  RSVP
+                </Button>
+              ) : (
+                <div className="flex-1 flex items-center justify-center gap-2 text-sm text-primary font-medium py-1">
+                  <Check className="h-4 w-4" />
+                  You're on the list!
+                </div>
+              )}
               {item.event_date && (
                 <Button
                   variant="outline"
@@ -380,7 +400,112 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
                 </Button>
               )}
             </div>
+
+            {/* Attendees dropdown */}
+            {goingCount > 0 && (
+              <div className="rounded-lg border border-border overflow-hidden mt-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowAttendees(!showAttendees); }}
+                  className="w-full flex items-center justify-between p-2.5 hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-primary" />
+                    <span className="font-medium text-xs">Attendees ({goingCount})</span>
+                  </div>
+                  {showAttendees ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
+                </button>
+                {showAttendees && (
+                  <div className="border-t border-border max-h-40 overflow-y-auto divide-y divide-border">
+                    {goingRsvps.map((rsvp) => (
+                      <div key={rsvp.id} className="flex items-center gap-2 p-2">
+                        <Avatar className="w-6 h-6">
+                          <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
+                            {rsvp.name[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs font-medium truncate">{rsvp.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+        )}
+
+        {/* RSVP Dialog */}
+        {isEventItem && (
+          <Dialog open={rsvpDialogOpen} onOpenChange={setRsvpDialogOpen}>
+            <DialogContent className="sm:max-w-sm" onClick={(e) => e.stopPropagation()}>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <PartyPopper className="w-5 h-5 text-primary" />
+                  RSVP
+                </DialogTitle>
+              </DialogHeader>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!rsvpName.trim() || !rsvpEmail.trim()) {
+                    toast.error('Please fill in all fields');
+                    return;
+                  }
+                  submitRsvp.mutate(
+                    {
+                      event_id: item.id,
+                      name: rsvpName.trim(),
+                      email: rsvpEmail.trim(),
+                      role_type: 'actor',
+                      status: 'going',
+                    },
+                    {
+                      onSuccess: () => {
+                        toast.success("You're on the list! 🎉");
+                        setRsvpSubmitted(true);
+                        setRsvpDialogOpen(false);
+                        if (user) {
+                          supabase.from('messages').insert({
+                            sender_id: user.id,
+                            receiver_id: item.user_id,
+                            content: `📋 RSVP: ${rsvpName.trim()} has RSVP'd to your event "${item.title || 'Event'}".\nEmail: ${rsvpEmail.trim()}`,
+                          });
+                        }
+                      },
+                      onError: () => toast.error('Something went wrong. Try again.'),
+                    }
+                  );
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor={`rsvp-name-${item.id}`}>Name *</Label>
+                    <Input
+                      id={`rsvp-name-${item.id}`}
+                      value={rsvpName}
+                      onChange={(e) => setRsvpName(e.target.value)}
+                      placeholder="Your name"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`rsvp-email-${item.id}`}>Email *</Label>
+                    <Input
+                      id={`rsvp-email-${item.id}`}
+                      type="email"
+                      value={rsvpEmail}
+                      onChange={(e) => setRsvpEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" disabled={submitRsvp.isPending}>
+                  {submitRsvp.isPending ? 'Submitting...' : 'Confirm RSVP'}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         )}
 
         {/* Show details */}
