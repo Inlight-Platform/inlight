@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface EventRsvpFormProps {
   eventId: string;
@@ -23,6 +25,7 @@ interface EventRsvpFormProps {
 }
 
 const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }) => {
+  const navigate = useNavigate();
   const { goingRsvps, goingCount, cantMakeItCount, submitRsvp } = useEventRsvps(eventId);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -32,6 +35,15 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }
   const [showAttendees, setShowAttendees] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
+
+  // Check if user already RSVP'd
+  const userRsvp = currentUserId ? goingRsvps.find(r => r.user_id === currentUserId) : null;
+  const alreadyGoing = !!userRsvp || submitted;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +80,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }
   return (
     <div className="space-y-5">
       {/* RSVP Button */}
-      {!submitted ? (
+      {!alreadyGoing ? (
         <Button
           className="w-full gap-2 text-base py-6"
           size="lg"
@@ -82,7 +94,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }
           <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
             <Check className="w-6 h-6 text-primary" />
           </div>
-          <p className="font-semibold">You're all set!</p>
+          <p className="font-semibold">Going</p>
           <p className="text-sm text-muted-foreground">We'll see you there ✨</p>
         </div>
       )}
@@ -136,7 +148,14 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }
             ) : (
               <div className="divide-y divide-border">
                 {goingRsvps.map((rsvp) => (
-                  <div key={rsvp.id} className="flex items-center gap-3 p-3">
+                  <div
+                    key={rsvp.id}
+                    className={cn(
+                      'flex items-center gap-3 p-3',
+                      rsvp.user_id && 'cursor-pointer hover:bg-accent/50 transition-colors'
+                    )}
+                    onClick={() => rsvp.user_id && navigate(`/profile/${rsvp.user_id}`)}
+                  >
                     <Avatar className="w-8 h-8">
                       <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                         {rsvp.name[0]?.toUpperCase()}
