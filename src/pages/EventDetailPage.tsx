@@ -206,15 +206,14 @@ const EventDetailPage: React.FC = () => {
               </div>
             )}
 
-            {/* Admin panel — only visible to event creator */}
+          </div>
+
+          {/* Right sidebar: RSVP + Admin */}
+          <aside className="lg:sticky lg:top-24 lg:self-start space-y-5">
+            <EventRsvpForm eventId={eventId!} customQuestion={event.customQuestion} />
             {currentUserId && currentUserId === event.hostId && (
               <EventAdminPanel eventId={eventId!} />
             )}
-          </div>
-
-          {/* Right sidebar: RSVP */}
-          <aside className="lg:sticky lg:top-24 lg:self-start">
-            <EventRsvpForm eventId={eventId!} customQuestion={event.customQuestion} />
           </aside>
         </div>
       </main>
