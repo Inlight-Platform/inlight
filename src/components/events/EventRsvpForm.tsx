@@ -26,7 +26,7 @@ interface EventRsvpFormProps {
 
 const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }) => {
   const navigate = useNavigate();
-  const { goingRsvps, goingCount, cantMakeItCount, submitRsvp } = useEventRsvps(eventId);
+  const { rsvps, goingRsvps, goingCount, cantMakeItCount, submitRsvp } = useEventRsvps(eventId);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [roleType, setRoleType] = useState('actor');
@@ -41,12 +41,17 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
   }, []);
 
-  // Check if user already RSVP'd
-  const userRsvp = currentUserId ? goingRsvps.find(r => r.user_id === currentUserId) : null;
-  const alreadyGoing = !!userRsvp || submitted;
+  // Check if user already RSVP'd (any status — going or can't make it)
+  const userRsvp = currentUserId ? rsvps.find(r => r.user_id === currentUserId) : null;
+  const alreadyRsvpd = !!userRsvp || submitted;
+  const alreadyGoing = (userRsvp?.status === 'going') || submitted;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (alreadyRsvpd) {
+      toast.error("You've already RSVP'd to this event");
+      return;
+    }
     if (!name.trim() || !email.trim()) {
       toast.error('Please fill in all fields');
       return;
@@ -80,7 +85,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }
   return (
     <div className="space-y-5">
       {/* RSVP Button */}
-      {!alreadyGoing ? (
+      {!alreadyRsvpd ? (
         <Button
           className="w-full gap-2 text-base py-6"
           size="lg"
@@ -94,8 +99,10 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }
           <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
             <Check className="w-6 h-6 text-primary" />
           </div>
-          <p className="font-semibold">Going</p>
-          <p className="text-sm text-muted-foreground">We'll see you there ✨</p>
+          <p className="font-semibold">{alreadyGoing ? 'Going' : 'Responded'}</p>
+          <p className="text-sm text-muted-foreground">
+            {alreadyGoing ? "We'll see you there ✨" : "Thanks for letting us know!"}
+          </p>
         </div>
       )}
 
