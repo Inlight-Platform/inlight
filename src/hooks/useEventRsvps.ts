@@ -10,6 +10,7 @@ export interface EventRsvp {
   email: string;
   role_type: string;
   status: string;
+  custom_answer: string | null;
   created_at: string;
 }
 
