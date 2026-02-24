@@ -49,11 +49,17 @@ const EventDetailPage: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('events')
-        .select('*, profiles:user_id(display_name, avatar_url)')
+        .select('*')
         .eq('id', eventId!)
         .single();
       if (error) return null;
-      return data;
+      // Fetch host profile separately since there's no FK relationship
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url')
+        .eq('user_id', data.user_id)
+        .single();
+      return { ...data, host_profile: profile };
     },
     enabled: !!eventId && !stubEvent,
   });
@@ -88,10 +94,10 @@ const EventDetailPage: React.FC = () => {
         coverImage: dbEvent.image_url,
         type: dbEvent.event_type || 'general',
         tags: [] as string[],
-        hostName: (dbEvent as any).profiles?.display_name || 'Unknown',
-        hostAvatar: (dbEvent as any).profiles?.avatar_url,
+        hostName: dbEvent.host_profile?.display_name || 'Unknown',
+        hostAvatar: dbEvent.host_profile?.avatar_url,
         hostId: dbEvent.user_id,
-        customQuestion: (dbEvent as any).custom_question as string | null,
+        customQuestion: dbEvent.custom_question as string | null,
       }
     : null;
 
