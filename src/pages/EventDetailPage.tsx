@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { stubUsers, stubConnections, stubMaterials, stubCredits, stubStories, stubMessages, stubThreads, stubEvents } from '@/data/stubData';
 import EventRsvpForm from '@/components/events/EventRsvpForm';
+import EventAdminPanel from '@/components/events/EventAdminPanel';
 import { ChevronLeft, Calendar, MapPin, Clock, Video } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +25,11 @@ const EventDetailPage: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const { users, events, getUser } = useStore();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
 
   useEffect(() => {
     if (users.length === 0) {
@@ -192,6 +198,11 @@ const EventDetailPage: React.FC = () => {
                   <Badge key={tag} variant="outline">#{tag}</Badge>
                 ))}
               </div>
+            )}
+
+            {/* Admin panel — only visible to event creator */}
+            {currentUserId && currentUserId === event.hostId && (
+              <EventAdminPanel eventId={eventId!} />
             )}
           </div>
 
