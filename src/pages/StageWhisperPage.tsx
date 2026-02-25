@@ -37,6 +37,7 @@ interface FilmMetric {
   rating: number;
   weeks_in_release: number;
   poster_url?: string;
+  ticket_url?: string;
   date: string;
 }
 interface StreamingContent {
