@@ -16,6 +16,7 @@ import { MyShowList } from '@/components/stage-whisper/MyShowList';
 import { AddShowDialog } from '@/components/stage-whisper/AddShowDialog';
 import { AddFilmDialog } from '@/components/stage-whisper/AddFilmDialog';
 import { AddMusicShowDialog } from '@/components/stage-whisper/AddMusicShowDialog';
+import { FilmDetailSheet } from '@/components/stage-whisper/FilmDetailSheet';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -91,6 +92,7 @@ const StageWhisperPage: React.FC = () => {
   const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'streaming' | 'student'>('theatres');
   const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
   const [archiveMode, setArchiveMode] = useState(false);
+  const [selectedFilm, setSelectedFilm] = useState<FilmMetric | null>(null);
 
   // Fetch all shows
   const {
@@ -552,7 +554,7 @@ const StageWhisperPage: React.FC = () => {
                     {archiveMode ? <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" /> : <Film className="w-12 h-12 text-muted-foreground mx-auto mb-4" />}
                     <p className="text-muted-foreground">{archiveMode ? 'No archived films.' : 'No films data available right now.'}</p>
                   </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {filmsToShow.map(film => <Card key={film.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer">
+                    {filmsToShow.map(film => <Card key={film.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer" onClick={() => setSelectedFilm(film)}>
                         <div className="aspect-[2/3] relative bg-muted">
                           {film.poster_url ? <img src={film.poster_url} alt={film.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
                               <Film className="w-12 h-12 text-muted-foreground" />
@@ -776,6 +778,7 @@ const StageWhisperPage: React.FC = () => {
 
       {/* Show Detail Sheet */}
       <ShowDetailSheet show={selectedShow} isOpen={!!selectedShow} onClose={() => setSelectedShow(null)} isSaved={selectedShow ? isSaved(selectedShow.id) : false} onSave={saveShow} onUnsave={unsaveShow} />
+      <FilmDetailSheet film={selectedFilm} isOpen={!!selectedFilm} onClose={() => setSelectedFilm(null)} />
     </div>;
 };
 export default StageWhisperPage;
