@@ -124,16 +124,18 @@ export const FilmDetailSheet: React.FC<FilmDetailSheetProps> = ({
           </div>
 
           {/* Get Tickets */}
-          {film.ticket_url && (
-            <div className="flex gap-3">
-              <Button className="flex-1" asChild>
-                <a href={film.ticket_url} target="_blank" rel="noopener noreferrer">
-                  Get Tickets
-                  <ExternalLink className="w-4 h-4 ml-2" />
-                </a>
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-3">
+            <Button className="flex-1" asChild>
+              <a
+                href={film.ticket_url || `https://www.fandango.com/search?q=${encodeURIComponent(film.title)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Get Tickets
+                <ExternalLink className="w-4 h-4 ml-2" />
+              </a>
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
