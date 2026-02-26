@@ -1307,6 +1307,35 @@ export type Database = {
           },
         ]
       }
+      saved_films: {
+        Row: {
+          film_id: string
+          id: string
+          saved_at: string
+          user_id: string
+        }
+        Insert: {
+          film_id: string
+          id?: string
+          saved_at?: string
+          user_id: string
+        }
+        Update: {
+          film_id?: string
+          id?: string
+          saved_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_films_film_id_fkey"
+            columns: ["film_id"]
+            isOneToOne: false
+            referencedRelation: "film_metrics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_items: {
         Row: {
           id: string

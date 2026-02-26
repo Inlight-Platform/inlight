@@ -1,8 +1,9 @@
 import React from 'react';
-import { Film, Star, Clock, DollarSign, TrendingUp, TrendingDown, ExternalLink, Share2 } from 'lucide-react';
+import { Film, Star, Clock, DollarSign, TrendingUp, TrendingDown, ExternalLink, Share2, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 
 interface FilmMetric {
   id: string;
@@ -22,6 +23,9 @@ interface FilmDetailSheetProps {
   film: FilmMetric | null;
   isOpen: boolean;
   onClose: () => void;
+  isSaved?: boolean;
+  onSave?: (filmId: string) => void;
+  onUnsave?: (filmId: string) => void;
 }
 
 const formatCurrency = (amount: number): string => {
@@ -34,8 +38,19 @@ export const FilmDetailSheet: React.FC<FilmDetailSheetProps> = ({
   film,
   isOpen,
   onClose,
+  isSaved = false,
+  onSave,
+  onUnsave,
 }) => {
   if (!film) return null;
+
+  const handleSaveToggle = () => {
+    if (isSaved) {
+      onUnsave?.(film.id);
+    } else {
+      onSave?.(film.id);
+    }
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -58,6 +73,18 @@ export const FilmDetailSheet: React.FC<FilmDetailSheetProps> = ({
 
             {/* Floating Actions */}
             <div className="absolute top-4 right-4 flex gap-2">
+              {/* Save Button */}
+              <Button
+                size="icon"
+                variant="secondary"
+                className={cn(
+                  "backdrop-blur-sm",
+                  isSaved && "bg-primary text-primary-foreground hover:bg-primary/90"
+                )}
+                onClick={handleSaveToggle}
+              >
+                <Heart className={cn("w-5 h-5", isSaved && "fill-current")} />
+              </Button>
               <Button
                 size="icon"
                 variant="secondary"
