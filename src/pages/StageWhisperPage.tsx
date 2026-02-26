@@ -5,6 +5,7 @@ import { isPast } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedShows } from '@/hooks/useSavedShows';
+import { useSavedFilms } from '@/hooks/useSavedFilms';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -84,6 +85,7 @@ const StageWhisperPage: React.FC = () => {
     unsaveShow,
     savedShowIds
   } = useSavedShows();
+  const { isFilmSaved, saveFilm, unsaveFilm } = useSavedFilms();
   const [industryTab, setIndustryTab] = useState<'theatre' | 'film' | 'music'>('theatre');
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
@@ -560,6 +562,13 @@ const StageWhisperPage: React.FC = () => {
                           {film.poster_url ? <img src={film.poster_url} alt={film.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
                               <Film className="w-12 h-12 text-muted-foreground" />
                             </div>}
+                          {/* Save Button */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); isFilmSaved(film.id) ? unsaveFilm(film.id) : saveFilm(film.id); }}
+                            className={`absolute top-2 left-2 p-2 rounded-full backdrop-blur-sm transition-all duration-200 ${isFilmSaved(film.id) ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-black/50 text-white hover:bg-primary hover:text-primary-foreground'}`}
+                          >
+                            <Heart className={`w-4 h-4 ${isFilmSaved(film.id) ? 'fill-current' : ''}`} />
+                          </button>
                           <div className="absolute top-2 right-2">
                             <Badge className="bg-background/90 text-foreground">
                               ⭐ {film.rating.toFixed(1)}
@@ -779,7 +788,7 @@ const StageWhisperPage: React.FC = () => {
 
       {/* Show Detail Sheet */}
       <ShowDetailSheet show={selectedShow} isOpen={!!selectedShow} onClose={() => setSelectedShow(null)} isSaved={selectedShow ? isSaved(selectedShow.id) : false} onSave={saveShow} onUnsave={unsaveShow} />
-      <FilmDetailSheet film={selectedFilm} isOpen={!!selectedFilm} onClose={() => setSelectedFilm(null)} />
+      <FilmDetailSheet film={selectedFilm} isOpen={!!selectedFilm} onClose={() => setSelectedFilm(null)} isSaved={selectedFilm ? isFilmSaved(selectedFilm.id) : false} onSave={saveFilm} onUnsave={unsaveFilm} />
     </div>;
 };
 export default StageWhisperPage;

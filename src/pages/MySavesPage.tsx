@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft } from 'lucide-react';
+import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft, Film } from 'lucide-react';
 import { buildSharedItemMessage } from '@/components/messages/SharedItemCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedShows } from '@/hooks/useSavedShows';
+import { useSavedFilms } from '@/hooks/useSavedFilms';
 import { useSavedItems, SavedItem } from '@/hooks/useSavedItems';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -140,6 +141,7 @@ const MySavesPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { savedShowIds, unsaveShow } = useSavedShows();
+  const { savedFilmIds, unsaveFilm } = useSavedFilms();
   const { savedItems, unsaveItem } = useSavedItems();
 
   const [shareDialog, setShareDialog] = useState<{
@@ -195,6 +197,20 @@ const MySavesPage: React.FC = () => {
     enabled: savedShowIds.length > 0,
   });
 
+  // Fetch saved films
+  const { data: savedFilms = [], isLoading: loadingFilms } = useQuery({
+    queryKey: ['my-saved-films', user?.id, savedFilmIds],
+    queryFn: async () => {
+      if (!savedFilmIds.length) return [];
+      const { data } = await supabase
+        .from('film_metrics')
+        .select('id, title, studio, poster_url, rating, weekend_gross')
+        .in('id', savedFilmIds);
+      return (data || []) as { id: string; title: string; studio: string; poster_url: string | null; rating: number; weekend_gross: number }[];
+    },
+    enabled: savedFilmIds.length > 0,
+  });
+
   // Filter saved items by type
   const savedResources = savedItems.filter(i => i.item_type === 'resource');
   const savedJobs = savedItems.filter(i => i.item_type === 'job' || i.item_type === 'open_role');
@@ -209,9 +225,9 @@ const MySavesPage: React.FC = () => {
     toast.success('Project removed from saves');
   };
 
-  const isLoading = loadingProjects || loadingShows;
+  const isLoading = loadingProjects || loadingShows || loadingFilms;
 
-  const totalSaves = savedProjects.length + savedShows.length + savedResources.length + savedJobs.length;
+  const totalSaves = savedProjects.length + savedShows.length + savedFilms.length + savedResources.length + savedJobs.length;
 
   if (!user) {
     return (
@@ -254,7 +270,7 @@ const MySavesPage: React.FC = () => {
           </div>
         ) : (
           <Tabs defaultValue="projects" className="space-y-6">
-            <TabsList className="grid w-full max-w-2xl grid-cols-4">
+            <TabsList className="grid w-full max-w-3xl grid-cols-5">
               <TabsTrigger value="projects" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <FolderKanban className="w-4 h-4" />
                 <span className="hidden sm:inline">Projects</span> ({savedProjects.length})
@@ -262,6 +278,10 @@ const MySavesPage: React.FC = () => {
               <TabsTrigger value="shows" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <Theater className="w-4 h-4" />
                 <span className="hidden sm:inline">Shows</span> ({savedShows.length})
+              </TabsTrigger>
+              <TabsTrigger value="films" className="flex items-center gap-1.5 text-xs sm:text-sm">
+                <Film className="w-4 h-4" />
+                <span className="hidden sm:inline">Films</span> ({savedFilms.length})
               </TabsTrigger>
               <TabsTrigger value="resources" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <BookOpen className="w-4 h-4" />
@@ -334,6 +354,42 @@ const MySavesPage: React.FC = () => {
                               <MessageSquare className="w-4 h-4 text-muted-foreground" />
                             </button>
                             <button onClick={() => unsaveShow(show.id)} className="p-1.5 rounded-full hover:bg-accent">
+                              <BookmarkCheck className="w-4 h-4 text-primary" />
+                            </button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Films */}
+            <TabsContent value="films">
+              {savedFilms.length === 0 ? (
+                <EmptyCategory icon={Film} label="films" />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {savedFilms.map(film => (
+                    <Card key={film.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                      {film.poster_url ? (
+                        <img src={film.poster_url} alt={film.title} className="w-full h-36 object-cover" />
+                      ) : (
+                        <div className="w-full h-36 bg-muted flex items-center justify-center">
+                          <Film className="w-8 h-8 text-muted-foreground opacity-30" />
+                        </div>
+                      )}
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold truncate mb-1">{film.title}</h3>
+                        <p className="text-sm text-muted-foreground mb-2">{film.studio}</p>
+                        <div className="flex items-center justify-between">
+                          <Badge variant="secondary" className="text-xs">⭐ {film.rating?.toFixed(1)}</Badge>
+                          <div className="flex gap-1">
+                            <button onClick={() => setShareDialog({ open: true, title: film.title, type: 'Film', imageUrl: film.poster_url || undefined })} className="p-1.5 rounded-full hover:bg-accent">
+                              <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                            </button>
+                            <button onClick={() => unsaveFilm(film.id)} className="p-1.5 rounded-full hover:bg-accent">
                               <BookmarkCheck className="w-4 h-4 text-primary" />
                             </button>
                           </div>
