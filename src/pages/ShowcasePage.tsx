@@ -69,11 +69,7 @@ const ShowcasePage: React.FC = () => {
   const { data: program } = useShowcaseProgram(programId);
 
   const handleViewProfile = (userId: string) => {
-    if (user) {
-      navigate(`/profile/${userId}`);
-    } else {
-      navigate('/auth', { state: { from: `/showcase/${programId}`, message: 'Sign in to view full profiles' } });
-    }
+    navigate(`/showcase/${programId}/${userId}`);
   };
 
   if (isLoading) {
