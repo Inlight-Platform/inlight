@@ -28,6 +28,7 @@ import AdminPage from "./pages/AdminPage";
 import CompanyProfilePage from "./pages/CompanyProfilePage";
 import MySavesPage from "./pages/MySavesPage";
 import NotFound from "./pages/NotFound";
+import ShowcasePage from "./pages/ShowcasePage";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
           {/* Public routes - no shell */}
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/showcase/:programId" element={<ShowcasePage />} />
 
           {/* App shell (sidebar on desktop, bottom nav on mobile) */}
           <Route element={<AppShell />}>

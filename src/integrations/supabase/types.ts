@@ -1547,6 +1547,84 @@ export type Database = {
           },
         ]
       }
+      showcase_profiles: {
+        Row: {
+          bio_override: string | null
+          created_at: string
+          display_order: number | null
+          headshot_url: string | null
+          id: string
+          is_active: boolean
+          program_name: string
+          program_slug: string
+          reel_url: string | null
+          resume_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio_override?: string | null
+          created_at?: string
+          display_order?: number | null
+          headshot_url?: string | null
+          id?: string
+          is_active?: boolean
+          program_name: string
+          program_slug: string
+          reel_url?: string | null
+          resume_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio_override?: string | null
+          created_at?: string
+          display_order?: number | null
+          headshot_url?: string | null
+          id?: string
+          is_active?: boolean
+          program_name?: string
+          program_slug?: string
+          reel_url?: string | null
+          resume_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      showcase_programs: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       streaming_content: {
         Row: {
           content_type: string
