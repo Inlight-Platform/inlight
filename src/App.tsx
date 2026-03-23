@@ -29,6 +29,7 @@ import CompanyProfilePage from "./pages/CompanyProfilePage";
 import MySavesPage from "./pages/MySavesPage";
 import NotFound from "./pages/NotFound";
 import ShowcasePage from "./pages/ShowcasePage";
+import ShowcaseProfilePage from "./pages/ShowcaseProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/showcase/:programId" element={<ShowcasePage />} />
+          <Route path="/showcase/:programId/:userId" element={<ShowcaseProfilePage />} />
 
           {/* App shell (sidebar on desktop, bottom nav on mobile) */}
           <Route element={<AppShell />}>

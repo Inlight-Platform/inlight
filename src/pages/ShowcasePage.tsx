@@ -1,7 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useShowcaseByProgram, useShowcaseProgram, ShowcaseProfile } from '@/hooks/useShowcase';
-import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import inlightLogo from '@/assets/inlight-new-logo.png';
@@ -64,16 +63,11 @@ const ShowcaseStudentCard: React.FC<{ profile: ShowcaseProfile; onViewProfile: (
 const ShowcasePage: React.FC = () => {
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { data: students, isLoading } = useShowcaseByProgram(programId);
   const { data: program } = useShowcaseProgram(programId);
 
   const handleViewProfile = (userId: string) => {
-    if (user) {
-      navigate(`/profile/${userId}`);
-    } else {
-      navigate('/auth', { state: { from: `/showcase/${programId}`, message: 'Sign in to view full profiles' } });
-    }
+    navigate(`/showcase/${programId}/${userId}`);
   };
 
   if (isLoading) {
