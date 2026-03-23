@@ -846,6 +846,9 @@ const ProfileSettingsPage: React.FC = () => {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Showcase Settings */}
+        <ShowcaseSettings />
       </div>
     </div>
   );
