@@ -102,6 +102,7 @@ const ShowcasePage: React.FC = () => {
           </p>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3" style={{ fontFamily: "'Georgia', serif" }}>
             {programName}
+            <span className="block text-2xl md:text-3xl font-normal text-white/60 mt-2">Class of 2026</span>
           </h1>
           {program?.description && (
             <p className="text-white/50 text-lg max-w-xl mx-auto mt-4">{program.description}</p>
