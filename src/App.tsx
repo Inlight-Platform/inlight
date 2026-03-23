@@ -54,6 +54,7 @@ const App = () => (
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/showcase/:programId" element={<ShowcasePage />} />
           <Route path="/showcase/:programId/:userId" element={<ShowcaseProfilePage />} />
+          <Route path="/showcase/join/:programSlug" element={<ShowcaseJoinPage />} />
 
           {/* App shell (sidebar on desktop, bottom nav on mobile) */}
           <Route element={<AppShell />}>
