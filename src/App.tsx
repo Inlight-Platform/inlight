@@ -29,6 +29,7 @@ import CompanyProfilePage from "./pages/CompanyProfilePage";
 import MySavesPage from "./pages/MySavesPage";
 import NotFound from "./pages/NotFound";
 import ShowcasePage from "./pages/ShowcasePage";
+import ShowcaseProfilePage from "./pages/ShowcaseProfilePage";
 
 const queryClient = new QueryClient();
 
