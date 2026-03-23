@@ -52,9 +52,9 @@ const App = () => (
           {/* Public routes - no shell */}
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<AuthPage />} />
-          <Route path="/showcase/:programId" element={<ShowcasePage />} />
-          <Route path="/showcase/:programId/:userId" element={<ShowcaseProfilePage />} />
           <Route path="/showcase/join/:programSlug" element={<ShowcaseJoinPage />} />
+          <Route path="/showcase/:programId/:userId" element={<ShowcaseProfilePage />} />
+          <Route path="/showcase/:programId" element={<ShowcasePage />} />
 
           {/* App shell (sidebar on desktop, bottom nav on mobile) */}
           <Route element={<AppShell />}>
