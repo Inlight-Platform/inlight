@@ -104,7 +104,7 @@ const InlineAuth: React.FC<{ programSlug: string }> = ({ programSlug }) => {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+            className="w-full bg-rose-700 hover:bg-rose-800 text-white font-semibold"
           >
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {mode === 'signup' ? 'Create Account' : 'Sign In'}
