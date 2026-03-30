@@ -118,7 +118,7 @@ const InlineAuth: React.FC<{ programSlug: string }> = ({ programSlug }) => {
             </>
           ) : (
             <>Need an account?{' '}
-              <button onClick={() => setMode('signup')} className="text-amber-400 underline">Sign up</button>
+              <button onClick={() => setMode('signup')} className="text-rose-400 underline">Sign up</button>
             </>
           )}
         </p>
