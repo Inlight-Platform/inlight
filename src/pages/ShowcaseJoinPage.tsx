@@ -381,7 +381,14 @@ const ShowcaseJoinPage: React.FC = () => {
               <EditableStudentCard
                 key={student.id}
                 profile={student}
-                onClick={() => navigate(`/showcase/${programSlug}/${student.user_id}`)}
+                isOwn={!!user && student.user_id === user.id}
+                onClick={() => {
+                  if (user && student.user_id === user.id) {
+                    setDialogOpen(true);
+                  } else {
+                    navigate(`/showcase/${programSlug}/${student.user_id}`);
+                  }
+                }}
               />
             ))}
           </div>
