@@ -280,9 +280,9 @@ const EditableStudentCard: React.FC<{ profile: ShowcaseProfile; isOwn?: boolean;
   const headshot = profile.headshot_url || profile.avatar_url;
 
   return (
-    <div className="group relative overflow-hidden rounded-xl bg-black/40 border border-white/10 backdrop-blur-sm hover:border-white/25 transition-all duration-500 cursor-pointer" onClick={onClick}>
+    <div className="group relative overflow-hidden rounded-xl bg-black/40 border border-rose-900/30 backdrop-blur-sm hover:border-rose-700/50 transition-all duration-500 cursor-pointer" onClick={onClick}>
       {isOwn && (
-        <div className="absolute top-2 right-2 z-10 bg-amber-500 text-black text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+        <div className="absolute top-2 right-2 z-10 bg-rose-700 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
           Edit
         </div>
       )}
@@ -295,13 +295,13 @@ const EditableStudentCard: React.FC<{ profile: ShowcaseProfile; isOwn?: boolean;
           </div>
         )}
       </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#2a0a0a]/95 via-black/20 to-transparent pointer-events-none" />
       <div className="absolute bottom-0 left-0 right-0 p-4">
         <h3 className="text-white font-semibold text-lg tracking-wide">{displayName}</h3>
         {profile.bio_override && <p className="text-white/50 text-xs mt-2 line-clamp-2">{profile.bio_override}</p>}
         <div className="flex gap-2 mt-3">
-          {profile.reel_url && <span className="text-[10px] uppercase tracking-widest text-amber-400/80 border border-amber-400/30 px-2 py-0.5 rounded-full">Reel</span>}
-          {profile.resume_url && <span className="text-[10px] uppercase tracking-widest text-amber-400/80 border border-amber-400/30 px-2 py-0.5 rounded-full">Resume</span>}
+          {profile.reel_url && <span className="text-[10px] uppercase tracking-widest text-rose-300/80 border border-rose-400/30 px-2 py-0.5 rounded-full">Reel</span>}
+          {profile.resume_url && <span className="text-[10px] uppercase tracking-widest text-rose-300/80 border border-rose-400/30 px-2 py-0.5 rounded-full">Resume</span>}
         </div>
       </div>
     </div>
