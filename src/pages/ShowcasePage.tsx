@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import inlightLogo from '@/assets/inlight-new-logo.png';
 
 const ShowcaseStudentCard: React.FC<{ profile: ShowcaseProfile; onViewProfile: (userId: string) => void }> = ({ profile, onViewProfile }) => {
-  const displayName = profile.stage_name || profile.display_name || 'Student';
+  const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.stage_name || profile.display_name || 'Student';
   const headshot = profile.headshot_url || profile.avatar_url;
 
   return (

@@ -1552,9 +1552,11 @@ export type Database = {
           bio_override: string | null
           created_at: string
           display_order: number | null
+          first_name: string | null
           headshot_url: string | null
           id: string
           is_active: boolean
+          last_name: string | null
           program_name: string
           program_slug: string
           reel_url: string | null
@@ -1566,9 +1568,11 @@ export type Database = {
           bio_override?: string | null
           created_at?: string
           display_order?: number | null
+          first_name?: string | null
           headshot_url?: string | null
           id?: string
           is_active?: boolean
+          last_name?: string | null
           program_name: string
           program_slug: string
           reel_url?: string | null
@@ -1580,9 +1584,11 @@ export type Database = {
           bio_override?: string | null
           created_at?: string
           display_order?: number | null
+          first_name?: string | null
           headshot_url?: string | null
           id?: string
           is_active?: boolean
+          last_name?: string | null
           program_name?: string
           program_slug?: string
           reel_url?: string | null

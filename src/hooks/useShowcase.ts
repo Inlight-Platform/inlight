@@ -13,6 +13,8 @@ export interface ShowcaseProfile {
   reel_url: string | null;
   resume_url: string | null;
   bio_override: string | null;
+  first_name: string | null;
+  last_name: string | null;
   display_order: number;
   created_at: string;
   updated_at: string;
@@ -35,7 +37,7 @@ export const useShowcaseByProgram = (programSlug: string | undefined) => {
         .select('*')
         .eq('program_slug', programSlug)
         .eq('is_active', true)
-        .order('display_order', { ascending: true });
+        .order('last_name', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
 
