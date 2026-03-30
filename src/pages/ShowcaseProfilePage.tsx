@@ -97,10 +97,10 @@ const ShowcaseProfilePage: React.FC = () => {
   const embedUrl = profile.reel_url ? getEmbedUrl(profile.reel_url) : null;
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] text-white">
       {/* Top bar */}
-      <header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-20 bg-[#1a0505]/80 backdrop-blur-md border-b border-rose-900/20">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center">
           <button
             onClick={() => navigate(`/showcase/${programId}`)}
             className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm"
@@ -108,7 +108,6 @@ const ShowcaseProfilePage: React.FC = () => {
             <ArrowLeft className="h-4 w-4" />
             Back to Showcase
           </button>
-          <img src={inlightLogo} alt="Inlight" className="h-6 opacity-50" />
         </div>
       </header>
 
