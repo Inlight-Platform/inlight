@@ -37,7 +37,7 @@ export const useShowcaseByProgram = (programSlug: string | undefined) => {
         .select('*')
         .eq('program_slug', programSlug)
         .eq('is_active', true)
-        .order('display_order', { ascending: true });
+        .order('last_name', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
 
