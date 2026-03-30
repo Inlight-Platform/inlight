@@ -275,12 +275,17 @@ const AddProfileDialog: React.FC<{
 };
 
 /* ─── Student Card (reused from ShowcasePage style) ─── */
-const EditableStudentCard: React.FC<{ profile: ShowcaseProfile; onClick?: () => void }> = ({ profile, onClick }) => {
+const EditableStudentCard: React.FC<{ profile: ShowcaseProfile; isOwn?: boolean; onClick?: () => void }> = ({ profile, isOwn, onClick }) => {
   const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.display_name || 'Student';
   const headshot = profile.headshot_url || profile.avatar_url;
 
   return (
     <div className="group relative overflow-hidden rounded-xl bg-black/40 border border-white/10 backdrop-blur-sm hover:border-white/25 transition-all duration-500 cursor-pointer" onClick={onClick}>
+      {isOwn && (
+        <div className="absolute top-2 right-2 z-10 bg-amber-500 text-black text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+          Edit
+        </div>
+      )}
       <div className="aspect-[3/4] overflow-hidden bg-black/60">
         {headshot ? (
           <img src={headshot} alt={displayName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
@@ -381,7 +386,14 @@ const ShowcaseJoinPage: React.FC = () => {
               <EditableStudentCard
                 key={student.id}
                 profile={student}
-                onClick={() => navigate(`/showcase/${programSlug}/${student.user_id}`)}
+                isOwn={!!user && student.user_id === user.id}
+                onClick={() => {
+                  if (user && student.user_id === user.id) {
+                    setDialogOpen(true);
+                  } else {
+                    navigate(`/showcase/${programSlug}/${student.user_id}`);
+                  }
+                }}
               />
             ))}
           </div>
