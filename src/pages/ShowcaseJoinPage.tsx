@@ -359,7 +359,7 @@ const ShowcaseJoinPage: React.FC = () => {
           <div className="absolute top-6 right-6 z-20">
             <Button
               onClick={() => setDialogOpen(true)}
-              className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+              className="bg-rose-700 hover:bg-rose-800 text-white font-semibold"
             >
               <Plus className="w-4 h-4 mr-1" />
               {myProfile ? 'Edit Your Profile' : 'Add Your Profile'}
