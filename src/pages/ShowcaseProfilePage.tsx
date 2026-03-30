@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, ArrowLeft, Play, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import inlightLogo from '@/assets/inlight-new-logo.png';
+
 
 interface ShowcaseProfileDetail {
   id: string;
@@ -57,15 +57,15 @@ const ShowcaseProfilePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
+      <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-rose-400" />
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white gap-4">
+      <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] flex flex-col items-center justify-center text-white gap-4">
         <p className="text-white/50 text-lg">Profile not found.</p>
         <Button variant="outline" onClick={() => navigate(`/showcase/${programId}`)} className="border-white/20 text-white hover:bg-white/10">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Showcase
@@ -97,10 +97,10 @@ const ShowcaseProfilePage: React.FC = () => {
   const embedUrl = profile.reel_url ? getEmbedUrl(profile.reel_url) : null;
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] text-white">
       {/* Top bar */}
-      <header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-20 bg-[#1a0505]/80 backdrop-blur-md border-b border-rose-900/20">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center">
           <button
             onClick={() => navigate(`/showcase/${programId}`)}
             className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm"
@@ -108,7 +108,6 @@ const ShowcaseProfilePage: React.FC = () => {
             <ArrowLeft className="h-4 w-4" />
             Back to Showcase
           </button>
-          <img src={inlightLogo} alt="Inlight" className="h-6 opacity-50" />
         </div>
       </header>
 
@@ -116,7 +115,7 @@ const ShowcaseProfilePage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] gap-10 md:gap-14">
           {/* Left column — Headshot */}
           <div className="flex flex-col items-center md:items-start gap-6">
-            <div className="w-full max-w-[320px] aspect-[3/4] rounded-xl overflow-hidden bg-black/40 border border-white/10">
+            <div className="w-full max-w-[320px] aspect-[3/4] rounded-xl overflow-hidden bg-black/40 border border-rose-900/30">
               {headshot ? (
                 <img src={headshot} alt={displayName} className="w-full h-full object-cover" />
               ) : (
@@ -137,7 +136,7 @@ const ShowcaseProfilePage: React.FC = () => {
               {profile.role && (
                 <p className="text-white/50 text-lg mt-1">{profile.role}</p>
               )}
-              <p className="text-amber-400/70 text-xs uppercase tracking-[0.25em] mt-3 font-medium">
+              <p className="text-rose-300/70 text-xs uppercase tracking-[0.25em] mt-3 font-medium">
                 {profile.program_name}
               </p>
             </div>
@@ -171,7 +170,7 @@ const ShowcaseProfilePage: React.FC = () => {
                   href={profile.reel_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500/10 border border-amber-400/30 text-amber-400 text-sm font-medium hover:bg-amber-500/20 transition-colors"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-rose-700/20 border border-rose-500/30 text-rose-300 text-sm font-medium hover:bg-rose-700/30 transition-colors"
                 >
                   <Play className="h-4 w-4" />
                   Watch Reel
@@ -210,8 +209,8 @@ const ShowcaseProfilePage: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-8 text-center mt-12">
-        <p className="text-white/20 text-xs tracking-widest uppercase">Powered by Inlight</p>
+      <footer className="border-t border-rose-900/20 py-8 text-center mt-12">
+        <p className="text-white/20 text-xs tracking-widest uppercase">Private Showcase</p>
       </footer>
     </div>
   );

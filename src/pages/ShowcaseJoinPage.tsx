@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { toast } from 'sonner';
 import { Loader2, Plus, Upload, Trash2, Eye, EyeOff } from 'lucide-react';
 import { compressImage, isCompressibleImage } from '@/lib/imageCompression';
-import inlightLogo from '@/assets/inlight-new-logo.png';
+
 
 /* ─── Inline Auth Form ─── */
 const InlineAuth: React.FC<{ programSlug: string }> = ({ programSlug }) => {
@@ -104,7 +104,7 @@ const InlineAuth: React.FC<{ programSlug: string }> = ({ programSlug }) => {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+            className="w-full bg-rose-700 hover:bg-rose-800 text-white font-semibold"
           >
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {mode === 'signup' ? 'Create Account' : 'Sign In'}
@@ -114,11 +114,11 @@ const InlineAuth: React.FC<{ programSlug: string }> = ({ programSlug }) => {
         <p className="text-center text-white/40 text-sm">
           {mode === 'signup' ? (
             <>Already have an account?{' '}
-              <button onClick={() => setMode('login')} className="text-amber-400 underline">Sign in</button>
+              <button onClick={() => setMode('login')} className="text-rose-400 underline">Sign in</button>
             </>
           ) : (
             <>Need an account?{' '}
-              <button onClick={() => setMode('signup')} className="text-amber-400 underline">Sign up</button>
+              <button onClick={() => setMode('signup')} className="text-rose-400 underline">Sign up</button>
             </>
           )}
         </p>
@@ -263,7 +263,7 @@ const AddProfileDialog: React.FC<{
           <Button
             onClick={handleSave}
             disabled={isUpdating || !allFieldsFilled}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+            className="w-full bg-rose-700 hover:bg-rose-800 text-white font-semibold"
           >
             {isUpdating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {existingProfile ? 'Update Profile' : 'Add Profile'}
@@ -280,9 +280,9 @@ const EditableStudentCard: React.FC<{ profile: ShowcaseProfile; isOwn?: boolean;
   const headshot = profile.headshot_url || profile.avatar_url;
 
   return (
-    <div className="group relative overflow-hidden rounded-xl bg-black/40 border border-white/10 backdrop-blur-sm hover:border-white/25 transition-all duration-500 cursor-pointer" onClick={onClick}>
+    <div className="group relative overflow-hidden rounded-xl bg-black/40 border border-rose-900/30 backdrop-blur-sm hover:border-rose-700/50 transition-all duration-500 cursor-pointer" onClick={onClick}>
       {isOwn && (
-        <div className="absolute top-2 right-2 z-10 bg-amber-500 text-black text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+        <div className="absolute top-2 right-2 z-10 bg-rose-700 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
           Edit
         </div>
       )}
@@ -295,13 +295,13 @@ const EditableStudentCard: React.FC<{ profile: ShowcaseProfile; isOwn?: boolean;
           </div>
         )}
       </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#2a0a0a]/95 via-black/20 to-transparent pointer-events-none" />
       <div className="absolute bottom-0 left-0 right-0 p-4">
         <h3 className="text-white font-semibold text-lg tracking-wide">{displayName}</h3>
         {profile.bio_override && <p className="text-white/50 text-xs mt-2 line-clamp-2">{profile.bio_override}</p>}
         <div className="flex gap-2 mt-3">
-          {profile.reel_url && <span className="text-[10px] uppercase tracking-widest text-amber-400/80 border border-amber-400/30 px-2 py-0.5 rounded-full">Reel</span>}
-          {profile.resume_url && <span className="text-[10px] uppercase tracking-widest text-amber-400/80 border border-amber-400/30 px-2 py-0.5 rounded-full">Resume</span>}
+          {profile.reel_url && <span className="text-[10px] uppercase tracking-widest text-rose-300/80 border border-rose-400/30 px-2 py-0.5 rounded-full">Reel</span>}
+          {profile.resume_url && <span className="text-[10px] uppercase tracking-widest text-rose-300/80 border border-rose-400/30 px-2 py-0.5 rounded-full">Resume</span>}
         </div>
       </div>
     </div>
@@ -323,36 +323,35 @@ const ShowcaseJoinPage: React.FC = () => {
 
   if (authLoading || programLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
+      <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-rose-400" />
       </div>
     );
   }
 
   if (!program) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white/50">
+      <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] flex items-center justify-center text-white/50">
         <p>Program not found or no longer active.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] text-white">
       {/* Header */}
       <header className="relative py-16 px-6 text-center overflow-hidden">
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")` }} />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-amber-500/8 rounded-full blur-[120px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-rose-900/20 rounded-full blur-[120px]" />
 
         <div className="relative z-10 max-w-3xl mx-auto">
-          <img src={inlightLogo} alt="Inlight" className="h-10 mx-auto mb-8 opacity-70" />
-          <p className="text-amber-400/80 text-xs uppercase tracking-[0.3em] mb-4 font-medium">Private Showcase</p>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3" style={{ fontFamily: "'Georgia', serif" }}>
+          <p className="text-rose-300/80 text-xs uppercase tracking-[0.3em] mb-4 font-medium">Private Showcase</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3 text-white" style={{ fontFamily: "'Georgia', serif" }}>
             {programName}
             <span className="block text-2xl md:text-3xl font-normal text-white/60 mt-2">Class of 2026</span>
           </h1>
           {program.description && <p className="text-white/50 text-lg max-w-xl mx-auto mt-4">{program.description}</p>}
-          <div className="w-16 h-px bg-amber-400/40 mx-auto mt-8" />
+          <div className="w-16 h-px bg-rose-400/40 mx-auto mt-8" />
         </div>
 
         {/* Add Your Profile button - only when logged in */}
@@ -360,7 +359,7 @@ const ShowcaseJoinPage: React.FC = () => {
           <div className="absolute top-6 right-6 z-20">
             <Button
               onClick={() => setDialogOpen(true)}
-              className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+              className="bg-rose-700 hover:bg-rose-800 text-white font-semibold"
             >
               <Plus className="w-4 h-4 mr-1" />
               {myProfile ? 'Edit Your Profile' : 'Add Your Profile'}
@@ -375,7 +374,7 @@ const ShowcaseJoinPage: React.FC = () => {
       {/* Student grid */}
       <main className="max-w-7xl mx-auto px-6 pb-20">
         {studentsLoading ? (
-          <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-amber-400" /></div>
+          <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-rose-400" /></div>
         ) : (!students || students.length === 0) ? (
           <div className="text-center py-20 text-white/40">
             <p className="text-lg">No students in this showcase yet.</p>
@@ -400,8 +399,8 @@ const ShowcaseJoinPage: React.FC = () => {
         )}
       </main>
 
-      <footer className="border-t border-white/5 py-8 text-center">
-        <p className="text-white/20 text-xs tracking-widest uppercase">Powered by Inlight</p>
+      <footer className="border-t border-rose-900/20 py-8 text-center">
+        <p className="text-white/20 text-xs tracking-widest uppercase">Private Showcase</p>
       </footer>
 
       {/* Add/Edit Dialog */}
