@@ -374,7 +374,7 @@ const ShowcaseJoinPage: React.FC = () => {
       {/* Student grid */}
       <main className="max-w-7xl mx-auto px-6 pb-20">
         {studentsLoading ? (
-          <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-amber-400" /></div>
+          <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-rose-400" /></div>
         ) : (!students || students.length === 0) ? (
           <div className="text-center py-20 text-white/40">
             <p className="text-lg">No students in this showcase yet.</p>
