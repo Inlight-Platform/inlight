@@ -57,8 +57,8 @@ const ShowcaseProfilePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
+      <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-rose-400" />
       </div>
     );
   }
