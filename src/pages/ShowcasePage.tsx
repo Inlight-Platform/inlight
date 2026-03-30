@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useShowcaseByProgram, useShowcaseProgram, ShowcaseProfile } from '@/hooks/useShowcase';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import inlightLogo from '@/assets/inlight-new-logo.png';
 
 const ShowcaseStudentCard: React.FC<{ profile: ShowcaseProfile; onViewProfile: (userId: string) => void }> = ({ profile, onViewProfile }) => {
   const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.stage_name || profile.display_name || 'Student';
@@ -11,10 +10,9 @@ const ShowcaseStudentCard: React.FC<{ profile: ShowcaseProfile; onViewProfile: (
 
   return (
     <div
-      className="group relative overflow-hidden rounded-xl bg-black/40 border border-white/10 backdrop-blur-sm hover:border-white/25 transition-all duration-500 cursor-pointer"
+      className="group relative overflow-hidden rounded-xl bg-black/40 border border-rose-900/30 backdrop-blur-sm hover:border-rose-700/50 transition-all duration-500 cursor-pointer"
       onClick={() => onViewProfile(profile.user_id)}
     >
-      {/* Headshot */}
       <div className="aspect-[3/4] overflow-hidden bg-black/60">
         {headshot ? (
           <img
@@ -29,10 +27,8 @@ const ShowcaseStudentCard: React.FC<{ profile: ShowcaseProfile; onViewProfile: (
         )}
       </div>
 
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#2a0a0a]/95 via-black/20 to-transparent pointer-events-none" />
 
-      {/* Info overlay */}
       <div className="absolute bottom-0 left-0 right-0 p-4">
         <h3 className="text-white font-semibold text-lg tracking-wide">{displayName}</h3>
         {profile.role && (
@@ -42,15 +38,14 @@ const ShowcaseStudentCard: React.FC<{ profile: ShowcaseProfile; onViewProfile: (
           <p className="text-white/50 text-xs mt-2 line-clamp-2">{profile.bio_override}</p>
         )}
 
-        {/* Materials indicators */}
         <div className="flex gap-2 mt-3">
           {profile.reel_url && (
-            <span className="text-[10px] uppercase tracking-widest text-amber-400/80 border border-amber-400/30 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] uppercase tracking-widest text-rose-300/80 border border-rose-400/30 px-2 py-0.5 rounded-full">
               Reel
             </span>
           )}
           {profile.resume_url && (
-            <span className="text-[10px] uppercase tracking-widest text-amber-400/80 border border-amber-400/30 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] uppercase tracking-widest text-rose-300/80 border border-rose-400/30 px-2 py-0.5 rounded-full">
               Resume
             </span>
           )}
