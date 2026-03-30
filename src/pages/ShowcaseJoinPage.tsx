@@ -263,7 +263,7 @@ const AddProfileDialog: React.FC<{
           <Button
             onClick={handleSave}
             disabled={isUpdating || !allFieldsFilled}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+            className="w-full bg-rose-700 hover:bg-rose-800 text-white font-semibold"
           >
             {isUpdating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {existingProfile ? 'Update Profile' : 'Add Profile'}
