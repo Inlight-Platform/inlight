@@ -275,7 +275,7 @@ const AddProfileDialog: React.FC<{
 };
 
 /* ─── Student Card (reused from ShowcasePage style) ─── */
-const EditableStudentCard: React.FC<{ profile: ShowcaseProfile; onClick?: () => void }> = ({ profile, onClick }) => {
+const EditableStudentCard: React.FC<{ profile: ShowcaseProfile; isOwn?: boolean; onClick?: () => void }> = ({ profile, isOwn, onClick }) => {
   const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.display_name || 'Student';
   const headshot = profile.headshot_url || profile.avatar_url;
 
