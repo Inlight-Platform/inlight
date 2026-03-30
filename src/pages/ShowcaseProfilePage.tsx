@@ -170,7 +170,7 @@ const ShowcaseProfilePage: React.FC = () => {
                   href={profile.reel_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500/10 border border-amber-400/30 text-amber-400 text-sm font-medium hover:bg-amber-500/20 transition-colors"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-rose-700/20 border border-rose-500/30 text-rose-300 text-sm font-medium hover:bg-rose-700/30 transition-colors"
                 >
                   <Play className="h-4 w-4" />
                   Watch Reel
