@@ -13,6 +13,8 @@ export interface ShowcaseProfile {
   reel_url: string | null;
   resume_url: string | null;
   bio_override: string | null;
+  first_name: string | null;
+  last_name: string | null;
   display_order: number;
   created_at: string;
   updated_at: string;
