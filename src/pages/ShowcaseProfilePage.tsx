@@ -136,7 +136,7 @@ const ShowcaseProfilePage: React.FC = () => {
               {profile.role && (
                 <p className="text-white/50 text-lg mt-1">{profile.role}</p>
               )}
-              <p className="text-amber-400/70 text-xs uppercase tracking-[0.25em] mt-3 font-medium">
+              <p className="text-rose-300/70 text-xs uppercase tracking-[0.25em] mt-3 font-medium">
                 {profile.program_name}
               </p>
             </div>
