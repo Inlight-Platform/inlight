@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, ArrowLeft, Play, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import inlightLogo from '@/assets/inlight-new-logo.png';
+
 
 interface ShowcaseProfileDetail {
   id: string;
