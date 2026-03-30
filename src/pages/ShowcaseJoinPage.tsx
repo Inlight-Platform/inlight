@@ -338,21 +338,20 @@ const ShowcaseJoinPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] text-white">
       {/* Header */}
       <header className="relative py-16 px-6 text-center overflow-hidden">
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")` }} />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-amber-500/8 rounded-full blur-[120px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-rose-900/20 rounded-full blur-[120px]" />
 
         <div className="relative z-10 max-w-3xl mx-auto">
-          <img src={inlightLogo} alt="Inlight" className="h-10 mx-auto mb-8 opacity-70" />
-          <p className="text-amber-400/80 text-xs uppercase tracking-[0.3em] mb-4 font-medium">Private Showcase</p>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3" style={{ fontFamily: "'Georgia', serif" }}>
+          <p className="text-rose-300/80 text-xs uppercase tracking-[0.3em] mb-4 font-medium">Private Showcase</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3 text-white" style={{ fontFamily: "'Georgia', serif" }}>
             {programName}
             <span className="block text-2xl md:text-3xl font-normal text-white/60 mt-2">Class of 2026</span>
           </h1>
           {program.description && <p className="text-white/50 text-lg max-w-xl mx-auto mt-4">{program.description}</p>}
-          <div className="w-16 h-px bg-amber-400/40 mx-auto mt-8" />
+          <div className="w-16 h-px bg-rose-400/40 mx-auto mt-8" />
         </div>
 
         {/* Add Your Profile button - only when logged in */}
