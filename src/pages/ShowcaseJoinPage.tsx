@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { toast } from 'sonner';
 import { Loader2, Plus, Upload, Trash2, Eye, EyeOff } from 'lucide-react';
 import { compressImage, isCompressibleImage } from '@/lib/imageCompression';
-import inlightLogo from '@/assets/inlight-new-logo.png';
+
 
 /* ─── Inline Auth Form ─── */
 const InlineAuth: React.FC<{ programSlug: string }> = ({ programSlug }) => {
