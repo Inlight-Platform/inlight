@@ -331,7 +331,7 @@ const ShowcaseJoinPage: React.FC = () => {
 
   if (!program) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white/50">
+      <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] flex items-center justify-center text-white/50">
         <p>Program not found or no longer active.</p>
       </div>
     );

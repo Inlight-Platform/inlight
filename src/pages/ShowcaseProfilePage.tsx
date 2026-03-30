@@ -115,7 +115,7 @@ const ShowcaseProfilePage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] gap-10 md:gap-14">
           {/* Left column — Headshot */}
           <div className="flex flex-col items-center md:items-start gap-6">
-            <div className="w-full max-w-[320px] aspect-[3/4] rounded-xl overflow-hidden bg-black/40 border border-white/10">
+            <div className="w-full max-w-[320px] aspect-[3/4] rounded-xl overflow-hidden bg-black/40 border border-rose-900/30">
               {headshot ? (
                 <img src={headshot} alt={displayName} className="w-full h-full object-cover" />
               ) : (
