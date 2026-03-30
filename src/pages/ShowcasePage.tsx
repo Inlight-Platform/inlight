@@ -126,9 +126,9 @@ const ShowcasePage: React.FC = () => {
       </main>
 
       {/* Minimal footer */}
-      <footer className="border-t border-white/5 py-8 text-center">
+      <footer className="border-t border-rose-900/20 py-8 text-center">
         <p className="text-white/20 text-xs tracking-widest uppercase">
-          Powered by Inlight
+          Private Showcase
         </p>
       </footer>
     </div>
