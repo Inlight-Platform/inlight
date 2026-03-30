@@ -115,10 +115,29 @@ export const useMyShowcaseProfile = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-showcase-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['showcase'] });
       toast.success('Showcase profile updated');
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to update showcase profile');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (profileId: string) => {
+      const { error } = await supabase
+        .from('showcase_profiles')
+        .delete()
+        .eq('id', profileId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-showcase-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['showcase'] });
+      toast.success('Profile deleted');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to delete profile');
     },
   });
 
@@ -127,5 +146,7 @@ export const useMyShowcaseProfile = () => {
     isLoading: profileQuery.isLoading,
     upsert: upsertMutation.mutateAsync,
     isUpdating: upsertMutation.isPending,
+    deleteProfile: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending,
   };
 };
