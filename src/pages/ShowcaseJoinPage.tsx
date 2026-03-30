@@ -281,6 +281,11 @@ const EditableStudentCard: React.FC<{ profile: ShowcaseProfile; isOwn?: boolean;
 
   return (
     <div className="group relative overflow-hidden rounded-xl bg-black/40 border border-white/10 backdrop-blur-sm hover:border-white/25 transition-all duration-500 cursor-pointer" onClick={onClick}>
+      {isOwn && (
+        <div className="absolute top-2 right-2 z-10 bg-amber-500 text-black text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+          Edit
+        </div>
+      )}
       <div className="aspect-[3/4] overflow-hidden bg-black/60">
         {headshot ? (
           <img src={headshot} alt={displayName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
