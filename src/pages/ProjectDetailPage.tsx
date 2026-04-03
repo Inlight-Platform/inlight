@@ -979,6 +979,11 @@ const ProjectDetailPage: React.FC = () => {
         description="This will permanently delete this project, including all photos and team members. This action cannot be undone."
         isPending={deleteProjectMutation.isPending}
       />
+
+      {/* Floating chat icon for project members */}
+      {isMember && projectId && (
+        <FloatingChatButton onClick={() => navigate(`/messages/group/${projectId}`)} />
+      )}
     </div>
   );
 };
