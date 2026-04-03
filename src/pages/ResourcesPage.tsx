@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { BookOpen, ExternalLink, GraduationCap, Mic, Music, Video, Theater, Building2, Film, Newspaper, Users, FileText, Shield, Bookmark, BookmarkCheck } from 'lucide-react';
 import { useSavedItems } from '@/hooks/useSavedItems';
 import { Card, CardContent } from '@/components/ui/card';

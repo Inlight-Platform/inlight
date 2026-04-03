@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck } from 'lucide-react';

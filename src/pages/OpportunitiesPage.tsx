@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { Plus, Briefcase, Star, TrendingUp, Clock, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
