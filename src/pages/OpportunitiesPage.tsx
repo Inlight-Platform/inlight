@@ -152,7 +152,11 @@ const OpportunitiesPage: React.FC = () => {
           />
 
           {/* Discover Tab */}
-          <TabsContent value="discover" className="space-y-6">
+          <TabsContent value="discover" className="space-y-8">
+            {/* Open Project Roles */}
+            <OpenRolesFeed />
+
+            {/* Posted Opportunities */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">All Opportunities</h2>
               {openOpportunities.length > 0 ? (
