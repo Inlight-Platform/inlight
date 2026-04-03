@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 type NetworkFilter = 'all' | '1st';
-type ContentFilter = 'all' | 'events' | 'jobs' | 'projects' | 'updates';
+type ContentFilter = 'all' | 'events' | 'projects' | 'updates';
 type ProjectSubTab = 'feed' | 'my-network' | 'open-roles' | 'saved' | 'archive';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 
