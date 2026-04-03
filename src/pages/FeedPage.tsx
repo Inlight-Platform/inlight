@@ -51,6 +51,7 @@ const FeedPage: React.FC = () => {
   const [projectSubTab, setProjectSubTab] = useState<ProjectSubTab>('feed');
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [feedSearchQuery, setFeedSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   // Fetch current user's profile
@@ -365,15 +366,27 @@ const FeedPage: React.FC = () => {
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
-    if (networkFilter === 'all') return allItems;
+    if (networkFilter !== 'all') {
+      allItems = allItems.filter((item) => {
+        if (item.user_id === user?.id) return true;
+        const degree = getConnectionDegree(item.user_id);
+        if (networkFilter === '1st') return degree === '1st';
+        return true;
+      });
+    }
 
-    return allItems.filter((item) => {
-      if (item.user_id === user?.id) return true;
-      const degree = getConnectionDegree(item.user_id);
-      if (networkFilter === '1st') return degree === '1st';
-      return true;
-    });
-  }, [posts, projectFeedItems, events, openRoles, networkFilter, contentFilter, user?.id, getConnectionDegree]);
+    if (feedSearchQuery.trim()) {
+      const q = feedSearchQuery.toLowerCase();
+      allItems = allItems.filter((item) => {
+        const title = item.title?.toLowerCase() || '';
+        const desc = item.description?.toLowerCase() || '';
+        const content = item.content?.toLowerCase() || '';
+        return title.includes(q) || desc.includes(q) || content.includes(q);
+      });
+    }
+
+    return allItems;
+  }, [posts, projectFeedItems, events, openRoles, networkFilter, contentFilter, feedSearchQuery, user?.id, getConnectionDegree]);
 
   const isLoading = postsLoading || projectsLoading || eventsLoading || openRolesLoading || connectionsLoading;
 
@@ -686,6 +699,27 @@ const FeedPage: React.FC = () => {
                 ))}
               </div>
             </div>
+
+            {/* Search Bar (for non-project tabs) */}
+            {contentFilter !== 'projects' && (
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search posts, events, projects..."
+                  value={feedSearchQuery}
+                  onChange={(e) => setFeedSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+                {feedSearchQuery && (
+                  <button
+                    onClick={() => setFeedSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Show project sub-content when on projects tab */}
             {contentFilter === 'projects' ? (
