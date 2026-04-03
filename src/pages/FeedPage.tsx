@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Filter, Plus, Calendar, Briefcase, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
