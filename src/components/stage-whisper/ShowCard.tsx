@@ -34,6 +34,7 @@ interface ShowCardProps {
   onSave: (showId: string) => void;
   onUnsave: (showId: string) => void;
   onClick: (show: Show) => void;
+  onDelete?: (showId: string) => void;
 }
 
 export const ShowCard: React.FC<ShowCardProps> = ({
