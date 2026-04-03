@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Briefcase, Star, TrendingUp, Clock, Loader2 } from 'lucide-react';
+import { Plus, Briefcase, Star, TrendingUp, Clock, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OpportunityCard from '@/components/opportunities/OpportunityCard';
@@ -7,6 +7,7 @@ import OpportunityFilters from '@/components/opportunities/OpportunityFilters';
 import OpportunityCreator from '@/components/opportunities/OpportunityCreator';
 import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
 import { useAuth } from '@/hooks/useAuth';
+import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 
 type OpportunityType = 'job' | 'casting' | 'gig' | 'collaboration';
 type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician';
@@ -151,7 +152,11 @@ const OpportunitiesPage: React.FC = () => {
           />
 
           {/* Discover Tab */}
-          <TabsContent value="discover" className="space-y-6">
+          <TabsContent value="discover" className="space-y-8">
+            {/* Open Project Roles */}
+            <OpenRolesFeed />
+
+            {/* Posted Opportunities */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">All Opportunities</h2>
               {openOpportunities.length > 0 ? (
