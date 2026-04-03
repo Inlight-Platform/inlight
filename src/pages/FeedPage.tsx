@@ -355,7 +355,6 @@ const FeedPage: React.FC = () => {
     if (contentFilter !== 'all') {
       allItems = allItems.filter((item) => {
         if (contentFilter === 'events') return item.type === 'event';
-        if (contentFilter === 'jobs') return item.type === 'job' || item.type === 'open_role';
         if (contentFilter === 'projects') return item.type === 'project';
         if (contentFilter === 'updates') return item.type === 'post';
         return true;
