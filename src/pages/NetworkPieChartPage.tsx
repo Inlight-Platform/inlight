@@ -71,6 +71,26 @@ const NetworkPieChartPage: React.FC = () => {
 
   const isLoading = loadingConnections || loadingProfiles;
 
+  // Build suggestions for missing affiliations
+  const suggestions = React.useMemo(() => {
+    if (!studios.length || !connectionProfiles.length) return [];
+
+    const connectedTags = new Set<string>();
+    connectionProfiles.forEach((profile) => {
+      (profile.badges || []).forEach((badge: string) => {
+        connectedTags.add(badge.replace('#', '').toLowerCase());
+      });
+    });
+
+    return studios
+      .filter((s) => !connectedTags.has(s.badge_tag?.toLowerCase() || ''))
+      .map((s) => ({
+        name: s.name,
+        icon: s.icon || '',
+        tag: s.badge_tag || '',
+      }));
+  }, [studios, connectionProfiles]);
+
   // Build pie chart data
   const chartData = React.useMemo(() => {
     if (!studios.length || !connectionProfiles.length) return [];
@@ -208,6 +228,27 @@ const NetworkPieChartPage: React.FC = () => {
                 ))}
             </div>
           </div>
+
+          {suggestions.length > 0 && (
+            <div className="space-y-2">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Suggestions to diversify your network
+              </h2>
+              <div className="grid gap-1.5">
+                {suggestions.slice(0, 5).map((s) => (
+                  <div
+                    key={s.tag}
+                    className="flex items-center gap-2 py-2 px-3 rounded-md bg-primary/5 border border-primary/10"
+                  >
+                    <span className="text-base">{s.icon}</span>
+                    <span className="text-sm text-foreground">
+                      Connect with more <span className="font-semibold">{s.name}</span> students
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
