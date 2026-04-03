@@ -355,7 +355,7 @@ const PeoplePage: React.FC = () => {
                         isOwnProfile={isOwnProfile}
                         onConnect={handleConnect}
                         onCancel={handleCancelRequest}
-                        onMessage={() => navigate('/messages')}
+                        
                       />
                     );
                   })}
