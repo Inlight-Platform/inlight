@@ -102,7 +102,7 @@ const ShowcaseProfilePage: React.FC = () => {
       <header className="sticky top-0 z-20 bg-[#1a0505]/80 backdrop-blur-md border-b border-rose-900/20">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center">
           <button
-            onClick={() => navigate(`/showcase/${programId}`)}
+            onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm"
           >
             <ArrowLeft className="h-4 w-4" />
