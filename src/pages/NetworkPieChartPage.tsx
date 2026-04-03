@@ -71,6 +71,26 @@ const NetworkPieChartPage: React.FC = () => {
 
   const isLoading = loadingConnections || loadingProfiles;
 
+  // Build suggestions for missing affiliations
+  const suggestions = React.useMemo(() => {
+    if (!studios.length || !connectionProfiles.length) return [];
+
+    const connectedTags = new Set<string>();
+    connectionProfiles.forEach((profile) => {
+      (profile.badges || []).forEach((badge: string) => {
+        connectedTags.add(badge.replace('#', '').toLowerCase());
+      });
+    });
+
+    return studios
+      .filter((s) => !connectedTags.has(s.badge_tag?.toLowerCase() || ''))
+      .map((s) => ({
+        name: s.name,
+        icon: s.icon || '',
+        tag: s.badge_tag || '',
+      }));
+  }, [studios, connectionProfiles]);
+
   // Build pie chart data
   const chartData = React.useMemo(() => {
     if (!studios.length || !connectionProfiles.length) return [];
