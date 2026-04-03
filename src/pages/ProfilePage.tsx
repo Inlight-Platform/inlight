@@ -78,6 +78,8 @@ import { SkillsCombobox } from '@/components/ui/skills-combobox';
 import { LocationCombobox } from '@/components/ui/location-combobox';
 import ProfileCompletionBar from '@/components/profile/ProfileCompletionBar';
 import FloatingChatButton from '@/components/messages/FloatingChatButton';
+import { useMinimizedChat } from '@/hooks/useMinimizedChat';
+import { useLocation } from 'react-router-dom';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';
@@ -130,6 +132,8 @@ interface ProfileData {
 const ProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isMinimized: chatMinimized, originRoute: chatOriginRoute, chatRoute, close: closeChat, expand: expandChat } = useMinimizedChat();
   const { user: authUser } = useAuth();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -325,6 +329,13 @@ const ProfilePage: React.FC = () => {
   
   const materials = resolvedUserId ? getMaterials(resolvedUserId) : [];
   
+  // Clear minimized chat state if we're not the origin page
+  useEffect(() => {
+    if (chatMinimized && chatOriginRoute !== location.pathname) {
+      closeChat();
+    }
+  }, [chatMinimized, chatOriginRoute, location.pathname, closeChat]);
+
   useEffect(() => {
     setAnnounced(false);
     if (!isOwnProfile && resolvedUserId) {
@@ -1872,9 +1883,16 @@ const ProfilePage: React.FC = () => {
         onOpenChange={setShowProjectCreator}
         onSuccess={() => setShowProjectCreator(false)}
       />
-      {/* Floating chat icon for connected users */}
+      {/* Floating chat icon for connected users - or minimized bubble */}
       {!isOwnProfile && isConnected && resolvedUserId && (
-        <FloatingChatButton onClick={() => navigate(`/messages/direct/${resolvedUserId}`)} />
+        chatMinimized && chatOriginRoute === location.pathname ? (
+          <FloatingChatButton onClick={() => {
+            expandChat();
+            navigate(chatRoute!, { state: { originRoute: location.pathname } });
+          }} />
+        ) : !chatMinimized ? (
+          <FloatingChatButton onClick={() => navigate(`/messages/direct/${resolvedUserId}`, { state: { originRoute: location.pathname } })} />
+        ) : null
       )}
     </div>
   );

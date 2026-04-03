@@ -75,7 +75,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
 
   const handleMessage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (userId) navigate(`/messages/direct/${userId}`);
+    if (userId) navigate(`/messages/direct/${userId}`, { state: { originRoute: window.location.pathname } });
   };
 
   return (

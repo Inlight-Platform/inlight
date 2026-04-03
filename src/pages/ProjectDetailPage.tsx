@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -42,6 +42,8 @@ import { ProjectTimeline } from '@/components/projects/ProjectTimeline';
 import { OpenRolesDisplay } from '@/components/projects/OpenRolesDisplay';
 import { ProjectStatusDropdown } from '@/components/projects/ProjectStatusDropdown';
 import FloatingChatButton from '@/components/messages/FloatingChatButton';
+import { useMinimizedChat } from '@/hooks/useMinimizedChat';
+import { useLocation } from 'react-router-dom';
 
 interface ProjectMember {
   id: string;
@@ -64,6 +66,8 @@ interface ProjectPhoto {
 const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isMinimized: chatMinimized, originRoute: chatOriginRoute, chatRoute, close: closeChat, expand: expandChat } = useMinimizedChat();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [addPhotoOpen, setAddPhotoOpen] = useState(false);
@@ -84,6 +88,13 @@ const ProjectDetailPage: React.FC = () => {
   const [isEditingDrive, setIsEditingDrive] = useState(false);
   
   const { uploadPhoto, uploading, progress } = useProjectPhotoUpload();
+
+  // Clear minimized chat state if we're not the origin page
+  useEffect(() => {
+    if (chatMinimized && chatOriginRoute !== location.pathname) {
+      closeChat();
+    }
+  }, [chatMinimized, chatOriginRoute, location.pathname, closeChat]);
 
   // Fetch project details
   const { data: project, isLoading } = useQuery({
@@ -982,8 +993,16 @@ const ProjectDetailPage: React.FC = () => {
       />
 
       {/* Floating chat icon for project members */}
+      {/* Floating chat icon for project members - or minimized bubble */}
       {isMember && projectId && (
-        <FloatingChatButton onClick={() => navigate(`/messages/group/${projectId}`)} />
+        chatMinimized && chatOriginRoute === location.pathname ? (
+          <FloatingChatButton onClick={() => {
+            expandChat();
+            navigate(chatRoute!, { state: { originRoute: location.pathname } });
+          }} />
+        ) : !chatMinimized ? (
+          <FloatingChatButton onClick={() => navigate(`/messages/group/${projectId}`, { state: { originRoute: location.pathname } })} />
+        ) : null
       )}
     </div>
   );
