@@ -29,6 +29,7 @@ import AdminPage from "./pages/AdminPage";
 import CompanyProfilePage from "./pages/CompanyProfilePage";
 import MySavesPage from "./pages/MySavesPage";
 import NotFound from "./pages/NotFound";
+import NetworkPieChartPage from "./pages/NetworkPieChartPage";
 import ShowcasePage from "./pages/ShowcasePage";
 import ShowcaseProfilePage from "./pages/ShowcaseProfilePage";
 import ShowcaseJoinPage from "./pages/ShowcaseJoinPage";
