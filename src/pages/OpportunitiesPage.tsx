@@ -7,6 +7,7 @@ import OpportunityFilters from '@/components/opportunities/OpportunityFilters';
 import OpportunityCreator from '@/components/opportunities/OpportunityCreator';
 import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
 import { useAuth } from '@/hooks/useAuth';
+import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 
 type OpportunityType = 'job' | 'casting' | 'gig' | 'collaboration';
 type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician';
