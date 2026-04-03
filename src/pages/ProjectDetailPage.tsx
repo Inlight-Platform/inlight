@@ -42,6 +42,8 @@ import { ProjectTimeline } from '@/components/projects/ProjectTimeline';
 import { OpenRolesDisplay } from '@/components/projects/OpenRolesDisplay';
 import { ProjectStatusDropdown } from '@/components/projects/ProjectStatusDropdown';
 import FloatingChatButton from '@/components/messages/FloatingChatButton';
+import { useMinimizedChat } from '@/hooks/useMinimizedChat';
+import { useLocation } from 'react-router-dom';
 
 interface ProjectMember {
   id: string;

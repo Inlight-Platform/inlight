@@ -78,6 +78,8 @@ import { SkillsCombobox } from '@/components/ui/skills-combobox';
 import { LocationCombobox } from '@/components/ui/location-combobox';
 import ProfileCompletionBar from '@/components/profile/ProfileCompletionBar';
 import FloatingChatButton from '@/components/messages/FloatingChatButton';
+import { useMinimizedChat } from '@/hooks/useMinimizedChat';
+import { useLocation } from 'react-router-dom';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';

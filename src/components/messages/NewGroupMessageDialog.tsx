@@ -136,7 +136,7 @@ const NewGroupMessageDialog: React.FC<NewGroupMessageDialogProps> = ({
           <div>
             <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
-              Chat with member
+              Chat privately with
             </h3>
             {otherMembers.length === 0 ? (
               <p className="text-sm text-muted-foreground py-2">No other members yet</p>
