@@ -75,9 +75,9 @@ export const MainNav: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
-  // Build nav items with messages at top when user is logged in
+  // Build nav items with notifications at top when user is logged in
   const allNavItems: NavItem[] = user ?
-  [{ label: 'Messages', icon: MessageCircle, path: '/messages', badge: totalUnread }, ...navItems] :
+  [{ label: 'Notifications', icon: Bell, path: '/notifications', badge: combinedUnread }, ...navItems] :
   navItems;
 
   return (
