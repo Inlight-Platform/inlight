@@ -384,6 +384,7 @@ const FeedPage: React.FC = () => {
   ];
 
   const contentFilters: { value: ContentFilter; label: string; icon: React.ReactNode }[] = [
+    { value: 'all', label: 'All', icon: <Filter className="h-4 w-4" /> },
     { value: 'events', label: 'Events', icon: <Calendar className="h-4 w-4" /> },
     { value: 'projects', label: 'Projects', icon: <FolderKanban className="h-4 w-4" /> },
     { value: 'jobs', label: 'Opportunities', icon: <Briefcase className="h-4 w-4" /> },
