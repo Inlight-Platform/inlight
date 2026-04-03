@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { 
   MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2,
-  CheckCircle2, Bookmark, BookmarkCheck, CalendarPlus, Pencil
+  CheckCircle2, Bookmark, BookmarkCheck, CalendarPlus, Pencil, Trash2
 } from 'lucide-react';
 import { useSavedItems } from '@/hooks/useSavedItems';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';

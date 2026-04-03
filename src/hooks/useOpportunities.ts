@@ -201,5 +201,25 @@ export function useOpportunities() {
     },
   });
 
-  return { opportunities, isLoading, createOpportunity, updateOpportunity };
+  const deleteOpportunity = useMutation({
+    mutationFn: async (id: string) => {
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('opportunities')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      toast.success('Opportunity deleted successfully');
+    },
+    onError: () => {
+      toast.error('Failed to delete opportunity');
+    },
+  });
+
+  return { opportunities, isLoading, createOpportunity, updateOpportunity, deleteOpportunity };
 }
