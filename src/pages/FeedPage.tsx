@@ -42,7 +42,7 @@ const FeedPage: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
-  const [contentFilter, setContentFilter] = useState<ContentFilter>('projects');
+  const [contentFilter, setContentFilter] = useState<ContentFilter>('events');
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
   const { firstDegree, secondDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
@@ -384,9 +384,9 @@ const FeedPage: React.FC = () => {
   ];
 
   const contentFilters: { value: ContentFilter; label: string; icon: React.ReactNode }[] = [
+    { value: 'events', label: 'Events', icon: <Calendar className="h-4 w-4" /> },
     { value: 'projects', label: 'Projects', icon: <FolderKanban className="h-4 w-4" /> },
     { value: 'jobs', label: 'Opportunities', icon: <Briefcase className="h-4 w-4" /> },
-    { value: 'events', label: 'Events', icon: <Calendar className="h-4 w-4" /> },
     { value: 'updates', label: 'Updates', icon: <User className="h-4 w-4" /> },
   ];
 
