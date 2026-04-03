@@ -191,14 +191,6 @@ const PersonCard: React.FC<PersonCardProps> = ({
                 <Clock className="w-4 h-4 mr-2" />
                 Pending
               </Button>
-              <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 rounded-full"
-              onClick={handleMessage}>
-
-                <Mail className="w-4 h-4" />
-              </Button>
             </>
           }
 
