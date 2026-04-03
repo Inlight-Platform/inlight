@@ -552,7 +552,7 @@ const StageWhisperPage: React.FC = () => {
                       <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">No archived shows yet.</p>
                     </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                      {archivedShows.map(show => <ShowCard key={show.id} show={show} isSaved={isSaved(show.id)} onSave={saveShow} onUnsave={unsaveShow} onClick={setSelectedShow} />)}
+                      {archivedShows.map(show => <ShowCard key={show.id} show={show} isSaved={isSaved(show.id)} onSave={saveShow} onUnsave={unsaveShow} onClick={setSelectedShow} onDelete={isAdmin ? (id) => setDeleteTarget({ id, table: 'nyc_shows', label: 'show' }) : undefined} />)}
                     </div>}
                 </>}
               </> : <MyShowList onShowClick={setSelectedShow} onUnsave={unsaveShow} />}
