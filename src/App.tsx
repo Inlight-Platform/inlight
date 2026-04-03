@@ -17,6 +17,7 @@ import OpportunitiesPage from "./pages/OpportunitiesPage";
 import EventsPage from "./pages/EventsPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import MessagesPage from "./pages/MessagesPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import AuthPage from "./pages/AuthPage";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import ProjectsPage from "./pages/ProjectsPage";
