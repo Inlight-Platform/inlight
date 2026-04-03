@@ -76,7 +76,7 @@ export const MainNav: React.FC = () => {
 
   // Build nav items with notifications at top when user is logged in
   const allNavItems: NavItem[] = user ?
-  [{ label: 'Notifications', icon: Bell, path: '/notifications', badge: combinedUnread }, ...navItems] :
+  [{ label: 'Notifications', icon: Bell, path: '/notifications', badge: combinedUnread > 0 ? combinedUnread : undefined }, ...navItems] :
   navItems;
 
   return (
