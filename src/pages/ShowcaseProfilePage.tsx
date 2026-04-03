@@ -67,7 +67,7 @@ const ShowcaseProfilePage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] flex flex-col items-center justify-center text-white gap-4">
         <p className="text-white/50 text-lg">Profile not found.</p>
-        <Button variant="outline" onClick={() => navigate(`/showcase/${programId}`)} className="border-white/20 text-white hover:bg-white/10">
+        <Button variant="outline" onClick={() => navigate(-1)} className="border-white/20 text-white hover:bg-white/10">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Showcase
         </Button>
       </div>
@@ -102,7 +102,7 @@ const ShowcaseProfilePage: React.FC = () => {
       <header className="sticky top-0 z-20 bg-[#1a0505]/80 backdrop-blur-md border-b border-rose-900/20">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center">
           <button
-            onClick={() => navigate(`/showcase/${programId}`)}
+            onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm"
           >
             <ArrowLeft className="h-4 w-4" />
