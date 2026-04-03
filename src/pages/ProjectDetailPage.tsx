@@ -41,6 +41,7 @@ import { toast } from 'sonner';
 import { ProjectTimeline } from '@/components/projects/ProjectTimeline';
 import { OpenRolesDisplay } from '@/components/projects/OpenRolesDisplay';
 import { ProjectStatusDropdown } from '@/components/projects/ProjectStatusDropdown';
+import FloatingChatButton from '@/components/messages/FloatingChatButton';
 
 interface ProjectMember {
   id: string;

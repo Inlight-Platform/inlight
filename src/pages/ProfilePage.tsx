@@ -77,6 +77,7 @@ import { VouchDialog } from '@/components/profile/VouchDialog';
 import { SkillsCombobox } from '@/components/ui/skills-combobox';
 import { LocationCombobox } from '@/components/ui/location-combobox';
 import ProfileCompletionBar from '@/components/profile/ProfileCompletionBar';
+import FloatingChatButton from '@/components/messages/FloatingChatButton';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';
