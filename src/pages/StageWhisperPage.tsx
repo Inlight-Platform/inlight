@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music, ExternalLink, Archive } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music, ExternalLink, Archive, Trash2 } from 'lucide-react';
 import { isPast } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { useSavedShows } from '@/hooks/useSavedShows';
 import { useSavedFilms } from '@/hooks/useSavedFilms';
 import { Button } from '@/components/ui/button';
