@@ -700,6 +700,27 @@ const FeedPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Search Bar (for non-project tabs) */}
+            {contentFilter !== 'projects' && (
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search posts, events, projects..."
+                  value={feedSearchQuery}
+                  onChange={(e) => setFeedSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+                {feedSearchQuery && (
+                  <button
+                    onClick={() => setFeedSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Show project sub-content when on projects tab */}
             {contentFilter === 'projects' ? (
               renderProjectsContent()
