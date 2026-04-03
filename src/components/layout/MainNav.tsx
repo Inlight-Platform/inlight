@@ -118,21 +118,6 @@ export const MainNav: React.FC = () => {
 
         {/* Nav Items */}
         <nav className={cn("flex-1 space-y-1", collapsed ? "p-2" : "p-4")}>
-          {/* Notification Bell - only for authenticated users */}
-          {user && (
-          collapsed ?
-          <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <NotificationBell collapsed={collapsed} />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right">Notifications</TooltipContent>
-              </Tooltip> :
-
-          <NotificationBell collapsed={collapsed} />)
-
-          }
 
           {allNavItems.map((item) => {
             const Icon = item.icon;
