@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, MapPin, Calendar, Clock, Ticket, Accessibility } from 'lucide-react';
+import { Heart, MapPin, Calendar, Clock, Ticket, Accessibility, Trash2 } from 'lucide-react';
 import { format, differenceInDays, isPast } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ interface ShowCardProps {
   onSave: (showId: string) => void;
   onUnsave: (showId: string) => void;
   onClick: (show: Show) => void;
+  onDelete?: (showId: string) => void;
 }
 
 export const ShowCard: React.FC<ShowCardProps> = ({
@@ -42,6 +43,7 @@ export const ShowCard: React.FC<ShowCardProps> = ({
   onSave,
   onUnsave,
   onClick,
+  onDelete,
 }) => {
   const daysUntilClosing = show.run_end 
     ? differenceInDays(new Date(show.run_end), new Date()) 
@@ -128,6 +130,17 @@ export const ShowCard: React.FC<ShowCardProps> = ({
         >
           <Heart className={cn("w-5 h-5", isSaved && "fill-current")} />
         </button>
+
+        {/* Admin Delete Button */}
+        {onDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(show.id); }}
+            className="absolute bottom-3 right-3 p-2 rounded-full bg-destructive/80 text-destructive-foreground backdrop-blur-sm hover:bg-destructive transition-all duration-200 opacity-0 group-hover:opacity-100"
+            title="Delete show"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Closing Soon Badge */}
         {isClosingSoon && (

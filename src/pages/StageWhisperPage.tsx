@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music, ExternalLink, Archive } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music, ExternalLink, Archive, Trash2 } from 'lucide-react';
 import { isPast } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { useSavedShows } from '@/hooks/useSavedShows';
 import { useSavedFilms } from '@/hooks/useSavedFilms';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import { FilmDetailSheet } from '@/components/stage-whisper/FilmDetailSheet';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 const EMPTY_FILTERS: FilterState = {
   category: [],
   showType: [],
@@ -86,6 +88,8 @@ const StageWhisperPage: React.FC = () => {
     savedShowIds
   } = useSavedShows();
   const { isFilmSaved, saveFilm, unsaveFilm } = useSavedFilms();
+  const { isAdmin } = useAdmin();
+  const queryClient = useQueryClient();
   const [industryTab, setIndustryTab] = useState<'theatre' | 'film' | 'music'>('theatre');
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
@@ -96,6 +100,26 @@ const StageWhisperPage: React.FC = () => {
   const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
   const [archiveMode, setArchiveMode] = useState(false);
   const [selectedFilm, setSelectedFilm] = useState<FilmMetric | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; table: string; label: string } | null>(null);
+
+  const adminDeleteMutation = useMutation({
+    mutationFn: async ({ id, table }: { id: string; table: string }) => {
+      const { error } = await supabase.from(table as any).delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['nyc-shows'] });
+      queryClient.invalidateQueries({ queryKey: ['film-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['streaming-content'] });
+      queryClient.invalidateQueries({ queryKey: ['user-films'] });
+      queryClient.invalidateQueries({ queryKey: ['user-music-shows'] });
+      toast.success('Item deleted successfully');
+      setDeleteTarget(null);
+    },
+    onError: () => {
+      toast.error('Failed to delete. Please try again.');
+    },
+  });
 
   // Fetch all shows
   const {
@@ -519,7 +543,7 @@ const StageWhisperPage: React.FC = () => {
                         {searchQuery || hasActiveFilters ? 'No shows match your search. Try adjusting your filters!' : 'No shows available right now.'}
                       </p>
                     </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                      {activeShows.map(show => <ShowCard key={show.id} show={show} isSaved={isSaved(show.id)} onSave={saveShow} onUnsave={unsaveShow} onClick={setSelectedShow} />)}
+                      {activeShows.map(show => <ShowCard key={show.id} show={show} isSaved={isSaved(show.id)} onSave={saveShow} onUnsave={unsaveShow} onClick={setSelectedShow} onDelete={isAdmin ? (id) => setDeleteTarget({ id, table: 'nyc_shows', label: 'show' }) : undefined} />)}
                     </div>}
                 </>}
 
@@ -528,7 +552,7 @@ const StageWhisperPage: React.FC = () => {
                       <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">No archived shows yet.</p>
                     </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                      {archivedShows.map(show => <ShowCard key={show.id} show={show} isSaved={isSaved(show.id)} onSave={saveShow} onUnsave={unsaveShow} onClick={setSelectedShow} />)}
+                      {archivedShows.map(show => <ShowCard key={show.id} show={show} isSaved={isSaved(show.id)} onSave={saveShow} onUnsave={unsaveShow} onClick={setSelectedShow} onDelete={isAdmin ? (id) => setDeleteTarget({ id, table: 'nyc_shows', label: 'show' }) : undefined} />)}
                     </div>}
                 </>}
               </> : <MyShowList onShowClick={setSelectedShow} onUnsave={unsaveShow} />}
@@ -574,6 +598,15 @@ const StageWhisperPage: React.FC = () => {
                               ⭐ {film.rating.toFixed(1)}
                             </Badge>
                           </div>
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: film.id, table: 'film_metrics', label: 'film' }); }}
+                              className="absolute bottom-2 right-2 p-2 rounded-full bg-destructive/80 text-destructive-foreground backdrop-blur-sm hover:bg-destructive transition-all duration-200 opacity-0 group-hover:opacity-100"
+                              title="Delete film"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                         <CardContent className="p-3">
                           <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
@@ -617,6 +650,15 @@ const StageWhisperPage: React.FC = () => {
                               ⭐ {Number(content.rating).toFixed(1)}
                             </Badge>
                           </div>
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: content.id, table: 'streaming_content', label: 'streaming content' }); }}
+                              className="absolute bottom-2 right-2 p-2 rounded-full bg-destructive/80 text-destructive-foreground backdrop-blur-sm hover:bg-destructive transition-all duration-200 opacity-0 group-hover:opacity-100"
+                              title="Delete content"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                         <CardContent className="p-3">
                           <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
@@ -672,6 +714,15 @@ const StageWhisperPage: React.FC = () => {
                                 <ExternalLink className="w-3 h-3" />
                               </Badge>
                             </div>
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget({ id: film.id, table: 'user_films', label: 'community film' }); }}
+                              className="absolute bottom-2 right-2 p-2 rounded-full bg-destructive/80 text-destructive-foreground backdrop-blur-sm hover:bg-destructive transition-all duration-200 opacity-0 group-hover:opacity-100"
+                              title="Delete film"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                           </div>
                           <CardContent className="p-3">
                             <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
@@ -742,6 +793,15 @@ const StageWhisperPage: React.FC = () => {
                                 {show.is_free ? 'Free' : 'Tickets'}
                               </Badge>
                             </div>
+                            {isAdmin && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: show.id, table: 'user_music_shows', label: 'music show' }); }}
+                                className="absolute bottom-2 right-2 p-2 rounded-full bg-destructive/80 text-destructive-foreground backdrop-blur-sm hover:bg-destructive transition-all duration-200 opacity-0 group-hover:opacity-100"
+                                title="Delete show"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                           <CardContent className="p-3">
                             <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
@@ -771,6 +831,15 @@ const StageWhisperPage: React.FC = () => {
                                 {show.is_free ? 'Free' : 'Tickets'}
                               </Badge>
                             </div>
+                            {isAdmin && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: show.id, table: 'user_music_shows', label: 'music show' }); }}
+                                className="absolute bottom-2 right-2 p-2 rounded-full bg-destructive/80 text-destructive-foreground backdrop-blur-sm hover:bg-destructive transition-all duration-200 opacity-0 group-hover:opacity-100"
+                                title="Delete show"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                           <CardContent className="p-3">
                             <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
@@ -789,6 +858,15 @@ const StageWhisperPage: React.FC = () => {
       {/* Show Detail Sheet */}
       <ShowDetailSheet show={selectedShow} isOpen={!!selectedShow} onClose={() => setSelectedShow(null)} isSaved={selectedShow ? isSaved(selectedShow.id) : false} onSave={saveShow} onUnsave={unsaveShow} />
       <FilmDetailSheet film={selectedFilm} isOpen={!!selectedFilm} onClose={() => setSelectedFilm(null)} isSaved={selectedFilm ? isFilmSaved(selectedFilm.id) : false} onSave={saveFilm} onUnsave={unsaveFilm} />
+      
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onConfirm={() => { if (deleteTarget) adminDeleteMutation.mutate({ id: deleteTarget.id, table: deleteTarget.table }); }}
+        title={`Delete this ${deleteTarget?.label || 'item'}?`}
+        description="This will permanently remove this item. This action cannot be undone."
+        isPending={adminDeleteMutation.isPending}
+      />
     </div>;
 };
 export default StageWhisperPage;

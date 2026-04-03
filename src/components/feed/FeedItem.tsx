@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -71,6 +72,7 @@ interface FeedItemProps {
 export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -84,6 +86,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const { goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
 
   const isOwner = user?.id === item.user_id;
+  const canDelete = isOwner || isAdmin;
   const canEdit = isOwner && item.type !== 'show'; // Shows have their own edit flow
 
   // Delete mutation
@@ -230,7 +233,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
             <div className="p-1.5 rounded-full bg-muted">
               {getTypeIcon()}
             </div>
-            {isOwner && (
+            {canDelete && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
