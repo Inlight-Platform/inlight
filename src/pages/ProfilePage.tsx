@@ -1199,28 +1199,6 @@ const ProfilePage: React.FC = () => {
                     <Users className="w-4 h-4 mr-2" />
                     My Community
                   </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="sm">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => { setDefaultPostType('update'); setShowPostCreator(true); }}>
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Post Update
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setDefaultPostType('event'); setShowPostCreator(true); }}>
-                        <Calendar className="w-4 h-4 mr-2" />
-                        Create Event
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setDefaultPostType('job'); setShowPostCreator(true); }}>
-                        <Briefcase className="w-4 h-4 mr-2" />
-                        Post Opportunity
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </>
               )}
               {!isOwnProfile && authUser && (
