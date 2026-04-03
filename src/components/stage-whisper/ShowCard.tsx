@@ -131,6 +131,17 @@ export const ShowCard: React.FC<ShowCardProps> = ({
           <Heart className={cn("w-5 h-5", isSaved && "fill-current")} />
         </button>
 
+        {/* Admin Delete Button */}
+        {onDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(show.id); }}
+            className="absolute bottom-3 right-3 p-2 rounded-full bg-destructive/80 text-destructive-foreground backdrop-blur-sm hover:bg-destructive transition-all duration-200 opacity-0 group-hover:opacity-100"
+            title="Delete show"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+
         {/* Closing Soon Badge */}
         {isClosingSoon && (
           <div className="absolute top-3 left-3">
