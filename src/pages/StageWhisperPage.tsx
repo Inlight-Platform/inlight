@@ -22,6 +22,7 @@ import { FilmDetailSheet } from '@/components/stage-whisper/FilmDetailSheet';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 const EMPTY_FILTERS: FilterState = {
   category: [],
   showType: [],
