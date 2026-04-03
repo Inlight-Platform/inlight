@@ -858,6 +858,15 @@ const StageWhisperPage: React.FC = () => {
       {/* Show Detail Sheet */}
       <ShowDetailSheet show={selectedShow} isOpen={!!selectedShow} onClose={() => setSelectedShow(null)} isSaved={selectedShow ? isSaved(selectedShow.id) : false} onSave={saveShow} onUnsave={unsaveShow} />
       <FilmDetailSheet film={selectedFilm} isOpen={!!selectedFilm} onClose={() => setSelectedFilm(null)} isSaved={selectedFilm ? isFilmSaved(selectedFilm.id) : false} onSave={saveFilm} onUnsave={unsaveFilm} />
+      
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onConfirm={() => { if (deleteTarget) adminDeleteMutation.mutate({ id: deleteTarget.id, table: deleteTarget.table }); }}
+        title={`Delete this ${deleteTarget?.label || 'item'}?`}
+        description="This will permanently remove this item. This action cannot be undone."
+        isPending={adminDeleteMutation.isPending}
+      />
     </div>;
 };
 export default StageWhisperPage;
