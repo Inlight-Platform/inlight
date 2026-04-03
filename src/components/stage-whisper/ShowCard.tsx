@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, MapPin, Calendar, Clock, Ticket, Accessibility } from 'lucide-react';
+import { Heart, MapPin, Calendar, Clock, Ticket, Accessibility, Trash2 } from 'lucide-react';
 import { format, differenceInDays, isPast } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
