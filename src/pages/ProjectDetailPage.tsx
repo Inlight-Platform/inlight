@@ -89,6 +89,13 @@ const ProjectDetailPage: React.FC = () => {
   
   const { uploadPhoto, uploading, progress } = useProjectPhotoUpload();
 
+  // Clear minimized chat state if we're not the origin page
+  useEffect(() => {
+    if (chatMinimized && chatOriginRoute !== location.pathname) {
+      closeChat();
+    }
+  }, [chatMinimized, chatOriginRoute, location.pathname, closeChat]);
+
   // Fetch project details
   const { data: project, isLoading } = useQuery({
     queryKey: ['project', projectId],

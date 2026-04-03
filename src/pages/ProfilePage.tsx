@@ -329,6 +329,13 @@ const ProfilePage: React.FC = () => {
   
   const materials = resolvedUserId ? getMaterials(resolvedUserId) : [];
   
+  // Clear minimized chat state if we're not the origin page
+  useEffect(() => {
+    if (chatMinimized && chatOriginRoute !== location.pathname) {
+      closeChat();
+    }
+  }, [chatMinimized, chatOriginRoute, location.pathname, closeChat]);
+
   useEffect(() => {
     setAnnounced(false);
     if (!isOwnProfile && resolvedUserId) {
