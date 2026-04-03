@@ -41,6 +41,7 @@ import { toast } from 'sonner';
 import { ProjectTimeline } from '@/components/projects/ProjectTimeline';
 import { OpenRolesDisplay } from '@/components/projects/OpenRolesDisplay';
 import { ProjectStatusDropdown } from '@/components/projects/ProjectStatusDropdown';
+import FloatingChatButton from '@/components/messages/FloatingChatButton';
 
 interface ProjectMember {
   id: string;
@@ -979,6 +980,11 @@ const ProjectDetailPage: React.FC = () => {
         description="This will permanently delete this project, including all photos and team members. This action cannot be undone."
         isPending={deleteProjectMutation.isPending}
       />
+
+      {/* Floating chat icon for project members */}
+      {isMember && projectId && (
+        <FloatingChatButton onClick={() => navigate(`/messages/group/${projectId}`)} />
+      )}
     </div>
   );
 };
