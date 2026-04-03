@@ -42,7 +42,7 @@ const FeedPage: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
-  const [contentFilter, setContentFilter] = useState<ContentFilter>('events');
+  const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
   const { firstDegree, secondDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
