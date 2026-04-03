@@ -1871,6 +1871,10 @@ const ProfilePage: React.FC = () => {
         onOpenChange={setShowProjectCreator}
         onSuccess={() => setShowProjectCreator(false)}
       />
+      {/* Floating chat icon for connected users */}
+      {!isOwnProfile && isConnected && resolvedUserId && (
+        <FloatingChatButton onClick={() => navigate(`/messages/direct/${resolvedUserId}`)} />
+      )}
     </div>
   );
 };
