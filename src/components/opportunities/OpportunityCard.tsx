@@ -286,6 +286,15 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
                 <Pencil className="w-4 h-4 text-muted-foreground" />
               </button>
             )}
+            {user && (user.id === opportunity.postedBy || isAdmin) && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowDeleteDialog(true); }}
+                className="p-1 rounded-full hover:bg-destructive/20 transition-colors"
+                title="Delete opportunity"
+              >
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </button>
+            )}
           </div>
           
           {opportunity.actionType === 'calendar' ? (
