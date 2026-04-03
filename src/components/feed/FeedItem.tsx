@@ -72,6 +72,7 @@ interface FeedItemProps {
 export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
