@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music, ExternalLink, Archive, Trash2 } from 'lucide-react';
 import { isPast } from 'date-fns';
@@ -350,7 +351,7 @@ const StageWhisperPage: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <img
-                src="/lovable-uploads/c3205623-a05c-42d3-98bc-f6f58256bf08.png"
+                src={inlightLogo}
                 alt="Inlight"
                 className="w-10 h-10 rounded-full object-cover"
               />

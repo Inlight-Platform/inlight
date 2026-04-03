@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { Plus, Briefcase, Star, TrendingUp, Clock, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -93,7 +94,7 @@ const OpportunitiesPage: React.FC = () => {
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img
-              src="/lovable-uploads/c3205623-a05c-42d3-98bc-f6f58256bf08.png"
+              src={inlightLogo}
               alt="Inlight"
               className="w-10 h-10 rounded-full object-cover"
             />
