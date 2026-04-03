@@ -1219,10 +1219,6 @@ const ProfilePage: React.FC = () => {
                         <Briefcase className="w-4 h-4 mr-2" />
                         Post Opportunity
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowProjectCreator(true)}>
-                        <FolderKanban className="w-4 h-4 mr-2" />
-                        Create Project
-                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </>
