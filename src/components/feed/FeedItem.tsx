@@ -86,6 +86,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const { goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
 
   const isOwner = user?.id === item.user_id;
+  const canDelete = isOwner || isAdmin;
   const canEdit = isOwner && item.type !== 'show'; // Shows have their own edit flow
 
   // Delete mutation
