@@ -51,6 +51,7 @@ const FeedPage: React.FC = () => {
   const [projectSubTab, setProjectSubTab] = useState<ProjectSubTab>('feed');
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [feedSearchQuery, setFeedSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   // Fetch current user's profile
