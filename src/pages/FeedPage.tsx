@@ -366,15 +366,27 @@ const FeedPage: React.FC = () => {
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
-    if (networkFilter === 'all') return allItems;
+    if (networkFilter !== 'all') {
+      allItems = allItems.filter((item) => {
+        if (item.user_id === user?.id) return true;
+        const degree = getConnectionDegree(item.user_id);
+        if (networkFilter === '1st') return degree === '1st';
+        return true;
+      });
+    }
 
-    return allItems.filter((item) => {
-      if (item.user_id === user?.id) return true;
-      const degree = getConnectionDegree(item.user_id);
-      if (networkFilter === '1st') return degree === '1st';
-      return true;
-    });
-  }, [posts, projectFeedItems, events, openRoles, networkFilter, contentFilter, user?.id, getConnectionDegree]);
+    if (feedSearchQuery.trim()) {
+      const q = feedSearchQuery.toLowerCase();
+      allItems = allItems.filter((item) => {
+        const title = item.title?.toLowerCase() || '';
+        const desc = item.description?.toLowerCase() || '';
+        const content = item.content?.toLowerCase() || '';
+        return title.includes(q) || desc.includes(q) || content.includes(q);
+      });
+    }
+
+    return allItems;
+  }, [posts, projectFeedItems, events, openRoles, networkFilter, contentFilter, feedSearchQuery, user?.id, getConnectionDegree]);
 
   const isLoading = postsLoading || projectsLoading || eventsLoading || openRolesLoading || connectionsLoading;
 
