@@ -41,10 +41,13 @@ const experienceLevelLabels: Record<string, string> = {
 const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact = false }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
+  const { deleteOpportunity } = useOpportunities();
   const { isSaved, toggleSave } = useSavedItems();
   const [showApplicationDialog, setShowApplicationDialog] = useState(false);
   const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [hasAppliedDB, setHasAppliedDB] = useState(false);
   const [posterProfile, setPosterProfile] = useState<{
     display_name: string | null;
