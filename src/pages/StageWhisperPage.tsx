@@ -88,6 +88,8 @@ const StageWhisperPage: React.FC = () => {
     savedShowIds
   } = useSavedShows();
   const { isFilmSaved, saveFilm, unsaveFilm } = useSavedFilms();
+  const { isAdmin } = useAdmin();
+  const queryClient = useQueryClient();
   const [industryTab, setIndustryTab] = useState<'theatre' | 'film' | 'music'>('theatre');
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
@@ -98,6 +100,26 @@ const StageWhisperPage: React.FC = () => {
   const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
   const [archiveMode, setArchiveMode] = useState(false);
   const [selectedFilm, setSelectedFilm] = useState<FilmMetric | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; table: string; label: string } | null>(null);
+
+  const adminDeleteMutation = useMutation({
+    mutationFn: async ({ id, table }: { id: string; table: string }) => {
+      const { error } = await supabase.from(table as any).delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['nyc-shows'] });
+      queryClient.invalidateQueries({ queryKey: ['film-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['streaming-content'] });
+      queryClient.invalidateQueries({ queryKey: ['user-films'] });
+      queryClient.invalidateQueries({ queryKey: ['user-music-shows'] });
+      toast.success('Item deleted successfully');
+      setDeleteTarget(null);
+    },
+    onError: () => {
+      toast.error('Failed to delete. Please try again.');
+    },
+  });
 
   // Fetch all shows
   const {
