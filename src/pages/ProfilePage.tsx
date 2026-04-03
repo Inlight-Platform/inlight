@@ -1876,9 +1876,16 @@ const ProfilePage: React.FC = () => {
         onOpenChange={setShowProjectCreator}
         onSuccess={() => setShowProjectCreator(false)}
       />
-      {/* Floating chat icon for connected users */}
+      {/* Floating chat icon for connected users - or minimized bubble */}
       {!isOwnProfile && isConnected && resolvedUserId && (
-        <FloatingChatButton onClick={() => navigate(`/messages/direct/${resolvedUserId}`)} />
+        chatMinimized && chatOriginRoute === location.pathname ? (
+          <FloatingChatButton onClick={() => {
+            expandChat();
+            navigate(chatRoute!, { state: { originRoute: location.pathname } });
+          }} />
+        ) : !chatMinimized ? (
+          <FloatingChatButton onClick={() => navigate(`/messages/direct/${resolvedUserId}`, { state: { originRoute: location.pathname } })} />
+        ) : null
       )}
     </div>
   );

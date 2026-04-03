@@ -986,8 +986,16 @@ const ProjectDetailPage: React.FC = () => {
       />
 
       {/* Floating chat icon for project members */}
+      {/* Floating chat icon for project members - or minimized bubble */}
       {isMember && projectId && (
-        <FloatingChatButton onClick={() => navigate(`/messages/group/${projectId}`)} />
+        chatMinimized && chatOriginRoute === location.pathname ? (
+          <FloatingChatButton onClick={() => {
+            expandChat();
+            navigate(chatRoute!, { state: { originRoute: location.pathname } });
+          }} />
+        ) : !chatMinimized ? (
+          <FloatingChatButton onClick={() => navigate(`/messages/group/${projectId}`, { state: { originRoute: location.pathname } })} />
+        ) : null
       )}
     </div>
   );
