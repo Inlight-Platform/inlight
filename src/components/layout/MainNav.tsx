@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, FolderKanban, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, MessageCircle, Bell, Shield, Sparkles } from 'lucide-react';
+import { Home, Users, Briefcase, FolderKanban, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { useMessages } from '@/hooks/useMessages';
 import { Badge } from '@/components/ui/badge';
-import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { useNotifications } from '@/hooks/useNotifications';
 import { SignOutDialog } from '@/components/ui/sign-out-dialog';
 
 interface NavItem {
@@ -50,6 +50,8 @@ export const MainNav: React.FC = () => {
   const { isAdmin } = useAdmin();
   const { collapsed, toggleCollapsed } = useSidebarState();
   const { totalUnread } = useMessages();
+  const { unreadCount: notifUnreadCount } = useNotifications();
+  const combinedUnread = totalUnread + notifUnreadCount;
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   const handleSignOut = () => {
@@ -73,9 +75,9 @@ export const MainNav: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
-  // Build nav items with messages at top when user is logged in
+  // Build nav items with notifications at top when user is logged in
   const allNavItems: NavItem[] = user ?
-  [{ label: 'Messages', icon: MessageCircle, path: '/messages', badge: totalUnread }, ...navItems] :
+  [{ label: 'Notifications', icon: Bell, path: '/notifications', badge: combinedUnread }, ...navItems] :
   navItems;
 
   return (
@@ -116,21 +118,6 @@ export const MainNav: React.FC = () => {
 
         {/* Nav Items */}
         <nav className={cn("flex-1 space-y-1", collapsed ? "p-2" : "p-4")}>
-          {/* Notification Bell - only for authenticated users */}
-          {user && (
-          collapsed ?
-          <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <NotificationBell collapsed={collapsed} />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right">Notifications</TooltipContent>
-              </Tooltip> :
-
-          <NotificationBell collapsed={collapsed} />)
-
-          }
 
           {allNavItems.map((item) => {
             const Icon = item.icon;
@@ -371,24 +358,23 @@ export const MainNav: React.FC = () => {
         <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide px-2 py-2">
           {/* Notifications for mobile */}
           {user &&
-          <div className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg text-[hsl(220_15%_60%)] flex-shrink-0 min-w-[72px]">
-              <NotificationBell collapsed={true} />
-            </div>
-          }
-          
-          {/* Messages for mobile */}
-          {user &&
           <Link
-            to="/messages"
+            to="/notifications"
             className={cn(
               'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all relative flex-shrink-0 min-w-[72px]',
-              isActive('/messages') ?
+              isActive('/notifications') ?
               'text-[hsl(45_95%_58%)]' :
               'text-[hsl(220_15%_60%)]'
             )}>
-
-              <MessageCircle className="w-5 h-5" />
-              <span className="text-[10px] leading-none whitespace-nowrap">Messages</span>
+              <div className="relative">
+                <Bell className="w-5 h-5" />
+                {combinedUnread > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-[16px] h-[16px] flex items-center justify-center text-[9px] font-bold bg-[hsl(45_95%_58%)] text-[hsl(222_35%_8%)] rounded-full px-0.5">
+                    {combinedUnread > 99 ? '99+' : combinedUnread}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] leading-none whitespace-nowrap">Notifications</span>
             </Link>
           }
 
