@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Filter, Plus, Calendar, Briefcase, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 type NetworkFilter = 'all' | '1st';
-type ContentFilter = 'all' | 'events' | 'jobs' | 'projects' | 'updates';
+type ContentFilter = 'all' | 'events' | 'projects' | 'updates';
 type ProjectSubTab = 'feed' | 'my-network' | 'open-roles' | 'saved' | 'archive';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 
@@ -355,7 +355,6 @@ const FeedPage: React.FC = () => {
     if (contentFilter !== 'all') {
       allItems = allItems.filter((item) => {
         if (contentFilter === 'events') return item.type === 'event';
-        if (contentFilter === 'jobs') return item.type === 'job' || item.type === 'open_role';
         if (contentFilter === 'projects') return item.type === 'project';
         if (contentFilter === 'updates') return item.type === 'post';
         return true;
@@ -387,16 +386,14 @@ const FeedPage: React.FC = () => {
     { value: 'all', label: 'All', icon: <Filter className="h-4 w-4" /> },
     { value: 'events', label: 'Events', icon: <Calendar className="h-4 w-4" /> },
     { value: 'projects', label: 'Projects', icon: <FolderKanban className="h-4 w-4" /> },
-    { value: 'jobs', label: 'Opportunities', icon: <Briefcase className="h-4 w-4" /> },
     { value: 'updates', label: 'Updates', icon: <User className="h-4 w-4" /> },
   ];
 
   const itemCounts = useMemo(() => ({
     events: events.length,
-    jobs: posts.filter((p) => p.type === 'job').length + openRoles.length,
     projects: activeProjects.length,
     updates: posts.filter((p) => p.type === 'post').length,
-  }), [events, posts, activeProjects, openRoles]);
+  }), [events, posts, activeProjects]);
 
   // Project card component for sub-tabs
   const ProjectCard = ({ project }: { project: typeof allProjects[0] }) => {
