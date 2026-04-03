@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { 
   MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2,
-  CheckCircle2, Bookmark, BookmarkCheck, CalendarPlus, Pencil
+  CheckCircle2, Bookmark, BookmarkCheck, CalendarPlus, Pencil, Trash2
 } from 'lucide-react';
 import { useSavedItems } from '@/hooks/useSavedItems';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -12,10 +12,12 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { OpportunityView } from '@/hooks/useOpportunities';
+import { useAdmin } from '@/hooks/useAdmin';
+import { OpportunityView, useOpportunities } from '@/hooks/useOpportunities';
 import ApplicationDialog from './ApplicationDialog';
 import OpportunityDetailSheet from './OpportunityDetailSheet';
 import EditOpportunityDialog from './EditOpportunityDialog';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 
 interface OpportunityCardProps {
   opportunity: OpportunityView;
@@ -39,10 +41,13 @@ const experienceLevelLabels: Record<string, string> = {
 const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact = false }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
+  const { deleteOpportunity } = useOpportunities();
   const { isSaved, toggleSave } = useSavedItems();
   const [showApplicationDialog, setShowApplicationDialog] = useState(false);
   const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [hasAppliedDB, setHasAppliedDB] = useState(false);
   const [posterProfile, setPosterProfile] = useState<{
     display_name: string | null;
@@ -281,6 +286,15 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
                 <Pencil className="w-4 h-4 text-muted-foreground" />
               </button>
             )}
+            {user && (user.id === opportunity.postedBy || isAdmin) && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowDeleteDialog(true); }}
+                className="p-1 rounded-full hover:bg-destructive/20 transition-colors"
+                title="Delete opportunity"
+              >
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </button>
+            )}
           </div>
           
           {opportunity.actionType === 'calendar' ? (
@@ -333,6 +347,15 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
         opportunity={opportunity}
+      />
+
+      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={() => deleteOpportunity.mutate(opportunity.id)}
+        title="Delete Opportunity"
+        description="Are you sure you want to delete this opportunity? This action cannot be undone."
+        isPending={deleteOpportunity.isPending}
       />
     </Card>
   );
