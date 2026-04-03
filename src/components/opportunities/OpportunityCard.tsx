@@ -12,10 +12,12 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { OpportunityView } from '@/hooks/useOpportunities';
+import { useAdmin } from '@/hooks/useAdmin';
+import { OpportunityView, useOpportunities } from '@/hooks/useOpportunities';
 import ApplicationDialog from './ApplicationDialog';
 import OpportunityDetailSheet from './OpportunityDetailSheet';
 import EditOpportunityDialog from './EditOpportunityDialog';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 
 interface OpportunityCardProps {
   opportunity: OpportunityView;
