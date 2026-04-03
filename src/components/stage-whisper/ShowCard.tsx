@@ -43,6 +43,7 @@ export const ShowCard: React.FC<ShowCardProps> = ({
   onSave,
   onUnsave,
   onClick,
+  onDelete,
 }) => {
   const daysUntilClosing = show.run_end 
     ? differenceInDays(new Date(show.run_end), new Date()) 
