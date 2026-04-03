@@ -103,7 +103,7 @@ export const MainNav: React.FC = () => {
                 className={cn(
                   "transition-all relative z-10 rounded-full object-cover ring-2 ring-[hsl(45_95%_58%/0.3)] group-hover:ring-[hsl(45_95%_58%/0.6)]",
                   collapsed ? "h-8 w-8" : "h-10 w-10"
-                )} src="/lovable-uploads/c3205623-a05c-42d3-98bc-f6f58256bf08.png" />
+                )} src={inlightLogo} />
 
               <div className="absolute inset-0 blur-lg bg-[hsl(45_95%_58%/0.2)] opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
             </div>
