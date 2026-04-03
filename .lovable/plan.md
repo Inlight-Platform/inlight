@@ -1,108 +1,79 @@
-## Messaging System Restructure — Plan
 
-This is a large, multi-part restructure touching the Messages page, Profile page, People page, Project page, and routing. Here is the incremental approach.
 
----
+## Messaging Fix & Refinement Plan
 
-### Part 1: Restructure /messages page with tabs
+### FIX 1 — Minimize navigates back to originating page with floating bubble
 
-**Files modified:** `src/pages/MessagesPage.tsx`
+**Approach**: Use a global lightweight state (React context or a tiny zustand slice) to track the "active minimized chat" across pages. When minimizing, navigate back to the originating route. The floating bubble renders conditionally on Profile/Project pages when this state is active.
 
-- Inside the `MessagesPage.tsx` UI only, add a `Tabs` component with two tabs: "Direct Messages" and "Group Chats". Do not add any Messages link, icon, or tab to the sidebar navigation — the `/messages` route is only reachable via chat icons on profile pages, project pages, and the People page.
-- The "Direct Messages" tab shows the existing DM conversation list (filtered from `allChats` to only `type === 'dm'`)
-- The "Group Chats" tab shows only group chats (filtered to `type === 'group'`)
-- Remove the `+` / `NewMessageDialog` button from the DM tab header
-- Keep `+` button only in the Group Chats tab — clicking opens a new dialog (`NewGroupMessageDialog`) that lists members of the selected group chat who can be messaged
-- Add minimize/expand floating chat pattern:
-  - New state: `isMinimized` — when true, the chat area collapses to a fixed floating Mail icon button in the bottom-right corner
-  - Clicking the floating icon restores the full chat view
-  - A minimize button (ChevronDown or Minimize2 icon) appears in the chat header
+**Files modified:**
+- **New: `src/hooks/useMinimizedChat.ts`** — A zustand store (or simple context) holding `{ originRoute: string | null, chatRoute: string | null, isMinimized: boolean }`. Actions: `minimize(originRoute, chatRoute)`, `expand()`, `close()`.
+- **`src/pages/MessagesPage.tsx`** — On minimize click: call `minimize(originRoute, currentChatRoute)` then `navigate(originRoute)`. Remove the current "return blank page with FloatingChatButton" logic. Read `originRoute` from a query param or location state passed when navigating to `/messages`.
+- **`src/pages/ProfilePage.tsx`** — Pass `location.pathname` as state when navigating to `/messages/direct/:id`. Render `FloatingChatButton` if `useMinimizedChat().isMinimized` is true AND current path matches the stored origin. On click, navigate to stored `chatRoute`. On route change away from origin, call `close()`.
+- **`src/pages/ProjectDetailPage.tsx`** — Same pattern as ProfilePage.
+- **`src/components/messages/FloatingChatButton.tsx`** — No changes needed (already a simple presentational component).
 
-**New component:** `src/components/messages/FloatingChatButton.tsx`
-
-- A fixed-position button (bottom-right) with a Mail/MessageSquare icon
-- Accepts `onClick` to expand the chat
-- Shows on messages page when minimized, and on profile/project pages as entry point
-
-**New component:** `src/components/messages/NewGroupMessageDialog.tsx`
-
-- The `+` button is visible to the members of the project
-- When the creator clicks `+`, the dialog shows two sections in a single list:
-  - **"Chat with member"** — lists current project team members (to start or open a direct chat with them)
-  - **"Add new member"** — lists the creator's connections who are not yet in the project chat, allowing them to be added manually (no authentication check needed)
-- **Non-creator project members** see the `+` button :
-  - **"Chat with member"** — lists current project team members (to start or open a direct chat with them). They can only chat within the existing group — no ability to add new members or start new threads
-    &nbsp;
-
-Part 2: DM entry points on Profile and People pages
-
-**File modified:** `src/pages/ProfilePage.tsx`
-
-- Check if viewing another user's profile and if connection status is "connected"
-- If connected: render `FloatingChatButton` in bottom-right corner
-- On click: `navigate('/messages/direct/${userId}')` which opens the messages page with that DM auto-selected
-
-**File modified:** `src/components/people/PersonCard.tsx`
-
-- The Mail icon button already exists for connected users (`handleMessage`)
-- Update `handleMessage` to navigate to `/messages/direct/${userId}` instead of calling `onMessage`
-- Only show Mail icon when `connectionStatus === 'connected'` (already the case)
-
-**File modified:** `src/pages/PeoplePage.tsx`
-
-- Remove or simplify the `onMessage` handler passed to PersonCard (navigation now handled inside PersonCard)
-
-### Part 3: Project group chat floating icon
-
-**File modified:** `src/pages/ProjectDetailPage.tsx`
-
-- Check if current user is a project member (already fetched in the page)
-- If member: render `FloatingChatButton` in bottom-right
-- When a new project is created, automatically create a group chat for it with the project creator as the first and only member by default. If this trigger does not already exist in the project creation flow or database, add it now.
-- On click: navigate to `/messages/group/${projectId}`
-- Non-members see nothing
-
-### Part 4: Routing and auto-open
-
-**File modified:** `src/App.tsx`
-
-- Add routes: `/messages/direct/:userId` and `/messages/group/:projectId`
-- Both render `MessagesPage` component
-
-**File modified:** `src/pages/MessagesPage.tsx`
-
-- Read route params (`useParams`) for `userId` or `projectId`
-- On mount, if `userId` param exists: set active tab to "Direct Messages", auto-select that DM conversation
-- If `projectId` param exists: set active tab to "Group Chats", look up the group chat for that project, auto-select it
-- Handle disconnected users: when a DM is selected, check connection status. If not connected, show the thread read-only with a disabled input and message "You are no longer connected with this person"
-
-### Part 5: Connection-gated messaging
-
-**File modified:** `src/pages/MessagesPage.tsx`
-
-- For DM threads, query connection status between current user and the selected partner
-- If not mutually connected: display messages but disable the send input with an explanatory note
+**Behavior**: Navigating to any page other than the origin clears the minimized state entirely (bubble disappears). This is enforced via a `useEffect` in the originating pages that checks if the current path still matches.
 
 ---
 
-### Technical details
+### FIX 2 — Replace email input with structured + dialog
 
-- **Tabs**: Use existing `@/components/ui/tabs` (Radix Tabs) already in the project
-- **Floating button**: A `fixed bottom-6 right-6 z-50` positioned button with shadow, uses Mail icon from lucide-react
-- **Route params**: Use `useParams()` from react-router-dom; routes defined as `/messages/direct/:userId` and `/messages/group/:projectId`
-- **Connection check for send-gating**: Use `supabase.rpc('get_mutual_connections', { target_user_id: user.id })` and check if the partner is in the result set
-- **No database changes required** — When a new project is created, automatically create a group chat for it with the project creator as the first member. If this trigger does not already exist in the database or in the project creation flow, add it now. All tables and triggers other than this already exist.
-- **No new hooks needed** — existing `useMessages`, `useGroupChats`, and `useNetworkConnections` cover all data needs
+**File modified: `src/components/messages/NewGroupMessageDialog.tsx`**
 
-### Files to create
+The current component already has the right structure (two sections: "Chat with member" and "Add new member") but may have issues. This fix:
+- Removes any manual email input field
+- **"Add new member"** section: Lists creator's connections not in the group chat, each with an "Add" button. Visible only to project creator.
+- **"Chat privately with"** section: Lists current group members (excluding self), each with a "Message" button. Clicking navigates to `/messages/direct/:memberId`. Visible to all members.
+- Non-creators see only the "Chat privately with" section.
+- Ensure the `+` button is only visible to the creator in the group chat header, but the dialog content differs based on role.
 
-1. `src/components/messages/FloatingChatButton.tsx`
-2. `src/components/messages/NewGroupMessageDialog.tsx`
+Actually, re-reading the plan: the `+` button should be visible to ALL project members, but non-creators only see "Chat privately with" section. Let me check the current implementation more carefully.
 
-### Files to modify
+The current `NewGroupMessageDialog` already has both sections and already gates "Add new member" to creator only. The "Chat with member" section navigates to `/messages/direct/:userId`. This looks mostly correct already. The fix is to:
+1. Ensure no email input exists (it doesn't in the current code — good)
+2. Make the `+` button visible to all members (currently it's rendered in MessagesPage without a creator check, so it's visible to all — good)
+3. Relabel sections to match spec: "Chat privately with" and "Add new member"
 
-1. `src/App.tsx` — add sub-routes
-2. `src/pages/MessagesPage.tsx` — tabs, minimize pattern, route param handling, connection-gated send
-3. `src/pages/ProfilePage.tsx` — floating chat icon for connected users
-4. `src/pages/ProjectDetailPage.tsx` — floating chat icon for project members
-5. `src/components/people/PersonCard.tsx` — navigate to DM on Mail click
+---
+
+### FIX 3 — Remove Messages tab from NotificationsPage
+
+**File modified: `src/pages/NotificationsPage.tsx`**
+
+- Remove the "Messages" `TabsTrigger` (line 150-157)
+- Remove the entire `TabsContent value="messages"` block (lines 253-335)
+- Remove unused imports: `useMessages`, `useGroupChats`, `NewMessageDialog`, `GroupChatItem`, `parseSharedItem`, `MessageSquare`, and related variables (`conversations`, `loadingConversations`, `totalUnread`, `groupChats`, `loadingGroupChats`, `allChats`, `handleNewMessage`)
+
+---
+
+### FIX 4 — Context-filtered messages view (no tabs UI)
+
+**File modified: `src/pages/MessagesPage.tsx`**
+
+- Remove the `Tabs` / `TabsList` / `TabsTrigger` UI entirely from both desktop and mobile layouts
+- When `routeProjectId` is set: show only the group chat for that project plus any DM threads associated with project members (or just the group chat thread directly — auto-selected)
+- When `routeUserId` is set: show only the DM thread with that user — auto-selected, no sidebar list needed
+- When neither param exists (`/messages` bare): redirect to the most recently active conversation, or show an empty state
+- The sidebar list is unnecessary in the context-filtered view since only one conversation is shown. Simplify to just render the chat area directly.
+
+**Implementation**: 
+- If `routeUserId`: immediately select that DM, render chat area only (no sidebar)
+- If `routeProjectId`: find group chat for that project, render group chat thread only (no sidebar)  
+- If neither: redirect to most recent conversation or show empty state with message "Open a chat from a profile or project page"
+
+---
+
+### Summary of files
+
+| Action | File |
+|--------|------|
+| Create | `src/hooks/useMinimizedChat.ts` |
+| Modify | `src/pages/MessagesPage.tsx` |
+| Modify | `src/pages/ProfilePage.tsx` |
+| Modify | `src/pages/ProjectDetailPage.tsx` |
+| Modify | `src/pages/NotificationsPage.tsx` |
+| Modify | `src/components/messages/NewGroupMessageDialog.tsx` |
+
+No database changes required.
+
