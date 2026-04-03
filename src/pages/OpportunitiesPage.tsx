@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Briefcase, Star, TrendingUp, Clock, Loader2 } from 'lucide-react';
+import { Plus, Briefcase, Star, TrendingUp, Clock, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OpportunityCard from '@/components/opportunities/OpportunityCard';
