@@ -66,6 +66,8 @@ interface ProjectPhoto {
 const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isMinimized: chatMinimized, originRoute: chatOriginRoute, chatRoute, close: closeChat, expand: expandChat } = useMinimizedChat();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [addPhotoOpen, setAddPhotoOpen] = useState(false);
