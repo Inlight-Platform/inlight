@@ -543,7 +543,7 @@ const StageWhisperPage: React.FC = () => {
                         {searchQuery || hasActiveFilters ? 'No shows match your search. Try adjusting your filters!' : 'No shows available right now.'}
                       </p>
                     </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                      {activeShows.map(show => <ShowCard key={show.id} show={show} isSaved={isSaved(show.id)} onSave={saveShow} onUnsave={unsaveShow} onClick={setSelectedShow} />)}
+                      {activeShows.map(show => <ShowCard key={show.id} show={show} isSaved={isSaved(show.id)} onSave={saveShow} onUnsave={unsaveShow} onClick={setSelectedShow} onDelete={isAdmin ? (id) => setDeleteTarget({ id, table: 'nyc_shows', label: 'show' }) : undefined} />)}
                     </div>}
                 </>}
 
