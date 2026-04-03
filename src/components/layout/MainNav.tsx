@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { useMessages } from '@/hooks/useMessages';
 import { Badge } from '@/components/ui/badge';
-import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { useNotifications } from '@/hooks/useNotifications';
 import { SignOutDialog } from '@/components/ui/sign-out-dialog';
 
 interface NavItem {
