@@ -350,7 +350,7 @@ const FeedPage: React.FC = () => {
 
   // Combine and filter feed items (for non-project tabs)
   const feedItems = useMemo(() => {
-    let allItems: FeedItemData[] = [...posts, ...projectFeedItems, ...events, ...openRoles];
+    let allItems: FeedItemData[] = [...posts, ...projectFeedItems, ...events];
 
     if (contentFilter !== 'all') {
       allItems = allItems.filter((item) => {
