@@ -413,7 +413,7 @@ const PeoplePage: React.FC = () => {
                   key={user.id}
                   user={user}
                   connectionStatus="connected"
-                  onMessage={() => navigate('/messages')}
+                  
                 />
               ))}
             </div>
