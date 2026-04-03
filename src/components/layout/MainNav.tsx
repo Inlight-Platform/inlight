@@ -50,6 +50,8 @@ export const MainNav: React.FC = () => {
   const { isAdmin } = useAdmin();
   const { collapsed, toggleCollapsed } = useSidebarState();
   const { totalUnread } = useMessages();
+  const { unreadCount: notifUnreadCount } = useNotifications();
+  const combinedUnread = totalUnread + notifUnreadCount;
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   const handleSignOut = () => {
