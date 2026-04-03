@@ -81,9 +81,10 @@ export const OpenRolesFeed: React.FC = () => {
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {roles.map(role => {
-          const applyBy = role.projectDeadline
-            ? new Date(role.projectDeadline)
-            : addMonths(new Date(role.createdAt), 1);
+          const deadlineDate = role.projectDeadline ? new Date(role.projectDeadline) : null;
+          const applyBy = deadlineDate && !isNaN(deadlineDate.getTime())
+            ? deadlineDate
+            : addMonths(new Date(role.createdAt || Date.now()), 1);
 
           return (
             <div
