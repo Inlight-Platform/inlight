@@ -650,6 +650,15 @@ const StageWhisperPage: React.FC = () => {
                               ⭐ {Number(content.rating).toFixed(1)}
                             </Badge>
                           </div>
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: content.id, table: 'streaming_content', label: 'streaming content' }); }}
+                              className="absolute bottom-2 right-2 p-2 rounded-full bg-destructive/80 text-destructive-foreground backdrop-blur-sm hover:bg-destructive transition-all duration-200 opacity-0 group-hover:opacity-100"
+                              title="Delete content"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                         <CardContent className="p-3">
                           <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
