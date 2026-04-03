@@ -391,10 +391,9 @@ const FeedPage: React.FC = () => {
 
   const itemCounts = useMemo(() => ({
     events: events.length,
-    jobs: posts.filter((p) => p.type === 'job').length + openRoles.length,
     projects: activeProjects.length,
     updates: posts.filter((p) => p.type === 'post').length,
-  }), [events, posts, activeProjects, openRoles]);
+  }), [events, posts, activeProjects]);
 
   // Project card component for sub-tabs
   const ProjectCard = ({ project }: { project: typeof allProjects[0] }) => {
