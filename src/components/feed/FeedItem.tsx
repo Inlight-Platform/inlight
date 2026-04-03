@@ -233,7 +233,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
             <div className="p-1.5 rounded-full bg-muted">
               {getTypeIcon()}
             </div>
-            {isOwner && (
+            {canDelete && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
