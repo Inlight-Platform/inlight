@@ -358,24 +358,23 @@ export const MainNav: React.FC = () => {
         <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide px-2 py-2">
           {/* Notifications for mobile */}
           {user &&
-          <div className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg text-[hsl(220_15%_60%)] flex-shrink-0 min-w-[72px]">
-              <NotificationBell collapsed={true} />
-            </div>
-          }
-          
-          {/* Messages for mobile */}
-          {user &&
           <Link
-            to="/messages"
+            to="/notifications"
             className={cn(
               'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all relative flex-shrink-0 min-w-[72px]',
-              isActive('/messages') ?
+              isActive('/notifications') ?
               'text-[hsl(45_95%_58%)]' :
               'text-[hsl(220_15%_60%)]'
             )}>
-
-              <MessageCircle className="w-5 h-5" />
-              <span className="text-[10px] leading-none whitespace-nowrap">Messages</span>
+              <div className="relative">
+                <Bell className="w-5 h-5" />
+                {combinedUnread > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-[16px] h-[16px] flex items-center justify-center text-[9px] font-bold bg-[hsl(45_95%_58%)] text-[hsl(222_35%_8%)] rounded-full px-0.5">
+                    {combinedUnread > 99 ? '99+' : combinedUnread}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] leading-none whitespace-nowrap">Notifications</span>
             </Link>
           }
 
