@@ -29,6 +29,7 @@ import AdminPage from "./pages/AdminPage";
 import CompanyProfilePage from "./pages/CompanyProfilePage";
 import MySavesPage from "./pages/MySavesPage";
 import NotFound from "./pages/NotFound";
+import NetworkPieChartPage from "./pages/NetworkPieChartPage";
 import ShowcasePage from "./pages/ShowcasePage";
 import ShowcaseProfilePage from "./pages/ShowcaseProfilePage";
 import ShowcaseJoinPage from "./pages/ShowcaseJoinPage";
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="/company/:companyId" element={<CompanyProfilePage />} />
             <Route path="/saves" element={<MySavesPage />} />
             <Route path="/group" element={<GroupMembersPage />} />
+            <Route path="/pie-chart" element={<NetworkPieChartPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
           </Route>

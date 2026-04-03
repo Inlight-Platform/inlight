@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles } from 'lucide-react';
+import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, PieChart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
@@ -40,7 +40,8 @@ const navItems: NavItem[] = [
 { label: 'People', icon: Users, path: '/people' },
 { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
 { label: 'Industry Now', icon: Theater, path: '/stage-whisper' },
-{ label: 'Resources', icon: BookOpen, path: '/resources' }];
+{ label: 'Resources', icon: BookOpen, path: '/resources' },
+{ label: 'Pie Chart', icon: PieChart, path: '/pie-chart' }];
 
 
 export const MainNav: React.FC = () => {
