@@ -154,33 +154,35 @@ const OpportunitiesPage: React.FC = () => {
 
           {/* Discover Tab */}
           <TabsContent value="discover" className="space-y-8">
+            {/* Posted Opportunities — compact cards matching Open Roles style */}
+            {openOpportunities.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold">All Opportunities</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {openOpportunities.map((opportunity) => (
+                    <OpportunityCompactCard key={opportunity.id} opportunity={opportunity} />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Open Project Roles */}
             <OpenRolesFeed />
 
-            {/* Posted Opportunities */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">All Opportunities</h2>
-              {openOpportunities.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {openOpportunities.map((opportunity) => (
-                    <OpportunityCard key={opportunity.id} opportunity={opportunity} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No opportunities found</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Try adjusting your filters or check back later
-                  </p>
-                   {isAdmin && (
-                     <Button onClick={() => setShowCreator(true)}>
-                       Post an Opportunity
-                     </Button>
-                   )}
-                </div>
-              )}
-            </div>
+            {openOpportunities.length === 0 && (
+              <div className="text-center py-12">
+                <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No opportunities found</h3>
+                <p className="text-muted-foreground mb-4">
+                  Try adjusting your filters or check back later
+                </p>
+                 {isAdmin && (
+                   <Button onClick={() => setShowCreator(true)}>
+                     Post an Opportunity
+                   </Button>
+                 )}
+              </div>
+            )}
           </TabsContent>
 
           {/* Posted Tab */}
