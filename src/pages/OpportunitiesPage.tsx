@@ -209,16 +209,13 @@ const OpportunitiesPage: React.FC = () => {
           />
 
           {/* Discover Tab */}
-          <TabsContent value="discover" className="space-y-8">
-            {/* Posted Opportunities — compact cards matching Open Roles style */}
+          <TabsContent value="discover" className="space-y-3">
+            {/* All jobs in a single unified grid — posted opportunities first, then open roles */}
             {openOpportunities.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">All Opportunities</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {openOpportunities.map((opportunity) => (
-                    <OpportunityCompactCard key={opportunity.id} opportunity={opportunity} />
-                  ))}
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {openOpportunities.map((opportunity) => (
+                  <OpportunityCompactCard key={opportunity.id} opportunity={opportunity} />
+                ))}
               </div>
             )}
 
