@@ -30,7 +30,7 @@ interface OpenRole {
   createdAt: string;
 }
 
-export const OpenRolesFeed: React.FC = () => {
+export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ prependItems }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -213,6 +213,7 @@ export const OpenRolesFeed: React.FC = () => {
     <>
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {prependItems}
           {roles.map(role => {
             const deadlineDate = role.projectDeadline ? new Date(role.projectDeadline) : null;
             const applyBy = deadlineDate && !isNaN(deadlineDate.getTime())
