@@ -96,24 +96,41 @@ export const MainNav: React.FC = () => {
         
         {/* Logo with gold accent - circular styling */}
         <div className={cn("border-b border-[hsl(45_95%_58%/0.1)] relative", collapsed ? "p-3" : "p-6")}>
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="relative">
-              <img
-
-                alt="Inlight"
-                className={cn(
-                  "transition-all relative z-10 rounded-full object-cover ring-2 ring-[hsl(45_95%_58%/0.3)] group-hover:ring-[hsl(45_95%_58%/0.6)]",
-                  collapsed ? "h-8 w-8" : "h-10 w-10"
-                )} src={inlightLogo} />
-
-              <div className="absolute inset-0 blur-lg bg-[hsl(45_95%_58%/0.2)] opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
-            </div>
-            {!collapsed &&
-            <span className="text-xl font-display font-bold tracking-wide bg-gradient-to-r from-white to-[hsl(45_95%_58%)] bg-clip-text text-transparent">
-                Inlight
-              </span>
-            }
-          </Link>
+          <div className="flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-3 group">
+              <div className="relative">
+                <img
+                  alt="Inlight"
+                  className={cn(
+                    "transition-all relative z-10 rounded-full object-cover ring-2 ring-[hsl(45_95%_58%/0.3)] group-hover:ring-[hsl(45_95%_58%/0.6)]",
+                    collapsed ? "h-8 w-8" : "h-10 w-10"
+                  )} src={inlightLogo} />
+                <div className="absolute inset-0 blur-lg bg-[hsl(45_95%_58%/0.2)] opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
+              </div>
+              {!collapsed &&
+              <span className="text-xl font-display font-bold tracking-wide bg-gradient-to-r from-white to-[hsl(45_95%_58%)] bg-clip-text text-transparent">
+                  Inlight
+                </span>
+              }
+            </Link>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleCollapsed}
+                  className="h-7 w-7 text-[hsl(220_15%_60%)] hover:text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)] transition-colors flex-shrink-0">
+                  {collapsed ?
+                  <PanelLeft className="w-4 h-4" /> :
+                  <PanelLeftClose className="w-4 h-4" />
+                  }
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
+                {collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
         {/* Nav Items */}
@@ -194,28 +211,6 @@ export const MainNav: React.FC = () => {
           })}
         </nav>
 
-        {/* Collapse Toggle */}
-        <div className={cn("px-2 py-2", collapsed ? "flex justify-center" : "")}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleCollapsed}
-                className="h-9 w-9 text-[hsl(220_15%_60%)] hover:text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)] transition-colors">
-
-                {collapsed ?
-                <PanelLeft className="w-5 h-5" /> :
-
-                <PanelLeftClose className="w-5 h-5" />
-                }
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
-              {collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            </TooltipContent>
-          </Tooltip>
-        </div>
 
         {/* User Section - Premium styling */}
         <div className={cn("border-t border-[hsl(45_95%_58%/0.1)]", collapsed ? "p-2" : "p-4")}>
