@@ -1,14 +1,70 @@
 import React, { useState, useMemo } from 'react';
+import { format, addMonths, isPast } from 'date-fns';
 import inlightLogo from '@/assets/inlight-logo.jpeg';
-import { Plus, Briefcase, Star, TrendingUp, Clock, Loader2, Users } from 'lucide-react';
+import { Plus, Briefcase, TrendingUp, Clock, Loader2, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OpportunityCard from '@/components/opportunities/OpportunityCard';
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters';
 import OpportunityCreator from '@/components/opportunities/OpportunityCreator';
+import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
+import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
 import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
 import { useAuth } from '@/hooks/useAuth';
 import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
+
+/** Compact card matching the Open Roles style — title, company, deadline */
+const OpportunityCompactCard: React.FC<{ opportunity: OpportunityView }> = ({ opportunity }) => {
+  const [showDetail, setShowDetail] = useState(false);
+  const [showApply, setShowApply] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
+
+  const deadlineDate = opportunity.deadline ? new Date(opportunity.deadline) : null;
+  const applyBy = deadlineDate && !isNaN(deadlineDate.getTime())
+    ? deadlineDate
+    : addMonths(new Date(opportunity.createdAt), 1);
+
+  return (
+    <>
+      <div
+        onClick={() => setShowDetail(true)}
+        className="flex flex-col justify-between gap-2 p-4 rounded-lg border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all cursor-pointer"
+      >
+        <div className="space-y-1">
+          <h3 className="font-semibold text-foreground text-sm leading-tight">
+            {opportunity.roles?.[0] || opportunity.title}
+          </h3>
+          <p className="text-xs text-muted-foreground truncate">
+            {opportunity.company || opportunity.title}
+          </p>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+          <Calendar className="w-3 h-3 flex-shrink-0" />
+          <span>
+            {isPast(applyBy) ? 'Deadline passed' : `Apply by ${format(applyBy, 'MMM d, yyyy')}`}
+          </span>
+        </div>
+      </div>
+
+      <OpportunityDetailSheet
+        opportunity={opportunity}
+        open={showDetail}
+        onOpenChange={setShowDetail}
+        posterProfile={null}
+        hasApplied={hasApplied}
+        onApply={() => { setShowDetail(false); setShowApply(true); }}
+      />
+
+      <ApplicationDialog
+        open={showApply}
+        onOpenChange={setShowApply}
+        opportunityId={opportunity.id}
+        opportunityTitle={opportunity.title}
+        onApplicationSubmitted={() => setHasApplied(true)}
+      />
+    </>
+  );
+};
 
 type OpportunityType = 'job' | 'casting' | 'gig' | 'collaboration';
 type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician';
@@ -154,33 +210,35 @@ const OpportunitiesPage: React.FC = () => {
 
           {/* Discover Tab */}
           <TabsContent value="discover" className="space-y-8">
+            {/* Posted Opportunities — compact cards matching Open Roles style */}
+            {openOpportunities.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold">All Opportunities</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {openOpportunities.map((opportunity) => (
+                    <OpportunityCompactCard key={opportunity.id} opportunity={opportunity} />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Open Project Roles */}
             <OpenRolesFeed />
 
-            {/* Posted Opportunities */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">All Opportunities</h2>
-              {openOpportunities.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {openOpportunities.map((opportunity) => (
-                    <OpportunityCard key={opportunity.id} opportunity={opportunity} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No opportunities found</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Try adjusting your filters or check back later
-                  </p>
-                   {isAdmin && (
-                     <Button onClick={() => setShowCreator(true)}>
-                       Post an Opportunity
-                     </Button>
-                   )}
-                </div>
-              )}
-            </div>
+            {openOpportunities.length === 0 && (
+              <div className="text-center py-12">
+                <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No opportunities found</h3>
+                <p className="text-muted-foreground mb-4">
+                  Try adjusting your filters or check back later
+                </p>
+                 {isAdmin && (
+                   <Button onClick={() => setShowCreator(true)}>
+                     Post an Opportunity
+                   </Button>
+                 )}
+              </div>
+            )}
           </TabsContent>
 
           {/* Posted Tab */}
