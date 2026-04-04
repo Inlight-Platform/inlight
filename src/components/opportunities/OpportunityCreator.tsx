@@ -28,7 +28,7 @@ interface OpportunityCreatorProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician';
+type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician' | 'Gaffer' | 'Grip' | 'DP' | 'AD' | 'Extras' | 'Singer' | 'Dancer' | 'Designer';
 
 const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenChange }) => {
   const { user } = useAuth();
