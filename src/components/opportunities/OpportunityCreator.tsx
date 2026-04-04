@@ -47,7 +47,7 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
   const [duration, setDuration] = useState('');
   const [actionType, setActionType] = useState('apply');
 
-  const allRoles: UserRole[] = ['Actor', 'Director', 'Producer', 'Musician'];
+  const allRoles: UserRole[] = ['Actor', 'Director', 'Producer', 'Musician', 'Gaffer', 'Grip', 'DP', 'AD', 'Extras', 'Singer', 'Dancer', 'Designer'];
 
   const toggleRole = (role: UserRole) => {
     if (selectedRoles.includes(role)) {
