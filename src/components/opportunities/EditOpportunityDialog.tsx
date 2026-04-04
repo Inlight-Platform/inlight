@@ -27,8 +27,8 @@ interface EditOpportunityDialogProps {
   opportunity: OpportunityView;
 }
 
-type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician';
-const allRoles: UserRole[] = ['Actor', 'Director', 'Producer', 'Musician'];
+type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician' | 'Gaffer' | 'Grip' | 'DP' | 'AD' | 'Extras' | 'Singer' | 'Dancer' | 'Designer';
+const allRoles: UserRole[] = ['Actor', 'Director', 'Producer', 'Musician', 'Gaffer', 'Grip', 'DP', 'AD', 'Extras', 'Singer', 'Dancer', 'Designer'];
 
 const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onOpenChange, opportunity }) => {
   const { updateOpportunity } = useOpportunities();

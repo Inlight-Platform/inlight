@@ -50,6 +50,14 @@ const roles: { value: UserRole | 'all'; label: string }[] = [
   { value: 'Director', label: 'Director' },
   { value: 'Producer', label: 'Producer' },
   { value: 'Musician', label: 'Musician' },
+  { value: 'Gaffer', label: 'Gaffer' },
+  { value: 'Grip', label: 'Grip' },
+  { value: 'DP', label: 'DP' },
+  { value: 'AD', label: 'AD' },
+  { value: 'Extras', label: 'Extras' },
+  { value: 'Singer', label: 'Singer' },
+  { value: 'Dancer', label: 'Dancer' },
+  { value: 'Designer', label: 'Designer' },
 ];
 
 const OpportunityFilters: React.FC<OpportunityFiltersProps> = ({

@@ -67,7 +67,7 @@ const OpportunityCompactCard: React.FC<{ opportunity: OpportunityView }> = ({ op
 };
 
 type OpportunityType = 'job' | 'casting' | 'gig' | 'collaboration';
-type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician';
+type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician' | 'Gaffer' | 'Grip' | 'DP' | 'AD' | 'Extras' | 'Singer' | 'Dancer' | 'Designer';
 type ExperienceLevel = 'entry' | 'intermediate' | 'senior' | 'any';
 
 const OpportunitiesPage: React.FC = () => {
