@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type UserRole = 'Actor' | 'Producer' | 'Director' | 'Musician';
+export type UserRole = 'Actor' | 'Producer' | 'Director' | 'Musician' | 'Gaffer' | 'Grip' | 'DP' | 'AD' | 'Extras' | 'Singer' | 'Dancer' | 'Designer';
 export type ConnectionStatus = 'pending' | 'accepted';
 export type Visibility = 'public' | 'connections' | 'private';
 export type StoryType = 'image' | 'video';
