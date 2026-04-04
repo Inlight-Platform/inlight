@@ -30,7 +30,7 @@ interface OpenRole {
   createdAt: string;
 }
 
-export const OpenRolesFeed: React.FC = () => {
+export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ prependItems }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
