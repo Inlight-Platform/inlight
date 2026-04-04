@@ -211,28 +211,6 @@ export const MainNav: React.FC = () => {
           })}
         </nav>
 
-        {/* Collapse Toggle */}
-        <div className={cn("px-2 py-2", collapsed ? "flex justify-center" : "")}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleCollapsed}
-                className="h-9 w-9 text-[hsl(220_15%_60%)] hover:text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)] transition-colors">
-
-                {collapsed ?
-                <PanelLeft className="w-5 h-5" /> :
-
-                <PanelLeftClose className="w-5 h-5" />
-                }
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
-              {collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            </TooltipContent>
-          </Tooltip>
-        </div>
 
         {/* User Section - Premium styling */}
         <div className={cn("border-t border-[hsl(45_95%_58%/0.1)]", collapsed ? "p-2" : "p-4")}>
