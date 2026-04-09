@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
 
     console.log("[send-notification-email] Email sent successfully! ID:", emailData?.id);
     return new Response(
-      JSON.stringify({ message: "Email sent", id: emailResult?.id }),
+      JSON.stringify({ message: "Email sent", id: emailData?.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
