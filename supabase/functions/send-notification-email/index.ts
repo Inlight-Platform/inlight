@@ -66,47 +66,37 @@ Deno.serve(async (req) => {
 
     const html = wrapEmailTemplate(emailBody);
 
-    // Send via Resend connector gateway
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // Send via Resend directly
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
-    if (!LOVABLE_API_KEY || !RESEND_API_KEY) {
-      console.error("[send-notification-email] Missing API keys - LOVABLE_API_KEY:", !!LOVABLE_API_KEY, "RESEND_API_KEY:", !!RESEND_API_KEY);
+    if (!RESEND_API_KEY) {
+      console.error("[send-notification-email] RESEND_API_KEY is not set");
       return new Response(
-        JSON.stringify({ error: "Missing API keys" }),
+        JSON.stringify({ error: "Missing RESEND_API_KEY" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const resend = new Resend(RESEND_API_KEY);
 
     console.log("[send-notification-email] Sending email to:", profile.email, "| subject:", emailSubject);
 
-    const emailResponse = await fetch(`${GATEWAY_URL}/emails`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": RESEND_API_KEY,
-      },
-      body: JSON.stringify({
-        from: "Inlight <notifications@inlight.social>",
-        to: [profile.email],
-        subject: emailSubject,
-        html,
-      }),
+    const { data: emailData, error: emailError } = await resend.emails.send({
+      from: "Inlight <notifications@inlight.social>",
+      to: [profile.email],
+      subject: emailSubject,
+      html,
     });
 
-    const emailResult = await emailResponse.json();
-    console.log("[send-notification-email] Resend gateway response:", emailResponse.status, JSON.stringify(emailResult));
-
-    if (!emailResponse.ok) {
-      console.error("[send-notification-email] Email send failed:", emailResult);
+    if (emailError) {
+      console.error("[send-notification-email] Resend error:", JSON.stringify(emailError));
       return new Response(
-        JSON.stringify({ error: "Failed to send email", details: emailResult }),
+        JSON.stringify({ error: "Failed to send email", details: emailError }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("[send-notification-email] Email sent successfully!");
+    console.log("[send-notification-email] Email sent successfully! ID:", emailData?.id);
     return new Response(
       JSON.stringify({ message: "Email sent", id: emailResult?.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
