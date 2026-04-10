@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, ArrowLeft, Play, FileText } from 'lucide-react';
+import { capitalizeName } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 
@@ -74,7 +75,7 @@ const ShowcaseProfilePage: React.FC = () => {
     );
   }
 
-  const displayName = profile.stage_name || profile.display_name || 'Student';
+  const displayName = capitalizeName(profile.stage_name || profile.display_name || 'Student');
   const headshot = profile.headshot_url || profile.avatar_url;
 
   // Extract video embed URL from reel

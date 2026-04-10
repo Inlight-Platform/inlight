@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useEventRsvps } from '@/hooks/useEventRsvps';
-import { cn } from '@/lib/utils';
+import { cn, capitalizeName } from '@/lib/utils';
 
 export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show' | 'open_role';
 
@@ -182,7 +182,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   
   // For anonymous shows, hide the creator info
   const showAnonymous = item.type === 'show' && item.is_anonymous;
-  const displayName = showAnonymous ? 'Anonymous' : (item.creator_profile?.display_name || 'Unknown');
+  const displayName = showAnonymous ? 'Anonymous' : capitalizeName(item.creator_profile?.display_name || 'Unknown');
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
 
   return (
