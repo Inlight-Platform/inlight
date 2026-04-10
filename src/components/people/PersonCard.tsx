@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Users, Mail, Clock, Check, ExternalLink } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, capitalizeName } from '@/lib/utils';
 
 interface PersonCardProps {
   user: {
@@ -46,7 +46,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const userId = user.user_id || user.id;
-  const displayName = user.display_name || user.name || 'Unknown User';
+  const displayName = capitalizeName(user.display_name || user.name || 'Unknown User');
   const avatarUrl = user.avatar_url || user.avatar;
 
   const handleClick = () => {

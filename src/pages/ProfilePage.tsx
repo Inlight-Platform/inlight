@@ -8,7 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { cn, capitalizeName } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -289,8 +289,8 @@ const ProfilePage: React.FC = () => {
   // Use database values - fall back to store only as last resort for legacy data
   const user = getUser(resolvedUserId || '');
   const displayAvatar = dbProfile?.avatar_url || user?.avatar;
-  const displayName = dbProfile?.display_name || user?.name || '';
-  const displayStageName = dbProfile?.stage_name || '';
+  const displayName = capitalizeName(dbProfile?.display_name || user?.name || '');
+  const displayStageName = capitalizeName(dbProfile?.stage_name || '');
   const displayLocation = dbProfile?.location || user?.location || '';
   const displayRole = dbProfile?.role || user?.role || '';
   // Parse roles from comma-separated string into array (max 4 roles)
