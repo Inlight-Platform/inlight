@@ -69,6 +69,10 @@ const PlanSelectionPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      {/* Test mode banner */}
+      <div className="fixed top-0 left-0 right-0 bg-yellow-400 text-yellow-900 text-center text-sm font-semibold py-2 z-50">
+        ⚠️ TEST MODE — This page is showing on every login for testing purposes only
+      </div>
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center gap-3">
         <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center">
