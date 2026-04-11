@@ -936,6 +936,7 @@ export type Database = {
           instagram_url: string | null
           location: string | null
           message_privacy: string
+          plan_type: string
           pronouns: string | null
           representation: string | null
           role: string | null
@@ -944,6 +945,7 @@ export type Database = {
           show_union_status: boolean
           skills: string[] | null
           stage_name: string | null
+          stripe_customer_id: string | null
           union_status: string | null
           updated_at: string
           user_id: string
@@ -971,6 +973,7 @@ export type Database = {
           instagram_url?: string | null
           location?: string | null
           message_privacy?: string
+          plan_type?: string
           pronouns?: string | null
           representation?: string | null
           role?: string | null
@@ -979,6 +982,7 @@ export type Database = {
           show_union_status?: boolean
           skills?: string[] | null
           stage_name?: string | null
+          stripe_customer_id?: string | null
           union_status?: string | null
           updated_at?: string
           user_id: string
@@ -1006,6 +1010,7 @@ export type Database = {
           instagram_url?: string | null
           location?: string | null
           message_privacy?: string
+          plan_type?: string
           pronouns?: string | null
           representation?: string | null
           role?: string | null
@@ -1014,6 +1019,7 @@ export type Database = {
           show_union_status?: boolean
           skills?: string[] | null
           stage_name?: string | null
+          stripe_customer_id?: string | null
           union_status?: string | null
           updated_at?: string
           user_id?: string
