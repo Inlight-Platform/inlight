@@ -41,7 +41,7 @@ const AuthPage: React.FC = () => {
   useEffect(() => {
     // Don't redirect if in password recovery mode
     if (!loading && user && view !== 'reset' && !isPasswordRecovery) {
-      navigate('/');
+      navigate('/plan-selection');
     }
   }, [user, loading, navigate, view, isPasswordRecovery]);
 
