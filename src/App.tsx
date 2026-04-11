@@ -33,6 +33,7 @@ import NetworkPieChartPage from "./pages/NetworkPieChartPage";
 import ShowcasePage from "./pages/ShowcasePage";
 import ShowcaseProfilePage from "./pages/ShowcaseProfilePage";
 import ShowcaseJoinPage from "./pages/ShowcaseJoinPage";
+import PlanSelectionPage from "./pages/PlanSelectionPage";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
           <Route path="/showcase/join/:programSlug" element={<ShowcaseJoinPage />} />
           <Route path="/showcase/:programId/:userId" element={<ShowcaseProfilePage />} />
           <Route path="/showcase/:programId" element={<ShowcasePage />} />
+          <Route path="/plan-selection" element={<RequireAuth><PlanSelectionPage /></RequireAuth>} />
 
           {/* App shell (sidebar on desktop, bottom nav on mobile) */}
           <Route element={<AppShell />}>

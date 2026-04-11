@@ -93,7 +93,7 @@ const AuthPage: React.FC = () => {
       toast.error(error.message);
     } else {
       toast.success('Account created! Welcome to Inlight.');
-      navigate('/');
+      navigate('/plan-selection');
     }
 
     setIsLoading(false);
