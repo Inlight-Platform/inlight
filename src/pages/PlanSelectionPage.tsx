@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Check, Loader2, GraduationCap, Sparkles } from 'lucide-react';
@@ -16,8 +16,23 @@ const PRO_FEATURES = [
 const PlanSelectionPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
+
+  // Handle return from Stripe checkout success
+  useEffect(() => {
+    if (searchParams.get('success') === 'true' && user) {
+      // Webhook will set plan_type to 'pro', but also update client-side as fallback
+      supabase
+        .from('profiles')
+        .update({ plan_type: 'pro' })
+        .eq('user_id', user.id)
+        .then(() => {
+          navigate('/feed', { replace: true });
+        });
+    }
+  }, [searchParams, user, navigate]);
 
   const handleUpgrade = async () => {
     setIsLoading(true);
