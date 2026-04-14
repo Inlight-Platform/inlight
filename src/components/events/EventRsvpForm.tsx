@@ -76,8 +76,9 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }
           setDialogOpen(false);
         },
         onError: (err: any) => {
-          const msg = err?.message || '';
-          if (msg.includes('unique') || msg.includes('duplicate')) {
+          const msg = String(err?.message || err?.details || err?.code || err || '');
+          console.error('RSVP error:', JSON.stringify(err));
+          if (msg.includes('unique') || msg.includes('duplicate') || msg.includes('23505') || err?.code === '23505') {
             toast.error("You've already RSVP'd to this event.");
             setSubmitted(true);
             setDialogOpen(false);
