@@ -81,6 +81,10 @@ const EventDetailPage: React.FC = () => {
         hostAvatar: getUser(stubEvent.hostId)?.avatar,
         hostId: stubEvent.hostId,
         customQuestion: null as string | null,
+        isPaid: false,
+        price: null as number | null,
+        currency: 'usd',
+        stripePriceId: null as string | null,
       }
     : dbEvent
     ? {
@@ -98,6 +102,10 @@ const EventDetailPage: React.FC = () => {
         hostAvatar: dbEvent.host_profile?.avatar_url,
         hostId: dbEvent.user_id,
         customQuestion: dbEvent.custom_question as string | null,
+        isPaid: (dbEvent as any).is_paid ?? false,
+        price: (dbEvent as any).price ?? null,
+        currency: (dbEvent as any).currency ?? 'usd',
+        stripePriceId: (dbEvent as any).stripe_price_id ?? null,
       }
     : null;
 
@@ -148,6 +156,13 @@ const EventDetailPage: React.FC = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute top-4 left-4 flex gap-2">
                   <Badge className={cn(eventTypeColors[event.type] || 'bg-muted text-muted-foreground')}>{event.type}</Badge>
+                  {event.isPaid ? (
+                    <Badge className="bg-blue-500/90 text-white border-0">
+                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: event.currency }).format(event.price!)}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-emerald-400/50 text-emerald-400 bg-emerald-500/10">Free</Badge>
+                  )}
                   {event.isVirtual && (
                     <Badge variant="secondary" className="gap-1"><Video className="w-3 h-3" />Virtual</Badge>
                   )}
@@ -210,7 +225,14 @@ const EventDetailPage: React.FC = () => {
 
           {/* Right sidebar: RSVP + Admin */}
           <aside className="lg:sticky lg:top-24 lg:self-start space-y-5">
-            <EventRsvpForm eventId={eventId!} customQuestion={event.customQuestion} />
+            <EventRsvpForm
+              eventId={eventId!}
+              customQuestion={event.customQuestion}
+              isPaid={event.isPaid}
+              price={event.price}
+              currency={event.currency}
+              stripePriceId={event.stripePriceId}
+            />
             {currentUserId && currentUserId === event.hostId && (
               <EventAdminPanel eventId={eventId!} />
             )}
