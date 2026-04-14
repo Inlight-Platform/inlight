@@ -32,14 +32,31 @@ serve(async (req) => {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.metadata?.user_id;
       const customerId = session.customer as string;
+      const eventId = session.metadata?.event_id;
 
-      if (userId) {
-        const supabase = createClient(
-          Deno.env.get("SUPABASE_URL") ?? "",
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-          { auth: { persistSession: false } }
-        );
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        { auth: { persistSession: false } }
+      );
 
+      // Handle ticket purchases
+      if (eventId && userId) {
+        const amountPaid = (session.amount_total || 0) / 100;
+        const { error: ticketError } = await supabase
+          .from("tickets")
+          .update({ status: "confirmed", amount_paid: amountPaid })
+          .eq("stripe_session_id", session.id);
+
+        if (ticketError) {
+          console.error("[STRIPE-WEBHOOK] Ticket update error:", ticketError);
+        } else {
+          console.log(`[STRIPE-WEBHOOK] Ticket confirmed for event ${eventId}, user ${userId}`);
+        }
+      }
+
+      // Handle plan upgrades (no event_id means it's a plan checkout)
+      if (userId && !eventId) {
         const { error } = await supabase
           .from("profiles")
           .update({ plan_type: "pro", stripe_customer_id: customerId })
