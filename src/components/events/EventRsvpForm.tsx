@@ -75,7 +75,16 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }
           setSubmitted(true);
           setDialogOpen(false);
         },
-        onError: () => toast.error('Something went wrong. Try again.'),
+        onError: (err: any) => {
+          const msg = err?.message || '';
+          if (msg.includes('unique') || msg.includes('duplicate')) {
+            toast.error("You've already RSVP'd to this event.");
+            setSubmitted(true);
+            setDialogOpen(false);
+          } else {
+            toast.error('Something went wrong. Try again.');
+          }
+        },
       }
     );
   };
