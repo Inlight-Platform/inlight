@@ -366,45 +366,57 @@ export type Database = {
       events: {
         Row: {
           created_at: string
+          currency: string
           custom_question: string | null
           description: string | null
           event_date: string
           event_type: string | null
           id: string
           image_url: string | null
+          is_paid: boolean
           link_title: string | null
           link_url: string | null
           location: string | null
+          price: number | null
+          stripe_price_id: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          currency?: string
           custom_question?: string | null
           description?: string | null
           event_date: string
           event_type?: string | null
           id?: string
           image_url?: string | null
+          is_paid?: boolean
           link_title?: string | null
           link_url?: string | null
           location?: string | null
+          price?: number | null
+          stripe_price_id?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          currency?: string
           custom_question?: string | null
           description?: string | null
           event_date?: string
           event_type?: string | null
           id?: string
           image_url?: string | null
+          is_paid?: boolean
           link_title?: string | null
           link_url?: string | null
           location?: string | null
+          price?: number | null
+          stripe_price_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -1778,6 +1790,47 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      tickets: {
+        Row: {
+          amount_paid: number | null
+          created_at: string
+          event_id: string
+          id: string
+          status: string
+          stripe_session_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid?: number | null
+          created_at?: string
+          event_id: string
+          id?: string
+          status?: string
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          status?: string
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tip_votes: {
         Row: {
