@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move } from 'lucide-react';
+import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [customQuestion, setCustomQuestion] = useState('');
   const [positionX, setPositionX] = useState(50);
   const [positionY, setPositionY] = useState(50);
+  const [isPaid, setIsPaid] = useState(false);
+  const [ticketPrice, setTicketPrice] = useState('');
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
   useEffect(() => {
@@ -76,6 +78,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setSelectedRecipients([]);
     setPositionX(50);
     setPositionY(50);
+    setIsPaid(false);
+    setTicketPrice('');
   };
 
   const createPostMutation = useMutation({
@@ -119,7 +123,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           throw new Error('Event date is required');
         }
         
-        const { error } = await supabase
+        const { data: eventData, error } = await supabase
           .from('events')
           .insert({
             user_id: user.id,
@@ -132,10 +136,31 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             custom_question: customQuestion.trim() || null,
-          });
+            is_paid: isPaid,
+            price: isPaid && ticketPrice ? parseFloat(ticketPrice) : null,
+            currency: 'usd',
+          })
+          .select('id')
+          .single();
         if (error) {
           console.error('Event creation error:', error);
           throw error;
+        }
+
+        // If paid event, create Stripe price
+        if (isPaid && ticketPrice && eventData) {
+          const { error: priceError } = await supabase.functions.invoke('create-event-price', {
+            body: {
+              event_id: eventData.id,
+              title: title.trim(),
+              price: parseFloat(ticketPrice),
+              currency: 'usd',
+            },
+          });
+          if (priceError) {
+            console.error('Stripe price creation error:', priceError);
+            // Non-fatal: event is created, price can be retried
+          }
         }
       } else if (postType === 'job') {
         // Jobs are stored as posts with a special format and optional link
@@ -352,7 +377,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                     </div>
                   )}
 
-                  {/* Event type for events */}
+                  {/* Event type and paid toggle for events */}
                   {postType === 'event' && (
                     <>
                       <div className="space-y-1.5">
@@ -363,6 +388,37 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                           onChange={(e) => setEventType(e.target.value)}
                         />
                       </div>
+
+                      {/* Paid event toggle */}
+                      <div className="space-y-3 p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-medium flex items-center gap-1.5">
+                            <DollarSign className="h-3.5 w-3.5" />
+                            Paid Event
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setIsPaid(!isPaid)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPaid ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPaid ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        </div>
+                        {isPaid && (
+                          <div className="space-y-1.5">
+                            <label className="text-sm text-muted-foreground">Ticket Price (USD) <span className="text-destructive">*</span></label>
+                            <Input
+                              type="number"
+                              min="0.50"
+                              step="0.01"
+                              placeholder="10.00"
+                              value={ticketPrice}
+                              onChange={(e) => setTicketPrice(e.target.value)}
+                            />
+                          </div>
+                        )}
+                      </div>
+
                       <div className="space-y-1.5">
                         <label className="text-sm text-muted-foreground">Custom RSVP Question (optional)</label>
                         <Input
