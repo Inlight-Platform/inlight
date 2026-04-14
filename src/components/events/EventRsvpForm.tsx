@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useEventRsvps } from '@/hooks/useEventRsvps';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Check, Users, ChevronDown, ChevronUp, Sparkles, PartyPopper } from 'lucide-react';
+import { Check, Users, ChevronDown, ChevronUp, Sparkles, PartyPopper, Ticket } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,10 +22,15 @@ import { supabase } from '@/integrations/supabase/client';
 interface EventRsvpFormProps {
   eventId: string;
   customQuestion?: string | null;
+  isPaid?: boolean;
+  price?: number | null;
+  currency?: string;
+  stripePriceId?: string | null;
 }
 
-const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }) => {
+const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, isPaid, price, currency = 'usd', stripePriceId }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { rsvps, goingRsvps, goingCount, cantMakeItCount, submitRsvp } = useEventRsvps(eventId);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -36,6 +41,11 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion }
   const [submitted, setSubmitted] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [buyingTicket, setBuyingTicket] = useState(false);
+
+  // Check for ticket success from Stripe redirect
+  const ticketStatus = searchParams.get('ticket');
+  const hasTicketSuccess = ticketStatus === 'success';
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
