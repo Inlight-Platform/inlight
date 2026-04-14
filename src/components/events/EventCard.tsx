@@ -92,10 +92,11 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 flex gap-1.5">
           <Badge className={cn(eventTypeColors[event.type])}>
             {event.type}
           </Badge>
+          <Badge variant="outline" className="border-emerald-400/50 text-emerald-400 bg-emerald-500/10">Free</Badge>
         </div>
         {event.isVirtual && (
           <div className="absolute top-3 right-3">
