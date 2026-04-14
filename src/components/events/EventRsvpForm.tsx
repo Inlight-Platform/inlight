@@ -100,12 +100,68 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
     );
   };
 
+  const handleBuyTicket = async () => {
+    if (!stripePriceId) {
+      toast.error('Tickets are not yet available for this event.');
+      return;
+    }
+    setBuyingTicket(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {
+        body: { event_id: eventId, stripe_price_id: stripePriceId },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to start checkout');
+      setBuyingTicket(false);
+    }
+  };
+
   const totalCount = goingCount + cantMakeItCount;
+
+  const formatPrice = (amount: number, curr: string) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: curr }).format(amount);
+  };
 
   return (
     <div className="space-y-5">
-      {/* RSVP Button */}
-      {!alreadyRsvpd ? (
+      {/* Ticket confirmed state (from Stripe redirect) */}
+      {hasTicketSuccess && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5 text-center space-y-2">
+          <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto">
+            <Ticket className="w-6 h-6 text-emerald-500" />
+          </div>
+          <p className="font-semibold text-emerald-400">Ticket Confirmed! 🎟️</p>
+          <p className="text-sm text-muted-foreground">Your ticket has been purchased. See you there!</p>
+        </div>
+      )}
+
+      {/* Paid event: Buy Ticket button */}
+      {isPaid && !hasTicketSuccess && (
+        <div className="space-y-3">
+          {price && (
+            <div className="text-center">
+              <span className="text-2xl font-bold text-primary">{formatPrice(price, currency)}</span>
+              <span className="text-sm text-muted-foreground ml-1">per ticket</span>
+            </div>
+          )}
+          <Button
+            className="w-full gap-2 text-base py-6"
+            size="lg"
+            onClick={handleBuyTicket}
+            disabled={buyingTicket}
+          >
+            <Ticket className="w-5 h-5" />
+            {buyingTicket ? 'Redirecting...' : 'Buy Ticket'}
+          </Button>
+        </div>
+      )}
+
+      {/* Free event: RSVP Button */}
+      {!isPaid && !alreadyRsvpd ? (
         <Button
           className="w-full gap-2 text-base py-6"
           size="lg"
@@ -114,7 +170,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
           <PartyPopper className="w-5 h-5" />
           RSVP to this Event
         </Button>
-      ) : (
+      ) : !isPaid ? (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 text-center space-y-2">
           <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
             <Check className="w-6 h-6 text-primary" />
@@ -124,7 +180,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
             {alreadyGoing ? "We'll see you there ✨" : "Thanks for letting us know!"}
           </p>
         </div>
-      )}
+      ) : null}
 
       {/* Real-time counter */}
       <div className="rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 p-5">
