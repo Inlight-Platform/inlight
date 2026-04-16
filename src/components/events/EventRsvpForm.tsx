@@ -26,6 +26,7 @@ interface EventRsvpFormProps {
   price?: number | null;
   currency?: string;
   stripePriceId?: string | null;
+  paymentLinkUrl?: string | null;
 }
 
 const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, isPaid, price, currency = 'usd', stripePriceId }) => {
@@ -101,6 +102,10 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   };
 
   const handleBuyTicket = async () => {
+    if (paymentLinkUrl) {
+      window.open(paymentLinkUrl, '_blank');
+      return;
+    }
     if (!stripePriceId) {
       toast.error('Tickets are not yet available for this event.');
       return;
