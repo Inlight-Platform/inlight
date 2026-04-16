@@ -233,6 +233,7 @@ const EventDetailPage: React.FC = () => {
               price={event.price}
               currency={event.currency}
               stripePriceId={event.stripePriceId}
+              paymentLinkUrl={event.paymentLinkUrl}
             />
             {currentUserId && currentUserId === event.hostId && (
               <EventAdminPanel eventId={eventId!} />
