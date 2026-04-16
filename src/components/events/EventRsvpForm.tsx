@@ -103,6 +103,28 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
 
   const handleBuyTicket = async () => {
     if (paymentLinkUrl) {
+      // Auto-RSVP the logged-in user as "going"
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name, email')
+            .eq('user_id', user.id)
+            .single();
+          if (profile) {
+            submitRsvp.mutate({
+              event_id: eventId,
+              name: profile.display_name || profile.email.split('@')[0],
+              email: profile.email,
+              role_type: 'attendee',
+              status: 'going',
+            });
+          }
+        } catch (e) {
+          console.error('Auto-RSVP error:', e);
+        }
+      }
       window.open(paymentLinkUrl, '_blank');
       return;
     }
