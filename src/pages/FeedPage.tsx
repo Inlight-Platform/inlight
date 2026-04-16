@@ -163,6 +163,7 @@ const FeedPage: React.FC = () => {
         price: event.price,
         currency: event.currency,
         stripe_price_id: event.stripe_price_id,
+        payment_link_url: (event as any).payment_link_url,
         creator_profile: profileMap.get(event.user_id)
       }));
     }

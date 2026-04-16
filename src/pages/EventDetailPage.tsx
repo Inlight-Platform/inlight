@@ -106,6 +106,7 @@ const EventDetailPage: React.FC = () => {
         price: dbEvent.price ?? null,
         currency: dbEvent.currency ?? 'usd',
         stripePriceId: dbEvent.stripe_price_id ?? null,
+        paymentLinkUrl: (dbEvent as any).payment_link_url ?? null,
       }
     : null;
 
