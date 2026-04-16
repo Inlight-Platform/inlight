@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp, Ticket } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -45,6 +45,10 @@ export interface FeedItemData {
   event_date?: string;
   location?: string;
   event_type?: string;
+  is_paid?: boolean;
+  price?: number | null;
+  currency?: string | null;
+  stripe_price_id?: string | null;
   // Show-specific fields
   venue?: string;
   borough?: string;
@@ -81,8 +85,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const [rsvpEmail, setRsvpEmail] = useState('');
   const [rsvpSubmitted, setRsvpSubmitted] = useState(false);
   const [showAttendees, setShowAttendees] = useState(false);
+  const [buyingTicket, setBuyingTicket] = useState(false);
 
   const isEventItem = item.type === 'event';
+  const isPaidEvent = isEventItem && !!item.is_paid;
   const { goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
 
   const isOwner = user?.id === item.user_id;
@@ -164,6 +170,35 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
       navigate('/stage-whisper');
     } else if (item.type === 'open_role' && item.project_id) {
       navigate(`/projects/${item.project_id}`);
+    }
+  };
+
+  const formatPrice = (amount: number, currency = 'usd') =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+
+  const handleBuyTicket = async () => {
+    if (!isPaidEvent || !item.stripe_price_id) {
+      toast.error('Tickets are not yet available for this event.');
+      return;
+    }
+
+    setBuyingTicket(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {
+        body: {
+          event_id: item.id,
+          stripe_price_id: item.stripe_price_id,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.url) throw new Error('Checkout link unavailable');
+
+      window.location.href = data.url;
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to start checkout');
+      setBuyingTicket(false);
     }
   };
 
@@ -360,9 +395,35 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
                   {item.event_type}
                 </Badge>
               )}
+              {isPaidEvent && (
+                <Badge className="text-xs bg-primary text-primary-foreground border-0">
+                  {typeof item.price === 'number' ? formatPrice(item.price, item.currency || 'usd') : 'Paid Event'}
+                </Badge>
+              )}
             </div>
+            {isPaidEvent && typeof item.price === 'number' && (
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-sm font-semibold text-foreground">
+                  {formatPrice(item.price, item.currency || 'usd')}
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">per ticket</span>
+                </p>
+              </div>
+            )}
             <div className="flex gap-2">
-              {!rsvpSubmitted ? (
+              {isPaidEvent ? (
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleBuyTicket();
+                  }}
+                  disabled={buyingTicket}
+                >
+                  <Ticket className="h-4 w-4 mr-2" />
+                  {buyingTicket ? 'Redirecting...' : 'Buy Ticket'}
+                </Button>
+              ) : !rsvpSubmitted ? (
                 <Button
                   size="sm"
                   className="flex-1"
@@ -437,7 +498,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
         )}
 
         {/* RSVP Dialog */}
-        {isEventItem && (
+        {isEventItem && !isPaidEvent && (
           <Dialog open={rsvpDialogOpen} onOpenChange={setRsvpDialogOpen}>
             <DialogContent className="sm:max-w-sm" onClick={(e) => e.stopPropagation()}>
               <DialogHeader>

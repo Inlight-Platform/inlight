@@ -159,6 +159,10 @@ const FeedPage: React.FC = () => {
         event_date: event.event_date,
         location: event.location,
         event_type: event.event_type,
+        is_paid: event.is_paid,
+        price: event.price,
+        currency: event.currency,
+        stripe_price_id: event.stripe_price_id,
         creator_profile: profileMap.get(event.user_id)
       }));
     }
