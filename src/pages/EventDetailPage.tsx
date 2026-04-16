@@ -102,10 +102,10 @@ const EventDetailPage: React.FC = () => {
         hostAvatar: dbEvent.host_profile?.avatar_url,
         hostId: dbEvent.user_id,
         customQuestion: dbEvent.custom_question as string | null,
-        isPaid: (dbEvent as any).is_paid ?? false,
-        price: (dbEvent as any).price ?? null,
-        currency: (dbEvent as any).currency ?? 'usd',
-        stripePriceId: (dbEvent as any).stripe_price_id ?? null,
+        isPaid: dbEvent.is_paid ?? false,
+        price: dbEvent.price ?? null,
+        currency: dbEvent.currency ?? 'usd',
+        stripePriceId: dbEvent.stripe_price_id ?? null,
       }
     : null;
 
