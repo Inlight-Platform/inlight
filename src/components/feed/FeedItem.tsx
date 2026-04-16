@@ -178,8 +178,30 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
     new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
 
   const handleBuyTicket = async () => {
-    // If a direct payment link exists, use it immediately
+    // If a direct payment link exists, auto-RSVP and open it
     if (item.payment_link_url) {
+      // Auto-RSVP the logged-in user as "going"
+      if (user) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name, email')
+            .eq('user_id', user.id)
+            .single();
+          if (profile) {
+            submitRsvp.mutate({
+              event_id: item.id,
+              name: profile.display_name || profile.email.split('@')[0],
+              email: profile.email,
+              role_type: 'attendee',
+              status: 'going',
+            });
+          }
+        } catch (e) {
+          // Don't block checkout if RSVP fails
+          console.error('Auto-RSVP error:', e);
+        }
+      }
       window.open(item.payment_link_url, '_blank');
       return;
     }

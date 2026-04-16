@@ -123,6 +123,11 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           throw new Error('Event date is required');
         }
         
+        const parsedPrice = isPaid && ticketPrice ? parseFloat(ticketPrice) : null;
+        const defaultPaymentLink = isPaid && parsedPrice === 10
+          ? 'https://buy.stripe.com/5kQcN4fsA37B9Br4yjco001'
+          : null;
+
         const { data: eventData, error } = await supabase
           .from('events')
           .insert({
@@ -137,8 +142,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             link_title: linkTitle.trim() || null,
             custom_question: customQuestion.trim() || null,
             is_paid: isPaid,
-            price: isPaid && ticketPrice ? parseFloat(ticketPrice) : null,
+            price: parsedPrice,
             currency: 'usd',
+            payment_link_url: defaultPaymentLink,
           })
           .select('id')
           .single();
