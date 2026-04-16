@@ -49,6 +49,7 @@ export interface FeedItemData {
   price?: number | null;
   currency?: string | null;
   stripe_price_id?: string | null;
+  payment_link_url?: string | null;
   // Show-specific fields
   venue?: string;
   borough?: string;
