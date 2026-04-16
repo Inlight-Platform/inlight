@@ -26,9 +26,10 @@ interface EventRsvpFormProps {
   price?: number | null;
   currency?: string;
   stripePriceId?: string | null;
+  paymentLinkUrl?: string | null;
 }
 
-const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, isPaid, price, currency = 'usd', stripePriceId }) => {
+const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, isPaid, price, currency = 'usd', stripePriceId, paymentLinkUrl }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { rsvps, goingRsvps, goingCount, cantMakeItCount, submitRsvp } = useEventRsvps(eventId);
@@ -101,6 +102,10 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   };
 
   const handleBuyTicket = async () => {
+    if (paymentLinkUrl) {
+      window.open(paymentLinkUrl, '_blank');
+      return;
+    }
     if (!stripePriceId) {
       toast.error('Tickets are not yet available for this event.');
       return;

@@ -1,0 +1,1 @@
+UPDATE public.events SET payment_link_url = 'https://buy.stripe.com/5kQcN4fsA37B9Br4yjco001' WHERE id = 'e10cd385-56bc-437a-877f-e43a15cc5d95';

@@ -85,6 +85,7 @@ const EventDetailPage: React.FC = () => {
         price: null as number | null,
         currency: 'usd',
         stripePriceId: null as string | null,
+        paymentLinkUrl: null as string | null,
       }
     : dbEvent
     ? {
@@ -106,6 +107,7 @@ const EventDetailPage: React.FC = () => {
         price: dbEvent.price ?? null,
         currency: dbEvent.currency ?? 'usd',
         stripePriceId: dbEvent.stripe_price_id ?? null,
+        paymentLinkUrl: (dbEvent as any).payment_link_url ?? null,
       }
     : null;
 
@@ -232,6 +234,7 @@ const EventDetailPage: React.FC = () => {
               price={event.price}
               currency={event.currency}
               stripePriceId={event.stripePriceId}
+              paymentLinkUrl={event.paymentLinkUrl}
             />
             {currentUserId && currentUserId === event.hostId && (
               <EventAdminPanel eventId={eventId!} />

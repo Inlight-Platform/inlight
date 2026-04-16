@@ -49,6 +49,7 @@ export interface FeedItemData {
   price?: number | null;
   currency?: string | null;
   stripe_price_id?: string | null;
+  payment_link_url?: string | null;
   // Show-specific fields
   venue?: string;
   borough?: string;
@@ -177,6 +178,12 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
     new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
 
   const handleBuyTicket = async () => {
+    // If a direct payment link exists, use it immediately
+    if (item.payment_link_url) {
+      window.open(item.payment_link_url, '_blank');
+      return;
+    }
+
     if (!isPaidEvent || !item.stripe_price_id) {
       toast.error('Tickets are not yet available for this event.');
       return;
