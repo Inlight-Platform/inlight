@@ -29,7 +29,7 @@ interface EventRsvpFormProps {
   paymentLinkUrl?: string | null;
 }
 
-const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, isPaid, price, currency = 'usd', stripePriceId }) => {
+const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, isPaid, price, currency = 'usd', stripePriceId, paymentLinkUrl }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { rsvps, goingRsvps, goingCount, cantMakeItCount, submitRsvp } = useEventRsvps(eventId);
