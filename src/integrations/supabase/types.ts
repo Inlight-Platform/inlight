@@ -377,6 +377,7 @@ export type Database = {
           link_title: string | null
           link_url: string | null
           location: string | null
+          payment_link_url: string | null
           price: number | null
           stripe_price_id: string | null
           title: string
@@ -396,6 +397,7 @@ export type Database = {
           link_title?: string | null
           link_url?: string | null
           location?: string | null
+          payment_link_url?: string | null
           price?: number | null
           stripe_price_id?: string | null
           title: string
@@ -415,6 +417,7 @@ export type Database = {
           link_title?: string | null
           link_url?: string | null
           location?: string | null
+          payment_link_url?: string | null
           price?: number | null
           stripe_price_id?: string | null
           title?: string
