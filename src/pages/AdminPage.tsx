@@ -107,6 +107,10 @@ const AdminPage: React.FC = () => {
           <CreditVerificationManager />
         </TabsContent>
 
+        <TabsContent value="events">
+          <EventsManager />
+        </TabsContent>
+
         <TabsContent value="broadway">
           <BroadwayShowsManager category="broadway" />
         </TabsContent>
