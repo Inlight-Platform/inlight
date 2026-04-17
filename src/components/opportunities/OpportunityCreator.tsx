@@ -45,6 +45,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
   const [experienceLevel, setExperienceLevel] = useState('any');
   const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([]);
   const [deadlineDate, setDeadlineDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [duration, setDuration] = useState('');
   const [actionType, setActionType] = useState('apply');
   const [imageUrl, setImageUrl] = useState('');
@@ -77,6 +79,15 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       return;
     }
 
+    // For in-person events, combine date + times into ISO datetimes
+    const isCalendar = actionType === 'calendar';
+    let startIso: string | undefined;
+    let endIso: string | undefined;
+    if (isCalendar && deadlineDate) {
+      if (startTime) startIso = new Date(`${deadlineDate}T${startTime}`).toISOString();
+      if (endTime) endIso = new Date(`${deadlineDate}T${endTime}`).toISOString();
+    }
+
     createOpportunity.mutate({
       title: title.trim(),
       description: description.trim(),
@@ -89,8 +100,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       experience_level: experienceLevel,
       roles: selectedRoles,
       requirements: [],
-      deadline: deadlineDate || undefined,
-      start_date: undefined,
+      deadline: isCalendar ? (endIso || startIso || (deadlineDate ? new Date(`${deadlineDate}T23:59`).toISOString() : undefined)) : (deadlineDate || undefined),
+      start_date: isCalendar ? startIso : undefined,
       duration: duration.trim() || undefined,
       tags: [],
       is_featured: false,
@@ -110,6 +121,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
         setExperienceLevel('any');
         setSelectedRoles([]);
         setDeadlineDate('');
+        setStartTime('');
+        setEndTime('');
         setDuration('');
         setActionType('apply');
         setImageUrl('');
@@ -303,6 +316,35 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
                   placeholder="Apply on Casting Networks"
                   value={externalLabel}
                   onChange={(e) => setExternalLabel(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* In-Person time fields */}
+          {actionType === 'calendar' && (
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg border border-border bg-muted/30">
+              <div className="col-span-2 text-sm text-muted-foreground">
+                Add a start and end time so attendees can save the event to their calendar with the correct time.
+              </div>
+              <div>
+                <Label htmlFor="startTime">Start Time</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="endTime">End Time</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
                   className="mt-1"
                 />
               </div>
