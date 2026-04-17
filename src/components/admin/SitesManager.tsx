@@ -56,8 +56,8 @@ const SitesManager: React.FC = () => {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {programs.map((p) => {
-              const showcaseUrl = `${baseUrl}/showcase/${p.slug}`;
-              const joinUrl = `${baseUrl}/showcase/${p.slug}/join`;
+      const showcaseUrl = `${baseUrl}/showcase/${p.slug}`;
+              const joinUrl = `${baseUrl}/showcase/join/${p.slug}`;
               const memberCount = counts?.[p.slug] ?? 0;
               return (
                 <Card key={p.id} className="border-2">
