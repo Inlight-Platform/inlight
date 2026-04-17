@@ -228,6 +228,46 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
             </div>
           </div>
 
+          {/* Image */}
+          {user && (
+            <div>
+              <Label>Image (optional)</Label>
+              <div className="mt-2">
+                <ImageUploader
+                  userId={user.id}
+                  onImageUploaded={setImageUrl}
+                  currentImageUrl={imageUrl || undefined}
+                  onRemoveImage={() => setImageUrl('')}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Link */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="edit-linkUrl">Link URL (optional)</Label>
+              <Input
+                id="edit-linkUrl"
+                type="url"
+                placeholder="https://example.com"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-linkTitle">Link Button Label</Label>
+              <Input
+                id="edit-linkTitle"
+                placeholder="e.g., Visit Website"
+                value={linkTitle}
+                onChange={(e) => setLinkTitle(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button
