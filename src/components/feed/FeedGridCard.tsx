@@ -35,7 +35,7 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
     }
   };
 
-  // Show image area for any item that actually has an image, plus projects/events/shows (which fall back to placeholder)
+  // Show image area for ANY item that has an image (including update posts), plus projects/events/shows (which fall back to a placeholder icon)
   const hasImage = !!item.image_url;
   const showImage = hasImage || item.type === 'project' || item.type === 'event' || item.type === 'show';
   const showAnonymous = item.type === 'show' && item.is_anonymous;
@@ -52,15 +52,16 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
       )}
       onClick={onClick}
     >
-      {/* Image header - only for projects, events, and shows */}
+      {/* Image header - shown whenever the item has an image_url, with a placeholder icon for project/event/show without one */}
       {showImage && (
-        <div className="w-full h-32 overflow-hidden flex-shrink-0">
-          {item.image_url ? (
+        <div className="w-full h-32 overflow-hidden flex-shrink-0 bg-muted">
+          {hasImage ? (
             <img
-              src={item.image_url}
-              alt={item.title || 'Feed image'}
+              src={item.image_url!}
+              alt={item.title || item.content?.slice(0, 40) || 'Feed image'}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               style={{ objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` }}
+              loading="lazy"
             />
           ) : (
             <div className="w-full h-full bg-muted/50 flex items-center justify-center">
