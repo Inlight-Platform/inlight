@@ -2,6 +2,7 @@ import React from 'react';
 import MainNav from './MainNav';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
+import OnboardingTour from '@/components/tour/OnboardingTour';
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -29,6 +30,9 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ children }) => {
       )}>
         {children}
       </main>
+
+      {/* First-time user onboarding tour */}
+      <OnboardingTour />
     </div>
   );
 };
