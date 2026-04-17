@@ -16,7 +16,7 @@ import { compressImage, isCompressibleImage } from '@/lib/imageCompression';
 
 
 /* ─── Inline Auth Form ─── */
-const InlineAuth: React.FC<{ programSlug: string }> = ({ programSlug }) => {
+const InlineAuth: React.FC<{ programSlug: string; programName: string }> = ({ programSlug, programName }) => {
   const { signUp, signIn } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('signup');
   const [email, setEmail] = useState('');
@@ -32,6 +32,23 @@ const InlineAuth: React.FC<{ programSlug: string }> = ({ programSlug }) => {
       if (mode === 'signup') {
         const { error } = await signUp(email, password, displayName || undefined);
         if (error) throw error;
+
+        // Mark this signup as a showcase signup so we can redirect to /feed
+        // (where the onboarding tour auto-starts) after they verify + sign in.
+        try {
+          localStorage.setItem('inlight_showcase_signup', '1');
+          localStorage.setItem('inlight_showcase_program', programName);
+        } catch { /* noop */ }
+
+        // Fire welcome email (non-blocking — don't fail signup if email fails)
+        supabase.functions.invoke('send-showcase-welcome', {
+          body: {
+            email,
+            displayName: displayName || email.split('@')[0],
+            programName,
+          },
+        }).catch((err) => console.error('Welcome email failed:', err));
+
         toast.success('Account created! Check your email to verify, then log in.');
         setMode('login');
       } else {
@@ -47,14 +64,31 @@ const InlineAuth: React.FC<{ programSlug: string }> = ({ programSlug }) => {
 
   return (
     <div className="max-w-sm mx-auto mt-12 px-6">
+      {/* Prominent info banner — clarifies they're creating a full Inlight account */}
+      {mode === 'signup' && (
+        <div className="mb-5 rounded-xl border border-rose-700/40 bg-gradient-to-br from-rose-900/30 to-rose-950/40 p-5 text-left">
+          <p className="text-rose-200 text-xs uppercase tracking-[0.2em] font-semibold mb-2">
+            Joining {programName}
+          </p>
+          <p className="text-white/80 text-sm leading-relaxed mb-3">
+            Creating your account here gives you a full <strong>Inlight</strong> profile — the network for the next generation of entertainment.
+          </p>
+          <ul className="text-white/60 text-xs space-y-1.5">
+            <li>✓ Your showcase profile, live for casting and industry</li>
+            <li>✓ Connect with classmates and industry pros</li>
+            <li>✓ Discover jobs, projects, and events</li>
+          </ul>
+        </div>
+      )}
+
       <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-5">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-white">
-            {mode === 'signup' ? 'Create Your Account' : 'Sign In'}
+            {mode === 'signup' ? 'Create Your Inlight Account' : 'Sign In'}
           </h2>
           <p className="text-white/50 text-sm mt-1">
             {mode === 'signup'
-              ? 'Create an account to add your profile to this showcase.'
+              ? `One account joins the ${programName} showcase and unlocks the full Inlight platform.`
               : 'Sign in to manage your showcase profile.'}
           </p>
         </div>
