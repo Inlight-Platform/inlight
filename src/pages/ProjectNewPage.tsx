@@ -50,6 +50,8 @@ const ProjectNewPage: React.FC = () => {
   const [roles, setRoles] = useState<RoleSlot[]>([]);
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
 
   // Auto-set status to archived if end date is in the past
   const effectiveStatus = endDate && endDate < new Date(new Date().toDateString()) ? 'archived' : status;
@@ -72,6 +74,8 @@ const ProjectNewPage: React.FC = () => {
           is_public: isPublic,
           start_date: startDate ? startDate.toISOString().split('T')[0] : null,
           end_date: endDate ? endDate.toISOString().split('T')[0] : null,
+          link_url: linkUrl.trim() || null,
+          link_title: linkTitle.trim() || null,
         })
         .select('id, title')
         .single();
@@ -314,6 +318,34 @@ const ProjectNewPage: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Optional Link */}
+            <div className="space-y-2">
+              <Label htmlFor="linkUrl">Link URL (optional)</Label>
+              <Input
+                id="linkUrl"
+                placeholder="https://example.com"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                type="url"
+              />
+              <p className="text-xs text-muted-foreground">
+                Add a website, trailer, or external page related to your project
+              </p>
+            </div>
+
+            {linkUrl && (
+              <div className="space-y-2">
+                <Label htmlFor="linkTitle">Link Display Title (optional)</Label>
+                <Input
+                  id="linkTitle"
+                  placeholder="e.g. Watch Trailer, Visit Website"
+                  value={linkTitle}
+                  onChange={(e) => setLinkTitle(e.target.value)}
+                  maxLength={60}
+                />
+              </div>
+            )}
 
             {/* Header Image Upload */}
             <div className="space-y-2">
