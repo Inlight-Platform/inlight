@@ -13,11 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv, ShieldCheck } from 'lucide-react';
+import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv, ShieldCheck, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import BroadwayShowsManager from '@/components/admin/BroadwayShowsManager';
 import FilmContentManager from '@/components/admin/FilmContentManager';
 import CreditVerificationManager from '@/components/admin/CreditVerificationManager';
+import EventsManager from '@/components/admin/EventsManager';
 
 const AdminPage: React.FC = () => {
   const navigate = useNavigate();
@@ -63,6 +64,10 @@ const AdminPage: React.FC = () => {
               <ShieldCheck className="w-4 h-4" />
               <span className="hidden sm:inline">Verification</span>
             </TabsTrigger>
+            <TabsTrigger value="events" className="gap-2 whitespace-nowrap">
+              <Calendar className="w-4 h-4" />
+              <span className="hidden sm:inline">Events</span>
+            </TabsTrigger>
             <TabsTrigger value="broadway" className="gap-2 whitespace-nowrap">
               <Theater className="w-4 h-4" />
               <span className="hidden sm:inline">⭐</span> Broadway
@@ -100,6 +105,10 @@ const AdminPage: React.FC = () => {
 
         <TabsContent value="verification">
           <CreditVerificationManager />
+        </TabsContent>
+
+        <TabsContent value="events">
+          <EventsManager />
         </TabsContent>
 
         <TabsContent value="broadway">
