@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { OpportunityView, useOpportunities } from '@/hooks/useOpportunities';
+import { buildOpportunityCalendarUrl, parseOpportunityDate } from '@/lib/opportunityCalendar';
 import ApplicationDialog from './ApplicationDialog';
 import OpportunityDetailSheet from './OpportunityDetailSheet';
 import EditOpportunityDialog from './EditOpportunityDialog';
@@ -55,7 +56,11 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
     user_id: string;
   } | null>(null);
   
-  const isDeadlinePast = opportunity.deadline ? isPast(new Date(opportunity.deadline)) : false;
+  const deadlineDate = parseOpportunityDate(opportunity.deadline);
+  const isDeadlinePast = deadlineDate ? isPast(deadlineDate) : false;
+  const calendarUrl = opportunity.actionType === 'calendar'
+    ? buildOpportunityCalendarUrl(opportunity)
+    : null;
   const hasApplied = hasAppliedDB;
 
   // Fetch poster profile
@@ -103,22 +108,8 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
 
   const handleAddToCalendar = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const title = encodeURIComponent(opportunity.title);
-    const details = encodeURIComponent(opportunity.description);
-    const location = encodeURIComponent(opportunity.isRemote ? 'Remote' : (opportunity.location || ''));
-    const deadlineDate = opportunity.deadline ? new Date(opportunity.deadline) : new Date();
-    const dateStr = deadlineDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    // Use end time if available, otherwise default to 2 hours after start
-    let endDate: Date;
-    if (opportunity.startDate) {
-      const sd = new Date(opportunity.startDate);
-      endDate = !isNaN(sd.getTime()) ? sd : new Date(deadlineDate.getTime() + 2 * 60 * 60 * 1000);
-    } else {
-      endDate = new Date(deadlineDate.getTime() + 2 * 60 * 60 * 1000);
-    }
-    const endStr = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}&dates=${dateStr}/${endStr}`;
-    window.open(calUrl, '_blank');
+    if (!calendarUrl) return;
+    window.open(calendarUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleApplicationSubmitted = () => {
@@ -330,6 +321,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
               <Button 
                 size="sm"
                 variant="outline"
+                disabled={!calendarUrl}
                 onClick={handleAddToCalendar}
                 className="gap-1.5"
               >

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { OpportunityView } from '@/hooks/useOpportunities';
+import { buildOpportunityCalendarUrl, parseOpportunityDate } from '@/lib/opportunityCalendar';
 
 const opportunityTypeColors: Record<string, string> = {
   job: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -49,7 +50,11 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
 
   if (!opportunity) return null;
 
-  const isDeadlinePast = opportunity.deadline ? isPast(new Date(opportunity.deadline)) : false;
+  const deadlineDate = parseOpportunityDate(opportunity.deadline);
+  const isDeadlinePast = deadlineDate ? isPast(deadlineDate) : false;
+  const calendarUrl = opportunity.actionType === 'calendar'
+    ? buildOpportunityCalendarUrl(opportunity)
+    : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -209,22 +214,10 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
               variant="outline"
               onClick={(e) => {
                 e.stopPropagation();
-                const title = encodeURIComponent(opportunity.title);
-                const details = encodeURIComponent(opportunity.description);
-                const loc = encodeURIComponent(opportunity.isRemote ? 'Remote' : (opportunity.location || ''));
-                const deadlineDate = opportunity.deadline ? new Date(opportunity.deadline) : new Date();
-                const dateStr = deadlineDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                let endDate: Date;
-                if (opportunity.startDate && opportunity.deadline) {
-                  const baseDateStr = opportunity.deadline.split('T')[0];
-                  endDate = new Date(`${baseDateStr}T${opportunity.startDate}`);
-                } else {
-                  endDate = new Date(deadlineDate.getTime() + 2 * 60 * 60 * 1000);
-                }
-                const endStr = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${loc}&dates=${dateStr}/${endStr}`;
-                window.open(calUrl, '_blank');
+                if (!calendarUrl) return;
+                window.open(calendarUrl, '_blank', 'noopener,noreferrer');
               }}
+              disabled={!calendarUrl}
               className="gap-1.5"
             >
               <CalendarPlus className="w-4 h-4" />

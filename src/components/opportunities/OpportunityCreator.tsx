@@ -22,6 +22,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { ImageUploader } from '@/components/feed/ImageUploader';
+import { createOpportunityDateTimeIso } from '@/lib/opportunityCalendar';
 import { toast } from 'sonner';
 
 interface OpportunityCreatorProps {
@@ -81,12 +82,15 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
 
     // For in-person events, combine date + times into ISO datetimes
     const isCalendar = actionType === 'calendar';
-    let startIso: string | undefined;
-    let endIso: string | undefined;
-    if (isCalendar && deadlineDate) {
-      if (startTime) startIso = new Date(`${deadlineDate}T${startTime}`).toISOString();
-      if (endTime) endIso = new Date(`${deadlineDate}T${endTime}`).toISOString();
-    }
+    const startIso = isCalendar
+      ? createOpportunityDateTimeIso(deadlineDate, startTime)
+      : undefined;
+    const endIso = isCalendar
+      ? createOpportunityDateTimeIso(deadlineDate, endTime)
+      : undefined;
+    const endOfDayIso = isCalendar
+      ? createOpportunityDateTimeIso(deadlineDate, '23:59')
+      : undefined;
 
     createOpportunity.mutate({
       title: title.trim(),
@@ -100,7 +104,7 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       experience_level: experienceLevel,
       roles: selectedRoles,
       requirements: [],
-      deadline: isCalendar ? (endIso || startIso || (deadlineDate ? new Date(`${deadlineDate}T23:59`).toISOString() : undefined)) : (deadlineDate || undefined),
+      deadline: isCalendar ? (endIso || startIso || endOfDayIso) : (deadlineDate || undefined),
       start_date: isCalendar ? startIso : undefined,
       duration: duration.trim() || undefined,
       tags: [],
