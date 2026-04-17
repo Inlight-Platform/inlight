@@ -164,7 +164,7 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
           </>
         )}
 
-        {opportunity.linkUrl && (
+        {opportunity.linkUrl && opportunity.actionType !== 'external' && (
           <>
             <Separator />
             <div className="py-4">
