@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { format, addMonths, isPast } from 'date-fns';
 import inlightLogo from '@/assets/inlight-logo.jpeg';
-import { Plus, Briefcase, TrendingUp, Clock, Loader2, Calendar } from 'lucide-react';
+import { Plus, Briefcase, TrendingUp, Clock, Loader2, Calendar, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OpportunityCard from '@/components/opportunities/OpportunityCard';
@@ -9,15 +9,23 @@ import OpportunityFilters from '@/components/opportunities/OpportunityFilters';
 import OpportunityCreator from '@/components/opportunities/OpportunityCreator';
 import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
 import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 
 /** Compact card matching the Open Roles style — title, company, deadline */
 const OpportunityCompactCard: React.FC<{ opportunity: OpportunityView }> = ({ opportunity }) => {
+  const { user } = useAuth();
+  const { isAdmin } = useAdmin();
+  const { deleteOpportunity } = useOpportunities();
   const [showDetail, setShowDetail] = useState(false);
   const [showApply, setShowApply] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+
+  const canDelete = !!user && (user.id === opportunity.postedBy || isAdmin);
 
   const deadlineDate = opportunity.deadline ? new Date(opportunity.deadline) : null;
   const applyBy = deadlineDate && !isNaN(deadlineDate.getTime())
@@ -28,9 +36,18 @@ const OpportunityCompactCard: React.FC<{ opportunity: OpportunityView }> = ({ op
     <>
       <div
         onClick={() => setShowDetail(true)}
-        className="flex flex-col justify-between gap-2 p-4 rounded-lg border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all cursor-pointer"
+        className="relative flex flex-col justify-between gap-2 p-4 rounded-lg border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all cursor-pointer"
       >
-        <div className="space-y-1">
+        {canDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowDelete(true); }}
+            className="absolute top-2 right-2 p-1 rounded-full hover:bg-destructive/20 transition-colors"
+            title="Delete opportunity"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+          </button>
+        )}
+        <div className="space-y-1 pr-6">
           <h3 className="font-semibold text-foreground text-sm leading-tight">
             {opportunity.roles?.[0] || opportunity.title}
           </h3>
@@ -61,6 +78,15 @@ const OpportunityCompactCard: React.FC<{ opportunity: OpportunityView }> = ({ op
         opportunityId={opportunity.id}
         opportunityTitle={opportunity.title}
         onApplicationSubmitted={() => setHasApplied(true)}
+      />
+
+      <DeleteConfirmDialog
+        open={showDelete}
+        onOpenChange={setShowDelete}
+        onConfirm={() => deleteOpportunity.mutate(opportunity.id)}
+        title="Delete Opportunity"
+        description="Are you sure you want to delete this opportunity? This action cannot be undone."
+        isPending={deleteOpportunity.isPending}
       />
     </>
   );
