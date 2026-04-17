@@ -6,7 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { stubUsers, stubConnections, stubMaterials, stubCredits, stubStories, stubMessages, stubThreads, stubEvents } from '@/data/stubData';
 import EventRsvpForm from '@/components/events/EventRsvpForm';
 import EventAdminPanel from '@/components/events/EventAdminPanel';
-import { ChevronLeft, Calendar, MapPin, Clock, Video, QrCode } from 'lucide-react';
+import CreatorDashboardPanel from '@/components/events/CreatorDashboardPanel';
+import { ChevronLeft, Calendar, MapPin, Clock, Video } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -136,8 +137,11 @@ const EventDetailPage: React.FC = () => {
       hour: 'numeric', minute: '2-digit', hour12: true,
     });
 
+  const canManage = !!currentUserId && (currentUserId === event.hostId || isAdmin);
+
   return (
     <div className="min-h-screen bg-background">
+      {canManage && <CreatorDashboardPanel eventId={eventId!} />}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
           <button
@@ -238,16 +242,6 @@ const EventDetailPage: React.FC = () => {
               stripePriceId={event.stripePriceId}
               paymentLinkUrl={event.paymentLinkUrl}
             />
-            {currentUserId && (currentUserId === event.hostId || isAdmin) && (
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() => navigate(`/manage-event/${eventId}/scanner`)}
-              >
-                <QrCode className="w-4 h-4" />
-                Open check-in scanner
-              </Button>
-            )}
             {currentUserId && currentUserId === event.hostId && (
               <EventAdminPanel eventId={eventId!} />
             )}
