@@ -351,6 +351,8 @@ const FeedPage: React.FC = () => {
       created_at: project.created_at,
       category: project.category,
       project_status: project.status,
+      link_url: project.link_url,
+      link_title: project.link_title,
       creator_profile: project.creator_profile
     }));
   }, [activeProjects]);

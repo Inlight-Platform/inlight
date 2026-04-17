@@ -633,6 +633,18 @@ const ProjectDetailPage: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Optional external link */}
+          {project.link_url && (
+            <a
+              href={project.link_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-md border border-border bg-secondary hover:bg-secondary/80 text-secondary-foreground text-sm font-medium transition-colors"
+            >
+              {project.link_title || 'Visit Link'}
+            </a>
+          )}
         </section>
 
         {/* Open Roles - Collapsible */}
