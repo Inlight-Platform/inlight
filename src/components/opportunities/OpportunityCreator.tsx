@@ -45,6 +45,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
   const [experienceLevel, setExperienceLevel] = useState('any');
   const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([]);
   const [deadlineDate, setDeadlineDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [duration, setDuration] = useState('');
   const [actionType, setActionType] = useState('apply');
   const [imageUrl, setImageUrl] = useState('');
@@ -77,6 +79,15 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       return;
     }
 
+    // For in-person events, combine date + times into ISO datetimes
+    const isCalendar = actionType === 'calendar';
+    let startIso: string | undefined;
+    let endIso: string | undefined;
+    if (isCalendar && deadlineDate) {
+      if (startTime) startIso = new Date(`${deadlineDate}T${startTime}`).toISOString();
+      if (endTime) endIso = new Date(`${deadlineDate}T${endTime}`).toISOString();
+    }
+
     createOpportunity.mutate({
       title: title.trim(),
       description: description.trim(),
@@ -89,8 +100,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       experience_level: experienceLevel,
       roles: selectedRoles,
       requirements: [],
-      deadline: deadlineDate || undefined,
-      start_date: undefined,
+      deadline: isCalendar ? (endIso || startIso || (deadlineDate ? new Date(`${deadlineDate}T23:59`).toISOString() : undefined)) : (deadlineDate || undefined),
+      start_date: isCalendar ? startIso : undefined,
       duration: duration.trim() || undefined,
       tags: [],
       is_featured: false,
@@ -110,6 +121,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
         setExperienceLevel('any');
         setSelectedRoles([]);
         setDeadlineDate('');
+        setStartTime('');
+        setEndTime('');
         setDuration('');
         setActionType('apply');
         setImageUrl('');
