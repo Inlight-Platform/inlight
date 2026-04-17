@@ -79,6 +79,19 @@ const ShowcasePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] text-white">
+      {isAdmin && (
+        <div className="absolute top-4 left-4 z-20">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/admin')}
+            className="text-white/70 hover:text-white hover:bg-white/10 gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Admin
+          </Button>
+        </div>
+      )}
       {/* Cinematic header */}
       <header className="relative py-16 px-6 text-center overflow-hidden">
         <div
