@@ -1,8 +1,9 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useShowcaseByProgram, useShowcaseProgram, ShowcaseProfile } from '@/hooks/useShowcase';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAdmin } from '@/hooks/useAdmin';
 
 const ShowcaseStudentCard: React.FC<{ profile: ShowcaseProfile; onViewProfile: (userId: string) => void }> = ({ profile, onViewProfile }) => {
   const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.stage_name || profile.display_name || 'Student';
@@ -58,6 +59,7 @@ const ShowcaseStudentCard: React.FC<{ profile: ShowcaseProfile; onViewProfile: (
 const ShowcasePage: React.FC = () => {
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
+  const { isAdmin } = useAdmin();
   const { data: students, isLoading } = useShowcaseByProgram(programId);
   const { data: program } = useShowcaseProgram(programId);
 
@@ -77,6 +79,19 @@ const ShowcasePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a0505] via-[#2a0a0a] to-[#0d0202] text-white">
+      {isAdmin && (
+        <div className="absolute top-4 left-4 z-20">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/admin')}
+            className="text-white/70 hover:text-white hover:bg-white/10 gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Admin
+          </Button>
+        </div>
+      )}
       {/* Cinematic header */}
       <header className="relative py-16 px-6 text-center overflow-hidden">
         <div
