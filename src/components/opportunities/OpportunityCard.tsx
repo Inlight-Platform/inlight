@@ -174,13 +174,13 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-xl font-semibold text-foreground mb-2">{opportunity.title}</h3>
+            <div className="flex items-center gap-2 mb-1">
               <Badge variant="outline" className={opportunityTypeColors[opportunity.type]}>
                 {opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}
               </Badge>
               {opportunity.status === 'closed' && <Badge variant="destructive">Closed</Badge>}
             </div>
-            <h3 className="text-xl font-semibold text-foreground mb-1">{opportunity.title}</h3>
             {opportunity.company && (
               <p className="text-muted-foreground flex items-center gap-1">
                 <Building2 className="w-4 h-4" />{opportunity.company}
