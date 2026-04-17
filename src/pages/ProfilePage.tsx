@@ -61,6 +61,7 @@ import { MediaUploader } from '@/components/profile/MediaUploader';
 import { AvatarCropper } from '@/components/profile/AvatarCropper';
 import { MyProjects } from '@/components/profile/MyProjects';
 import { UserPosts } from '@/components/profile/UserPosts';
+import { AttendedSection } from '@/components/profile/AttendedSection';
 import { SavedProjects } from '@/components/profile/SavedProjects';
 import { supabase } from '@/integrations/supabase/client';
 import { PostCreator, PostType } from '@/components/feed/PostCreator';
@@ -1778,6 +1779,23 @@ const ProfilePage: React.FC = () => {
           </CollapsibleContent>
         </section>
       </Collapsible>
+
+      {/* Attended - Collapsible */}
+      {resolvedUserId && (
+        <Collapsible defaultOpen className="border-b border-border">
+          <section className="px-4 sm:px-6 lg:px-8 py-4">
+            <CollapsibleTrigger className="flex items-center justify-between w-full group">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-display font-semibold">Attended</h2>
+              </div>
+              <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <AttendedSection userId={resolvedUserId} />
+            </CollapsibleContent>
+          </section>
+        </Collapsible>
+      )}
 
       {/* Projects - Collapsible */}
       <Collapsible open={projectsOpen} onOpenChange={setProjectsOpen} className="border-b border-border">

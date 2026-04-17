@@ -35,8 +35,9 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
     }
   };
 
-  // Only show image area for projects, events, and shows
-  const showImage = item.type === 'project' || item.type === 'event' || item.type === 'show';
+  // Show image area for any item that actually has an image, plus projects/events/shows (which fall back to placeholder)
+  const hasImage = !!item.image_url;
+  const showImage = hasImage || item.type === 'project' || item.type === 'event' || item.type === 'show';
   const showAnonymous = item.type === 'show' && item.is_anonymous;
   const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
