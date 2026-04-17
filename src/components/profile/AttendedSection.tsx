@@ -28,16 +28,18 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
     queryKey: ['attended-events', userId],
     queryFn: async () => {
       const [rsvpsRes, ticketsRes] = await Promise.all([
+        // Only count RSVPs that were physically checked in via QR scan
         supabase
           .from('event_rsvps')
-          .select('event_id, status, created_at, events!inner(id, title, description, image_url, event_date, location)')
+          .select('event_id, attended, attended_at, events!inner(id, title, description, image_url, event_date, location)')
           .eq('user_id', userId)
-          .eq('status', 'going'),
+          .eq('attended', true),
+        // Only count tickets that were physically scanned at the door
         supabase
           .from('tickets')
-          .select('event_id, status, created_at, events!inner(id, title, description, image_url, event_date, location)')
+          .select('event_id, checked_in_at, events!inner(id, title, description, image_url, event_date, location)')
           .eq('user_id', userId)
-          .eq('status', 'paid'),
+          .not('checked_in_at', 'is', null),
       ]);
 
       const map = new Map<string, AttendedEvent>();
@@ -82,7 +84,7 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
   if (attended.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-4">
-        No attended events yet. RSVPs and tickets will appear here.
+        No attended events yet. Events appear here once you're checked in at the door.
       </p>
     );
   }
