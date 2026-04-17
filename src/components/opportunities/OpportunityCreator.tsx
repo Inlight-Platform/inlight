@@ -263,17 +263,51 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
 
             <div>
               <Label htmlFor="actionType">Response Type</Label>
-              <Select value={actionType} onValueChange={setActionType}>
+              <Select value={actionType} onValueChange={(v) => {
+                setActionType(v);
+                if (v !== 'external') {
+                  setExternalUrl('');
+                  setExternalLabel('Apply Externally');
+                }
+              }}>
                 <SelectTrigger className="mt-1 bg-background">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
-                  <SelectItem value="apply">Apply Online</SelectItem>
+                  <SelectItem value="apply">Inlight Application</SelectItem>
+                  <SelectItem value="external">External Application</SelectItem>
                   <SelectItem value="calendar">In-Person (Add to Calendar)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+
+          {/* External Application fields */}
+          {actionType === 'external' && (
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg border border-border bg-muted/30">
+              <div className="col-span-2">
+                <Label htmlFor="externalUrl">External URL *</Label>
+                <Input
+                  id="externalUrl"
+                  type="url"
+                  placeholder="https://..."
+                  value={externalUrl}
+                  onChange={(e) => setExternalUrl(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="externalLabel">Button Label</Label>
+                <Input
+                  id="externalLabel"
+                  placeholder="Apply on Casting Networks"
+                  value={externalLabel}
+                  onChange={(e) => setExternalLabel(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Roles Needed */}
           <div>
