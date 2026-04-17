@@ -116,6 +116,10 @@ const AdminPage: React.FC = () => {
           <EventsManager />
         </TabsContent>
 
+        <TabsContent value="sites">
+          <SitesManager />
+        </TabsContent>
+
         <TabsContent value="broadway">
           <BroadwayShowsManager category="broadway" />
         </TabsContent>
