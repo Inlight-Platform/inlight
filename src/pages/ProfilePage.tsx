@@ -929,7 +929,7 @@ const ProfilePage: React.FC = () => {
         {/* Profile info */}
         <div className="relative px-4 sm:px-6 lg:px-8 pb-6">
           {/* Avatar */}
-          <div className="absolute -top-16 sm:-top-20 left-4 sm:left-6 lg:left-8">
+          <div className="absolute -top-16 sm:-top-20 left-4 sm:left-6 lg:left-8" data-tour="profile-avatar">
             <div className="relative">
               <img
                 src={displayAvatar || '/placeholder.svg'}
@@ -1034,7 +1034,7 @@ const ProfilePage: React.FC = () => {
               )}
               
               {/* Editable Role, Location, Pronouns */}
-              <div className="flex flex-wrap items-center gap-2 mt-2">
+              <div className="flex flex-wrap items-center gap-2 mt-2" data-tour="profile-roles">
                 {/* Role Badges - Multiple roles support (up to 4) */}
                 {isOwnProfile && isEditingRole ? (
                   <div className="flex items-center gap-1">
@@ -1687,7 +1687,7 @@ const ProfilePage: React.FC = () => {
       
       {/* Credits - Collapsible */}
       <Collapsible open={creditsOpen} onOpenChange={setCreditsOpen} className="border-b border-border">
-        <section className="px-4 sm:px-6 lg:px-8 py-4">
+        <section className="px-4 sm:px-6 lg:px-8 py-4" data-tour="profile-credits">
           <CollapsibleTrigger className="flex items-center justify-between w-full group">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-display font-semibold">Credits</h2>

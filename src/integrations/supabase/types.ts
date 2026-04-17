@@ -955,6 +955,7 @@ export type Database = {
           gear_list: string[] | null
           graduation_status: string | null
           graduation_year: number | null
+          has_completed_tour: boolean
           headline: string | null
           id: string
           instagram_url: string | null
@@ -992,6 +993,7 @@ export type Database = {
           gear_list?: string[] | null
           graduation_status?: string | null
           graduation_year?: number | null
+          has_completed_tour?: boolean
           headline?: string | null
           id?: string
           instagram_url?: string | null
@@ -1029,6 +1031,7 @@ export type Database = {
           gear_list?: string[] | null
           graduation_status?: string | null
           graduation_year?: number | null
+          has_completed_tour?: boolean
           headline?: string | null
           id?: string
           instagram_url?: string | null
