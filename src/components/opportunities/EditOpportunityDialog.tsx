@@ -95,6 +95,8 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
 
   const handleSubmit = () => {
     if (!title.trim() || !description.trim()) return;
+    const isExternal = actionType === 'external';
+    if (isExternal && !externalUrl.trim()) return;
 
     updateOpportunity.mutate({
       id: opportunity.id,
@@ -113,8 +115,8 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
       duration: duration.trim() || undefined,
       action_type: actionType,
       image_url: imageUrl || null,
-      link_url: linkUrl.trim() || null,
-      link_title: linkTitle.trim() || null,
+      link_url: isExternal ? externalUrl.trim() : (linkUrl.trim() || null),
+      link_title: isExternal ? (externalLabel.trim() || 'Apply Externally') : (linkTitle.trim() || null),
     }, {
       onSuccess: () => onOpenChange(false),
     });
