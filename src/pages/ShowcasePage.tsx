@@ -59,6 +59,7 @@ const ShowcaseStudentCard: React.FC<{ profile: ShowcaseProfile; onViewProfile: (
 const ShowcasePage: React.FC = () => {
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
+  const { isAdmin } = useAdmin();
   const { data: students, isLoading } = useShowcaseByProgram(programId);
   const { data: program } = useShowcaseProgram(programId);
 
