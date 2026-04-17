@@ -52,6 +52,8 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
   const [imageUrl, setImageUrl] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
+  const [externalUrl, setExternalUrl] = useState('');
+  const [externalLabel, setExternalLabel] = useState('Apply Externally');
 
   useEffect(() => {
     if (open && opportunity) {
