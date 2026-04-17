@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import {
-  MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2, CheckCircle2, CalendarPlus, Pencil
+  MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2, CheckCircle2, CalendarPlus, Pencil, ExternalLink
 } from 'lucide-react';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
@@ -54,6 +54,11 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {opportunity.imageUrl && (
+          <div className="w-full aspect-video bg-muted overflow-hidden rounded-lg mb-4 -mt-2">
+            <img src={opportunity.imageUrl} alt={opportunity.title} className="w-full h-full object-cover" />
+          </div>
+        )}
         <SheetHeader className="space-y-3 pb-4">
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={opportunityTypeColors[opportunity.type]}>
@@ -155,6 +160,22 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
                   <Badge key={tag} variant="outline" className="text-xs text-muted-foreground">#{tag}</Badge>
                 ))}
               </div>
+            </div>
+          </>
+        )}
+
+        {opportunity.linkUrl && (
+          <>
+            <Separator />
+            <div className="py-4">
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={(e) => { e.stopPropagation(); window.open(opportunity.linkUrl, '_blank', 'noopener,noreferrer'); }}
+              >
+                <ExternalLink className="w-4 h-4" />
+                {opportunity.linkTitle || 'Visit Link'}
+              </Button>
             </div>
           </>
         )}

@@ -702,8 +702,11 @@ export type Database = {
           duration: string | null
           experience_level: string
           id: string
+          image_url: string | null
           is_featured: boolean
           is_remote: boolean
+          link_title: string | null
+          link_url: string | null
           location: string | null
           posted_by: string
           requirements: string[]
@@ -725,8 +728,11 @@ export type Database = {
           duration?: string | null
           experience_level?: string
           id?: string
+          image_url?: string | null
           is_featured?: boolean
           is_remote?: boolean
+          link_title?: string | null
+          link_url?: string | null
           location?: string | null
           posted_by: string
           requirements?: string[]
@@ -748,8 +754,11 @@ export type Database = {
           duration?: string | null
           experience_level?: string
           id?: string
+          image_url?: string | null
           is_featured?: boolean
           is_remote?: boolean
+          link_title?: string | null
+          link_url?: string | null
           location?: string | null
           posted_by?: string
           requirements?: string[]

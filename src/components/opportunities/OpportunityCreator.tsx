@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { useOpportunities } from '@/hooks/useOpportunities';
+import { ImageUploader } from '@/components/feed/ImageUploader';
 import { toast } from 'sonner';
 
 interface OpportunityCreatorProps {
@@ -46,6 +47,9 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
   const [deadlineDate, setDeadlineDate] = useState('');
   const [duration, setDuration] = useState('');
   const [actionType, setActionType] = useState('apply');
+  const [imageUrl, setImageUrl] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
 
   const allRoles: UserRole[] = ['Actor', 'Director', 'Producer', 'Musician', 'Gaffer', 'Grip', 'DP', 'AD', 'Extras', 'Singer', 'Dancer', 'Designer'];
 
@@ -83,6 +87,9 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       tags: [],
       is_featured: false,
       action_type: actionType,
+      image_url: imageUrl || undefined,
+      link_url: linkUrl.trim() || undefined,
+      link_title: linkTitle.trim() || undefined,
     }, {
       onSuccess: () => {
         setTitle('');
@@ -97,6 +104,9 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
         setDeadlineDate('');
         setDuration('');
         setActionType('apply');
+        setImageUrl('');
+        setLinkUrl('');
+        setLinkTitle('');
         onOpenChange(false);
       },
     });
@@ -269,6 +279,46 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
                   {role}
                 </Badge>
               ))}
+            </div>
+          </div>
+
+          {/* Image */}
+          {user && (
+            <div>
+              <Label>Image (optional)</Label>
+              <div className="mt-2">
+                <ImageUploader
+                  userId={user.id}
+                  onImageUploaded={setImageUrl}
+                  currentImageUrl={imageUrl || undefined}
+                  onRemoveImage={() => setImageUrl('')}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Link */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="linkUrl">Link URL (optional)</Label>
+              <Input
+                id="linkUrl"
+                type="url"
+                placeholder="https://example.com"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="linkTitle">Link Button Label</Label>
+              <Input
+                id="linkTitle"
+                placeholder="e.g., Visit Website"
+                value={linkTitle}
+                onChange={(e) => setLinkTitle(e.target.value)}
+                className="mt-1"
+              />
             </div>
           </div>
 

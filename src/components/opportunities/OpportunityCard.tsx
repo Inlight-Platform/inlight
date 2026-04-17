@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { 
   MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2,
-  CheckCircle2, Bookmark, BookmarkCheck, CalendarPlus, Pencil, Trash2
+  CheckCircle2, Bookmark, BookmarkCheck, CalendarPlus, Pencil, Trash2, ExternalLink
 } from 'lucide-react';
 import { useSavedItems } from '@/hooks/useSavedItems';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -161,6 +161,16 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border-border/50 hover:border-primary/30 cursor-pointer" onClick={() => setShowDetailSheet(true)}>
+      {opportunity.imageUrl && (
+        <div className="relative w-full aspect-video bg-muted overflow-hidden">
+          <img
+            src={opportunity.imageUrl}
+            alt={opportunity.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -297,31 +307,44 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
             )}
           </div>
           
-          {opportunity.actionType === 'calendar' ? (
-            <Button 
-              size="sm"
-              variant="outline"
-              onClick={handleAddToCalendar}
-              className="gap-1.5"
-            >
-              <CalendarPlus className="w-4 h-4" />
-              Add to Calendar
-            </Button>
-          ) : hasApplied ? (
-            <div className="flex items-center gap-2 text-sm">
-              <CheckCircle2 className="w-4 h-4 text-green-500" />
-              <span className="text-green-500 font-medium">Applied</span>
-            </div>
-          ) : (
-            <Button 
-              size="sm"
-              disabled={isDeadlinePast || opportunity.status !== 'open'}
-              onClick={handleApply}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Apply Now
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {opportunity.linkUrl && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => { e.stopPropagation(); window.open(opportunity.linkUrl, '_blank', 'noopener,noreferrer'); }}
+                className="gap-1.5"
+              >
+                <ExternalLink className="w-4 h-4" />
+                {opportunity.linkTitle || 'Visit Link'}
+              </Button>
+            )}
+            {opportunity.actionType === 'calendar' ? (
+              <Button 
+                size="sm"
+                variant="outline"
+                onClick={handleAddToCalendar}
+                className="gap-1.5"
+              >
+                <CalendarPlus className="w-4 h-4" />
+                Add to Calendar
+              </Button>
+            ) : hasApplied ? (
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <span className="text-green-500 font-medium">Applied</span>
+              </div>
+            ) : (
+              <Button 
+                size="sm"
+                disabled={isDeadlinePast || opportunity.status !== 'open'}
+                onClick={handleApply}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Apply Now
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
 

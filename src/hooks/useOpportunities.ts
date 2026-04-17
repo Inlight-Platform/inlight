@@ -23,6 +23,9 @@ export interface DBOpportunity {
   tags: string[];
   is_featured: boolean;
   action_type: string;
+  image_url: string | null;
+  link_url: string | null;
+  link_title: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -49,6 +52,9 @@ export interface OpportunityView {
   createdAt: string;
   isFeatured: boolean;
   actionType: string;
+  imageUrl?: string;
+  linkUrl?: string;
+  linkTitle?: string;
   applicants: { userId: string; appliedAt: string; status: string }[];
 }
 
@@ -74,7 +80,10 @@ function toView(row: DBOpportunity): OpportunityView {
     createdAt: row.created_at,
     isFeatured: row.is_featured,
     actionType: row.action_type || 'apply',
-    applicants: [], // Will be enriched separately if needed
+    imageUrl: row.image_url || undefined,
+    linkUrl: row.link_url || undefined,
+    linkTitle: row.link_title || undefined,
+    applicants: [],
   };
 }
 
@@ -114,6 +123,9 @@ export function useOpportunities() {
       tags: string[];
       is_featured: boolean;
       action_type: string;
+      image_url?: string;
+      link_url?: string;
+      link_title?: string;
     }) => {
       if (!user) throw new Error('Not authenticated');
 
@@ -136,6 +148,9 @@ export function useOpportunities() {
         tags: input.tags,
         is_featured: input.is_featured,
         action_type: input.action_type,
+        image_url: input.image_url || null,
+        link_url: input.link_url || null,
+        link_title: input.link_title || null,
       });
 
       if (error) throw error;
@@ -166,6 +181,9 @@ export function useOpportunities() {
       start_date?: string;
       duration?: string;
       action_type: string;
+      image_url?: string | null;
+      link_url?: string | null;
+      link_title?: string | null;
     }) => {
       if (!user) throw new Error('Not authenticated');
 
@@ -186,6 +204,9 @@ export function useOpportunities() {
           start_date: input.start_date || null,
           duration: input.duration || null,
           action_type: input.action_type,
+          image_url: input.image_url ?? null,
+          link_url: input.link_url ?? null,
+          link_title: input.link_title ?? null,
         })
         .eq('id', input.id)
         .eq('posted_by', user.id);
