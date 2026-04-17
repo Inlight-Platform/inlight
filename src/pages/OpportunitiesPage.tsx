@@ -209,9 +209,6 @@ const OpportunitiesPage: React.FC = () => {
                 <TrendingUp className="w-4 h-4 mr-2" />
                 Discover
               </TabsTrigger>
-              <TabsTrigger value="posted" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20 whitespace-nowrap">
-                <span className="hidden sm:inline">My </span>Posts ({myOpportunities.length})
-              </TabsTrigger>
               <TabsTrigger value="expired" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20 whitespace-nowrap">
                 <Clock className="w-4 h-4 mr-2" />
                 Expired ({expiredOpportunities.length})
@@ -255,30 +252,6 @@ const OpportunitiesPage: React.FC = () => {
                  {isAdmin && (
                    <Button onClick={() => setShowCreator(true)}>
                      Post an Opportunity
-                   </Button>
-                 )}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Posted Tab */}
-          <TabsContent value="posted" className="space-y-4">
-            {myOpportunities.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {myOpportunities.map((opportunity) => (
-                  <OpportunityCard key={opportunity.id} opportunity={opportunity} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Plus className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No opportunities posted</h3>
-                <p className="text-muted-foreground mb-4">
-                  Share opportunities with the creative community
-                </p>
-                 {isAdmin && (
-                   <Button onClick={() => setShowCreator(true)}>
-                     Post Your First Opportunity
                    </Button>
                  )}
               </div>
