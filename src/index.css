@@ -452,3 +452,73 @@
     padding-top: env(safe-area-inset-top);
   }
 }
+/* ============================================ */
+/* Onboarding Tour (driver.js) theming          */
+/* ============================================ */
+.driver-popover.inlight-tour-popover {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.6);
+  max-width: 360px;
+  font-family: inherit;
+}
+.driver-popover.inlight-tour-popover .driver-popover-title {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+.driver-popover.inlight-tour-popover .driver-popover-description {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.driver-popover.inlight-tour-popover .driver-popover-footer {
+  margin-top: 14px;
+  gap: 8px;
+}
+.driver-popover.inlight-tour-popover .driver-popover-prev-btn,
+.driver-popover.inlight-tour-popover .driver-popover-next-btn {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  text-shadow: none;
+  box-shadow: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.driver-popover.inlight-tour-popover .driver-popover-prev-btn {
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+.driver-popover.inlight-tour-popover .driver-popover-prev-btn:hover,
+.driver-popover.inlight-tour-popover .driver-popover-next-btn:hover {
+  opacity: 0.9;
+}
+.driver-popover.inlight-tour-popover .driver-popover-close-btn {
+  color: hsl(var(--muted-foreground));
+  font-size: 18px;
+  top: 10px;
+  right: 12px;
+}
+.driver-popover.inlight-tour-popover .driver-popover-arrow {
+  border-color: hsl(var(--card));
+}
+.driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-bottom-color: hsl(var(--card));
+}
+.driver-popover-arrow-side-top.driver-popover-arrow {
+  border-top-color: hsl(var(--card));
+}
+.driver-popover-arrow-side-left.driver-popover-arrow {
+  border-left-color: hsl(var(--card));
+}
+.driver-popover-arrow-side-right.driver-popover-arrow {
+  border-right-color: hsl(var(--card));
+}
