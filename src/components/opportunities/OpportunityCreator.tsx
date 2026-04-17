@@ -71,6 +71,12 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       return;
     }
 
+    const isExternal = actionType === 'external';
+    if (isExternal && !externalUrl.trim()) {
+      toast.error('Please provide an External URL');
+      return;
+    }
+
     createOpportunity.mutate({
       title: title.trim(),
       description: description.trim(),
@@ -90,8 +96,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       is_featured: false,
       action_type: actionType,
       image_url: imageUrl || undefined,
-      link_url: linkUrl.trim() || undefined,
-      link_title: linkTitle.trim() || undefined,
+      link_url: isExternal ? externalUrl.trim() : (linkUrl.trim() || undefined),
+      link_title: isExternal ? (externalLabel.trim() || 'Apply Externally') : (linkTitle.trim() || undefined),
     }, {
       onSuccess: () => {
         setTitle('');
@@ -109,6 +115,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
         setImageUrl('');
         setLinkUrl('');
         setLinkTitle('');
+        setExternalUrl('');
+        setExternalLabel('Apply Externally');
         onOpenChange(false);
       },
     });
