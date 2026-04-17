@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { safeBack } from '@/lib/safeBack';
 import { useStore } from '../store/useStore';
 import { Input } from '@/components/ui/input';
 import { 
@@ -57,7 +58,7 @@ const DirectoryPage: React.FC = () => {
         <div className="px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4 mb-4">
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => safeBack(navigate, '/people')}
               className="p-2 rounded-full hover:bg-accent transition-colors"
               aria-label="Go back"
             >

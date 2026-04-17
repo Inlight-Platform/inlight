@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { safeBack } from '@/lib/safeBack';
 import { useStore } from '@/store/useStore';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -139,7 +140,7 @@ const EventDetailPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => safeBack(navigate, '/events')}
             className="p-2 rounded-full hover:bg-accent transition-colors"
           >
             <ChevronLeft className="w-6 h-6" />

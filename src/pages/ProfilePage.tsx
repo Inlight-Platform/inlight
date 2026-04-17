@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { safeBack } from '@/lib/safeBack';
 import { useStore, User, Visibility } from '../store/useStore';
 import { useTrackProfileView, useUpdateEngagement } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
@@ -883,7 +884,7 @@ const ProfilePage: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Back button */}
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => safeBack(navigate, '/people')}
         className="fixed top-4 left-4 z-50 p-2 rounded-full bg-card/80 backdrop-blur-sm shadow-card hover:bg-accent transition-colors"
         aria-label="Go back"
       >

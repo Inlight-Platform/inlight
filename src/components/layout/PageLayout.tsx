@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import MainNav from './MainNav';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
 import OnboardingTour from '@/components/tour/OnboardingTour';
+import { recordRoute } from '@/lib/safeBack';
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -10,6 +12,13 @@ interface PageLayoutProps {
 
 export const PageLayout: React.FC<PageLayoutProps> = ({ children }) => {
   const { collapsed } = useSidebarState();
+  const location = useLocation();
+
+  // Track the most recently visited sidebar route so back-arrows can
+  // safely return to it instead of landing on a non-sidebar URL.
+  useEffect(() => {
+    recordRoute(location.pathname);
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-[hsl(222_35%_6%)] via-[hsl(222_38%_5%)] to-[hsl(222_40%_4%)]">
