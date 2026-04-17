@@ -1240,6 +1240,8 @@ export type Database = {
           header_image_url: string | null
           id: string
           is_public: boolean | null
+          link_title: string | null
+          link_url: string | null
           main_image_url: string | null
           post_approval_required: boolean
           start_date: string | null
@@ -1258,6 +1260,8 @@ export type Database = {
           header_image_url?: string | null
           id?: string
           is_public?: boolean | null
+          link_title?: string | null
+          link_url?: string | null
           main_image_url?: string | null
           post_approval_required?: boolean
           start_date?: string | null
@@ -1276,6 +1280,8 @@ export type Database = {
           header_image_url?: string | null
           id?: string
           is_public?: boolean | null
+          link_title?: string | null
+          link_url?: string | null
           main_image_url?: string | null
           post_approval_required?: boolean
           start_date?: string | null
