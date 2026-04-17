@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
+import { ImageUploader } from '@/components/feed/ImageUploader';
+import { useAuth } from '@/hooks/useAuth';
 
 interface EditOpportunityDialogProps {
   open: boolean;
@@ -32,6 +34,7 @@ const allRoles: UserRole[] = ['Actor', 'Director', 'Producer', 'Musician', 'Gaff
 
 const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onOpenChange, opportunity }) => {
   const { updateOpportunity } = useOpportunities();
+  const { user } = useAuth();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -46,6 +49,9 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
   const [deadlineDate, setDeadlineDate] = useState('');
   const [duration, setDuration] = useState('');
   const [actionType, setActionType] = useState('apply');
+  const [imageUrl, setImageUrl] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
 
   useEffect(() => {
     if (open && opportunity) {
@@ -63,6 +69,9 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
       setDeadlineDate(dl.includes('T') ? dl.split('T')[0] : dl);
       setDuration(opportunity.duration || '');
       setActionType(opportunity.actionType || 'apply');
+      setImageUrl(opportunity.imageUrl || '');
+      setLinkUrl(opportunity.linkUrl || '');
+      setLinkTitle(opportunity.linkTitle || '');
     }
   }, [open, opportunity]);
 
@@ -91,6 +100,9 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
       start_date: undefined,
       duration: duration.trim() || undefined,
       action_type: actionType,
+      image_url: imageUrl || null,
+      link_url: linkUrl.trim() || null,
+      link_title: linkTitle.trim() || null,
     }, {
       onSuccess: () => onOpenChange(false),
     });

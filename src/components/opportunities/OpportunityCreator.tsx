@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { useOpportunities } from '@/hooks/useOpportunities';
+import { ImageUploader } from '@/components/feed/ImageUploader';
 import { toast } from 'sonner';
 
 interface OpportunityCreatorProps {
@@ -46,6 +47,9 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
   const [deadlineDate, setDeadlineDate] = useState('');
   const [duration, setDuration] = useState('');
   const [actionType, setActionType] = useState('apply');
+  const [imageUrl, setImageUrl] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
 
   const allRoles: UserRole[] = ['Actor', 'Director', 'Producer', 'Musician', 'Gaffer', 'Grip', 'DP', 'AD', 'Extras', 'Singer', 'Dancer', 'Designer'];
 
@@ -83,6 +87,9 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       tags: [],
       is_featured: false,
       action_type: actionType,
+      image_url: imageUrl || undefined,
+      link_url: linkUrl.trim() || undefined,
+      link_title: linkTitle.trim() || undefined,
     }, {
       onSuccess: () => {
         setTitle('');
@@ -97,6 +104,9 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
         setDeadlineDate('');
         setDuration('');
         setActionType('apply');
+        setImageUrl('');
+        setLinkUrl('');
+        setLinkTitle('');
         onOpenChange(false);
       },
     });
