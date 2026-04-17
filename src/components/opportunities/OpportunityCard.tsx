@@ -310,7 +310,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
           </div>
           
           <div className="flex items-center gap-2">
-            {opportunity.linkUrl && (
+            {opportunity.linkUrl && opportunity.actionType !== 'external' && (
               <Button
                 size="sm"
                 variant="outline"
@@ -330,6 +330,16 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
               >
                 <CalendarPlus className="w-4 h-4" />
                 Add to Calendar
+              </Button>
+            ) : opportunity.actionType === 'external' ? (
+              <Button
+                size="sm"
+                disabled={isDeadlinePast || opportunity.status !== 'open' || !opportunity.linkUrl}
+                onClick={handleApply}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+              >
+                <ExternalLink className="w-4 h-4" />
+                {opportunity.linkTitle || 'Apply Externally'}
               </Button>
             ) : hasApplied ? (
               <div className="flex items-center gap-2 text-sm">
