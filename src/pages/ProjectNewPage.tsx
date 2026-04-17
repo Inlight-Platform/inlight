@@ -163,7 +163,7 @@ const ProjectNewPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => safeBack(navigate, '/projects')}
             className="p-2 rounded-full hover:bg-accent transition-colors"
           >
             <ChevronLeft className="w-6 h-6" />
@@ -392,7 +392,7 @@ const ProjectNewPage: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate(-1)}
+              onClick={() => safeBack(navigate, '/projects')}
               className="flex-1"
             >
               Cancel

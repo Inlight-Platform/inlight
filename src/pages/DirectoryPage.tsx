@@ -57,7 +57,7 @@ const DirectoryPage: React.FC = () => {
         <div className="px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4 mb-4">
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => safeBack(navigate, '/people')}
               className="p-2 rounded-full hover:bg-accent transition-colors"
               aria-label="Go back"
             >

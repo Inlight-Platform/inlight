@@ -377,7 +377,7 @@ const CompanyProfilePage: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Back button - matches personal profile */}
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => safeBack(navigate, '/people')}
         className="fixed top-4 left-4 z-50 p-2 rounded-full bg-card/80 backdrop-blur-sm shadow-card hover:bg-accent transition-colors"
         aria-label="Go back"
       >

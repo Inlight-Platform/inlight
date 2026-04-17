@@ -219,7 +219,7 @@ const NetworkPage: React.FC = () => {
           <div className="flex items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate(-1)}
+                onClick={() => safeBack(navigate, '/feed')}
                 className="p-2 rounded-full hover:bg-accent transition-colors"
                 aria-label="Go back"
               >

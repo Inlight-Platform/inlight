@@ -243,7 +243,7 @@ const MySavesPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate(-1)} className="p-1 rounded-full hover:bg-accent">
+            <button onClick={() => safeBack(navigate, '/feed')} className="p-1 rounded-full hover:bg-accent">
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-3">
