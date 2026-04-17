@@ -94,6 +94,8 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
     e.stopPropagation();
     if (opportunity.actionType === 'calendar') {
       handleAddToCalendar(e);
+    } else if (opportunity.actionType === 'external' && opportunity.linkUrl) {
+      window.open(opportunity.linkUrl, '_blank', 'noopener,noreferrer');
     } else {
       setShowApplicationDialog(true);
     }
