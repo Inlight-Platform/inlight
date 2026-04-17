@@ -225,6 +225,23 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
               <CalendarPlus className="w-4 h-4" />
               Add to Calendar
             </Button>
+          ) : opportunity.actionType === 'external' ? (
+            <Button
+              size="sm"
+              asChild
+              disabled={isDeadlinePast || opportunity.status !== 'open' || !opportunity.linkUrl}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+            >
+              <a
+                href={opportunity.linkUrl || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink className="w-4 h-4" />
+                {opportunity.linkTitle || 'Apply Externally'}
+              </a>
+            </Button>
           ) : hasApplied ? (
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
