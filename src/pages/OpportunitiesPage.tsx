@@ -49,11 +49,13 @@ const OpportunityCompactCard: React.FC<{ opportunity: OpportunityView }> = ({ op
         )}
         <div className="space-y-1 pr-6">
           <h3 className="font-semibold text-foreground text-sm leading-tight">
-            {opportunity.roles?.[0] || opportunity.title}
+            {opportunity.title}
           </h3>
-          <p className="text-xs text-muted-foreground truncate">
-            {opportunity.company || opportunity.title}
-          </p>
+          {opportunity.roles?.[0] && (
+            <p className="text-xs text-muted-foreground truncate">
+              {opportunity.roles[0]}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
           <Calendar className="w-3 h-3 flex-shrink-0" />
