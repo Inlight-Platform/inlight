@@ -110,9 +110,9 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
     const dateStr = deadlineDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     // Use end time if available, otherwise default to 2 hours after start
     let endDate: Date;
-    if (opportunity.startDate && opportunity.deadline) {
-      const baseDateStr = opportunity.deadline.split('T')[0];
-      endDate = new Date(`${baseDateStr}T${opportunity.startDate}`);
+    if (opportunity.startDate) {
+      const sd = new Date(opportunity.startDate);
+      endDate = !isNaN(sd.getTime()) ? sd : new Date(deadlineDate.getTime() + 2 * 60 * 60 * 1000);
     } else {
       endDate = new Date(deadlineDate.getTime() + 2 * 60 * 60 * 1000);
     }
@@ -233,12 +233,17 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
                 ? 'Deadline passed' 
                 : (() => {
                     const dl = opportunity.deadline!;
+                    const dlDate = new Date(dl);
+                    if (isNaN(dlDate.getTime())) return 'Date TBD';
                     const hasTime = dl.includes('T');
-                    const dateFormatted = format(new Date(dl), hasTime ? 'MMM d, yyyy' : 'MMM d, yyyy');
-                    const startFormatted = hasTime ? format(new Date(dl), 'h:mm a') : '';
-                    const endFormatted = opportunity.startDate ? format(new Date(`2000-01-01T${opportunity.startDate}`), 'h:mm a') : '';
+                    const dateFormatted = format(dlDate, 'MMM d, yyyy');
+                    const startDate = opportunity.startDate ? new Date(opportunity.startDate) : null;
+                    const startValid = startDate && !isNaN(startDate.getTime());
+                    const startFormatted = startValid ? format(startDate!, 'h:mm a') : '';
+                    const endFormatted = hasTime ? format(dlDate, 'h:mm a') : '';
                     if (startFormatted && endFormatted) return `${dateFormatted} · ${startFormatted} – ${endFormatted}`;
                     if (startFormatted) return `${dateFormatted} · ${startFormatted}`;
+                    if (endFormatted) return `${dateFormatted} · ${endFormatted}`;
                     return `Apply by ${dateFormatted}`;
                   })()}
             </span>

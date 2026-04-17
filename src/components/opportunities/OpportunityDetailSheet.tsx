@@ -117,12 +117,17 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
                 ? 'Deadline passed' 
                 : (() => {
                     const dl = opportunity.deadline!;
+                    const dlDate = new Date(dl);
+                    if (isNaN(dlDate.getTime())) return 'Date TBD';
                     const hasTime = dl.includes('T');
-                    const dateFormatted = format(new Date(dl), 'MMM d, yyyy');
-                    const startFormatted = hasTime ? format(new Date(dl), 'h:mm a') : '';
-                    const endFormatted = opportunity.startDate ? format(new Date(`2000-01-01T${opportunity.startDate}`), 'h:mm a') : '';
+                    const dateFormatted = format(dlDate, 'MMM d, yyyy');
+                    const startDate = opportunity.startDate ? new Date(opportunity.startDate) : null;
+                    const startValid = startDate && !isNaN(startDate.getTime());
+                    const startFormatted = startValid ? format(startDate!, 'h:mm a') : '';
+                    const endFormatted = hasTime ? format(dlDate, 'h:mm a') : '';
                     if (startFormatted && endFormatted) return `${dateFormatted} · ${startFormatted} – ${endFormatted}`;
                     if (startFormatted) return `${dateFormatted} · ${startFormatted}`;
+                    if (endFormatted) return `${dateFormatted} · ${endFormatted}`;
                     return `Apply by ${dateFormatted}`;
                   })()}
             </span>
