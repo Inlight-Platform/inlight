@@ -322,6 +322,35 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
             </div>
           )}
 
+          {/* In-Person time fields */}
+          {actionType === 'calendar' && (
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg border border-border bg-muted/30">
+              <div className="col-span-2 text-sm text-muted-foreground">
+                Add a start and end time so attendees can save the event to their calendar with the correct time.
+              </div>
+              <div>
+                <Label htmlFor="startTime">Start Time</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="endTime">End Time</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Roles Needed */}
           <div>
             <Label>Roles Needed</Label>
