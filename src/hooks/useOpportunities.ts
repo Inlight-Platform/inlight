@@ -208,8 +208,7 @@ export function useOpportunities() {
           link_url: input.link_url ?? null,
           link_title: input.link_title ?? null,
         })
-        .eq('id', input.id)
-        .eq('posted_by', user.id);
+        .eq('id', input.id);
 
       if (error) throw error;
     },
