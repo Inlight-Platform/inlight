@@ -29,7 +29,7 @@ interface OpportunityCreatorProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician' | 'Gaffer' | 'Grip' | 'DP' | 'AD' | 'Extras' | 'Singer' | 'Dancer' | 'Designer';
+type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician' | 'Gaffer' | 'Grip' | 'DP' | 'AD' | 'Extras' | 'Singer' | 'Dancer' | 'Designer' | 'Technical';
 
 const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenChange }) => {
   const { user } = useAuth();
@@ -53,7 +53,7 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
   const [externalUrl, setExternalUrl] = useState('');
   const [externalLabel, setExternalLabel] = useState('Apply Externally');
 
-  const allRoles: UserRole[] = ['Actor', 'Director', 'Producer', 'Musician', 'Gaffer', 'Grip', 'DP', 'AD', 'Extras', 'Singer', 'Dancer', 'Designer'];
+  const allRoles: UserRole[] = ['Actor', 'Director', 'Producer', 'Musician', 'Gaffer', 'Grip', 'DP', 'AD', 'Extras', 'Singer', 'Dancer', 'Designer', 'Technical'];
 
   const toggleRole = (role: UserRole) => {
     if (selectedRoles.includes(role)) {
