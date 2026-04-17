@@ -70,10 +70,20 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
       const dl = opportunity.deadline || '';
       setDeadlineDate(dl.includes('T') ? dl.split('T')[0] : dl);
       setDuration(opportunity.duration || '');
-      setActionType(opportunity.actionType || 'apply');
+      const at = opportunity.actionType || 'apply';
+      setActionType(at);
       setImageUrl(opportunity.imageUrl || '');
-      setLinkUrl(opportunity.linkUrl || '');
-      setLinkTitle(opportunity.linkTitle || '');
+      if (at === 'external') {
+        setExternalUrl(opportunity.linkUrl || '');
+        setExternalLabel(opportunity.linkTitle || 'Apply Externally');
+        setLinkUrl('');
+        setLinkTitle('');
+      } else {
+        setLinkUrl(opportunity.linkUrl || '');
+        setLinkTitle(opportunity.linkTitle || '');
+        setExternalUrl('');
+        setExternalLabel('Apply Externally');
+      }
     }
   }, [open, opportunity]);
 
