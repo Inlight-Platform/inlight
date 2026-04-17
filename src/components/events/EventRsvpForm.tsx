@@ -57,6 +57,27 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   const alreadyRsvpd = !!userRsvp || submitted;
   const alreadyGoing = (userRsvp?.status === 'going') || submitted;
 
+  const sendTicketEmail = async (rsvpEmail: string) => {
+    // Find the auto-created ticket for this RSVP and trigger the QR email
+    try {
+      const { data: ticket } = await supabase
+        .from('tickets')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('attendee_email', rsvpEmail)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (ticket?.id) {
+        await supabase.functions.invoke('send-ticket-email', {
+          body: { ticket_id: ticket.id },
+        });
+      }
+    } catch (e) {
+      console.error('send-ticket-email failed', e);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (alreadyRsvpd) {
@@ -82,7 +103,13 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
       },
       {
         onSuccess: () => {
-          toast.success(status === 'going' ? "You're on the list! 🎉" : 'Thanks for letting us know!');
+          if (status === 'going') {
+            toast.success("You're on the list! Check your email for your ticket 🎟️");
+            // Fire and forget — backend trigger creates the ticket, we email it
+            sendTicketEmail(email.trim());
+          } else {
+            toast.success('Thanks for letting us know!');
+          }
           setSubmitted(true);
           setDialogOpen(false);
         },

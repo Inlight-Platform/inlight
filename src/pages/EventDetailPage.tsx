@@ -6,10 +6,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { stubUsers, stubConnections, stubMaterials, stubCredits, stubStories, stubMessages, stubThreads, stubEvents } from '@/data/stubData';
 import EventRsvpForm from '@/components/events/EventRsvpForm';
 import EventAdminPanel from '@/components/events/EventAdminPanel';
-import { ChevronLeft, Calendar, MapPin, Clock, Video } from 'lucide-react';
+import { ChevronLeft, Calendar, MapPin, Clock, Video, QrCode } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useAdmin } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
 
 const eventTypeColors: Record<string, string> = {
@@ -25,6 +26,7 @@ const EventDetailPage: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const { users, events, getUser } = useStore();
+  const { isAdmin } = useAdmin();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -236,6 +238,16 @@ const EventDetailPage: React.FC = () => {
               stripePriceId={event.stripePriceId}
               paymentLinkUrl={event.paymentLinkUrl}
             />
+            {currentUserId && (currentUserId === event.hostId || isAdmin) && (
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => navigate(`/manage-event/${eventId}/scanner`)}
+              >
+                <QrCode className="w-4 h-4" />
+                Open check-in scanner
+              </Button>
+            )}
             {currentUserId && currentUserId === event.hostId && (
               <EventAdminPanel eventId={eventId!} />
             )}
