@@ -50,6 +50,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
   const [imageUrl, setImageUrl] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
+  const [externalUrl, setExternalUrl] = useState('');
+  const [externalLabel, setExternalLabel] = useState('Apply Externally');
 
   const allRoles: UserRole[] = ['Actor', 'Director', 'Producer', 'Musician', 'Gaffer', 'Grip', 'DP', 'AD', 'Extras', 'Singer', 'Dancer', 'Designer'];
 
@@ -66,6 +68,12 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
     
     if (!user) {
       toast.error('You must be logged in to post an opportunity');
+      return;
+    }
+
+    const isExternal = actionType === 'external';
+    if (isExternal && !externalUrl.trim()) {
+      toast.error('Please provide an External URL');
       return;
     }
 
@@ -88,8 +96,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       is_featured: false,
       action_type: actionType,
       image_url: imageUrl || undefined,
-      link_url: linkUrl.trim() || undefined,
-      link_title: linkTitle.trim() || undefined,
+      link_url: isExternal ? externalUrl.trim() : (linkUrl.trim() || undefined),
+      link_title: isExternal ? (externalLabel.trim() || 'Apply Externally') : (linkTitle.trim() || undefined),
     }, {
       onSuccess: () => {
         setTitle('');
@@ -107,6 +115,8 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
         setImageUrl('');
         setLinkUrl('');
         setLinkTitle('');
+        setExternalUrl('');
+        setExternalLabel('Apply Externally');
         onOpenChange(false);
       },
     });
@@ -253,17 +263,51 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
 
             <div>
               <Label htmlFor="actionType">Response Type</Label>
-              <Select value={actionType} onValueChange={setActionType}>
+              <Select value={actionType} onValueChange={(v) => {
+                setActionType(v);
+                if (v !== 'external') {
+                  setExternalUrl('');
+                  setExternalLabel('Apply Externally');
+                }
+              }}>
                 <SelectTrigger className="mt-1 bg-background">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
-                  <SelectItem value="apply">Apply Online</SelectItem>
+                  <SelectItem value="apply">Inlight Application</SelectItem>
+                  <SelectItem value="external">External Application</SelectItem>
                   <SelectItem value="calendar">In-Person (Add to Calendar)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+
+          {/* External Application fields */}
+          {actionType === 'external' && (
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg border border-border bg-muted/30">
+              <div className="col-span-2">
+                <Label htmlFor="externalUrl">External URL *</Label>
+                <Input
+                  id="externalUrl"
+                  type="url"
+                  placeholder="https://..."
+                  value={externalUrl}
+                  onChange={(e) => setExternalUrl(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="externalLabel">Button Label</Label>
+                <Input
+                  id="externalLabel"
+                  placeholder="Apply on Casting Networks"
+                  value={externalLabel}
+                  onChange={(e) => setExternalLabel(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Roles Needed */}
           <div>

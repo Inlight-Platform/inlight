@@ -52,6 +52,8 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
   const [imageUrl, setImageUrl] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
+  const [externalUrl, setExternalUrl] = useState('');
+  const [externalLabel, setExternalLabel] = useState('Apply Externally');
 
   useEffect(() => {
     if (open && opportunity) {
@@ -68,10 +70,20 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
       const dl = opportunity.deadline || '';
       setDeadlineDate(dl.includes('T') ? dl.split('T')[0] : dl);
       setDuration(opportunity.duration || '');
-      setActionType(opportunity.actionType || 'apply');
+      const at = opportunity.actionType || 'apply';
+      setActionType(at);
       setImageUrl(opportunity.imageUrl || '');
-      setLinkUrl(opportunity.linkUrl || '');
-      setLinkTitle(opportunity.linkTitle || '');
+      if (at === 'external') {
+        setExternalUrl(opportunity.linkUrl || '');
+        setExternalLabel(opportunity.linkTitle || 'Apply Externally');
+        setLinkUrl('');
+        setLinkTitle('');
+      } else {
+        setLinkUrl(opportunity.linkUrl || '');
+        setLinkTitle(opportunity.linkTitle || '');
+        setExternalUrl('');
+        setExternalLabel('Apply Externally');
+      }
     }
   }, [open, opportunity]);
 
@@ -83,6 +95,8 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
 
   const handleSubmit = () => {
     if (!title.trim() || !description.trim()) return;
+    const isExternal = actionType === 'external';
+    if (isExternal && !externalUrl.trim()) return;
 
     updateOpportunity.mutate({
       id: opportunity.id,
@@ -101,8 +115,8 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
       duration: duration.trim() || undefined,
       action_type: actionType,
       image_url: imageUrl || null,
-      link_url: linkUrl.trim() || null,
-      link_title: linkTitle.trim() || null,
+      link_url: isExternal ? externalUrl.trim() : (linkUrl.trim() || null),
+      link_title: isExternal ? (externalLabel.trim() || 'Apply Externally') : (linkTitle.trim() || null),
     }, {
       onSuccess: () => onOpenChange(false),
     });
@@ -189,15 +203,48 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
             </div>
             <div>
               <Label htmlFor="edit-actionType">Response Type</Label>
-              <Select value={actionType} onValueChange={setActionType}>
+              <Select value={actionType} onValueChange={(v) => {
+                setActionType(v);
+                if (v !== 'external') {
+                  setExternalUrl('');
+                  setExternalLabel('Apply Externally');
+                }
+              }}>
                 <SelectTrigger className="mt-1 bg-background"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover border-border">
-                  <SelectItem value="apply">Apply Online</SelectItem>
+                  <SelectItem value="apply">Inlight Application</SelectItem>
+                  <SelectItem value="external">External Application</SelectItem>
                   <SelectItem value="calendar">In-Person (Add to Calendar)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+
+          {actionType === 'external' && (
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg border border-border bg-muted/30">
+              <div className="col-span-2">
+                <Label htmlFor="edit-externalUrl">External URL *</Label>
+                <Input
+                  id="edit-externalUrl"
+                  type="url"
+                  placeholder="https://..."
+                  value={externalUrl}
+                  onChange={(e) => setExternalUrl(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="edit-externalLabel">Button Label</Label>
+                <Input
+                  id="edit-externalLabel"
+                  placeholder="Apply on Casting Networks"
+                  value={externalLabel}
+                  onChange={(e) => setExternalLabel(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
