@@ -69,6 +69,10 @@ const AdminPage: React.FC = () => {
               <Calendar className="w-4 h-4" />
               <span className="hidden sm:inline">Events</span>
             </TabsTrigger>
+            <TabsTrigger value="sites" className="gap-2 whitespace-nowrap">
+              <Globe className="w-4 h-4" />
+              <span className="hidden sm:inline">Sites</span>
+            </TabsTrigger>
             <TabsTrigger value="broadway" className="gap-2 whitespace-nowrap">
               <Theater className="w-4 h-4" />
               <span className="hidden sm:inline">⭐</span> Broadway
