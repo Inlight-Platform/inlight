@@ -56,8 +56,8 @@ const SitesManager: React.FC = () => {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {programs.map((p) => {
-              const showcaseUrl = `${baseUrl}/showcase/${p.slug}`;
-              const joinUrl = `${baseUrl}/showcase/${p.slug}/join`;
+      const showcaseUrl = `${baseUrl}/showcase/${p.slug}`;
+              const joinUrl = `${baseUrl}/showcase/join/${p.slug}`;
               const memberCount = counts?.[p.slug] ?? 0;
               return (
                 <Card key={p.id} className="border-2">
@@ -103,7 +103,7 @@ const SitesManager: React.FC = () => {
                         <p className="text-xs font-medium mb-1">Join Link</p>
                         <div className="flex gap-1">
                           <Button asChild size="sm" variant="outline" className="flex-1 justify-start text-xs h-8">
-                            <Link to={`/showcase/${p.slug}/join`}>
+                            <Link to={`/showcase/join/${p.slug}`}>
                               <ExternalLink className="w-3 h-3 mr-1" />
                               Open
                             </Link>
