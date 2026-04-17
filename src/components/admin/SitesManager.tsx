@@ -36,7 +36,9 @@ const SitesManager: React.FC = () => {
     },
   });
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  // Always use the production domain for shareable showcase links so they
+  // don't open the Lovable editor/login when clicked from the preview.
+  const baseUrl = 'https://inlight.social';
 
   const copyLink = (url: string) => {
     navigator.clipboard.writeText(url);
@@ -83,10 +85,10 @@ const SitesManager: React.FC = () => {
                         <p className="text-xs font-medium mb-1">Public Showcase</p>
                         <div className="flex gap-1">
                           <Button asChild size="sm" variant="outline" className="flex-1 justify-start text-xs h-8">
-                            <Link to={`/showcase/${p.slug}`}>
+                            <a href={showcaseUrl} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="w-3 h-3 mr-1" />
                               Open
-                            </Link>
+                            </a>
                           </Button>
                           <Button
                             size="sm"
@@ -103,10 +105,10 @@ const SitesManager: React.FC = () => {
                         <p className="text-xs font-medium mb-1">Join Link</p>
                         <div className="flex gap-1">
                           <Button asChild size="sm" variant="outline" className="flex-1 justify-start text-xs h-8">
-                            <Link to={`/showcase/join/${p.slug}`}>
+                            <a href={joinUrl} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="w-3 h-3 mr-1" />
                               Open
-                            </Link>
+                            </a>
                           </Button>
                           <Button
                             size="sm"
