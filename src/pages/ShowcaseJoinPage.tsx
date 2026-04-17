@@ -541,6 +541,19 @@ const ShowcaseJoinPage: React.FC = () => {
   const myProfile = profiles.find(p => p.program_slug === programSlug) || null;
   const programName = program?.name || programSlug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Showcase';
 
+  // Redirect newly-signed-up showcase users straight to /feed so the
+  // onboarding tour auto-starts on their first visit to the platform.
+  useEffect(() => {
+    if (!user) return;
+    const flag = localStorage.getItem('inlight_showcase_signup');
+    if (flag === '1') {
+      localStorage.removeItem('inlight_showcase_signup');
+      localStorage.removeItem('inlight_showcase_program');
+      // Small delay so they see "signed in" before redirect
+      setTimeout(() => navigate('/feed'), 400);
+    }
+  }, [user, navigate]);
+
   const handleAdminDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -616,7 +629,7 @@ const ShowcaseJoinPage: React.FC = () => {
       </header>
 
       {/* If not logged in, show auth */}
-      {!user && <InlineAuth programSlug={programSlug || ''} />}
+      {!user && <InlineAuth programSlug={programSlug || ''} programName={programName} />}
 
       {/* Student grid */}
       <main className="max-w-7xl mx-auto px-6 pb-20">
