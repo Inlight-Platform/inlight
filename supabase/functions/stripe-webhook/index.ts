@@ -43,35 +43,15 @@ serve(async (req) => {
       // Handle ticket purchases
       if (eventId && userId) {
         const amountPaid = (session.amount_total || 0) / 100;
-        const { data: updatedTickets, error: ticketError } = await supabase
+        const { error: ticketError } = await supabase
           .from("tickets")
-          .update({ status: "confirmed", amount_paid: amountPaid, source: "paid" })
-          .eq("stripe_session_id", session.id)
-          .select("id");
+          .update({ status: "confirmed", amount_paid: amountPaid })
+          .eq("stripe_session_id", session.id);
 
         if (ticketError) {
           console.error("[STRIPE-WEBHOOK] Ticket update error:", ticketError);
         } else {
           console.log(`[STRIPE-WEBHOOK] Ticket confirmed for event ${eventId}, user ${userId}`);
-
-          // Trigger the QR-coded receipt email for each updated ticket
-          for (const t of updatedTickets ?? []) {
-            try {
-              await fetch(
-                `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-ticket-email`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-                  },
-                  body: JSON.stringify({ ticket_id: t.id }),
-                },
-              );
-            } catch (e) {
-              console.error("[STRIPE-WEBHOOK] send-ticket-email failed", e);
-            }
-          }
         }
       }
 

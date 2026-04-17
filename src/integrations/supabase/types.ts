@@ -318,8 +318,6 @@ export type Database = {
       }
       event_rsvps: {
         Row: {
-          attended: boolean
-          attended_at: string | null
           created_at: string
           custom_answer: string | null
           email: string
@@ -332,8 +330,6 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          attended?: boolean
-          attended_at?: string | null
           created_at?: string
           custom_answer?: string | null
           email: string
@@ -346,8 +342,6 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
-          attended?: boolean
-          attended_at?: string | null
           created_at?: string
           custom_answer?: string | null
           email?: string
@@ -1824,52 +1818,31 @@ export type Database = {
       tickets: {
         Row: {
           amount_paid: number | null
-          attendee_email: string | null
-          attendee_name: string | null
-          attendee_role: string | null
-          checked_in_at: string | null
-          checked_in_by: string | null
           created_at: string
           event_id: string
           id: string
-          source: string
           status: string
           stripe_session_id: string | null
-          ticket_code: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           amount_paid?: number | null
-          attendee_email?: string | null
-          attendee_name?: string | null
-          attendee_role?: string | null
-          checked_in_at?: string | null
-          checked_in_by?: string | null
           created_at?: string
           event_id: string
           id?: string
-          source?: string
           status?: string
           stripe_session_id?: string | null
-          ticket_code?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           amount_paid?: number | null
-          attendee_email?: string | null
-          attendee_name?: string | null
-          attendee_role?: string | null
-          checked_in_at?: string | null
-          checked_in_by?: string | null
           created_at?: string
           event_id?: string
           id?: string
-          source?: string
           status?: string
           stripe_session_id?: string | null
-          ticket_code?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -2242,7 +2215,6 @@ export type Database = {
         Args: { post_row: Database["public"]["Tables"]["posts"]["Row"] }
         Returns: boolean
       }
-      generate_ticket_code: { Args: never; Returns: string }
       get_2nd_degree_connections: {
         Args: { target_user_id: string }
         Returns: {

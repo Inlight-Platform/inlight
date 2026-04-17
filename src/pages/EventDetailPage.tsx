@@ -6,12 +6,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { stubUsers, stubConnections, stubMaterials, stubCredits, stubStories, stubMessages, stubThreads, stubEvents } from '@/data/stubData';
 import EventRsvpForm from '@/components/events/EventRsvpForm';
 import EventAdminPanel from '@/components/events/EventAdminPanel';
-import CreatorDashboardPanel from '@/components/events/CreatorDashboardPanel';
 import { ChevronLeft, Calendar, MapPin, Clock, Video } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAdmin } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
 
 const eventTypeColors: Record<string, string> = {
@@ -27,7 +25,6 @@ const EventDetailPage: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const { users, events, getUser } = useStore();
-  const { isAdmin } = useAdmin();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -137,11 +134,8 @@ const EventDetailPage: React.FC = () => {
       hour: 'numeric', minute: '2-digit', hour12: true,
     });
 
-  const canManage = !!currentUserId && (currentUserId === event.hostId || isAdmin);
-
   return (
     <div className="min-h-screen bg-background">
-      {canManage && <CreatorDashboardPanel eventId={eventId!} />}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
           <button

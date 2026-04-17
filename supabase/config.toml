@@ -14,6 +14,3 @@ verify_jwt = false
 
 [functions.create-ticket-checkout]
 verify_jwt = false
-
-[functions.send-ticket-email]
-verify_jwt = false

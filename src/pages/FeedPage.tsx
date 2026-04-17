@@ -797,18 +797,7 @@ const FeedPage: React.FC = () => {
                       <FeedGridCard
                         key={`${item.type}-${item.id}`}
                         item={item}
-                        onClick={() => {
-                          // Events should open the full detail page so creators/admins see the dashboard
-                          if (item.type === 'event') {
-                            navigate(`/events/${item.id}`);
-                          } else if (item.type === 'project') {
-                            navigate(`/projects/${item.id}`);
-                          } else if (item.type === 'open_role' && item.project_id) {
-                            navigate(`/projects/${item.project_id}`);
-                          } else {
-                            setSelectedItem(item);
-                          }
-                        }}
+                        onClick={() => setSelectedItem(item)}
                       />
                     ))}
                   </div>
