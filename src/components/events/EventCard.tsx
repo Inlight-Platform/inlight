@@ -58,8 +58,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
   if (compact) {
     return (
       <div 
-        className="flex items-center gap-3 p-3 rounded-lg bg-card hover:bg-accent/50 cursor-pointer transition-colors"
-        onClick={() => navigate(`/events/${event.id}`)}
+        className="flex items-center gap-3 p-3 rounded-lg bg-card transition-colors"
       >
         <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center shrink-0">
           <span className="text-xs font-medium text-primary">
@@ -83,7 +82,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
   }
 
   return (
-    <div className="rounded-xl overflow-hidden bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate(`/events/${event.id}`)}>
+    <div className="rounded-xl overflow-hidden bg-card border border-border transition-colors">
       {/* Cover Image */}
       <div className="relative h-40 overflow-hidden">
         <img 

@@ -94,8 +94,7 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
       {attended.map((ev) => (
         <Card
           key={`${ev.source}-${ev.id}`}
-          className="overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] bg-card border-border"
-          onClick={() => navigate(`/events/${ev.id}`)}
+          className="overflow-hidden bg-card border-border"
         >
           {ev.image_url ? (
             <img src={ev.image_url} alt={ev.title} className="w-full h-32 object-cover" />
