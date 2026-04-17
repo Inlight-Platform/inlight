@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { safeBack } from '@/lib/safeBack';
 import { useStore } from '../store/useStore';
 import { Input } from '@/components/ui/input';
 import { 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { safeBack } from '@/lib/safeBack';
 import { useStore, User, Visibility } from '../store/useStore';
 import { useTrackProfileView, useUpdateEngagement } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
