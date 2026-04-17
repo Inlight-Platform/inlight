@@ -289,7 +289,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
                 <Bookmark className="w-4 h-4 text-muted-foreground" />
               )}
             </button>
-            {user && user.id === opportunity.postedBy && (
+            {user && (user.id === opportunity.postedBy || isAdmin) && (
               <button
                 onClick={(e) => { e.stopPropagation(); setShowEditDialog(true); }}
                 className="p-1 rounded-full hover:bg-accent transition-colors"
