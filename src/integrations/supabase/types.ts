@@ -941,6 +941,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          activity_score: number
           avatar_url: string | null
           badges: string[] | null
           bio: string | null
@@ -979,6 +980,7 @@ export type Database = {
           why_artist: string | null
         }
         Insert: {
+          activity_score?: number
           avatar_url?: string | null
           badges?: string[] | null
           bio?: string | null
@@ -1017,6 +1019,7 @@ export type Database = {
           why_artist?: string | null
         }
         Update: {
+          activity_score?: number
           avatar_url?: string | null
           badges?: string[] | null
           bio?: string | null
@@ -2204,6 +2207,10 @@ export type Database = {
       }
     }
     Functions: {
+      bump_activity_score: {
+        Args: { _delta: number; _user_id: string }
+        Returns: undefined
+      }
       can_view_post: {
         Args: { post_row: Database["public"]["Tables"]["posts"]["Row"] }
         Returns: boolean
