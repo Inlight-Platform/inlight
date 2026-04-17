@@ -206,7 +206,7 @@ const QrScannerDialog: React.FC<{
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const containerId = 'qr-scanner-container';
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [scanning, setScanning] = useState(true);
   const [lastResult, setLastResult] = useState<{
     success: boolean;
@@ -219,7 +219,6 @@ const QrScannerDialog: React.FC<{
     if (processingRef.current) return;
     processingRef.current = true;
     try {
-      // Look up ticket by code for this event
       const { data: ticket, error: lookupError } = await supabase
         .from('tickets')
         .select('id, event_id, attendee_name, attendee_email, checked_in_at, status')
@@ -264,7 +263,6 @@ const QrScannerDialog: React.FC<{
     } catch (err: any) {
       setLastResult({ success: false, message: err.message ?? 'Check-in failed' });
     } finally {
-      // Allow scanning the next code after a brief pause
       setTimeout(() => {
         processingRef.current = false;
       }, 1500);
@@ -272,32 +270,54 @@ const QrScannerDialog: React.FC<{
   };
 
   useEffect(() => {
-    const scanner = new Html5Qrcode(containerId);
-    scannerRef.current = scanner;
+    let cancelled = false;
+    let scanner: Html5Qrcode | null = null;
 
-    scanner
-      .start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          checkInTicket(decodedText.trim());
-        },
-        () => {
-          // ignore per-frame decode errors
-        }
-      )
-      .catch((err) => {
+    // Wait one tick so the dialog content (and our container div) is mounted
+    const timer = setTimeout(() => {
+      if (cancelled || !containerRef.current) return;
+
+      // Ensure the element has an id for html5-qrcode
+      if (!containerRef.current.id) {
+        containerRef.current.id = `qr-scanner-${Math.random().toString(36).slice(2, 9)}`;
+      }
+
+      try {
+        scanner = new Html5Qrcode(containerRef.current.id);
+        scannerRef.current = scanner;
+
+        scanner
+          .start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText) => {
+              checkInTicket(decodedText.trim());
+            },
+            () => {
+              // ignore per-frame decode errors
+            }
+          )
+          .catch((err) => {
+            setScanning(false);
+            toast.error('Unable to access camera: ' + (err?.message ?? 'permission denied'));
+          });
+      } catch (err: any) {
         setScanning(false);
-        toast.error('Unable to access camera: ' + (err?.message ?? 'permission denied'));
-      });
+        toast.error('Scanner failed to initialize: ' + (err?.message ?? 'unknown error'));
+      }
+    }, 50);
 
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current
-          .stop()
+      cancelled = true;
+      clearTimeout(timer);
+      const s = scannerRef.current;
+      if (s) {
+        s.stop()
           .catch(() => {})
           .finally(() => {
-            scannerRef.current?.clear();
+            try {
+              s.clear();
+            } catch {}
             scannerRef.current = null;
           });
       }
@@ -319,7 +339,7 @@ const QrScannerDialog: React.FC<{
         </DialogHeader>
 
         <div className="relative bg-black rounded-lg overflow-hidden aspect-square">
-          <div id={containerId} className="w-full h-full" />
+          <div ref={containerRef} className="w-full h-full" />
           {!scanning && (
             <div className="absolute inset-0 flex items-center justify-center text-white text-sm p-4 text-center">
               Camera unavailable. Check browser permissions.
