@@ -1,8 +1,9 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useShowcaseByProgram, useShowcaseProgram, ShowcaseProfile } from '@/hooks/useShowcase';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAdmin } from '@/hooks/useAdmin';
 
 const ShowcaseStudentCard: React.FC<{ profile: ShowcaseProfile; onViewProfile: (userId: string) => void }> = ({ profile, onViewProfile }) => {
   const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.stage_name || profile.display_name || 'Student';
