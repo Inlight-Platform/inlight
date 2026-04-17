@@ -22,6 +22,7 @@ import {
 import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
 import { ImageUploader } from '@/components/feed/ImageUploader';
 import { useAuth } from '@/hooks/useAuth';
+import { createOpportunityDateTimeIso, getTimeInputValue } from '@/lib/opportunityCalendar';
 
 interface EditOpportunityDialogProps {
   open: boolean;
@@ -47,6 +48,8 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
   const [experienceLevel, setExperienceLevel] = useState('any');
   const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([]);
   const [deadlineDate, setDeadlineDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [duration, setDuration] = useState('');
   const [actionType, setActionType] = useState('apply');
   const [imageUrl, setImageUrl] = useState('');
@@ -69,6 +72,8 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
       setSelectedRoles((opportunity.roles || []).filter((r): r is UserRole => allRoles.includes(r as UserRole)));
       const dl = opportunity.deadline || '';
       setDeadlineDate(dl.includes('T') ? dl.split('T')[0] : dl);
+      setStartTime(getTimeInputValue(opportunity.startDate));
+      setEndTime(getTimeInputValue(opportunity.deadline));
       setDuration(opportunity.duration || '');
       const at = opportunity.actionType || 'apply';
       setActionType(at);
@@ -96,7 +101,18 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
   const handleSubmit = () => {
     if (!title.trim() || !description.trim()) return;
     const isExternal = actionType === 'external';
+    const isCalendar = actionType === 'calendar';
     if (isExternal && !externalUrl.trim()) return;
+
+    const startIso = isCalendar
+      ? createOpportunityDateTimeIso(deadlineDate, startTime)
+      : undefined;
+    const endIso = isCalendar
+      ? createOpportunityDateTimeIso(deadlineDate, endTime)
+      : undefined;
+    const endOfDayIso = isCalendar
+      ? createOpportunityDateTimeIso(deadlineDate, '23:59')
+      : undefined;
 
     updateOpportunity.mutate({
       id: opportunity.id,
@@ -110,8 +126,8 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
       compensation: compensation.trim() || undefined,
       experience_level: experienceLevel,
       roles: selectedRoles,
-      deadline: deadlineDate || undefined,
-      start_date: undefined,
+      deadline: isCalendar ? (endIso || startIso || endOfDayIso) : (deadlineDate || undefined),
+      start_date: isCalendar ? startIso : undefined,
       duration: duration.trim() || undefined,
       action_type: actionType,
       image_url: imageUrl || null,
@@ -240,6 +256,34 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
                   placeholder="Apply on Casting Networks"
                   value={externalLabel}
                   onChange={(e) => setExternalLabel(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+          {actionType === 'calendar' && (
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg border border-border bg-muted/30">
+              <div className="col-span-2 text-sm text-muted-foreground">
+                Add a start and end time so attendees can save the event to their calendar with the correct time.
+              </div>
+              <div>
+                <Label htmlFor="edit-startTime">Start Time</Label>
+                <Input
+                  id="edit-startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-endTime">End Time</Label>
+                <Input
+                  id="edit-endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
                   className="mt-1"
                 />
               </div>
