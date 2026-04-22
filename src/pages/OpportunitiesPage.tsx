@@ -14,19 +14,10 @@ import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const STRIPE_POST_JOB_URL = 'https://buy.stripe.com/dRmaEWa8gaA3eVL3ufco002';
-const jobCreditKey = (uid: string) => `inlight:jobPostCredits:${uid}`;
-const getJobCredits = (uid: string): number => {
-  if (typeof window === 'undefined') return 0;
-  const raw = window.localStorage.getItem(jobCreditKey(uid));
-  const n = raw ? parseInt(raw, 10) : 0;
-  return Number.isFinite(n) && n > 0 ? n : 0;
-};
-const setJobCredits = (uid: string, n: number) => {
-  window.localStorage.setItem(jobCreditKey(uid), String(Math.max(0, n)));
-};
 
 /** Compact card matching the Open Roles style — title, company, deadline */
 const OpportunityCompactCard: React.FC<{ opportunity: OpportunityView }> = ({ opportunity }) => {
