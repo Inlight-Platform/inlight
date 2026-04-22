@@ -399,7 +399,17 @@ const ProjectNewPage: React.FC = () => {
           </div>
 
           {/* Submit */}
-          <div className="pt-6 flex gap-3">
+          <div className="pt-6 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+            <p>
+              <span className="font-medium text-foreground">Heads up:</span>{' '}
+              This project will automatically be added as a credit on your profile
+              using the role{companyName.trim() ? ' and company' : ''} you entered above.
+              It will remain <span className="font-medium">unverified</span> until 3 or more
+              team members have accepted roles on this project.
+            </p>
+          </div>
+
+          <div className="pt-2 flex gap-3">
             <Button
               type="button"
               variant="outline"
