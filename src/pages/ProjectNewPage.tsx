@@ -192,6 +192,31 @@ const ProjectNewPage: React.FC = () => {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="creatorRole">Your Role *</Label>
+              <Input
+                id="creatorRole"
+                placeholder="e.g. Director, Producer, Lead Actor"
+                value={creatorRole}
+                onChange={(e) => setCreatorRole(e.target.value)}
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">
+                This becomes your credit on this project.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="companyName">Company / Production (optional)</Label>
+              <Input
+                id="companyName"
+                placeholder="e.g. A24, Roundabout Theatre"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                maxLength={150}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
