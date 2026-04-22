@@ -10,10 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Select,
@@ -42,6 +38,8 @@ const ProjectNewPage: React.FC = () => {
   const queryClient = useQueryClient();
 
   const [title, setTitle] = useState('');
+  const [creatorRole, setCreatorRole] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [description, setDescription] = useState('');
   const [mainImageUrl, setMainImageUrl] = useState('');
   const [headerImageUrl, setHeaderImageUrl] = useState('');
@@ -49,10 +47,13 @@ const ProjectNewPage: React.FC = () => {
   const [status, setStatus] = useState<ProjectStatus>('planning');
   const [isPublic, setIsPublic] = useState(false);
   const [roles, setRoles] = useState<RoleSlot[]>([]);
-  const [startDate, setStartDate] = useState<Date | undefined>();
-  const [endDate, setEndDate] = useState<Date | undefined>();
+  const [startDateStr, setStartDateStr] = useState('');
+  const [endDateStr, setEndDateStr] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
+
+  const startDate = startDateStr ? new Date(startDateStr) : undefined;
+  const endDate = endDateStr ? new Date(endDateStr) : undefined;
 
   // Auto-set status to archived if end date is in the past
   const effectiveStatus = endDate && endDate < new Date(new Date().toDateString()) ? 'archived' : status;
