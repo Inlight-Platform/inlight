@@ -193,6 +193,22 @@ export const OnboardingTour: React.FC = () => {
         prevBtnText: '← Back',
         doneBtnText: isLastPhase ? 'Finish 🎉' : 'Next →',
         steps,
+        onPopoverRender: (popover) => {
+          // Inject a subtle "Skip tour" link into the footer
+          const footer = popover.footer;
+          if (!footer || footer.querySelector('.inlight-tour-skip')) return;
+          const skip = document.createElement('button');
+          skip.type = 'button';
+          skip.textContent = 'Skip tour';
+          skip.className = 'inlight-tour-skip';
+          skip.setAttribute('aria-label', 'Skip onboarding tour');
+          skip.addEventListener('click', () => {
+            advancingRef.current = false;
+            try { d.destroy(); } catch { /* noop */ }
+            endTour(true);
+          });
+          footer.appendChild(skip);
+        },
         onCloseClick: () => {
           advancingRef.current = false;
           try { d.destroy(); } catch { /* noop */ }
