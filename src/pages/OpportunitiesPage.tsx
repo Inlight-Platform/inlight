@@ -147,10 +147,19 @@ const OpportunitiesPage: React.FC = () => {
     if (isAdmin || credits > 0) {
       setShowCreator(true);
     } else {
-      const returnUrl = `${window.location.origin}/opportunities?job_purchase=success`;
-      const url = `${STRIPE_POST_JOB_URL}?success_url=${encodeURIComponent(returnUrl)}`;
-      window.location.href = url;
+      // Stripe Payment Links use a redirect URL configured in the Stripe dashboard,
+      // not a query param. Open in a new tab so the user keeps their session here.
+      window.open(STRIPE_POST_JOB_URL, '_blank', 'noopener,noreferrer');
+      toast.info('Complete payment in the new tab, then click "I\'ve paid" to unlock posting.');
     }
+  };
+
+  const handleConfirmPaid = () => {
+    if (!user) return;
+    const next = getJobCredits(user.id) + 1;
+    setJobCredits(user.id, next);
+    setCredits(next);
+    toast.success('Posting unlocked — you can now post 1 job.');
   };
 
   const handleCreatorOpenChange = (open: boolean) => {
