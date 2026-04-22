@@ -463,6 +463,22 @@
   box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.6);
   max-width: 360px;
   font-family: inherit;
+  animation: inlight-tour-fade-in 320ms ease-out both;
+}
+@keyframes inlight-tour-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+/* Smooth stage highlight transition */
+.driver-active .driver-overlay,
+.driver-active .driver-stage {
+  transition: all 350ms ease-in-out !important;
 }
 .driver-popover.inlight-tour-popover .driver-popover-title {
   color: hsl(var(--foreground));

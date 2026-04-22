@@ -4,7 +4,6 @@ import { driver, type Driver, type DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useTour } from '@/hooks/useTour';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 
 type Phase = {
   route: string;
@@ -145,6 +144,8 @@ export const OnboardingTour: React.FC = () => {
   const location = useLocation();
   const driverRef = useRef<Driver | null>(null);
   const navigatedForStepRef = useRef<number>(-1);
+  const advancingRef = useRef<boolean>(false);
+  const mountedStepRef = useRef<number>(-1);
 
   // When a phase begins, ensure we're on the right route
   useEffect(() => {
@@ -170,9 +171,14 @@ export const OnboardingTour: React.FC = () => {
     const expectedPath = phase.route === '__profile__' ? profileRoute(user.id) : phase.route;
     if (location.pathname !== expectedPath) return;
 
-    // Wait a moment for the page to render targets
+    // Avoid re-mounting driver for the same step
+    if (mountedStepRef.current === currentStep && driverRef.current) return;
+
+    // Wait for the page to render targets
     const timeoutId = setTimeout(() => {
       const steps = phase.steps(user.id);
+      const isLastPhase = currentStep === phases.length - 1;
+      advancingRef.current = false;
 
       const d = driver({
         showProgress: false,
@@ -184,21 +190,26 @@ export const OnboardingTour: React.FC = () => {
         popoverClass: 'inlight-tour-popover',
         nextBtnText: 'Next →',
         prevBtnText: '← Back',
-        doneBtnText: currentStep === phases.length - 1 ? 'Finish 🎉' : 'Next phase →',
+        doneBtnText: isLastPhase ? 'Finish 🎉' : 'Next →',
         steps,
         onCloseClick: () => {
-          d.destroy();
+          advancingRef.current = false;
+          try { d.destroy(); } catch { /* noop */ }
           endTour(false);
         },
         onDestroyStarted: () => {
-          // If user manually closed
-          if (!d.hasNextStep() && d.isLastStep()) {
-            // proceed - handled by onDestroyed
+          // Only advance when the user finished the last step of this phase
+          const lastStep = d.isLastStep();
+          try { d.destroy(); } catch { /* noop */ }
+          if (lastStep) {
+            advancingRef.current = true;
           }
-          d.destroy();
         },
         onDestroyed: () => {
-          // Move to next phase or finish
+          driverRef.current = null;
+          mountedStepRef.current = -1;
+          if (!advancingRef.current) return;
+          advancingRef.current = false;
           const nextStep = currentStep + 1;
           if (nextStep >= phases.length) {
             endTour(true);
@@ -209,14 +220,18 @@ export const OnboardingTour: React.FC = () => {
       });
 
       driverRef.current = d;
+      mountedStepRef.current = currentStep;
       d.drive();
-    }, 600);
+    }, 500);
 
     return () => {
       clearTimeout(timeoutId);
+      // Tear down silently — do NOT trigger advance
       if (driverRef.current) {
+        advancingRef.current = false;
         try { driverRef.current.destroy(); } catch { /* noop */ }
         driverRef.current = null;
+        mountedStepRef.current = -1;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
