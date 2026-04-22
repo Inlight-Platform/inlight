@@ -13,7 +13,7 @@ const stages: { key: ProjectStatus; label: string; icon: React.ElementType }[] =
   { key: 'planning', label: 'Planning', icon: ClipboardList },
   { key: 'active', label: 'Active', icon: Clapperboard },
   { key: 'wrapping', label: 'Wrapping', icon: Film },
-  { key: 'archived', label: 'Archived', icon: Archive },
+  { key: 'archived', label: 'Completed', icon: Archive },
 ];
 
 export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ status, className }) => {

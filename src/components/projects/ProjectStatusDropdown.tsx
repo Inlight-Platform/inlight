@@ -23,7 +23,7 @@ const statusOptions: { value: ProjectStatus; label: string; icon: React.ElementT
   { value: 'planning', label: 'Planning', icon: ClipboardList },
   { value: 'active', label: 'Active', icon: Clapperboard },
   { value: 'wrapping', label: 'Wrapping', icon: Film },
-  { value: 'archived', label: 'Archived', icon: Archive },
+  { value: 'archived', label: 'Completed', icon: Archive },
 ];
 
 // Map old status values to new ones
