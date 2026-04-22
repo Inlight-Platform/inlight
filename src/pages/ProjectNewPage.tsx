@@ -244,23 +244,26 @@ const ProjectNewPage: React.FC = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select value={category} onValueChange={(v) => setCategory(v as ProjectCategory)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PROJECT_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="category">Project Type *</Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as ProjectCategory)}>
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Select project type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROJECT_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                This determines which category your project appears under on the homepage.
+              </p>
+            </div>
 
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
@@ -276,10 +279,7 @@ const ProjectNewPage: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            {/* Date pickers */}
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Start Date</Label>
                 <Input
@@ -289,16 +289,16 @@ const ProjectNewPage: React.FC = () => {
                   placeholder="YYYY-MM-DD"
                 />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Input
-                  type="date"
-                  value={endDateStr}
-                  onChange={(e) => setEndDateStr(e.target.value)}
-                  placeholder="YYYY-MM-DD"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>End Date</Label>
+              <Input
+                type="date"
+                value={endDateStr}
+                onChange={(e) => setEndDateStr(e.target.value)}
+                placeholder="YYYY-MM-DD"
+              />
             </div>
 
             {endDate && endDate < new Date(new Date().toDateString()) && (
