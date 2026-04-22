@@ -504,6 +504,25 @@
   align-self: center;
   margin-right: auto;
 }
+.driver-popover.inlight-tour-popover .inlight-tour-skip {
+  background: transparent;
+  border: none;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 6px 10px;
+  margin-right: 6px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  align-self: center;
+}
+.driver-popover.inlight-tour-popover .inlight-tour-skip:hover {
+  opacity: 1;
+  color: hsl(var(--foreground));
+}
 .driver-popover.inlight-tour-popover .driver-popover-prev-btn,
 .driver-popover.inlight-tour-popover .driver-popover-next-btn {
   background: hsl(var(--primary));
