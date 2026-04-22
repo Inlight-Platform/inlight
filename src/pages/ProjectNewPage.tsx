@@ -154,6 +154,10 @@ const ProjectNewPage: React.FC = () => {
       toast.error('Please enter a project title');
       return;
     }
+    if (!creatorRole.trim()) {
+      toast.error('Please enter your role on this project');
+      return;
+    }
     if (!mainImageUrl.trim() && !headerImageUrl.trim()) {
       toast.error('Please add an image for your project');
       return;
