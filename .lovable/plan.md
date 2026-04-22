@@ -1,40 +1,37 @@
 
-## Plan: Add image + hyperlink to job opportunities
 
-### Database
-Add two columns to `opportunities` table via migration:
-- `image_url text` (nullable)
-- `link_url text` (nullable)
-- `link_title text` (nullable, for the displayed CTA label)
+## Goal
+Generate a complete backup of your Lovable Cloud database (schema + all data) as a downloadable SQL file in `/mnt/documents/`.
 
-### OpportunityCreator (`src/components/opportunities/OpportunityCreator.tsx`)
-- Add an **Image** section using the existing `ImageUploader` component (same as feed posts), available to any user posting (works for Inlight admin and everyone else).
-- Add **Link URL** + **Link Title** input fields (optional).
-- Pass `image_url`, `link_url`, `link_title` into `createOpportunity.mutate()`.
+## What the backup will include
+- All `CREATE TABLE` statements with constraints, defaults, and indexes
+- All foreign key relationships
+- All RLS policies
+- All database functions and triggers
+- Custom enum types (e.g., `app_role`)
+- **All row data** from every table in the `public` schema (as `INSERT` / `COPY` statements)
 
-### useOpportunities hook (`src/hooks/useOpportunities.ts`)
-- Extend `DBOpportunity` and `OpportunityView` types with the three new fields.
-- Map them in `toView()`.
-- Include them in the `createOpportunity` and `updateOpportunity` mutations.
+## What it will NOT include
+- `auth.users` rows (managed by Supabase auth schema; cannot be exported via standard pg_dump from client)
+- Storage bucket files (the `profile-media` bucket contents — these are objects, not DB rows)
+- Edge function code (already in your repo under `supabase/functions/`)
+- Secrets (already listed; must be re-added manually in a new project)
 
-### OpportunityCard (`src/components/opportunities/OpportunityCard.tsx`)
-- If `imageUrl` is present, render it as a banner above the card header (16:9, object-cover).
-- If `linkUrl` is present, render a secondary outline button "{linkTitle || 'Visit Link'}" next to Apply that opens the URL in a new tab.
+## Approach
+1. Run `pg_dump` against the managed Postgres connection with:
+   - `--schema=public` (full public schema)
+   - Schema + data (no `--schema-only` flag this time)
+   - `--no-owner --no-privileges` for portability to a new Supabase instance
+2. Write output to `/mnt/documents/database_backup.sql`
+3. Verify file size and row counts, then surface as a downloadable artifact
 
-### EditOpportunityDialog
-- Add the same image + link fields so posts can be updated after creation.
+## Deliverable
+A single file: `database_backup.sql` in `/mnt/documents/`, ready to download and replay against a fresh Supabase project's SQL editor or via `psql`.
 
-### OpportunityDetailSheet
-- Display the image (full width) and the link button inside the detail view.
+## Restore notes (for migration)
+- Run the SQL file in the new project's SQL editor (or `psql -f database_backup.sql`)
+- Manually recreate the `profile-media` public storage bucket
+- Re-add secrets: `RESEND_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `LOVABLE_API_KEY`
+- Update the hardcoded `supabase_url` and `anon_key` inside `send_notification_email()` and `send_ticket_email()` DB functions to match the new project
+- Users in `auth.users` must sign up again (or be migrated separately via Supabase admin API)
 
-### Notes
-- Image uploads use the existing `profile-media` bucket via `ImageUploader` — no new storage needed.
-- Available to all users (not gated to Inlight only) since the request mentioned Inlight as the use case but the column-level approach makes it universal.
-
-Files touched:
-- New migration adding 3 columns
-- `src/hooks/useOpportunities.ts`
-- `src/components/opportunities/OpportunityCreator.tsx`
-- `src/components/opportunities/OpportunityCard.tsx`
-- `src/components/opportunities/EditOpportunityDialog.tsx`
-- `src/components/opportunities/OpportunityDetailSheet.tsx`
