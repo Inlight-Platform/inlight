@@ -193,6 +193,22 @@ export const OnboardingTour: React.FC = () => {
         prevBtnText: '← Back',
         doneBtnText: isLastPhase ? 'Finish 🎉' : 'Next →',
         steps,
+        onPopoverRender: (popover) => {
+          // Inject a subtle "Skip tour" link into the footer
+          const footer = popover.footer;
+          if (!footer || footer.querySelector('.inlight-tour-skip')) return;
+          const skip = document.createElement('button');
+          skip.type = 'button';
+          skip.textContent = 'Skip tour';
+          skip.className = 'inlight-tour-skip';
+          skip.setAttribute('aria-label', 'Skip onboarding tour');
+          skip.addEventListener('click', () => {
+            advancingRef.current = false;
+            try { d.destroy(); } catch { /* noop */ }
+            endTour(true);
+          });
+          footer.appendChild(skip);
+        },
         onCloseClick: () => {
           advancingRef.current = false;
           try { d.destroy(); } catch { /* noop */ }
@@ -238,24 +254,7 @@ export const OnboardingTour: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive, currentStep, user, location.pathname]);
 
-  // Floating skip button
-  if (!isActive) return null;
-
-  return (
-    <button
-      onClick={() => {
-        if (driverRef.current) {
-          try { driverRef.current.destroy(); } catch { /* noop */ }
-          driverRef.current = null;
-        }
-        endTour(true);
-      }}
-      className="fixed bottom-4 right-4 z-[10001] px-4 py-2 rounded-full bg-background/90 backdrop-blur border border-border shadow-lg text-sm font-medium hover:bg-accent transition-colors"
-      aria-label="Skip onboarding tour"
-    >
-      Skip tour
-    </button>
-  );
+  return null;
 };
 
 export default OnboardingTour;
