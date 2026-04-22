@@ -302,7 +302,7 @@ const ProjectNewPage: React.FC = () => {
             </div>
 
             {endDate && endDate < new Date(new Date().toDateString()) && (
-              <p className="text-sm text-amber-500 font-medium">
+              <p className="text-sm text-destructive font-medium">
                 ⚠ End date is in the past — this project will be automatically archived.
               </p>
             )}
