@@ -41,7 +41,7 @@ const AuthPage: React.FC = () => {
   useEffect(() => {
     // Don't redirect if in password recovery mode
     if (!loading && user && view !== 'reset' && !isPasswordRecovery) {
-      navigate('/plan-selection');
+      navigate('/feed');
     }
   }, [user, loading, navigate, view, isPasswordRecovery]);
 
@@ -93,7 +93,7 @@ const AuthPage: React.FC = () => {
       toast.error(error.message);
     } else {
       toast.success('Account created! Welcome to Inlight.');
-      navigate('/plan-selection');
+      navigate('/feed');
     }
 
     setIsLoading(false);
