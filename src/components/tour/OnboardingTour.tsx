@@ -254,24 +254,7 @@ export const OnboardingTour: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive, currentStep, user, location.pathname]);
 
-  // Floating skip button
-  if (!isActive) return null;
-
-  return (
-    <button
-      onClick={() => {
-        if (driverRef.current) {
-          try { driverRef.current.destroy(); } catch { /* noop */ }
-          driverRef.current = null;
-        }
-        endTour(true);
-      }}
-      className="fixed bottom-4 right-4 z-[10001] px-4 py-2 rounded-full bg-background/90 backdrop-blur border border-border shadow-lg text-sm font-medium hover:bg-accent transition-colors"
-      aria-label="Skip onboarding tour"
-    >
-      Skip tour
-    </button>
-  );
+  return null;
 };
 
 export default OnboardingTour;
