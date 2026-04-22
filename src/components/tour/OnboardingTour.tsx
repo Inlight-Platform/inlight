@@ -174,9 +174,22 @@ export const OnboardingTour: React.FC = () => {
     // Avoid re-mounting driver for the same step
     if (mountedStepRef.current === currentStep && driverRef.current) return;
 
-    // Wait for the page to render targets
-    const timeoutId = setTimeout(() => {
-      const steps = phase.steps(user.id);
+    // Wait for the page to render targets — poll until the first step's anchor exists
+    let cancelled = false;
+    let pollId: ReturnType<typeof setTimeout> | null = null;
+
+    const start = () => {
+      if (cancelled) return;
+      const steps = phase.steps(user.id).map((s) => {
+        // If the target selector isn't found, drop the element so driver.js
+        // shows a centered modal popover instead of failing silently.
+        const sel = typeof s.element === 'string' ? s.element : null;
+        if (sel && !document.querySelector(sel)) {
+          const { element, ...rest } = s as DriveStep & { element?: string };
+          return rest as DriveStep;
+        }
+        return s;
+      });
       const isLastPhase = currentStep === phases.length - 1;
       advancingRef.current = false;
 
@@ -239,10 +252,31 @@ export const OnboardingTour: React.FC = () => {
       driverRef.current = d;
       mountedStepRef.current = currentStep;
       d.drive();
-    }, 500);
+    };
+
+    // Poll for first anchor up to ~4s, then start regardless (centered fallback)
+    const firstSelector = (() => {
+      const s = phase.steps(user.id)[0];
+      return typeof s?.element === 'string' ? s.element : null;
+    })();
+
+    let attempts = 0;
+    const maxAttempts = 20; // 20 * 200ms = 4s
+    const tick = () => {
+      if (cancelled) return;
+      attempts += 1;
+      if (!firstSelector || document.querySelector(firstSelector) || attempts >= maxAttempts) {
+        // small settle delay so layout stabilizes
+        pollId = setTimeout(start, 150);
+        return;
+      }
+      pollId = setTimeout(tick, 200);
+    };
+    pollId = setTimeout(tick, 200);
 
     return () => {
-      clearTimeout(timeoutId);
+      cancelled = true;
+      if (pollId) clearTimeout(pollId);
       // Tear down silently — do NOT trigger advance
       if (driverRef.current) {
         advancingRef.current = false;
