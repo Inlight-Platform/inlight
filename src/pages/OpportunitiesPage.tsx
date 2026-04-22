@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { format, addMonths, isPast } from 'date-fns';
 import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { Plus, Briefcase, TrendingUp, Clock, Loader2, Calendar, Trash2 } from 'lucide-react';
@@ -14,6 +14,19 @@ import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
+import { toast } from 'sonner';
+
+const STRIPE_POST_JOB_URL = 'https://buy.stripe.com/dRmaEWa8gaA3eVL3ufco002';
+const jobCreditKey = (uid: string) => `inlight:jobPostCredits:${uid}`;
+const getJobCredits = (uid: string): number => {
+  if (typeof window === 'undefined') return 0;
+  const raw = window.localStorage.getItem(jobCreditKey(uid));
+  const n = raw ? parseInt(raw, 10) : 0;
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+const setJobCredits = (uid: string, n: number) => {
+  window.localStorage.setItem(jobCreditKey(uid), String(Math.max(0, n)));
+};
 
 /** Compact card matching the Open Roles style — title, company, deadline */
 const OpportunityCompactCard: React.FC<{ opportunity: OpportunityView }> = ({ opportunity }) => {
@@ -111,6 +124,60 @@ const OpportunitiesPage: React.FC = () => {
   const [remoteOnly, setRemoteOnly] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [activeTab, setActiveTab] = useState('discover');
+  const [credits, setCredits] = useState(0);
+
+  // Load credits & handle Stripe return (?job_purchase=success grants 1 credit)
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('job_purchase') === 'success') {
+      const next = getJobCredits(user.id) + 1;
+      setJobCredits(user.id, next);
+      setCredits(next);
+      toast.success('Payment received — you can now post 1 job.');
+      params.delete('job_purchase');
+      const newSearch = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
+    } else {
+      setCredits(getJobCredits(user.id));
+    }
+  }, [user]);
+
+  const handlePostJobClick = () => {
+    if (isAdmin || credits > 0) {
+      setShowCreator(true);
+    } else {
+      const returnUrl = `${window.location.origin}/opportunities?job_purchase=success`;
+      const url = `${STRIPE_POST_JOB_URL}?success_url=${encodeURIComponent(returnUrl)}`;
+      window.location.href = url;
+    }
+  };
+
+  const handleCreatorOpenChange = (open: boolean) => {
+    // When dialog closes after a successful post, the creator invalidates queries.
+    // Detect a new opportunity by length increase via effect below; here just toggle.
+    setShowCreator(open);
+  };
+
+  // Consume one credit when a non-admin user's opportunity count increases
+  const myCount = useMemo(
+    () => (user ? allOpportunities.filter(o => o.postedBy === user.id).length : 0),
+    [allOpportunities, user]
+  );
+  const [lastSeenMyCount, setLastSeenMyCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    if (lastSeenMyCount === null) {
+      setLastSeenMyCount(myCount);
+      return;
+    }
+    if (myCount > lastSeenMyCount && !isAdmin) {
+      const next = Math.max(0, getJobCredits(user.id) - 1);
+      setJobCredits(user.id, next);
+      setCredits(next);
+    }
+    setLastSeenMyCount(myCount);
+  }, [myCount, user, isAdmin, lastSeenMyCount]);
 
   // Get unique locations
   const locations = useMemo(() => {
@@ -189,15 +256,13 @@ const OpportunitiesPage: React.FC = () => {
               </p>
             </div>
           </div>
-          {isAdmin && (
-            <Button 
-              onClick={() => setShowCreator(true)}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Post Opportunity
-            </Button>
-          )}
+          <Button
+            onClick={handlePostJobClick}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            {isAdmin || credits > 0 ? 'Post A Job' : 'Post A Job'}
+          </Button>
         </div>
       </header>
 
@@ -249,11 +314,9 @@ const OpportunitiesPage: React.FC = () => {
                 <p className="text-muted-foreground mb-4">
                   Try adjusting your filters or check back later
                 </p>
-                 {isAdmin && (
-                   <Button onClick={() => setShowCreator(true)}>
-                     Post an Opportunity
-                   </Button>
-                 )}
+                 <Button onClick={handlePostJobClick}>
+                   Post A Job
+                 </Button>
               </div>
             )}
           </TabsContent>
@@ -280,7 +343,7 @@ const OpportunitiesPage: React.FC = () => {
       </div>
 
       {/* Opportunity Creator Modal */}
-      <OpportunityCreator open={showCreator} onOpenChange={setShowCreator} />
+      <OpportunityCreator open={showCreator} onOpenChange={handleCreatorOpenChange} />
     </div>
   );
 };
