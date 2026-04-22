@@ -87,7 +87,20 @@ const ProjectNewPage: React.FC = () => {
       await supabase.from('project_members').insert({
         project_id: project.id,
         user_id: user.id,
-        role: 'Creator',
+        role: creatorRole.trim() || 'Creator',
+      });
+
+      // 2b. Auto-create an unverified credit on the creator's profile
+      const creditYear = startDate
+        ? startDate.getFullYear()
+        : new Date().getFullYear();
+      await supabase.from('credits').insert({
+        user_id: user.id,
+        project: title.trim(),
+        role: creatorRole.trim() || 'Creator',
+        year: creditYear,
+        company: companyName.trim() || null,
+        verified: false,
       });
 
       // 3. Create project roles and send invitations
