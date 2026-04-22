@@ -23,12 +23,10 @@ import { toast } from 'sonner';
 
 export const PROJECT_CATEGORIES = [
   { value: 'film', label: 'Film' },
-  { value: 'theater', label: 'Theater' },
+  { value: 'theater', label: 'Theatre' },
   { value: 'music', label: 'Music' },
   { value: 'dance', label: 'Dance' },
   { value: 'photography', label: 'Photography' },
-  { value: 'commercial', label: 'Commercial' },
-  { value: 'documentary', label: 'Documentary' },
   { value: 'other', label: 'Other' },
 ] as const;
 
