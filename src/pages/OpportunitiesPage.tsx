@@ -256,15 +256,13 @@ const OpportunitiesPage: React.FC = () => {
               </p>
             </div>
           </div>
-          {isAdmin && (
-            <Button 
-              onClick={() => setShowCreator(true)}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Post Opportunity
-            </Button>
-          )}
+          <Button
+            onClick={handlePostJobClick}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            {isAdmin || credits > 0 ? 'Post A Job' : 'Post A Job'}
+          </Button>
         </div>
       </header>
 
