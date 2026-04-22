@@ -272,15 +272,6 @@ const OpportunitiesPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {!isAdmin && credits === 0 && (
-              <Button
-                variant="outline"
-                onClick={handleConfirmPaid}
-                title="Click after completing Stripe payment"
-              >
-                I've paid
-              </Button>
-            )}
             <Button
               onClick={handlePostJobClick}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
