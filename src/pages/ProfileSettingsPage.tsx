@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera, MessageCircle, Lock, Globe, Bell, Mail, Briefcase, X, Plus, Eye, EyeOff, KeyRound, Star } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera, MessageCircle, Lock, Globe, Bell, Mail, Briefcase, X, Plus, Eye, EyeOff, KeyRound, Star, Compass } from 'lucide-react';
 import ShowcaseSettings from '@/components/profile/ShowcaseSettings';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MediaUploader } from '@/components/profile/MediaUploader';
@@ -20,6 +20,7 @@ import { useMediaUpload, useUserMedia } from '@/hooks/useMediaUpload';
 import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidation';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useTour } from '@/hooks/useTour';
 
 interface Profile {
   id: string;
@@ -146,6 +147,7 @@ const ProfileSettingsPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { startTour } = useTour();
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState('');
@@ -592,6 +594,43 @@ const ProfileSettingsPage: React.FC = () => {
 
         {/* Change Password */}
         <ChangePasswordCard />
+
+        {/* Onboarding Tour */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Compass className="h-5 w-5" />
+              Onboarding Tour
+            </CardTitle>
+            <CardDescription>
+              Re-take the guided walkthrough of Inlight any time.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-muted">
+                  <Compass className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-medium">Restart the tour</p>
+                  <p className="text-sm text-muted-foreground">
+                    Re-launch the 7-step onboarding tour from your profile.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  startTour();
+                  if (user) navigate(`/profile/${user.id}`);
+                }}
+              >
+                Start tour
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Professional Details */}
         <Card>
