@@ -595,6 +595,43 @@ const ProfileSettingsPage: React.FC = () => {
         {/* Change Password */}
         <ChangePasswordCard />
 
+        {/* Onboarding Tour */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Compass className="h-5 w-5" />
+              Onboarding Tour
+            </CardTitle>
+            <CardDescription>
+              Re-take the guided walkthrough of Inlight any time.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-muted">
+                  <Compass className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-medium">Restart the tour</p>
+                  <p className="text-sm text-muted-foreground">
+                    Re-launch the 7-step onboarding tour from your profile.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  startTour();
+                  if (user) navigate(`/profile/${user.id}`);
+                }}
+              >
+                Start tour
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Professional Details */}
         <Card>
           <CardHeader>
