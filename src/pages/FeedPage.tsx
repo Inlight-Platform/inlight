@@ -16,7 +16,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +23,7 @@ import { toast } from 'sonner';
 
 type NetworkFilter = 'all' | '1st';
 type ContentFilter = 'all' | 'events' | 'projects' | 'updates';
-type ProjectSubTab = 'feed' | 'my-network' | 'open-roles' | 'saved' | 'archive';
+type ProjectSubTab = 'feed' | 'my-network' | 'saved' | 'archive';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 
 const PROJECT_CATEGORIES = [
@@ -553,9 +552,6 @@ const FeedPage: React.FC = () => {
                 <Users className="w-3 h-3" />
                 <span className="hidden sm:inline">My </span>Network
               </TabsTrigger>
-              <TabsTrigger value="open-roles" className="flex-shrink-0 whitespace-nowrap">
-                <span className="hidden sm:inline">Open </span>Roles
-              </TabsTrigger>
               <TabsTrigger value="saved" className="flex-shrink-0 whitespace-nowrap">Saved</TabsTrigger>
               <TabsTrigger value="archive" className="gap-1 flex-shrink-0 whitespace-nowrap">
                 <Archive className="w-3 h-3" />
@@ -605,10 +601,6 @@ const FeedPage: React.FC = () => {
                 ))}
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="open-roles">
-            <OpenRolesFeed />
           </TabsContent>
 
           <TabsContent value="saved">
