@@ -124,6 +124,60 @@ const OpportunitiesPage: React.FC = () => {
   const [remoteOnly, setRemoteOnly] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [activeTab, setActiveTab] = useState('discover');
+  const [credits, setCredits] = useState(0);
+
+  // Load credits & handle Stripe return (?job_purchase=success grants 1 credit)
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('job_purchase') === 'success') {
+      const next = getJobCredits(user.id) + 1;
+      setJobCredits(user.id, next);
+      setCredits(next);
+      toast.success('Payment received — you can now post 1 job.');
+      params.delete('job_purchase');
+      const newSearch = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
+    } else {
+      setCredits(getJobCredits(user.id));
+    }
+  }, [user]);
+
+  const handlePostJobClick = () => {
+    if (isAdmin || credits > 0) {
+      setShowCreator(true);
+    } else {
+      const returnUrl = `${window.location.origin}/opportunities?job_purchase=success`;
+      const url = `${STRIPE_POST_JOB_URL}?success_url=${encodeURIComponent(returnUrl)}`;
+      window.location.href = url;
+    }
+  };
+
+  const handleCreatorOpenChange = (open: boolean) => {
+    // When dialog closes after a successful post, the creator invalidates queries.
+    // Detect a new opportunity by length increase via effect below; here just toggle.
+    setShowCreator(open);
+  };
+
+  // Consume one credit when a non-admin user's opportunity count increases
+  const myCount = useMemo(
+    () => (user ? allOpportunities.filter(o => o.postedBy === user.id).length : 0),
+    [allOpportunities, user]
+  );
+  const [lastSeenMyCount, setLastSeenMyCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    if (lastSeenMyCount === null) {
+      setLastSeenMyCount(myCount);
+      return;
+    }
+    if (myCount > lastSeenMyCount && !isAdmin) {
+      const next = Math.max(0, getJobCredits(user.id) - 1);
+      setJobCredits(user.id, next);
+      setCredits(next);
+    }
+    setLastSeenMyCount(myCount);
+  }, [myCount, user, isAdmin, lastSeenMyCount]);
 
   // Get unique locations
   const locations = useMemo(() => {
