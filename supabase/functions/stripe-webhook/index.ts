@@ -68,6 +68,38 @@ serve(async (req) => {
           console.log(`[STRIPE-WEBHOOK] User ${userId} upgraded to pro`);
         }
       }
+
+      // Handle Job Posting Payment Link purchases.
+      // Stripe Payment Links forward `client_reference_id` (set in the URL by the
+      // frontend) on the completed Checkout Session. Use it to credit the user.
+      const clientRefId = session.client_reference_id;
+      if (clientRefId && !eventId && !userId) {
+        const { error: creditErr } = await supabase.rpc("increment_job_credit", {
+          _user_id: clientRefId,
+        });
+
+        if (creditErr) {
+          // Fallback: upsert manually if RPC doesn't exist
+          const { data: existing } = await supabase
+            .from("job_post_credits")
+            .select("credits")
+            .eq("user_id", clientRefId)
+            .maybeSingle();
+
+          const next = (existing?.credits ?? 0) + 1;
+          const { error: upsertErr } = await supabase
+            .from("job_post_credits")
+            .upsert({ user_id: clientRefId, credits: next, updated_at: new Date().toISOString() });
+
+          if (upsertErr) {
+            console.error("[STRIPE-WEBHOOK] Job credit upsert error:", upsertErr);
+          } else {
+            console.log(`[STRIPE-WEBHOOK] Granted job credit to ${clientRefId} (total: ${next})`);
+          }
+        } else {
+          console.log(`[STRIPE-WEBHOOK] Granted job credit to ${clientRefId} via RPC`);
+        }
+      }
     }
 
     return new Response(JSON.stringify({ received: true }), {
