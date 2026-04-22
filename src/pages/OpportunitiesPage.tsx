@@ -147,10 +147,19 @@ const OpportunitiesPage: React.FC = () => {
     if (isAdmin || credits > 0) {
       setShowCreator(true);
     } else {
-      const returnUrl = `${window.location.origin}/opportunities?job_purchase=success`;
-      const url = `${STRIPE_POST_JOB_URL}?success_url=${encodeURIComponent(returnUrl)}`;
-      window.location.href = url;
+      // Stripe Payment Links use a redirect URL configured in the Stripe dashboard,
+      // not a query param. Open in a new tab so the user keeps their session here.
+      window.open(STRIPE_POST_JOB_URL, '_blank', 'noopener,noreferrer');
+      toast.info('Complete payment in the new tab, then click "I\'ve paid" to unlock posting.');
     }
+  };
+
+  const handleConfirmPaid = () => {
+    if (!user) return;
+    const next = getJobCredits(user.id) + 1;
+    setJobCredits(user.id, next);
+    setCredits(next);
+    toast.success('Posting unlocked — you can now post 1 job.');
   };
 
   const handleCreatorOpenChange = (open: boolean) => {
@@ -256,13 +265,24 @@ const OpportunitiesPage: React.FC = () => {
               </p>
             </div>
           </div>
-          <Button
-            onClick={handlePostJobClick}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {isAdmin || credits > 0 ? 'Post A Job' : 'Post A Job'}
-          </Button>
+          <div className="flex items-center gap-2">
+            {!isAdmin && credits === 0 && (
+              <Button
+                variant="outline"
+                onClick={handleConfirmPaid}
+                title="Click after completing Stripe payment"
+              >
+                I've paid
+              </Button>
+            )}
+            <Button
+              onClick={handlePostJobClick}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Post A Job
+            </Button>
+          </div>
         </div>
       </header>
 
