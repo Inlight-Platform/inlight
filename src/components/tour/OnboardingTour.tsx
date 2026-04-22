@@ -180,8 +180,15 @@ export const OnboardingTour: React.FC = () => {
       const isLastPhase = currentStep === phases.length - 1;
       advancingRef.current = false;
 
+      // Compute global step numbering across all phases
+      const totalSteps = phases.reduce((sum, p) => sum + p.steps(user.id).length, 0);
+      const stepsBefore = phases
+        .slice(0, currentStep)
+        .reduce((sum, p) => sum + p.steps(user.id).length, 0);
+
       const d = driver({
-        showProgress: false,
+        showProgress: true,
+        progressText: `Step {{current}} of ${steps.length} · Phase ${currentStep + 1} of ${phases.length}`,
         animate: true,
         allowClose: false,
         overlayOpacity: 0.6,
