@@ -10,11 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -42,6 +37,8 @@ const ProjectNewPage: React.FC = () => {
   const queryClient = useQueryClient();
 
   const [title, setTitle] = useState('');
+  const [creatorRole, setCreatorRole] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [description, setDescription] = useState('');
   const [mainImageUrl, setMainImageUrl] = useState('');
   const [headerImageUrl, setHeaderImageUrl] = useState('');
@@ -49,10 +46,13 @@ const ProjectNewPage: React.FC = () => {
   const [status, setStatus] = useState<ProjectStatus>('planning');
   const [isPublic, setIsPublic] = useState(false);
   const [roles, setRoles] = useState<RoleSlot[]>([]);
-  const [startDate, setStartDate] = useState<Date | undefined>();
-  const [endDate, setEndDate] = useState<Date | undefined>();
+  const [startDateStr, setStartDateStr] = useState('');
+  const [endDateStr, setEndDateStr] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
+
+  const startDate = startDateStr ? new Date(startDateStr) : undefined;
+  const endDate = endDateStr ? new Date(endDateStr) : undefined;
 
   // Auto-set status to archived if end date is in the past
   const effectiveStatus = endDate && endDate < new Date(new Date().toDateString()) ? 'archived' : status;
@@ -87,7 +87,20 @@ const ProjectNewPage: React.FC = () => {
       await supabase.from('project_members').insert({
         project_id: project.id,
         user_id: user.id,
-        role: 'Creator',
+        role: creatorRole.trim() || 'Creator',
+      });
+
+      // 2b. Auto-create an unverified credit on the creator's profile
+      const creditYear = startDate
+        ? startDate.getFullYear()
+        : new Date().getFullYear();
+      await supabase.from('credits').insert({
+        user_id: user.id,
+        project: title.trim(),
+        role: creatorRole.trim() || 'Creator',
+        year: creditYear,
+        company: companyName.trim() || null,
+        verified: false,
       });
 
       // 3. Create project roles and send invitations
@@ -141,6 +154,10 @@ const ProjectNewPage: React.FC = () => {
       toast.error('Please enter a project title');
       return;
     }
+    if (!creatorRole.trim()) {
+      toast.error('Please enter your role on this project');
+      return;
+    }
     if (!mainImageUrl.trim() && !headerImageUrl.trim()) {
       toast.error('Please add an image for your project');
       return;
@@ -187,6 +204,31 @@ const ProjectNewPage: React.FC = () => {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={100}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="creatorRole">Your Role *</Label>
+              <Input
+                id="creatorRole"
+                placeholder="e.g. Director, Producer, Lead Actor"
+                value={creatorRole}
+                onChange={(e) => setCreatorRole(e.target.value)}
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">
+                This becomes your credit on this project.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="companyName">Company / Production (optional)</Label>
+              <Input
+                id="companyName"
+                placeholder="e.g. A24, Roundabout Theatre"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                maxLength={150}
               />
             </div>
 
@@ -240,59 +282,27 @@ const ProjectNewPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Start Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, 'PPP') : 'Pick a date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={startDate}
-                      onSelect={setStartDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  type="date"
+                  value={startDateStr}
+                  onChange={(e) => setStartDateStr(e.target.value)}
+                  placeholder="YYYY-MM-DD"
+                />
               </div>
 
               <div className="space-y-2">
                 <Label>End Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, 'PPP') : 'Pick a date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={endDate}
-                      onSelect={setEndDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  type="date"
+                  value={endDateStr}
+                  onChange={(e) => setEndDateStr(e.target.value)}
+                  placeholder="YYYY-MM-DD"
+                />
               </div>
             </div>
 
             {endDate && endDate < new Date(new Date().toDateString()) && (
-              <p className="text-sm text-amber-500 font-medium">
+              <p className="text-sm text-destructive font-medium">
                 ⚠ End date is in the past — this project will be automatically archived.
               </p>
             )}
@@ -389,7 +399,17 @@ const ProjectNewPage: React.FC = () => {
           </div>
 
           {/* Submit */}
-          <div className="pt-6 flex gap-3">
+          <div className="pt-6 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+            <p>
+              <span className="font-medium text-foreground">Heads up:</span>{' '}
+              This project will automatically be added as a credit on your profile
+              using the role{companyName.trim() ? ' and company' : ''} you entered above.
+              It will remain <span className="font-medium">unverified</span> until 3 or more
+              team members have accepted roles on this project.
+            </p>
+          </div>
+
+          <div className="pt-2 flex gap-3">
             <Button
               type="button"
               variant="outline"
