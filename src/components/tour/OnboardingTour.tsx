@@ -181,7 +181,8 @@ export const OnboardingTour: React.FC = () => {
       advancingRef.current = false;
 
       const d = driver({
-        showProgress: false,
+        showProgress: true,
+        progressText: `Phase ${currentStep + 1} of ${phases.length} · {{current}} / {{total}}`,
         animate: true,
         allowClose: false,
         overlayOpacity: 0.6,

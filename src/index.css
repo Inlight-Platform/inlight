@@ -495,6 +495,15 @@
   margin-top: 14px;
   gap: 8px;
 }
+.driver-popover.inlight-tour-popover .driver-popover-progress-text {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  opacity: 0.75;
+  align-self: center;
+  margin-right: auto;
+}
 .driver-popover.inlight-tour-popover .driver-popover-prev-btn,
 .driver-popover.inlight-tour-popover .driver-popover-next-btn {
   background: hsl(var(--primary));
