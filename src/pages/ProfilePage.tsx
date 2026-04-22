@@ -1423,7 +1423,19 @@ const ProfilePage: React.FC = () => {
               <a 
                 href={displayInstagram.startsWith('http') ? displayInstagram : `https://www.instagram.com/${displayInstagram.replace('@', '')}`}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener noreferrer external"
+                onClick={(e) => {
+                  // Escape preview iframe sandboxing by opening on the top window
+                  const url = displayInstagram.startsWith('http')
+                    ? displayInstagram
+                    : `https://www.instagram.com/${displayInstagram.replace('@', '')}`;
+                  e.preventDefault();
+                  try {
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                  } catch {
+                    window.location.href = url;
+                  }
+                }}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted text-sm transition-colors"
               >
                 <Instagram className="w-4 h-4" />
