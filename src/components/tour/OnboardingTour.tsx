@@ -4,7 +4,6 @@ import { driver, type Driver, type DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useTour } from '@/hooks/useTour';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 
 type Phase = {
   route: string;
