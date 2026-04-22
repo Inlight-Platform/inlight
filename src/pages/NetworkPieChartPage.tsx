@@ -1,4 +1,5 @@
 import React from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,6 +32,7 @@ const COLORS = [
 
 const NetworkPieChartPage: React.FC = () => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   // Fetch studios
   const { data: studios = [] } = useQuery({
@@ -163,14 +165,14 @@ const NetworkPieChartPage: React.FC = () => {
       ) : (
         <>
           <div className="w-full flex justify-center">
-            <ResponsiveContainer width="100%" height={360}>
+            <ResponsiveContainer width="100%" height={isMobile ? 420 : 360}>
               <PieChart>
                 <Pie
                   data={chartData}
                   cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={140}
+                  cy={isMobile ? '35%' : '50%'}
+                  innerRadius={isMobile ? 45 : 60}
+                  outerRadius={isMobile ? 95 : 140}
                   paddingAngle={2}
                   dataKey="value"
                   stroke="hsl(var(--background))"
@@ -193,10 +195,14 @@ const NetworkPieChartPage: React.FC = () => {
                   }}
                 />
                 <Legend
-                  layout="vertical"
-                  align="right"
-                  verticalAlign="middle"
-                  wrapperStyle={{ fontSize: '12px', paddingLeft: '16px' }}
+                  layout={isMobile ? 'horizontal' : 'vertical'}
+                  align={isMobile ? 'center' : 'right'}
+                  verticalAlign={isMobile ? 'bottom' : 'middle'}
+                  wrapperStyle={
+                    isMobile
+                      ? { fontSize: '11px', paddingTop: '12px' }
+                      : { fontSize: '12px', paddingLeft: '16px' }
+                  }
                 />
               </PieChart>
             </ResponsiveContainer>
