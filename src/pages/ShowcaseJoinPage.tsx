@@ -598,7 +598,7 @@ const ShowcaseJoinPage: React.FC = () => {
           <p className="text-rose-300/80 text-xs uppercase tracking-[0.3em] mb-4 font-medium">Private Showcase</p>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3 text-white" style={{ fontFamily: "'Georgia', serif" }}>
             {programName}
-            <span className="block text-2xl md:text-3xl font-normal text-white/60 mt-2">Class of 2026</span>
+            <span className="block text-2xl md:text-3xl font-normal text-white/60 mt-2">Advanced Students</span>
           </h1>
           {program.description && <p className="text-white/50 text-lg max-w-xl mx-auto mt-4">{program.description}</p>}
           <div className="w-16 h-px bg-rose-400/40 mx-auto mt-8" />
