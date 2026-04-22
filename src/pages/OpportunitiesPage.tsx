@@ -314,11 +314,9 @@ const OpportunitiesPage: React.FC = () => {
                 <p className="text-muted-foreground mb-4">
                   Try adjusting your filters or check back later
                 </p>
-                 {isAdmin && (
-                   <Button onClick={() => setShowCreator(true)}>
-                     Post an Opportunity
-                   </Button>
-                 )}
+                 <Button onClick={handlePostJobClick}>
+                   Post A Job
+                 </Button>
               </div>
             )}
           </TabsContent>
@@ -345,7 +343,7 @@ const OpportunitiesPage: React.FC = () => {
       </div>
 
       {/* Opportunity Creator Modal */}
-      <OpportunityCreator open={showCreator} onOpenChange={setShowCreator} />
+      <OpportunityCreator open={showCreator} onOpenChange={handleCreatorOpenChange} />
     </div>
   );
 };
