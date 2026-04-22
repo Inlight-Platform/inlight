@@ -14,19 +14,10 @@ import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const STRIPE_POST_JOB_URL = 'https://buy.stripe.com/dRmaEWa8gaA3eVL3ufco002';
-const jobCreditKey = (uid: string) => `inlight:jobPostCredits:${uid}`;
-const getJobCredits = (uid: string): number => {
-  if (typeof window === 'undefined') return 0;
-  const raw = window.localStorage.getItem(jobCreditKey(uid));
-  const n = raw ? parseInt(raw, 10) : 0;
-  return Number.isFinite(n) && n > 0 ? n : 0;
-};
-const setJobCredits = (uid: string, n: number) => {
-  window.localStorage.setItem(jobCreditKey(uid), String(Math.max(0, n)));
-};
 
 /** Compact card matching the Open Roles style — title, company, deadline */
 const OpportunityCompactCard: React.FC<{ opportunity: OpportunityView }> = ({ opportunity }) => {
@@ -126,40 +117,53 @@ const OpportunitiesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('discover');
   const [credits, setCredits] = useState(0);
 
-  // Load credits & handle Stripe return (?job_purchase=success grants 1 credit)
+  // Load credits from the server. The Stripe webhook is the only thing that
+  // can grant credits, so this is the source of truth.
+  const refreshCredits = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('job_post_credits')
+      .select('credits')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    setCredits(data?.credits ?? 0);
+  };
+
   useEffect(() => {
     if (!user) return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('job_purchase') === 'success') {
-      const next = getJobCredits(user.id) + 1;
-      setJobCredits(user.id, next);
-      setCredits(next);
-      toast.success('Payment received — you can now post 1 job.');
-      params.delete('job_purchase');
-      const newSearch = params.toString();
-      window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
-    } else {
-      setCredits(getJobCredits(user.id));
-    }
-  }, [user]);
+    refreshCredits();
+
+    // Realtime: refresh when the webhook upserts credits for this user
+    const channel = supabase
+      .channel(`job_credits_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'job_post_credits',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => refreshCredits()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const handlePostJobClick = () => {
     if (isAdmin || credits > 0) {
       setShowCreator(true);
-    } else {
-      // Stripe Payment Links use a redirect URL configured in the Stripe dashboard,
-      // not a query param. Open in a new tab so the user keeps their session here.
-      window.open(STRIPE_POST_JOB_URL, '_blank', 'noopener,noreferrer');
-      toast.info('Complete payment in the new tab, then click "I\'ve paid" to unlock posting.');
+    } else if (user) {
+      // Pass the user id to Stripe via client_reference_id so the webhook
+      // knows whose account to credit on payment success.
+      const url = `${STRIPE_POST_JOB_URL}?client_reference_id=${encodeURIComponent(user.id)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+      toast.info('Complete payment in the new tab. Your posting credit will unlock automatically once Stripe confirms.');
     }
-  };
-
-  const handleConfirmPaid = () => {
-    if (!user) return;
-    const next = getJobCredits(user.id) + 1;
-    setJobCredits(user.id, next);
-    setCredits(next);
-    toast.success('Posting unlocked — you can now post 1 job.');
   };
 
   const handleCreatorOpenChange = (open: boolean) => {
@@ -168,7 +172,8 @@ const OpportunitiesPage: React.FC = () => {
     setShowCreator(open);
   };
 
-  // Consume one credit when a non-admin user's opportunity count increases
+  // Consume one credit (server-side, atomic) when a non-admin user's
+  // opportunity count increases.
   const myCount = useMemo(
     () => (user ? allOpportunities.filter(o => o.postedBy === user.id).length : 0),
     [allOpportunities, user]
@@ -181,11 +186,12 @@ const OpportunitiesPage: React.FC = () => {
       return;
     }
     if (myCount > lastSeenMyCount && !isAdmin) {
-      const next = Math.max(0, getJobCredits(user.id) - 1);
-      setJobCredits(user.id, next);
-      setCredits(next);
+      supabase.rpc('consume_job_credit', { _user_id: user.id }).then(() => {
+        refreshCredits();
+      });
     }
     setLastSeenMyCount(myCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myCount, user, isAdmin, lastSeenMyCount]);
 
   // Get unique locations
@@ -266,15 +272,6 @@ const OpportunitiesPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {!isAdmin && credits === 0 && (
-              <Button
-                variant="outline"
-                onClick={handleConfirmPaid}
-                title="Click after completing Stripe payment"
-              >
-                I've paid
-              </Button>
-            )}
             <Button
               onClick={handlePostJobClick}
               className="bg-primary text-primary-foreground hover:bg-primary/90"

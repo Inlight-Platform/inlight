@@ -562,6 +562,24 @@ export type Database = {
         }
         Relationships: []
       }
+      job_post_credits: {
+        Row: {
+          credits: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          credits?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          credits?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -2242,6 +2260,7 @@ export type Database = {
         Args: { post_row: Database["public"]["Tables"]["posts"]["Row"] }
         Returns: boolean
       }
+      consume_job_credit: { Args: { _user_id: string }; Returns: boolean }
       generate_ticket_code: { Args: never; Returns: string }
       get_2nd_degree_connections: {
         Args: { target_user_id: string }
