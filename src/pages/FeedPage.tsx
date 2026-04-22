@@ -28,7 +28,7 @@ type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 
 const PROJECT_CATEGORIES = [
   { value: 'film', label: 'Film' },
-  { value: 'theater', label: 'Theater' },
+  { value: 'theater', label: 'Theatre' },
   { value: 'music', label: 'Music' },
   { value: 'dance', label: 'Dance' },
   { value: 'photography', label: 'Photography' },
@@ -547,7 +547,7 @@ const FeedPage: React.FC = () => {
         <Tabs value={projectSubTab} onValueChange={(v) => setProjectSubTab(v as ProjectSubTab)} className="w-full">
           <div className="overflow-x-auto scrollbar-thin -mx-3 px-3 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mb-4">
-              <TabsTrigger value="feed" className="flex-shrink-0 whitespace-nowrap">Feed</TabsTrigger>
+              <TabsTrigger value="feed" className="flex-shrink-0 whitespace-nowrap">All</TabsTrigger>
               <TabsTrigger value="my-network" className="gap-1 flex-shrink-0 whitespace-nowrap">
                 <Users className="w-3 h-3" />
                 <span className="hidden sm:inline">My </span>Network
