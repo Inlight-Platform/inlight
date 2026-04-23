@@ -1,0 +1,1 @@
+UPDATE public.showcase_programs SET name = 'Lee Strasberg Theatre & Film Institute', updated_at = now() WHERE slug = 'strasberg2026';
