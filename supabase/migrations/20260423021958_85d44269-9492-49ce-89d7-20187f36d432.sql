@@ -1,0 +1,1 @@
+UPDATE public.showcase_programs SET description = NULL, updated_at = now() WHERE slug = 'strasberg2026';
