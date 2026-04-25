@@ -202,10 +202,14 @@ const ResourcesManager: React.FC = () => {
                 <Label>Description</Label>
                 <Textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Short description"
-                  rows={3}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value.slice(0, 60) })}
+                  placeholder="Short description (max 60 characters, fits on one line)"
+                  rows={2}
+                  maxLength={60}
                 />
+                <div className="text-xs text-muted-foreground text-right">
+                  {formData.description.length}/60
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>URL *</Label>
