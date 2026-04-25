@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
-import { Edit, Trash2, Plus, Loader2 } from 'lucide-react';
+import { Edit, Trash2, Plus, Loader2, ImagePlus, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface MusicShow {
@@ -45,6 +45,10 @@ const MusicShowsManager: React.FC = () => {
   const [editing, setEditing] = useState<MusicShow | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [posterPreview, setPosterPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: shows, isLoading } = useQuery({
     queryKey: ['admin-music-shows'],
@@ -61,14 +65,52 @@ const MusicShowsManager: React.FC = () => {
   const resetForm = () => {
     setFormData(emptyForm);
     setEditing(null);
+    setPosterFile(null);
+    setPosterPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setIsDialogOpen(false);
+  };
+
+  const handlePosterSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error('Image must be under 10MB'); return; }
+    setPosterFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setPosterPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removePoster = () => {
+    setPosterFile(null);
+    setPosterPreview(null);
+    setFormData((prev) => ({ ...prev, poster_url: '' }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const uploadPoster = async (showId: string): Promise<string | null> => {
+    if (!posterFile) return null;
+    setUploading(true);
+    try {
+      const fileExt = posterFile.name.split('.').pop() || 'jpg';
+      const fileName = `music-shows/${showId}/poster-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('profile-media')
+        .upload(fileName, posterFile, { upsert: true, contentType: posterFile.type });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('profile-media').getPublicUrl(fileName);
+      return urlData.publicUrl;
+    } finally {
+      setUploading(false);
+    }
   };
 
   const createMutation = useMutation({
     mutationFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error('Not authenticated');
-      const { error } = await supabase.from('user_music_shows').insert({
+      const { data: inserted, error } = await supabase.from('user_music_shows').insert({
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         venue: formData.venue.trim() || null,
@@ -78,8 +120,15 @@ const MusicShowsManager: React.FC = () => {
         is_free: formData.is_free,
         is_active: formData.is_active,
         submitted_by: userData.user.id,
-      });
+      }).select('id').single();
       if (error) throw error;
+
+      if (posterFile && inserted?.id) {
+        const url = await uploadPoster(inserted.id);
+        if (url) {
+          await supabase.from('user_music_shows').update({ poster_url: url }).eq('id', inserted.id);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-music-shows'] });
@@ -93,6 +142,11 @@ const MusicShowsManager: React.FC = () => {
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!editing) return;
+      let posterUrl = formData.poster_url.trim() || null;
+      if (posterFile) {
+        const uploaded = await uploadPoster(editing.id);
+        if (uploaded) posterUrl = uploaded;
+      }
       const { error } = await supabase
         .from('user_music_shows')
         .update({
@@ -101,7 +155,7 @@ const MusicShowsManager: React.FC = () => {
           venue: formData.venue.trim() || null,
           show_date: formData.show_date || null,
           ticket_url: formData.is_free ? null : (formData.ticket_url.trim() || null),
-          poster_url: formData.poster_url.trim() || null,
+          poster_url: posterUrl,
           is_free: formData.is_free,
           is_active: formData.is_active,
         })
@@ -143,6 +197,8 @@ const MusicShowsManager: React.FC = () => {
       is_free: !!show.is_free,
       is_active: show.is_active !== false,
     });
+    setPosterFile(null);
+    setPosterPreview(show.poster_url || null);
     setIsDialogOpen(true);
   };
 
@@ -182,8 +238,26 @@ const MusicShowsManager: React.FC = () => {
                 <Input type="datetime-local" value={formData.show_date} onChange={(e) => setFormData({ ...formData, show_date: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Poster Image URL</Label>
-                <Input type="url" value={formData.poster_url} onChange={(e) => setFormData({ ...formData, poster_url: e.target.value })} placeholder="https://..." />
+                <Label>Poster Image</Label>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePosterSelect} className="hidden" />
+                {posterPreview ? (
+                  <div className="relative w-full aspect-[2/3] max-w-[180px] rounded-lg overflow-hidden border border-border">
+                    <img src={posterPreview} alt="Poster preview" className="w-full h-full object-cover" />
+                    <button type="button" onClick={removePoster} className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full aspect-[2/3] max-w-[180px] rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <ImagePlus className="w-8 h-8" />
+                    <span className="text-xs">Upload poster</span>
+                  </button>
+                )}
+                <p className="text-xs text-muted-foreground">PNG or JPG up to 10MB</p>
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox id="music-free-admin" checked={formData.is_free} onCheckedChange={(v) => setFormData({ ...formData, is_free: v === true })} />
@@ -205,8 +279,8 @@ const MusicShowsManager: React.FC = () => {
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={resetForm}>Cancel</Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="gap-2">
-                  {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}
+                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending || uploading} className="gap-2">
+                  {(createMutation.isPending || updateMutation.isPending || uploading) && <Loader2 className="w-4 h-4 animate-spin" />}
                   {editing ? 'Update' : 'Create'}
                 </Button>
               </div>
