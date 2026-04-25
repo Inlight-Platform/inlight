@@ -1756,6 +1756,7 @@ export type Database = {
           release_year: number | null
           title: string
           updated_at: string
+          watch_url: string | null
         }
         Insert: {
           content_type?: string
@@ -1770,6 +1771,7 @@ export type Database = {
           release_year?: number | null
           title: string
           updated_at?: string
+          watch_url?: string | null
         }
         Update: {
           content_type?: string
@@ -1784,6 +1786,7 @@ export type Database = {
           release_year?: number | null
           title?: string
           updated_at?: string
+          watch_url?: string | null
         }
         Relationships: []
       }
