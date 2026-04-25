@@ -36,10 +36,10 @@ export function useAuth() {
   }, []);
 
   const signUp = async (email: string, password: string, displayName?: string) => {
-    // Validate .edu email (admin email bypasses this check)
+    // Validate nyu.edu email (admin/whitelisted emails bypass this check)
     const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com'];
-    if (!email.toLowerCase().endsWith('.edu') && !allowedEmails.includes(email.toLowerCase())) {
-      return { error: { message: 'Only .edu email addresses are allowed to sign up.' } };
+    if (!email.toLowerCase().endsWith('@nyu.edu') && !allowedEmails.includes(email.toLowerCase())) {
+      return { error: { message: 'Only nyu.edu email addresses are allowed to sign up.' } };
     }
 
     const { data, error } = await supabase.auth.signUp({
