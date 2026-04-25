@@ -415,7 +415,7 @@ const ResourcesPage: React.FC = () => {
                                   {getEducationTypeName(program.type)}
                                 </Badge>
                                 {program.industry !== 'both' && (
-                                  <Badge variant="outline" className="text-xs">{program.industry === 'theatre' ? 'Theatre' : 'Film'}</Badge>
+                                <Badge variant="outline" className="text-xs capitalize">{program.industry}</Badge>
                                 )}
                               </div>
                             </CardContent>
