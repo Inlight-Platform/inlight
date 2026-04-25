@@ -430,7 +430,7 @@ const ResourcesPage: React.FC = () => {
                   ))}
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredEducation.map((program) => {
                     const saved = isSaved('resource', program.name, program.url);
                     return (
@@ -487,7 +487,7 @@ const ResourcesPage: React.FC = () => {
                   )}
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredResources.map((resource) => {
                     const saved = isSaved('resource', resource.name, resource.url);
                     return (
@@ -626,7 +626,7 @@ const ResourcesPage: React.FC = () => {
                   ))}
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredEducation.map((program) => {
                     const saved = isSaved('resource', program.name, program.url);
                     return (
@@ -683,7 +683,7 @@ const ResourcesPage: React.FC = () => {
                   )}
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredResources.map((resource) => {
                     const saved = isSaved('resource', resource.name, resource.url);
                     return (
@@ -799,7 +799,7 @@ const ResourcesPage: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredEducation.map((program) => {
                     const saved = isSaved('resource', program.name, program.url);
                     return (
@@ -856,7 +856,7 @@ const ResourcesPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredResources.map((resource) => {
                     const saved = isSaved('resource', resource.name, resource.url);
                     return (
