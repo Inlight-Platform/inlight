@@ -54,6 +54,7 @@ interface StreamingContent {
   genre?: string;
   release_year?: number;
   rating: number;
+  watch_url?: string;
 }
 interface UserFilm {
   id: string;
