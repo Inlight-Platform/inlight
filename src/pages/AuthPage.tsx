@@ -53,7 +53,7 @@ const AuthPage: React.FC = () => {
 
   const validateEduEmail = (email: string): boolean => {
     const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com'];
-    return email.toLowerCase().endsWith('.edu') || allowedEmails.includes(email.toLowerCase());
+    return email.toLowerCase().endsWith('@nyu.edu') || allowedEmails.includes(email.toLowerCase());
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -76,7 +76,7 @@ const AuthPage: React.FC = () => {
     e.preventDefault();
     
     if (!validateEduEmail(email)) {
-      toast.error('Only .edu email addresses are allowed to sign up.');
+      toast.error('Only nyu.edu email addresses are allowed to sign up.');
       return;
     }
 
@@ -387,14 +387,14 @@ const AuthPage: React.FC = () => {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="you@university.edu"
+                    placeholder="you@nyu.edu"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <GraduationCap className="h-3 w-3" />
-                    Only .edu emails are allowed
+                    Only nyu.edu emails are allowed
                   </p>
                 </div>
                 <div className="space-y-2">
