@@ -611,7 +611,7 @@ const ResourcesPage: React.FC = () => {
                                   {getEducationTypeName(program.type)}
                                 </Badge>
                                 {program.industry !== 'both' && (
-                                  <Badge variant="outline" className="text-xs">{program.industry === 'theatre' ? 'Theatre' : 'Film'}</Badge>
+                                  <Badge variant="outline" className="text-xs capitalize">{program.industry}</Badge>
                                 )}
                               </div>
                             </CardContent>
@@ -649,6 +649,177 @@ const ResourcesPage: React.FC = () => {
                   )}
                 </div>
                 
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredResources.map((resource) => {
+                    const saved = isSaved('resource', resource.name, resource.url);
+                    return (
+                      <div key={resource.name} className="relative block group">
+                        <a href={resource.url} target="_blank" rel="noopener noreferrer" className="block">
+                          <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <h3 className="font-semibold group-hover:text-primary transition-colors">{resource.name}</h3>
+                                <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{resource.description}</p>
+                              <Badge variant="secondary" className="text-xs">
+                                {resourceCategories.find(c => c.id === resource.category)?.name}
+                              </Badge>
+                            </CardContent>
+                          </Card>
+                        </a>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave({ item_type: 'resource', item_title: resource.name, item_url: resource.url, item_metadata: { description: resource.description, category: resource.category } }); }}
+                          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
+                        >
+                          {saved ? <BookmarkCheck className="w-4 h-4 text-primary" /> : <Bookmark className="w-4 h-4 text-muted-foreground" />}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+          </TabsContent>
+
+          <TabsContent value="music" className="space-y-8">
+            {/* Categories Grid */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-lg">📚</span>
+                <h2 className="text-lg font-display font-semibold">Browse by Category</h2>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {resourceCategories.map((cat) => (
+                  <Card
+                    key={cat.id}
+                    className={`cursor-pointer transition-colors group ${
+                      selectedCategory === cat.id
+                        ? 'bg-primary/20 border-primary'
+                        : 'hover:bg-accent/50'
+                    }`}
+                    onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <span className="text-3xl mb-2 block group-hover:scale-110 transition-transform">
+                        {cat.icon}
+                      </span>
+                      <h3 className="font-semibold text-xs mb-0.5 line-clamp-1">
+                        {cat.name}
+                      </h3>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">
+                        {cat.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+
+            {/* Education & Programs Section */}
+            {selectedCategory === 'education' && (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="w-5 h-5 text-primary" />
+                    <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
+                  </div>
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Clear filter
+                  </button>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Find lessons, studios, and music training programs in NYC
+                </p>
+
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <button
+                    onClick={() => setEducationFilter('all')}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      educationFilter === 'all'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-accent'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {educationTypes.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setEducationFilter(type)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
+                        educationFilter === type
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {getEducationTypeIcon(type)}
+                      {getEducationTypeName(type)}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredEducation.map((program) => {
+                    const saved = isSaved('resource', program.name, program.url);
+                    return (
+                      <div key={program.name} className="relative block group">
+                        <a href={program.url} target="_blank" rel="noopener noreferrer" className="block">
+                          <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <h3 className="font-semibold group-hover:text-primary transition-colors">{program.name}</h3>
+                                <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{program.description}</p>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                                  {getEducationTypeIcon(program.type)}
+                                  {getEducationTypeName(program.type)}
+                                </Badge>
+                                {program.industry !== 'both' && (
+                                  <Badge variant="outline" className="text-xs capitalize">{program.industry}</Badge>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </a>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave({ item_type: 'resource', item_title: program.name, item_url: program.url, item_metadata: { description: program.description, category: 'education' } }); }}
+                          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
+                        >
+                          {saved ? <BookmarkCheck className="w-4 h-4 text-primary" /> : <Bookmark className="w-4 h-4 text-muted-foreground" />}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* Resources List */}
+            {selectedCategory !== 'education' && (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-display font-semibold">
+                    {selectedCategory
+                      ? resourceCategories.find(c => c.id === selectedCategory)?.name
+                      : 'All Resources'}
+                  </h2>
+                  {selectedCategory && (
+                    <button
+                      onClick={() => setSelectedCategory(null)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredResources.map((resource) => {
                     const saved = isSaved('resource', resource.name, resource.url);
