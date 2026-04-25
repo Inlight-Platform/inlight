@@ -637,11 +637,27 @@ const StageWhisperPage: React.FC = () => {
                     <Tv className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No streaming content available right now.</p>
                   </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {streamingContent.map(content => <Card key={content.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer">
-                        <div className="aspect-[2/3] relative bg-muted">
+                     {streamingContent.map(content => <Card
+                         key={content.id}
+                         className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer"
+                         onClick={() => { if (content.watch_url) window.open(content.watch_url, '_blank', 'noopener,noreferrer'); }}
+                       >
+                         <div className="aspect-[2/3] relative bg-muted">
                           {content.poster_url ? <img src={content.poster_url} alt={content.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
                               {content.content_type === 'tv' ? <Tv className="w-12 h-12 text-muted-foreground" /> : <Film className="w-12 h-12 text-muted-foreground" />}
                             </div>}
+                          {content.watch_url && (
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Button
+                                size="sm"
+                                className="gap-1.5 shadow-lg"
+                                onClick={(e) => { e.stopPropagation(); window.open(content.watch_url!, '_blank', 'noopener,noreferrer'); }}
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Watch on {content.platform}
+                              </Button>
+                            </div>
+                          )}
                           <div className="absolute top-2 left-2">
                             <Badge variant={content.content_type === 'tv' ? 'secondary' : 'outline'} className="text-xs">
                               {content.content_type === 'tv' ? 'TV' : 'Movie'}
