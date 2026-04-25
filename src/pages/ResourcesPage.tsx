@@ -696,9 +696,11 @@ const ResourcesPage: React.FC = () => {
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{resource.description}</p>
-                              <Badge variant="secondary" className="text-xs">
-                                {resourceCategories.find(c => c.id === resource.category)?.name}
-                              </Badge>
+                              <div className="mt-auto">
+                                <Badge variant="secondary" className="text-xs">
+                                  {resourceCategories.find(c => c.id === resource.category)?.name}
+                                </Badge>
+                              </div>
                             </CardContent>
                           </Card>
                         </a>
@@ -867,9 +869,11 @@ const ResourcesPage: React.FC = () => {
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{resource.description}</p>
-                              <Badge variant="secondary" className="text-xs">
-                                {resourceCategories.find(c => c.id === resource.category)?.name}
-                              </Badge>
+                              <div className="mt-auto">
+                                <Badge variant="secondary" className="text-xs">
+                                  {resourceCategories.find(c => c.id === resource.category)?.name}
+                                </Badge>
+                              </div>
                             </CardContent>
                           </Card>
                         </a>
