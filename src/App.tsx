@@ -33,10 +33,6 @@ import ShowcasePage from "./pages/ShowcasePage";
 import ShowcaseProfilePage from "./pages/ShowcaseProfilePage";
 import ShowcaseJoinPage from "./pages/ShowcaseJoinPage";
 import PlanSelectionPage from "./pages/PlanSelectionPage";
-import MaintenanceOverlay from "./components/MaintenanceOverlay";
-
-// TEMPORARY: Toggle to false to restore normal app behavior.
-const MAINTENANCE_MODE = true;
 
 const queryClient = new QueryClient();
 
@@ -93,7 +89,6 @@ const App = () => (
           </Route>
         </Routes>
       </BrowserRouter>
-      {MAINTENANCE_MODE && <MaintenanceOverlay />}
     </TooltipProvider>
   </QueryClientProvider>
 );
