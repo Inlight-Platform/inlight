@@ -27,11 +27,8 @@ const MaintenanceOverlay: React.FC = () => {
             id="maintenance-title"
             className="text-2xl md:text-3xl font-semibold tracking-tight"
           >
-            Inlight is undergoing maintenance. Please check back in 1 hour.
+            Inlight is undergoing maintenance. We're upgrading the platform to improve security and performance.
           </h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            We're upgrading the platform to improve security and performance.
-          </p>
         </div>
       </div>
     </div>
