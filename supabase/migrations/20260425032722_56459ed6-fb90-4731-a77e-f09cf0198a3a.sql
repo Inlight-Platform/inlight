@@ -1,0 +1,14 @@
+UPDATE public.film_metrics SET poster_url = 'https://image.tmdb.org/t/p/w500/61DJMqFUFX6222ctnzuQEJLYdUT.jpg' WHERE title = 'Sinners';
+UPDATE public.film_metrics SET poster_url = 'https://image.tmdb.org/t/p/w500/yFHHfHcUgGAxziP1C3lLt0q2T4s.jpg' WHERE title = 'A Minecraft Movie';
+UPDATE public.film_metrics SET poster_url = 'https://image.tmdb.org/t/p/w500/eoY2jZ234IdO2z57JWpZ1MWyfIQ.jpg' WHERE title = 'The King of Kings';
+UPDATE public.film_metrics SET poster_url = 'https://image.tmdb.org/t/p/w500/hSQPSW8aLjsMBfwqGjgJ6HozTkp.jpg' WHERE title = 'Drop';
+UPDATE public.film_metrics SET poster_url = 'https://image.tmdb.org/t/p/w500/bIcf0A7LNTuYHZ9VDLOUKfyV2Ut.jpg' WHERE title = 'Warfare';
+UPDATE public.film_metrics SET poster_url = 'https://image.tmdb.org/t/p/w500/xWlF2i51zUq7BUq4iJte1g9NyIM.jpg' WHERE title = 'Death of a Unicorn';
+UPDATE public.streaming_content SET poster_url = 'https://image.tmdb.org/t/p/w500/20i4nShZZg1g1VFHSB8xpaYM4r7.jpg' WHERE title = 'Adolescence';
+UPDATE public.streaming_content SET poster_url = 'https://image.tmdb.org/t/p/w500/gbSaK9v1CbcYH1ISgbM7XObD2dW.jpg' WHERE title = 'The White Lotus Season 3';
+UPDATE public.streaming_content SET poster_url = 'https://image.tmdb.org/t/p/w500/khZqmwHQicTYoS7Flreb9EddFZC.jpg' WHERE title = 'Andor Season 2';
+UPDATE public.streaming_content SET poster_url = 'https://image.tmdb.org/t/p/w500/seN6rRfN0I6n8iDXjlSMk1QjNcq.jpg' WHERE title = 'Black Mirror Season 7';
+UPDATE public.streaming_content SET poster_url = 'https://image.tmdb.org/t/p/w500/zLlPHnNlE8xjVVXhOUBbQb5vKIQ.jpg' WHERE title = 'Conclave';
+UPDATE public.streaming_content SET poster_url = 'https://image.tmdb.org/t/p/w500/kvFSpESyBZMjaeOJDx7RS3P1jey.jpg' WHERE title = 'The Pitt';
+UPDATE public.streaming_content SET poster_url = 'https://image.tmdb.org/t/p/w500/8bZAkyXjzIOI1CHboCLy3jNdklV.jpg' WHERE title = 'Paradise';
+UPDATE public.streaming_content SET poster_url = 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=500&q=80' WHERE title = 'The Studio';
