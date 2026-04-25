@@ -64,7 +64,7 @@ export const useUpdateEngagement = () => {
         // Update existing record
         await supabase
           .from('user_engagement')
-          .update({ [field]: (existing[field] || 0) + 1 })
+          .update({ [field]: (existing[field] || 0) + 1 } as any)
           .eq('id', existing.id);
       } else {
         // Insert new record
@@ -74,7 +74,7 @@ export const useUpdateEngagement = () => {
             user_id: userId,
             date: today,
             [field]: 1,
-          });
+          } as any);
       }
     } catch (error) {
       console.error('Error updating engagement:', error);

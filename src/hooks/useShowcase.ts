@@ -106,7 +106,7 @@ export const useMyShowcaseProfile = () => {
           user_id: user.id,
           ...profile,
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id,program_slug' })
+        } as any, { onConflict: 'user_id,program_slug' })
         .select()
         .single();
 
