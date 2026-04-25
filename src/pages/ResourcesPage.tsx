@@ -387,7 +387,7 @@ const ResourcesPage: React.FC = () => {
             {selectedCategory === 'education' && (
               <section>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mt-auto">
                     <GraduationCap className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
                   </div>
@@ -430,20 +430,20 @@ const ResourcesPage: React.FC = () => {
                   ))}
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
                   {filteredEducation.map((program) => {
                     const saved = isSaved('resource', program.name, program.url);
                     return (
                       <div key={program.name} className="relative block group">
                         <a href={program.url} target="_blank" rel="noopener noreferrer" className="block">
                           <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                            <CardContent className="p-4">
+                            <CardContent className="p-4 flex flex-col h-full">
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{program.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{program.description}</p>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 mt-auto">
                                 <Badge variant="secondary" className="text-xs flex items-center gap-1">
                                   {getEducationTypeIcon(program.type)}
                                   {getEducationTypeName(program.type)}
@@ -487,7 +487,7 @@ const ResourcesPage: React.FC = () => {
                   )}
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
                   {filteredResources.map((resource) => {
                     const saved = isSaved('resource', resource.name, resource.url);
                     return (
@@ -499,7 +499,7 @@ const ResourcesPage: React.FC = () => {
                           className="block"
                         >
                           <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                            <CardContent className="p-4">
+                            <CardContent className="p-4 flex flex-col h-full">
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">
                                   {resource.name}
@@ -509,7 +509,7 @@ const ResourcesPage: React.FC = () => {
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
                                 {resource.description}
                               </p>
-                              <div className="flex items-center justify-between">
+                              <div className="flex items-center justify-between mt-auto">
                                 <Badge variant="secondary" className="text-xs">
                                   {resourceCategories.find(c => c.id === resource.category)?.name}
                                 </Badge>
@@ -583,7 +583,7 @@ const ResourcesPage: React.FC = () => {
             {selectedCategory === 'education' && (
               <section>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mt-auto">
                     <GraduationCap className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
                   </div>
@@ -626,20 +626,20 @@ const ResourcesPage: React.FC = () => {
                   ))}
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
                   {filteredEducation.map((program) => {
                     const saved = isSaved('resource', program.name, program.url);
                     return (
                       <div key={program.name} className="relative block group">
                         <a href={program.url} target="_blank" rel="noopener noreferrer" className="block">
                           <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                            <CardContent className="p-4">
+                            <CardContent className="p-4 flex flex-col h-full">
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{program.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{program.description}</p>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 mt-auto">
                                 <Badge variant="secondary" className="text-xs flex items-center gap-1">
                                   {getEducationTypeIcon(program.type)}
                                   {getEducationTypeName(program.type)}
@@ -683,22 +683,24 @@ const ResourcesPage: React.FC = () => {
                   )}
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
                   {filteredResources.map((resource) => {
                     const saved = isSaved('resource', resource.name, resource.url);
                     return (
                       <div key={resource.name} className="relative block group">
                         <a href={resource.url} target="_blank" rel="noopener noreferrer" className="block">
                           <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                            <CardContent className="p-4">
+                            <CardContent className="p-4 flex flex-col h-full">
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{resource.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{resource.description}</p>
-                              <Badge variant="secondary" className="text-xs">
-                                {resourceCategories.find(c => c.id === resource.category)?.name}
-                              </Badge>
+                              <div className="mt-auto">
+                                <Badge variant="secondary" className="text-xs">
+                                  {resourceCategories.find(c => c.id === resource.category)?.name}
+                                </Badge>
+                              </div>
                             </CardContent>
                           </Card>
                         </a>
@@ -755,7 +757,7 @@ const ResourcesPage: React.FC = () => {
             {selectedCategory === 'education' && (
               <section>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mt-auto">
                     <GraduationCap className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
                   </div>
@@ -797,20 +799,20 @@ const ResourcesPage: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
                   {filteredEducation.map((program) => {
                     const saved = isSaved('resource', program.name, program.url);
                     return (
                       <div key={program.name} className="relative block group">
                         <a href={program.url} target="_blank" rel="noopener noreferrer" className="block">
                           <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                            <CardContent className="p-4">
+                            <CardContent className="p-4 flex flex-col h-full">
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{program.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{program.description}</p>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 mt-auto">
                                 <Badge variant="secondary" className="text-xs flex items-center gap-1">
                                   {getEducationTypeIcon(program.type)}
                                   {getEducationTypeName(program.type)}
@@ -854,22 +856,24 @@ const ResourcesPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
                   {filteredResources.map((resource) => {
                     const saved = isSaved('resource', resource.name, resource.url);
                     return (
                       <div key={resource.name} className="relative block group">
                         <a href={resource.url} target="_blank" rel="noopener noreferrer" className="block">
                           <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                            <CardContent className="p-4">
+                            <CardContent className="p-4 flex flex-col h-full">
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{resource.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{resource.description}</p>
-                              <Badge variant="secondary" className="text-xs">
-                                {resourceCategories.find(c => c.id === resource.category)?.name}
-                              </Badge>
+                              <div className="mt-auto">
+                                <Badge variant="secondary" className="text-xs">
+                                  {resourceCategories.find(c => c.id === resource.category)?.name}
+                                </Badge>
+                              </div>
                             </CardContent>
                           </Card>
                         </a>
