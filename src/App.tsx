@@ -33,6 +33,10 @@ import ShowcasePage from "./pages/ShowcasePage";
 import ShowcaseProfilePage from "./pages/ShowcaseProfilePage";
 import ShowcaseJoinPage from "./pages/ShowcaseJoinPage";
 import PlanSelectionPage from "./pages/PlanSelectionPage";
+import MaintenanceOverlay from "./components/MaintenanceOverlay";
+
+// Toggle to false to restore normal app behavior.
+const MAINTENANCE_MODE = true;
 
 const queryClient = new QueryClient();
 
@@ -49,6 +53,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      {MAINTENANCE_MODE ? (
+        <MaintenanceOverlay />
+      ) : (
       <BrowserRouter>
         <Routes>
           {/* Public routes - no shell */}
@@ -89,6 +96,7 @@ const App = () => (
           </Route>
         </Routes>
       </BrowserRouter>
+      )}
     </TooltipProvider>
   </QueryClientProvider>
 );
