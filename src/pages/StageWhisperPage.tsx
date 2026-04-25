@@ -20,6 +20,7 @@ import { AddShowDialog } from '@/components/stage-whisper/AddShowDialog';
 import { AddFilmDialog } from '@/components/stage-whisper/AddFilmDialog';
 import { AddMusicShowDialog } from '@/components/stage-whisper/AddMusicShowDialog';
 import { FilmDetailSheet } from '@/components/stage-whisper/FilmDetailSheet';
+import { StreamingDetailSheet } from '@/components/stage-whisper/StreamingDetailSheet';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -102,6 +103,7 @@ const StageWhisperPage: React.FC = () => {
   const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
   const [archiveMode, setArchiveMode] = useState(false);
   const [selectedFilm, setSelectedFilm] = useState<FilmMetric | null>(null);
+  const [selectedStreaming, setSelectedStreaming] = useState<StreamingContent | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; table: string; label: string } | null>(null);
 
   const adminDeleteMutation = useMutation({
@@ -640,7 +642,7 @@ const StageWhisperPage: React.FC = () => {
                      {streamingContent.map(content => <Card
                          key={content.id}
                          className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer"
-                         onClick={() => { if (content.watch_url) window.open(content.watch_url, '_blank', 'noopener,noreferrer'); }}
+                         onClick={() => setSelectedStreaming(content)}
                        >
                          <div className="aspect-[2/3] relative bg-muted">
                           {content.poster_url ? <img src={content.poster_url} alt={content.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
