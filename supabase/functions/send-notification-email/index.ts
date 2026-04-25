@@ -125,18 +125,20 @@ async function buildEmailContent(
   if (notificationType === "message" && data.sender_id) {
     const senderName = await getDisplayName(supabase, data.sender_id);
     const isSharedItem = body && body.startsWith("Shared: ");
+    const threadUrl = `https://inlight.lovable.app/notifications?tab=messages&thread=${data.sender_id}`;
     if (isSharedItem) {
       const itemTitle = body.replace("Shared: ", "");
       emailSubject = `${senderName} shared something with you`;
       emailBody = `
         <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${senderName} shared "${itemTitle}" with you!</h2>
-        <a href="https://inlight.lovable.app/messages" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View</a>
+        <a href="${threadUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View</a>
       `;
     } else {
-      emailSubject = `New message from ${senderName}`;
+      emailSubject = `New message from ${senderName} on Inlight`;
       emailBody = `
-        <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">You got a new message from ${senderName}!</h2>
-        <a href="https://inlight.lovable.app/messages" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
+        <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">You got a new message from ${senderName} on Inlight!</h2>
+        ${body ? `<p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">"${body}"</p>` : ""}
+        <a href="${threadUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View</a>
       `;
     }
   } else if (notificationType === "application" && data.applicant_id && data.project_id) {
