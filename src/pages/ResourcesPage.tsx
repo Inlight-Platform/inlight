@@ -437,7 +437,7 @@ const ResourcesPage: React.FC = () => {
                       <div key={program.name} className="relative block group">
                         <a href={program.url} target="_blank" rel="noopener noreferrer" className="block">
                           <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                            <CardContent className="p-4">
+                            <CardContent className="p-4 flex flex-col h-full">
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{program.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -499,7 +499,7 @@ const ResourcesPage: React.FC = () => {
                           className="block"
                         >
                           <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                            <CardContent className="p-4">
+                            <CardContent className="p-4 flex flex-col h-full">
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">
                                   {resource.name}
@@ -633,7 +633,7 @@ const ResourcesPage: React.FC = () => {
                       <div key={program.name} className="relative block group">
                         <a href={program.url} target="_blank" rel="noopener noreferrer" className="block">
                           <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                            <CardContent className="p-4">
+                            <CardContent className="p-4 flex flex-col h-full">
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{program.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -690,7 +690,7 @@ const ResourcesPage: React.FC = () => {
                       <div key={resource.name} className="relative block group">
                         <a href={resource.url} target="_blank" rel="noopener noreferrer" className="block">
                           <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                            <CardContent className="p-4">
+                            <CardContent className="p-4 flex flex-col h-full">
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{resource.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -804,7 +804,7 @@ const ResourcesPage: React.FC = () => {
                       <div key={program.name} className="relative block group">
                         <a href={program.url} target="_blank" rel="noopener noreferrer" className="block">
                           <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                            <CardContent className="p-4">
+                            <CardContent className="p-4 flex flex-col h-full">
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{program.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -861,7 +861,7 @@ const ResourcesPage: React.FC = () => {
                       <div key={resource.name} className="relative block group">
                         <a href={resource.url} target="_blank" rel="noopener noreferrer" className="block">
                           <Card className="h-full hover:bg-accent/50 transition-colors hover:shadow-lg">
-                            <CardContent className="p-4">
+                            <CardContent className="p-4 flex flex-col h-full">
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{resource.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
