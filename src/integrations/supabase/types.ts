@@ -1326,6 +1326,51 @@ export type Database = {
           },
         ]
       }
+      resources: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          display_order: number
+          education_type: string | null
+          id: string
+          industry: string
+          is_active: boolean
+          is_education: boolean
+          name: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          education_type?: string | null
+          id?: string
+          industry?: string
+          is_active?: boolean
+          is_education?: boolean
+          name: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          education_type?: string | null
+          id?: string
+          industry?: string
+          is_active?: boolean
+          is_education?: boolean
+          name?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       role_applications: {
         Row: {
           applicant_id: string
