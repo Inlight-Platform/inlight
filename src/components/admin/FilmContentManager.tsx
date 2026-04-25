@@ -518,6 +518,15 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
                       rows={3}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Watch URL (deep link to title on platform)</Label>
+                    <Input
+                      type="url"
+                      value={streamingForm.watch_url}
+                      onChange={(e) => setStreamingForm({ ...streamingForm, watch_url: e.target.value })}
+                      placeholder="https://www.netflix.com/title/..."
+                    />
+                  </div>
                 </>
               )}
 
