@@ -442,7 +442,7 @@ const ResourcesPage: React.FC = () => {
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{program.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{program.description}</p>
+                              <p className="text-sm text-muted-foreground truncate mb-2" title={program.description}>{program.description}</p>
                               <div className="flex items-center gap-2 mt-auto">
                                 <Badge variant="secondary" className="text-xs flex items-center gap-1">
                                   {getEducationTypeIcon(program.type)}
@@ -506,7 +506,7 @@ const ResourcesPage: React.FC = () => {
                                 </h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                              <p className="text-sm text-muted-foreground truncate mb-2" title={resource.description}>
                                 {resource.description}
                               </p>
                               <div className="flex items-center justify-between mt-auto">
@@ -638,7 +638,7 @@ const ResourcesPage: React.FC = () => {
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{program.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{program.description}</p>
+                              <p className="text-sm text-muted-foreground truncate mb-2" title={program.description}>{program.description}</p>
                               <div className="flex items-center gap-2 mt-auto">
                                 <Badge variant="secondary" className="text-xs flex items-center gap-1">
                                   {getEducationTypeIcon(program.type)}
@@ -695,7 +695,7 @@ const ResourcesPage: React.FC = () => {
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{resource.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{resource.description}</p>
+                              <p className="text-sm text-muted-foreground truncate mb-2" title={resource.description}>{resource.description}</p>
                               <div className="mt-auto">
                                 <Badge variant="secondary" className="text-xs">
                                   {resourceCategories.find(c => c.id === resource.category)?.name}
@@ -811,7 +811,7 @@ const ResourcesPage: React.FC = () => {
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{program.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{program.description}</p>
+                              <p className="text-sm text-muted-foreground truncate mb-2" title={program.description}>{program.description}</p>
                               <div className="flex items-center gap-2 mt-auto">
                                 <Badge variant="secondary" className="text-xs flex items-center gap-1">
                                   {getEducationTypeIcon(program.type)}
@@ -868,7 +868,7 @@ const ResourcesPage: React.FC = () => {
                                 <h3 className="font-semibold group-hover:text-primary transition-colors">{resource.name}</h3>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{resource.description}</p>
+                              <p className="text-sm text-muted-foreground truncate mb-2" title={resource.description}>{resource.description}</p>
                               <div className="mt-auto">
                                 <Badge variant="secondary" className="text-xs">
                                   {resourceCategories.find(c => c.id === resource.category)?.name}
