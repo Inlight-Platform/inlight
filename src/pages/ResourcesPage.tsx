@@ -387,7 +387,7 @@ const ResourcesPage: React.FC = () => {
             {selectedCategory === 'education' && (
               <section>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mt-auto">
                     <GraduationCap className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
                   </div>
@@ -443,7 +443,7 @@ const ResourcesPage: React.FC = () => {
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{program.description}</p>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 mt-auto">
                                 <Badge variant="secondary" className="text-xs flex items-center gap-1">
                                   {getEducationTypeIcon(program.type)}
                                   {getEducationTypeName(program.type)}
@@ -509,7 +509,7 @@ const ResourcesPage: React.FC = () => {
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
                                 {resource.description}
                               </p>
-                              <div className="flex items-center justify-between">
+                              <div className="flex items-center justify-between mt-auto">
                                 <Badge variant="secondary" className="text-xs">
                                   {resourceCategories.find(c => c.id === resource.category)?.name}
                                 </Badge>
@@ -583,7 +583,7 @@ const ResourcesPage: React.FC = () => {
             {selectedCategory === 'education' && (
               <section>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mt-auto">
                     <GraduationCap className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
                   </div>
@@ -639,7 +639,7 @@ const ResourcesPage: React.FC = () => {
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{program.description}</p>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 mt-auto">
                                 <Badge variant="secondary" className="text-xs flex items-center gap-1">
                                   {getEducationTypeIcon(program.type)}
                                   {getEducationTypeName(program.type)}
@@ -755,7 +755,7 @@ const ResourcesPage: React.FC = () => {
             {selectedCategory === 'education' && (
               <section>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mt-auto">
                     <GraduationCap className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-display font-semibold">Education & Programs</h2>
                   </div>
@@ -810,7 +810,7 @@ const ResourcesPage: React.FC = () => {
                                 <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               </div>
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{program.description}</p>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 mt-auto">
                                 <Badge variant="secondary" className="text-xs flex items-center gap-1">
                                   {getEducationTypeIcon(program.type)}
                                   {getEducationTypeName(program.type)}
