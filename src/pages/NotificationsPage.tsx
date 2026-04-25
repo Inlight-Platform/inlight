@@ -24,7 +24,9 @@ const NotificationsPage: React.FC = () => {
   const { user } = useAuth();
   const initialTab = searchParams.get('tab') === 'messages' ? 'messages' : 'notifications';
   const [activeTab, setActiveTab] = useState<'notifications' | 'messages'>(initialTab);
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(
+    searchParams.get('thread') || null
+  );
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -74,6 +76,15 @@ const NotificationsPage: React.FC = () => {
     }
     setSearchParams(searchParams, { replace: true });
   }, [activeTab]);
+
+  // Open thread from ?thread= URL param (e.g., from email deep links)
+  useEffect(() => {
+    const threadParam = searchParams.get('thread');
+    if (threadParam) {
+      setActiveTab('messages');
+      setSelectedThreadId(threadParam);
+    }
+  }, [searchParams]);
 
   const getIcon = (type: string) => {
     switch (type) {
