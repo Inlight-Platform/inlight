@@ -248,12 +248,44 @@ const ResourcesPage: React.FC = () => {
   const [educationFilter, setEducationFilter] = useState<EducationProgram['type'] | 'all'>('all');
   const { isSaved, toggleSave } = useSavedItems();
 
-  const currentResources =
-    activeTab === 'theatre'
-      ? theatreResources
-      : activeTab === 'film'
-      ? filmResources
-      : musicResources;
+  const { data: dbResources } = useQuery({
+    queryKey: ['public-resources'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('resources')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Resources for the current industry tab (non-education entries).
+  // 'both' industry rows show up in Theatre and Film.
+  const currentResources: ResourceItem[] = (dbResources ?? [])
+    .filter((r: any) => !r.is_education)
+    .filter((r: any) =>
+      r.industry === activeTab ||
+      (r.industry === 'both' && activeTab !== 'music')
+    )
+    .map((r: any) => ({
+      name: r.name,
+      description: r.description ?? '',
+      url: r.url,
+      category: (r.category as ResourceCategory) ?? 'directories',
+    }));
+
+  // Education programs sourced from DB.
+  const dbEducation: EducationProgram[] = (dbResources ?? [])
+    .filter((r: any) => r.is_education)
+    .map((r: any) => ({
+      name: r.name,
+      description: r.description ?? '',
+      url: r.url,
+      type: ((r.education_type as EducationProgram['type']) ?? 'general'),
+      industry: ((r.industry as EducationProgram['industry']) ?? 'both'),
+    }));
   // Filter out education from regular resources since it has its own section
   const filteredResources = selectedCategory 
     ? selectedCategory === 'education' 
@@ -261,7 +293,7 @@ const ResourcesPage: React.FC = () => {
       : currentResources.filter(r => r.category === selectedCategory)
     : currentResources.filter(r => r.category !== 'education');
 
-  const filteredEducation = educationPrograms.filter(p => {
+  const filteredEducation = dbEducation.filter(p => {
     const industryMatch = p.industry === 'both' || p.industry === activeTab;
     const typeMatch = educationFilter === 'all' || p.type === educationFilter;
     return industryMatch && typeMatch;
