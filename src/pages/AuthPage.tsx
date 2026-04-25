@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Loader2, GraduationCap, ArrowLeft } from 'lucide-react';
+import inlightLogo from '@/assets/inlight-logo.jpeg';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset';
 
@@ -201,9 +202,7 @@ const AuthPage: React.FC = () => {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center space-y-2">
-            <div className="mx-auto w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-              <GraduationCap className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <img src={inlightLogo} alt="Inlight" className="mx-auto w-12 h-12 rounded-full object-cover" />
             <CardTitle className="text-2xl font-bold">Set New Password</CardTitle>
             <CardDescription>
               Enter your new password below
@@ -258,9 +257,7 @@ const AuthPage: React.FC = () => {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center space-y-2">
-            <div className="mx-auto w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-              <GraduationCap className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <img src={inlightLogo} alt="Inlight" className="mx-auto w-12 h-12 rounded-full object-cover" />
             <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
             <CardDescription>
               Enter your email and we'll send you a reset link
@@ -310,9 +307,7 @@ const AuthPage: React.FC = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-            <GraduationCap className="h-6 w-6 text-primary-foreground" />
-          </div>
+          <img src={inlightLogo} alt="Inlight" className="mx-auto w-12 h-12 rounded-full object-cover" />
           <CardTitle className="text-2xl font-bold">Inlight</CardTitle>
           <CardDescription>
             Connect with your creative community
