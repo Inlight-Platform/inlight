@@ -71,6 +71,7 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
     genre: 'Drama',
     release_year: new Date().getFullYear(),
     rating: 0,
+    watch_url: '',
   });
 
   // Fetch theatres data
@@ -219,6 +220,7 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
       genre: 'Drama',
       release_year: new Date().getFullYear(),
       rating: 0,
+      watch_url: '',
     });
     setEditingItem(null);
     setIsDialogOpen(false);
@@ -245,6 +247,7 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
         genre: item.genre || 'Drama',
         release_year: item.release_year || new Date().getFullYear(),
         rating: Number(item.rating) || 0,
+        watch_url: item.watch_url || '',
       });
     }
     setIsDialogOpen(true);
@@ -513,6 +516,15 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
                       onChange={(e) => setStreamingForm({ ...streamingForm, description: e.target.value })}
                       placeholder="Brief description..."
                       rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Watch URL (deep link to title on platform)</Label>
+                    <Input
+                      type="url"
+                      value={streamingForm.watch_url}
+                      onChange={(e) => setStreamingForm({ ...streamingForm, watch_url: e.target.value })}
+                      placeholder="https://www.netflix.com/title/..."
                     />
                   </div>
                 </>

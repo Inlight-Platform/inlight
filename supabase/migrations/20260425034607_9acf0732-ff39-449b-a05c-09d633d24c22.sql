@@ -1,0 +1,1 @@
+ALTER TABLE public.streaming_content ADD COLUMN IF NOT EXISTS watch_url text;
