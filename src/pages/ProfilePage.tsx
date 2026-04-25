@@ -463,7 +463,7 @@ const ProfilePage: React.FC = () => {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ [field]: value })
+        .update({ [field]: value } as any)
         .eq('user_id', authUser.id);
       
       if (error) throw error;
