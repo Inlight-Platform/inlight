@@ -33,6 +33,7 @@ import ShowcasePage from "./pages/ShowcasePage";
 import ShowcaseProfilePage from "./pages/ShowcaseProfilePage";
 import ShowcaseJoinPage from "./pages/ShowcaseJoinPage";
 import PlanSelectionPage from "./pages/PlanSelectionPage";
+import MaintenanceOverlay from "./components/MaintenanceOverlay";
 
 const queryClient = new QueryClient();
 
@@ -44,7 +45,13 @@ const AppShell = () => (
   </RequireAuth>
 );
 
-const App = () => (
+const isMaintenanceMode = import.meta.env.VITE_MAINTENANCE_MODE === 'true';
+
+const App = () => {
+  if (isMaintenanceMode) {
+    return <MaintenanceOverlay />;
+  }
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -91,6 +98,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
