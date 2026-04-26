@@ -33,6 +33,7 @@ import ShowcasePage from "./pages/ShowcasePage";
 import ShowcaseProfilePage from "./pages/ShowcaseProfilePage";
 import ShowcaseJoinPage from "./pages/ShowcaseJoinPage";
 import PlanSelectionPage from "./pages/PlanSelectionPage";
+import MaintenanceOverlay, { MAINTENANCE_MODE } from "./components/MaintenanceOverlay";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      {MAINTENANCE_MODE && <MaintenanceOverlay />}
       <BrowserRouter>
         <Routes>
           {/* Public routes - no shell */}
