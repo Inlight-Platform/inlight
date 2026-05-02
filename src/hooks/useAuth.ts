@@ -7,8 +7,47 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const initializeAuth = async () => {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get('code');
+      const type = url.searchParams.get('type');
+
+      if (code && (type === 'recovery' || url.searchParams.get('mode') === 'reset')) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (error) {
+          console.error('Password recovery code exchange failed:', error);
+          setRecoveryError(error.message);
+          setLoading(false);
+          return;
+        }
+
+        setIsPasswordRecovery(true);
+        setSession(data.session);
+        setUser(data.user);
+        window.history.replaceState({}, document.title, '/auth?mode=reset');
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!isMounted) {
+        return;
+      }
+
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -25,14 +64,12 @@ export function useAuth() {
       }
     );
 
-    // Then get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    initializeAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, displayName?: string) => {
@@ -71,8 +108,10 @@ export function useAuth() {
   };
 
   const resetPassword = async (email: string) => {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth?mode=reset`,
+    const { data, error } = await supabase.functions.invoke('send-password-reset', {
+      body: {
+        email,
+      },
     });
     return { data, error };
   };
@@ -89,6 +128,7 @@ export function useAuth() {
     session,
     loading,
     isPasswordRecovery,
+    recoveryError,
     signUp,
     signIn,
     signOut,

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Loader2, GraduationCap, ArrowLeft } from 'lucide-react';
@@ -29,7 +30,7 @@ const AuthPage: React.FC = () => {
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { user, loading, signIn, signUp, resetPassword, updatePassword, isPasswordRecovery } = useAuth();
+  const { user, loading, signIn, signUp, resetPassword, updatePassword, isPasswordRecovery, recoveryError } = useAuth();
   const navigate = useNavigate();
 
   // Handle password recovery mode - detect when user arrives via reset link
@@ -57,6 +58,12 @@ const AuthPage: React.FC = () => {
     return email.toLowerCase().endsWith('@nyu.edu') || allowedEmails.includes(email.toLowerCase());
   };
 
+  const openForgotPassword = () => {
+    setView('forgot');
+    setPassword('');
+    setConfirmPassword('');
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -64,10 +71,10 @@ const AuthPage: React.FC = () => {
     const { error } = await signIn(email, password);
 
     if (error) {
-      toast.error(error.message);
+      toast.error('Login failed. If you had an account before the migration, reset your password once to continue.');
     } else {
       toast.success('Welcome back!');
-      navigate('/');
+      navigate('/feed');
     }
 
     setIsLoading(false);
@@ -115,7 +122,7 @@ const AuthPage: React.FC = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Password reset email sent! Check your inbox.');
+      toast.success('Password reset email sent. Use the same email as before the migration to set a new password.');
       setView('login');
     }
 
@@ -142,8 +149,8 @@ const AuthPage: React.FC = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Password updated successfully!');
-      navigate('/');
+      toast.success('Password updated successfully! Your existing account data is ready to use.');
+      navigate('/feed');
     }
 
     setIsLoading(false);
@@ -169,7 +176,7 @@ const AuthPage: React.FC = () => {
     }
 
     // If no user session and not in password recovery, the link might be invalid/expired
-    if (!user && !isPasswordRecovery) {
+    if ((!user && !isPasswordRecovery) || recoveryError) {
       return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
           <Card className="w-full max-w-md">
@@ -183,10 +190,16 @@ const AuthPage: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {recoveryError && (
+                <Alert className="mb-4" variant="destructive">
+                  <AlertTitle>Reset link could not be verified</AlertTitle>
+                  <AlertDescription>{recoveryError}</AlertDescription>
+                </Alert>
+              )}
               <Button
                 className="w-full"
                 onClick={() => {
-                  setView('forgot');
+                  openForgotPassword();
                   navigate('/auth');
                 }}
               >
@@ -260,11 +273,18 @@ const AuthPage: React.FC = () => {
             <img src={inlightLogo} alt="Inlight" className="mx-auto w-12 h-12 rounded-full object-cover" />
             <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
             <CardDescription>
-              Enter your email and we'll send you a reset link
+              Enter the same email tied to your old account and we'll send you a reset link
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleForgotPassword} className="space-y-4">
+              <Alert>
+                <GraduationCap className="h-4 w-4" />
+                <AlertTitle>Returning after the migration?</AlertTitle>
+                <AlertDescription>
+                  Your account still exists, but you need to set a new password once before signing in again.
+                </AlertDescription>
+              </Alert>
               <div className="space-y-2">
                 <Label htmlFor="reset-email">Email</Label>
                 <Input
@@ -322,6 +342,13 @@ const AuthPage: React.FC = () => {
 
             <TabsContent value="login" className="space-y-4 mt-4">
               <form onSubmit={handleLogin} className="space-y-4">
+                <Alert>
+                  <GraduationCap className="h-4 w-4" />
+                  <AlertTitle>Already had an account?</AlertTitle>
+                  <AlertDescription>
+                    We moved to a new sign-in system. Existing users should reset their password once, then log in normally.
+                  </AlertDescription>
+                </Alert>
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
                   <Input
@@ -358,10 +385,13 @@ const AuthPage: React.FC = () => {
                   type="button"
                   variant="link"
                   className="w-full text-sm"
-                  onClick={() => setView('forgot')}
+                  onClick={openForgotPassword}
                 >
-                  Forgot your password?
+                  Already had an account? Reset your password
                 </Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  If your old password no longer works, use the reset flow with the same email address.
+                </p>
               </form>
             </TabsContent>
 
