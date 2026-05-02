@@ -20,7 +20,7 @@ const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
   const validateEduEmail = (email: string): boolean => {
-    const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com'];
+    const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com', 'clelyfdes@gmail.com'];
     return email.toLowerCase().endsWith('.edu') || allowedEmails.includes(email.toLowerCase());
   };
 
