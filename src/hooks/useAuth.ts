@@ -16,6 +16,33 @@ export function useAuth() {
       const url = new URL(window.location.href);
       const code = url.searchParams.get('code');
       const type = url.searchParams.get('type');
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const hashAccessToken = hashParams.get('access_token');
+      const hashRefreshToken = hashParams.get('refresh_token');
+      const hashType = hashParams.get('type');
+
+      if (hashAccessToken && hashRefreshToken && (hashType === 'recovery' || type === 'recovery' || url.searchParams.get('mode') === 'reset')) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: hashAccessToken,
+          refresh_token: hashRefreshToken,
+        });
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (error) {
+          console.error('Password recovery session setup failed:', error);
+          setRecoveryError(error.message);
+          setLoading(false);
+          return;
+        }
+
+        setIsPasswordRecovery(true);
+        setSession(data.session);
+        setUser(data.user);
+        window.history.replaceState({}, document.title, '/auth?mode=reset');
+      }
 
       if (code && (type === 'recovery' || url.searchParams.get('mode') === 'reset')) {
         const { data, error } = await supabase.auth.exchangeCodeForSession(code);
