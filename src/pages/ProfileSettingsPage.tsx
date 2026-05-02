@@ -177,14 +177,35 @@ const ProfileSettingsPage: React.FC = () => {
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data, error } = await supabase
+      const { data: profileByUserId, error: profileByUserIdError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
-      
-      if (error) throw error;
-      return data as Profile;
+        .maybeSingle();
+
+      if (profileByUserIdError) {
+        console.error('ProfileSettingsPage: failed loading profile by user id', profileByUserIdError);
+      }
+
+      if (profileByUserId) {
+        return profileByUserId as Profile;
+      }
+
+      if (!user.email) {
+        return null;
+      }
+
+      const { data: profileByEmail, error: profileByEmailError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', user.email)
+        .maybeSingle();
+
+      if (profileByEmailError) {
+        throw profileByEmailError;
+      }
+
+      return profileByEmail as Profile | null;
     },
     enabled: !!user?.id,
   });

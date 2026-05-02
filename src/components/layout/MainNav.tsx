@@ -63,12 +63,35 @@ export const MainNav: React.FC = () => {
     queryKey: ['nav-profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data } = await supabase.
-      from('profiles').
-      select('display_name, avatar_url').
-      eq('user_id', user.id).
-      maybeSingle();
-      return data;
+      const { data: profileByUserId, error: profileByUserIdError } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (profileByUserIdError) {
+        console.error('MainNav: failed loading profile by user id', profileByUserIdError);
+      }
+
+      if (profileByUserId) {
+        return profileByUserId;
+      }
+
+      if (!user.email) {
+        return null;
+      }
+
+      const { data: profileByEmail, error: profileByEmailError } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url')
+        .eq('email', user.email)
+        .maybeSingle();
+
+      if (profileByEmailError) {
+        console.error('MainNav: failed loading profile by email', profileByEmailError);
+      }
+
+      return profileByEmail;
     },
     enabled: !!user?.id
   });
