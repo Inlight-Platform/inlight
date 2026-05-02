@@ -95,10 +95,13 @@ const AuthPage: React.FC = () => {
 
     setIsLoading(true);
 
-    const { error } = await signUp(email, password, displayName);
+    const { data, error } = await signUp(email, password, displayName);
 
     if (error) {
       toast.error(error.message);
+    } else if (!data?.session) {
+      toast.success('Account created. Check your .edu inbox and confirm your email before signing in.');
+      setView('login');
     } else {
       toast.success('Account created! Welcome to Inlight.');
       navigate('/feed');

@@ -16,12 +16,22 @@ export function useAuth() {
       const url = new URL(window.location.href);
       const code = url.searchParams.get('code');
       const type = url.searchParams.get('type');
+      const isRecoveryFlow = type === 'recovery' || url.searchParams.get('mode') === 'reset';
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const hashAccessToken = hashParams.get('access_token');
       const hashRefreshToken = hashParams.get('refresh_token');
       const hashType = hashParams.get('type');
+      const isHashRecoveryFlow = hashType === 'recovery' || isRecoveryFlow;
 
-      if (hashAccessToken && hashRefreshToken && (hashType === 'recovery' || type === 'recovery' || url.searchParams.get('mode') === 'reset')) {
+      const replaceAuthUrl = (isRecovery: boolean) => {
+        window.history.replaceState(
+          {},
+          document.title,
+          isRecovery ? '/auth?mode=reset' : url.pathname || '/'
+        );
+      };
+
+      if (hashAccessToken && hashRefreshToken) {
         const { data, error } = await supabase.auth.setSession({
           access_token: hashAccessToken,
           refresh_token: hashRefreshToken,
@@ -32,19 +42,23 @@ export function useAuth() {
         }
 
         if (error) {
-          console.error('Password recovery session setup failed:', error);
-          setRecoveryError(error.message);
+          console.error('Auth session setup from URL failed:', error);
+          if (isHashRecoveryFlow) {
+            setRecoveryError(error.message);
+          }
           setLoading(false);
           return;
         }
 
-        setIsPasswordRecovery(true);
+        if (isHashRecoveryFlow) {
+          setIsPasswordRecovery(true);
+        }
         setSession(data.session);
         setUser(data.user);
-        window.history.replaceState({}, document.title, '/auth?mode=reset');
+        replaceAuthUrl(isHashRecoveryFlow);
       }
 
-      if (code && (type === 'recovery' || url.searchParams.get('mode') === 'reset')) {
+      if (code) {
         const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (!isMounted) {
@@ -52,16 +66,20 @@ export function useAuth() {
         }
 
         if (error) {
-          console.error('Password recovery code exchange failed:', error);
-          setRecoveryError(error.message);
+          console.error('Auth code exchange failed:', error);
+          if (isRecoveryFlow) {
+            setRecoveryError(error.message);
+          }
           setLoading(false);
           return;
         }
 
-        setIsPasswordRecovery(true);
+        if (isRecoveryFlow) {
+          setIsPasswordRecovery(true);
+        }
         setSession(data.session);
         setUser(data.user);
-        window.history.replaceState({}, document.title, '/auth?mode=reset');
+        replaceAuthUrl(isRecoveryFlow);
       }
 
       const { data: { session } } = await supabase.auth.getSession();
