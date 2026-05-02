@@ -272,7 +272,7 @@ const CompanyProfilePage: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('id, title, description, main_image_url, status, created_at')
+        .select('id, title, description, main_image_url, header_image_url, status, created_at')
         .eq('company_id', companyId!)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -510,8 +510,8 @@ const CompanyProfilePage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {currentProjects.map((project) => (
                   <Card key={project.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border" onClick={() => navigate(`/projects/${project.id}`)}>
-                    {project.main_image_url ? (
-                      <img src={project.main_image_url} alt={project.title} className="w-full h-32 object-cover" />
+                    {project.header_image_url || project.main_image_url ? (
+                      <img src={project.header_image_url || project.main_image_url} alt={project.title} className="w-full h-32 object-cover" />
                     ) : (
                       <div className="w-full h-32 bg-muted flex items-center justify-center">
                         <FolderKanban className="w-8 h-8 text-muted-foreground" />
@@ -560,8 +560,8 @@ const CompanyProfilePage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {pastProjects.map((project) => (
                   <Card key={project.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border" onClick={() => navigate(`/projects/${project.id}`)}>
-                    {project.main_image_url ? (
-                      <img src={project.main_image_url} alt={project.title} className="w-full h-32 object-cover" />
+                    {project.header_image_url || project.main_image_url ? (
+                      <img src={project.header_image_url || project.main_image_url} alt={project.title} className="w-full h-32 object-cover" />
                     ) : (
                       <div className="w-full h-32 bg-muted flex items-center justify-center">
                         <FolderKanban className="w-8 h-8 text-muted-foreground" />

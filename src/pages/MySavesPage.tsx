@@ -23,6 +23,7 @@ interface SavedProject {
   title: string;
   description: string | null;
   main_image_url: string | null;
+  header_image_url?: string | null;
   category: string | null;
   creator_id: string;
   creator_profile?: { display_name: string | null; avatar_url: string | null };
@@ -302,8 +303,8 @@ const MySavesPage: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {savedProjects.map(project => (
                     <Card key={project.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/projects/${project.id}`)}>
-                      {project.main_image_url ? (
-                        <img src={project.main_image_url} alt={project.title} className="w-full h-36 object-cover" />
+                      {project.header_image_url || project.main_image_url ? (
+                        <img src={project.header_image_url || project.main_image_url || undefined} alt={project.title} className="w-full h-36 object-cover" />
                       ) : (
                         <div className="w-full h-36 bg-muted flex items-center justify-center">
                           <span className="text-muted-foreground text-sm">No image</span>
@@ -315,7 +316,7 @@ const MySavesPage: React.FC = () => {
                         <div className="flex items-center justify-between">
                           {project.category && <Badge variant="secondary" className="text-xs">{project.category}</Badge>}
                           <div className="flex gap-1">
-                            <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: project.title, url: `/projects/${project.id}`, type: 'Project', imageUrl: project.main_image_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
+                            <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: project.title, url: `/projects/${project.id}`, type: 'Project', imageUrl: project.header_image_url || project.main_image_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
                               <MessageSquare className="w-4 h-4 text-muted-foreground" />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); unsaveProject(project.id); }} className="p-1.5 rounded-full hover:bg-accent">

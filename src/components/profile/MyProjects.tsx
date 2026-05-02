@@ -12,6 +12,7 @@ interface Project {
   title: string;
   description: string | null;
   main_image_url: string | null;
+  header_image_url?: string | null;
   creator_id: string;
   role?: string;
 }
@@ -30,7 +31,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
     queryFn: async () => {
       const { data: createdProjects, error: createdError } = await supabase
         .from('projects')
-        .select('id, title, description, main_image_url, creator_id')
+        .select('id, title, description, main_image_url, header_image_url, creator_id')
         .eq('creator_id', userId);
 
       if (createdError) throw createdError;
@@ -50,7 +51,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
       if (memberProjectIds.length > 0) {
         const { data: memberProjectsData } = await supabase
           .from('projects')
-          .select('id, title, description, main_image_url, creator_id')
+          .select('id, title, description, main_image_url, header_image_url, creator_id')
           .in('id', memberProjectIds);
 
         memberProjects = (memberProjectsData || []).map(p => ({
@@ -84,7 +85,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
       const projectIds = saved.map(s => s.project_id);
       const { data: projectsData } = await supabase
         .from('projects')
-        .select('id, title, description, main_image_url, creator_id')
+        .select('id, title, description, main_image_url, header_image_url, creator_id')
         .in('id', projectIds);
 
       return projectsData || [];
@@ -97,9 +98,9 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
       className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border"
       onClick={() => navigate(`/projects/${project.id}`)}
     >
-      {project.main_image_url ? (
+      {project.header_image_url || project.main_image_url ? (
         <img
-          src={project.main_image_url}
+          src={project.header_image_url || project.main_image_url || undefined}
           alt={project.title}
           className="w-full h-32 object-cover"
         />

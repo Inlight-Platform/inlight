@@ -14,6 +14,7 @@ interface Project {
   title: string;
   description: string | null;
   main_image_url: string | null;
+  header_image_url?: string | null;
   creator_id: string;
   created_at: string;
   category: string | null;
@@ -158,9 +159,9 @@ export const SavedProjects: React.FC = () => {
                 </button>
 
                 {/* Main image */}
-                {project.main_image_url ? (
+                {project.header_image_url || project.main_image_url ? (
                   <img
-                    src={project.main_image_url}
+                    src={project.header_image_url || project.main_image_url || undefined}
                     alt={project.title}
                     className="w-full h-40 object-cover"
                   />

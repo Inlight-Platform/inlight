@@ -19,6 +19,7 @@ interface Invitation {
       id: string;
       title: string;
       main_image_url: string | null;
+      header_image_url?: string | null;
     };
   };
   sender: {
@@ -108,9 +109,9 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
         <div className="flex items-start gap-4">
           {/* Project image */}
           <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-            {invitation.project_role.project.main_image_url ? (
+            {invitation.project_role.project.header_image_url || invitation.project_role.project.main_image_url ? (
               <img
-                src={invitation.project_role.project.main_image_url}
+                src={invitation.project_role.project.header_image_url || invitation.project_role.project.main_image_url || undefined}
                 alt={invitation.project_role.project.title}
                 className="w-full h-full object-cover"
               />

@@ -36,7 +36,7 @@ export const InvitationsList: React.FC = () => {
       const projectIds = [...new Set(roles.map(r => r.project_id))];
       const { data: projects } = await supabase
         .from('projects')
-        .select('id, title, main_image_url')
+        .select('id, title, main_image_url, header_image_url')
         .in('id', projectIds);
 
       // Fetch sender profiles
@@ -67,6 +67,7 @@ export const InvitationsList: React.FC = () => {
               id: project?.id || '',
               title: project?.title || 'Unknown Project',
               main_image_url: project?.main_image_url || null,
+              header_image_url: project?.header_image_url || null,
             },
           },
           sender: {
