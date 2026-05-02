@@ -48,7 +48,8 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
             status,
             is_public,
             creator_id,
-            main_image_url
+            main_image_url,
+            header_image_url
           )
         `)
         .is('assigned_user_id', null)
@@ -115,7 +116,7 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
         project_id: role.project_id,
         project_title: (role.projects as any).title,
         project_status: (role.projects as any).status,
-        image_url: (role.projects as any).main_image_url,
+        image_url: (role.projects as any).header_image_url || (role.projects as any).main_image_url,
         created_at: role.created_at,
         creator_profile: profile ? {
           display_name: profile.display_name,
