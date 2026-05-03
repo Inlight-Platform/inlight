@@ -6,12 +6,26 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function assertInternalSecret(req: Request) {
+  const expected = Deno.env.get("NOTIFICATION_WEBHOOK_SECRET");
+  if (!expected) {
+    throw new Error("Missing NOTIFICATION_WEBHOOK_SECRET");
+  }
+
+  const provided = req.headers.get("x-internal-webhook-secret");
+  if (provided !== expected) {
+    throw new Error("Unauthorized");
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    assertInternalSecret(req);
+
     const { ticket_id } = await req.json();
     if (!ticket_id) throw new Error("Missing ticket_id");
 
