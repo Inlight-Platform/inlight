@@ -2201,7 +2201,6 @@ export type Database = {
     Views: {
       profiles_public: {
         Row: {
-          activity_score: number | null
           avatar_url: string | null
           badges: string[] | null
           bio: string | null
@@ -2219,7 +2218,6 @@ export type Database = {
           id: string | null
           instagram_url: string | null
           location: string | null
-          message_privacy: string | null
           pronouns: string | null
           representation: string | null
           role: string | null
@@ -2231,7 +2229,6 @@ export type Database = {
           union_status: string | null
           updated_at: string | null
           user_id: string | null
-          vouch_count: number | null
           website_url: string | null
           why_artist: string | null
         }
