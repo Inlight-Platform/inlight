@@ -223,9 +223,6 @@ class ProfilePageErrorBoundary extends React.Component<
   }
 }
 
-const ProfilePageInner: React.FC = () => {
-  return <ProfilePageBody />;
-};
 
 const ProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
