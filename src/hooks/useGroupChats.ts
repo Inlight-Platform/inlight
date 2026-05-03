@@ -186,28 +186,29 @@ export function useGroupChats() {
   useEffect(() => {
     if (!user?.id || groupChats.length === 0) return;
 
-    const groupChatIds = groupChats.map(gc => gc.id);
-
-    const channel = supabase
-      .channel('group-messages-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'group_chat_messages',
-        },
-        (payload) => {
-          if (groupChatIds.includes(payload.new.group_chat_id)) {
+    const channels = groupChats.map((groupChat) =>
+      supabase
+        .channel(`group-chat:${groupChat.id}`, { config: { private: true } })
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'group_chat_messages',
+            filter: `group_chat_id=eq.${groupChat.id}`,
+          },
+          (payload) => {
             queryClient.invalidateQueries({ queryKey: ['group-chats', user.id] });
             queryClient.invalidateQueries({ queryKey: ['group-messages', payload.new.group_chat_id] });
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe()
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach((channel) => {
+        supabase.removeChannel(channel);
+      });
     };
   }, [user?.id, groupChats, queryClient]);
 

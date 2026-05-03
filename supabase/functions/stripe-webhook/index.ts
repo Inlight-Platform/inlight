@@ -19,12 +19,22 @@ serve(async (req) => {
 
     let event: Stripe.Event;
 
-    if (webhookSecret && sig) {
-      event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-    } else {
-      // Fallback: parse without signature verification (dev/testing)
-      event = JSON.parse(body) as Stripe.Event;
+    if (!webhookSecret) {
+      console.error("[STRIPE-WEBHOOK] Missing STRIPE_WEBHOOK_SECRET");
+      return new Response(JSON.stringify({ error: "Webhook secret is not configured" }), {
+        headers: { "Content-Type": "application/json" },
+        status: 500,
+      });
     }
+
+    if (!sig) {
+      return new Response(JSON.stringify({ error: "Missing Stripe signature" }), {
+        headers: { "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
 
     console.log(`[STRIPE-WEBHOOK] Event type: ${event.type}`);
 

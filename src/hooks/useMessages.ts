@@ -165,7 +165,7 @@ export function useMessages() {
     if (!user?.id) return;
 
     const channel = supabase
-      .channel('messages-realtime')
+      .channel(`messages:${user.id}`, { config: { private: true } })
       .on(
         'postgres_changes',
         {

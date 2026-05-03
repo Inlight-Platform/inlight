@@ -135,7 +135,7 @@ const OpportunitiesPage: React.FC = () => {
 
     // Realtime: refresh when the webhook upserts credits for this user
     const channel = supabase
-      .channel(`job_credits_${user.id}`)
+      .channel(`job-credits:${user.id}`, { config: { private: true } })
       .on(
         'postgres_changes',
         {
