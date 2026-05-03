@@ -30,7 +30,7 @@ export const useVouch = (targetUserId: string | undefined) => {
     queryFn: async () => {
       if (!targetUserId) return 0;
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('vouch_count')
         .eq('user_id', targetUserId)
         .single();

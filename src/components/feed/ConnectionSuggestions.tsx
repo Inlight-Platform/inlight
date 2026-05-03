@@ -40,7 +40,7 @@ export const ConnectionSuggestions: React.FC = () => {
       // Get profiles for 2nd degree, excluding already followed
       if (secondDegreeIds.length > 0) {
         const { data: profiles } = await supabase
-          .from('profiles')
+          .from('profiles_public')
           .select('user_id, display_name, avatar_url, headline')
           .in('user_id', secondDegreeIds.slice(0, 10));
         
@@ -51,7 +51,7 @@ export const ConnectionSuggestions: React.FC = () => {
 
       // Fallback: get random users not followed
       const { data: randomProfiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url, headline')
         .neq('user_id', user.id)
         .limit(20);

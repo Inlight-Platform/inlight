@@ -60,7 +60,7 @@ const FeedPage: React.FC = () => {
     queryFn: async () => {
       if (!user?.id) return null;
       const { data: profileByUserId, error: profileByUserIdError } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('display_name, avatar_url')
         .eq('user_id', user.id)
         .maybeSingle();
@@ -78,7 +78,7 @@ const FeedPage: React.FC = () => {
       }
 
       const { data: profileByEmail, error: profileByEmailError } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('display_name, avatar_url')
         .eq('email', user.email)
         .maybeSingle();
@@ -105,7 +105,7 @@ const FeedPage: React.FC = () => {
 
       const userIds = [...new Set(data.map((p) => p.user_id))];
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', userIds);
 
@@ -135,7 +135,7 @@ const FeedPage: React.FC = () => {
 
       const userIds = [...new Set(data.map((p) => p.creator_id))];
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', userIds);
 
@@ -161,7 +161,7 @@ const FeedPage: React.FC = () => {
 
       const userIds = [...new Set(data.map((e) => e.user_id))];
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', userIds);
 
@@ -219,7 +219,7 @@ const FeedPage: React.FC = () => {
 
       const userIds = [...new Set(data.map((r) => (r.projects as any).creator_id))] as string[];
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', userIds);
 

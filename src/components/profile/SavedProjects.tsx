@@ -64,7 +64,7 @@ export const SavedProjects: React.FC = () => {
       // Fetch creator profiles
       const creatorIds = [...new Set(projectsData?.map(p => p.creator_id) || [])];
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', creatorIds);
 

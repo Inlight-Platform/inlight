@@ -172,7 +172,7 @@ const MySavesPage: React.FC = () => {
       
       const creatorIds = [...new Set(projects?.map(p => p.creator_id) || [])];
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', creatorIds);
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);

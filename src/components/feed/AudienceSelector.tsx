@@ -44,7 +44,7 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
     queryFn: async () => {
       if (searchQuery.length < 2) return [];
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .ilike('display_name', `%${searchQuery}%`)
         .neq('user_id', currentUserId)

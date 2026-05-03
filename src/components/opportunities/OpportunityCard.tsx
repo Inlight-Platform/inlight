@@ -70,7 +70,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
       if (!isUUID) return;
 
       const { data } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('display_name, avatar_url, user_id')
         .eq('user_id', opportunity.postedBy)
         .maybeSingle();

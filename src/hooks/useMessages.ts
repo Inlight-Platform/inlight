@@ -192,13 +192,10 @@ export function useMessages() {
     if (targetUserId === user.id) return { allowed: false, reason: 'Cannot message yourself' };
 
     // Get target user's message privacy setting
-    const { data: targetProfile } = await supabase
-      .from('profiles')
-      .select('message_privacy')
-      .eq('user_id', targetUserId)
-      .single();
+    const { data: privacyResult } = await supabase
+      .rpc('get_message_privacy', { target_user_id: targetUserId });
 
-    const privacy = targetProfile?.message_privacy || 'mutuals_only';
+    const privacy = privacyResult || 'mutuals_only';
 
     if (privacy === 'open') {
       return { allowed: true };

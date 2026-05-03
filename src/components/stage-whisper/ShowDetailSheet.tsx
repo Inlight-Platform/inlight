@@ -90,7 +90,7 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
       // Fetch profiles for tips
       const userIds = [...new Set(data.map(t => t.user_id))];
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', userIds);
 

@@ -62,7 +62,7 @@ const NetworkPieChartPage: React.FC = () => {
     queryFn: async () => {
       if (!connections.length) return [];
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, badges')
         .in('user_id', connections);
       if (error) throw error;

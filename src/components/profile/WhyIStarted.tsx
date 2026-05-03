@@ -70,7 +70,7 @@ export const WhyIStarted: React.FC<WhyIStartedProps> = ({
     queryKey: ['why-i-started-answers', userId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('favorite_movie, favorite_artist, favorite_song, why_artist')
         .eq('user_id', userId)
         .maybeSingle();

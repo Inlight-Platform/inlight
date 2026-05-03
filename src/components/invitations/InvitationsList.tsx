@@ -42,7 +42,7 @@ export const InvitationsList: React.FC = () => {
       // Fetch sender profiles
       const senderIds = [...new Set(invitationData.map(i => i.sender_id))];
       const { data: senderProfiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', senderIds);
 

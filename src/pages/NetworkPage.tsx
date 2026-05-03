@@ -51,7 +51,7 @@ const NetworkPage: React.FC = () => {
     queryFn: async () => {
       if (firstDegree.length === 0) return [];
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url, role, location, vouch_count')
         .in('user_id', firstDegree);
       if (error) throw error;
@@ -67,7 +67,7 @@ const NetworkPage: React.FC = () => {
     queryFn: async () => {
       if (pendingSenderIds.length === 0) return [];
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url, role, location, vouch_count')
         .in('user_id', pendingSenderIds);
       if (error) throw error;
@@ -83,7 +83,7 @@ const NetworkPage: React.FC = () => {
     queryFn: async () => {
       if (sentReceiverIds.length === 0) return [];
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url, role, location, vouch_count')
         .in('user_id', sentReceiverIds);
       if (error) throw error;

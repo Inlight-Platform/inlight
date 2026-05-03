@@ -89,7 +89,7 @@ const SchoolStudios: React.FC = () => {
       // Fetch user profiles for posts
       const userIds = [...new Set(data.map(p => p.user_id))];
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', userIds);
 
@@ -118,7 +118,7 @@ const SchoolStudios: React.FC = () => {
       // Fetch user profiles for comments
       const userIds = [...new Set(data.map(c => c.user_id))];
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', userIds);
 

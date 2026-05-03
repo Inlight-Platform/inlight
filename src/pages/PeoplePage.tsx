@@ -114,10 +114,8 @@ const PeoplePage: React.FC = () => {
   const { data: allUsers = [], isLoading } = useQuery({
     queryKey: ['all-users'],
     queryFn: async () => {
-      // Use base profiles to get activity_score (not exposed via profiles_public view).
-      // RLS: any authenticated user can SELECT profiles.
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('id, user_id, display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, headline, skills, instagram_url, website_url, graduation_status, graduation_year, created_at, updated_at, activity_score')
         .order('activity_score', { ascending: false })
         .order('created_at', { ascending: false });

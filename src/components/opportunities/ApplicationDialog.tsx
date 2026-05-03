@@ -30,7 +30,8 @@ interface ApplicationDialogProps {
 
 interface UploadedFile {
   name: string;
-  url: string;
+  file_path: string;
+  bucket: string;
   type: string;
 }
 
@@ -92,7 +93,7 @@ const ApplicationDialog: React.FC<ApplicationDialogProps> = ({
         const fileName = `${user.id}/applications/${opportunityId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('profile-media')
+          .from('application-materials')
           .upload(fileName, file);
 
         if (uploadError) {
@@ -101,13 +102,10 @@ const ApplicationDialog: React.FC<ApplicationDialogProps> = ({
           continue;
         }
 
-        const { data: urlData } = supabase.storage
-          .from('profile-media')
-          .getPublicUrl(fileName);
-
         newFiles.push({
           name: file.name,
-          url: urlData.publicUrl,
+          file_path: fileName,
+          bucket: 'application-materials',
           type: file.type,
         });
       }

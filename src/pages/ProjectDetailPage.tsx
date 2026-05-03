@@ -111,7 +111,7 @@ const ProjectDetailPage: React.FC = () => {
 
       // Fetch creator profile
       const { data: creatorProfile } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('display_name, avatar_url')
         .eq('user_id', data.creator_id)
         .single();
@@ -136,7 +136,7 @@ const ProjectDetailPage: React.FC = () => {
       // Fetch member profiles
       const userIds = data.map(m => m.user_id);
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', userIds);
 
@@ -238,22 +238,11 @@ const ProjectDetailPage: React.FC = () => {
     mutationFn: async () => {
       if (!projectId || !memberEmail.trim()) throw new Error('Invalid data');
       
-      // Find user by email
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('email', memberEmail.trim())
-        .maybeSingle();
-
-      if (!profile) throw new Error('User not found');
-
-      const { error } = await supabase
-        .from('project_members')
-        .insert({
-          project_id: projectId,
-          user_id: profile.user_id,
-          role: memberRole.trim() || null,
-        });
+      const { error } = await supabase.rpc('add_project_member_by_email', {
+        target_project_id: projectId,
+        target_email: memberEmail.trim(),
+        target_role: memberRole.trim() || null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {

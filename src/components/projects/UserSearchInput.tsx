@@ -37,7 +37,7 @@ export const UserSearchInput: React.FC<UserSearchInputProps> = ({
       if (query.length < 2) return [];
       
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, display_name, avatar_url, role')
         .ilike('display_name', `%${query}%`)
         .limit(10);
