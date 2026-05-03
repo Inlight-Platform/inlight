@@ -15,7 +15,14 @@ export const useNetworkConnections = () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
         .rpc('get_mutual_connections', { target_user_id: user.id });
-      if (error) throw error;
+      if (error) {
+        console.error('[ProfileDebug] get_mutual_connections failed', { userId: user.id, error });
+        throw error;
+      }
+      console.log('[ProfileDebug] get_mutual_connections result', {
+        userId: user.id,
+        sample: (data || []).slice(0, 5),
+      });
       return (data || []).map((d: { user_id: string }) => d.user_id);
     },
     enabled: !!user?.id,
@@ -28,7 +35,14 @@ export const useNetworkConnections = () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
         .rpc('get_2nd_degree_connections', { target_user_id: user.id });
-      if (error) throw error;
+      if (error) {
+        console.error('[ProfileDebug] get_2nd_degree_connections failed', { userId: user.id, error });
+        throw error;
+      }
+      console.log('[ProfileDebug] get_2nd_degree_connections result', {
+        userId: user.id,
+        sample: (data || []).slice(0, 5),
+      });
       return (data || []).map((d: { user_id: string }) => d.user_id);
     },
     enabled: !!user?.id,

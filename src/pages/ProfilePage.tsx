@@ -409,6 +409,59 @@ const ProfilePage: React.FC = () => {
   const displayGraduationStatus = dbProfile?.graduation_status || null;
   const displayGraduationYear = dbProfile?.graduation_year || null;
   const displayCredits = (dbCredits || []).filter((credit): credit is Credit => Boolean(credit?.id));
+
+  useEffect(() => {
+    if (isOwnProfile || !resolvedUserId) return;
+
+    console.groupCollapsed('[ProfileDebug] public profile snapshot');
+    console.log('routeUserId', userId);
+    console.log('resolvedUserId', resolvedUserId);
+    console.log('authUserId', authUser?.id ?? null);
+    console.log('currentUserId', currentUserId ?? null);
+    console.log('isOwnProfile', isOwnProfile);
+    console.log('dbProfile', dbProfile ? {
+      user_id: dbProfile.user_id,
+      display_name: dbProfile.display_name,
+      badgesCount: dbProfile.badges?.length ?? 0,
+      skillsCount: dbProfile.skills?.length ?? 0,
+      gearListCount: dbProfile.gear_list?.length ?? 0,
+      show_union_status: dbProfile.show_union_status ?? null,
+      show_representation: dbProfile.show_representation ?? null,
+      show_gear_list: dbProfile.show_gear_list ?? null,
+    } : null);
+    console.log('fallbackStoreUser', user ? {
+      id: user.id,
+      name: user.name,
+      role: user.role,
+    } : null);
+    console.log('networkCounts', networkCounts ?? null);
+    console.log('connectionStatus', connectionStatus ?? null);
+    console.log('hasPendingRequest', hasPendingRequest);
+    console.log('pendingRequestId', pendingRequestId ?? null);
+    console.log('vouchCount', vouchCount);
+    console.log('hasVouched', hasVouched);
+    console.log('displayCreditsCount', displayCredits.length);
+    console.log('displayBadges', displayBadges);
+    console.log('displaySkills', displaySkills);
+    console.groupEnd();
+  }, [
+    isOwnProfile,
+    resolvedUserId,
+    userId,
+    authUser?.id,
+    currentUserId,
+    dbProfile,
+    user,
+    networkCounts,
+    connectionStatus,
+    hasPendingRequest,
+    pendingRequestId,
+    vouchCount,
+    hasVouched,
+    displayCredits.length,
+    displayBadges,
+    displaySkills,
+  ]);
   
   // Fetch user media from database
   const { data: userMedia = [], refetch: refetchMedia } = useQuery({

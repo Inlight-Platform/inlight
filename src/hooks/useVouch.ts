@@ -18,7 +18,14 @@ export const useVouch = (targetUserId: string | undefined) => {
         .eq('voucher_id', user.id)
         .eq('vouched_for_id', targetUserId)
         .maybeSingle();
-      if (error) return false;
+      if (error) {
+        console.error('[ProfileDebug] useVouch status query failed', {
+          userId: user.id,
+          targetUserId,
+          error,
+        });
+        return false;
+      }
       return !!data;
     },
     enabled: !!user?.id && !!targetUserId && user.id !== targetUserId,
@@ -34,7 +41,17 @@ export const useVouch = (targetUserId: string | undefined) => {
         .select('vouch_count')
         .eq('user_id', targetUserId)
         .single();
-      if (error) return 0;
+      if (error) {
+        console.error('[ProfileDebug] useVouch count query failed', {
+          targetUserId,
+          error,
+        });
+        return 0;
+      }
+      console.log('[ProfileDebug] useVouch count query result', {
+        targetUserId,
+        data,
+      });
       return data?.vouch_count || 0;
     },
     enabled: !!targetUserId,

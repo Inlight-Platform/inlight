@@ -26,7 +26,18 @@ export function useConnectionRequests() {
         .eq('receiver_id', user.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error('[ProfileDebug] pending connection requests query failed', {
+          userId: user.id,
+          error,
+        });
+        throw error;
+      }
+      console.log('[ProfileDebug] pending connection requests result', {
+        userId: user.id,
+        count: data?.length ?? 0,
+        sample: (data || []).slice(0, 3),
+      });
       return data as ConnectionRequest[];
     },
     enabled: !!user?.id,
@@ -42,7 +53,18 @@ export function useConnectionRequests() {
         .select('*')
         .eq('sender_id', user.id)
         .order('created_at', { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error('[ProfileDebug] sent connection requests query failed', {
+          userId: user.id,
+          error,
+        });
+        throw error;
+      }
+      console.log('[ProfileDebug] sent connection requests result', {
+        userId: user.id,
+        count: data?.length ?? 0,
+        sample: (data || []).slice(0, 3),
+      });
       return data as ConnectionRequest[];
     },
     enabled: !!user?.id,
