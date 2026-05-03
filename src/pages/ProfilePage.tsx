@@ -2039,4 +2039,10 @@ const ProfilePage: React.FC = () => {
   );
 };
 
-export default ProfilePage;
+const ProfilePageWithBoundary: React.FC = () => (
+  <ProfilePageErrorBoundary>
+    <ProfilePage />
+  </ProfilePageErrorBoundary>
+);
+
+export default ProfilePageWithBoundary;
