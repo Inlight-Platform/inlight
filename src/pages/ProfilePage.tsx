@@ -2026,10 +2026,10 @@ const ProfilePage: React.FC = () => {
       />
       {/* Floating chat icon for connected users - or minimized bubble */}
       {!isOwnProfile && isConnected && resolvedUserId && (
-        chatMinimized && chatOriginRoute === location.pathname ? (
+        chatMinimized && chatOriginRoute === location.pathname && chatRoute ? (
           <FloatingChatButton onClick={() => {
             expandChat();
-            navigate(chatRoute!, { state: { originRoute: location.pathname } });
+            navigate(chatRoute, { state: { originRoute: location.pathname } });
           }} />
         ) : !chatMinimized ? (
           <FloatingChatButton onClick={() => navigate(`/messages/direct/${resolvedUserId}`, { state: { originRoute: location.pathname } })} />
