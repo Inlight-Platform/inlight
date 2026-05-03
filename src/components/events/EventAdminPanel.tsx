@@ -9,7 +9,7 @@ interface EventAdminPanelProps {
 }
 
 const EventAdminPanel: React.FC<EventAdminPanelProps> = ({ eventId }) => {
-  const { rsvps, goingCount, cantMakeItCount } = useEventRsvps(eventId);
+  const { rsvps, goingCount, cantMakeItCount } = useEventRsvps(eventId, { includePrivate: true });
   const [open, setOpen] = useState(false);
 
   const formatDate = (dateStr: string) =>

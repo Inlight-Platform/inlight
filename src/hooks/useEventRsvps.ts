@@ -7,24 +7,35 @@ export interface EventRsvp {
   event_id: string;
   user_id: string | null;
   name: string;
-  email: string;
+  email?: string | null;
   role_type: string;
   status: string;
-  custom_answer: string | null;
+  custom_answer?: string | null;
   created_at: string;
+  attended?: boolean | null;
+  attended_at?: string | null;
 }
 
-export function useEventRsvps(eventId: string) {
+interface UseEventRsvpsOptions {
+  includePrivate?: boolean;
+}
+
+export function useEventRsvps(eventId: string, options: UseEventRsvpsOptions = {}) {
   const queryClient = useQueryClient();
+  const { includePrivate = false } = options;
 
   const { data: rsvps = [], isLoading } = useQuery({
-    queryKey: ['event-rsvps', eventId],
+    queryKey: ['event-rsvps', eventId, includePrivate ? 'private' : 'public'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('event_rsvps')
-        .select('*')
-        .eq('event_id', eventId)
-        .order('created_at', { ascending: true });
+      const query = includePrivate
+        ? supabase
+            .from('event_rsvps')
+            .select('*')
+            .eq('event_id', eventId)
+            .order('created_at', { ascending: true })
+        : supabase.rpc('get_public_event_rsvps', { target_event_id: eventId });
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as EventRsvp[];
     },
