@@ -104,7 +104,7 @@ type ExperienceLevel = 'entry' | 'intermediate' | 'senior' | 'any';
 
 const OpportunitiesPage: React.FC = () => {
   const { user } = useAuth();
-  const isAdmin = user?.email === 'info@inlight.social';
+  const { isAdmin } = useAdmin();
   const { opportunities: allOpportunities, isLoading } = useOpportunities();
   
   const [showCreator, setShowCreator] = useState(false);
