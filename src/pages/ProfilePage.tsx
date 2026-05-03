@@ -131,6 +131,36 @@ interface ProfileData {
   show_gear_list?: boolean;
 }
 
+class ProfileSectionErrorBoundary extends React.Component<
+  { title: string; children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { title: string; children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error(`Profile section failed to render: ${this.props.title}`, error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-lg border border-border bg-card/50 p-4 text-sm text-muted-foreground">
+          Some {this.props.title.toLowerCase()} information could not be displayed yet.
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const ProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
@@ -1691,16 +1721,20 @@ const ProfilePage: React.FC = () => {
 
       {/* Public Media Gallery (for other users' profiles) */}
       {!isOwnProfile && resolvedUserId && (
-        <PublicMediaGallery 
-          userId={resolvedUserId} 
-          isConnected={connectionStatus === 'accepted'}
-        />
+        <ProfileSectionErrorBoundary title="Media">
+          <PublicMediaGallery 
+            userId={resolvedUserId} 
+            isConnected={connectionStatus === 'accepted'}
+          />
+        </ProfileSectionErrorBoundary>
       )}
       
       {/* Why I Started (for other users' profiles) */}
       {!isOwnProfile && resolvedUserId && (
         <section className="px-4 sm:px-6 lg:px-8 py-6 border-b border-border">
-          <WhyIStarted userId={resolvedUserId} isOwnProfile={false} />
+          <ProfileSectionErrorBoundary title="Why I Started">
+            <WhyIStarted userId={resolvedUserId} isOwnProfile={false} />
+          </ProfileSectionErrorBoundary>
         </section>
       )}
       
@@ -1763,37 +1797,39 @@ const ProfilePage: React.FC = () => {
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-4">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Project</th>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Role</th>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Year</th>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Company</th>
-                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Verified</th>
-                    {isOwnProfile && <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayCredits.map((credit) => (
-                    <CreditRow
-                      key={credit.id}
-                      credit={credit}
-                      isOwnProfile={isOwnProfile}
-                      onDelete={handleDeleteCredit}
-                    />
-                  ))}
-                  {displayCredits.length === 0 && (
-                    <tr>
-                      <td colSpan={isOwnProfile ? 6 : 5} className="py-8 text-center text-muted-foreground">
-                        {isOwnProfile ? 'No credits yet. Add your first credit!' : 'No credits listed.'}
-                      </td>
+            <ProfileSectionErrorBoundary title="Credits">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Project</th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Role</th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Year</th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Company</th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Verified</th>
+                      {isOwnProfile && <th className="text-left py-3 px-4 font-medium text-muted-foreground">Actions</th>}
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {displayCredits.map((credit) => (
+                      <CreditRow
+                        key={credit.id}
+                        credit={credit}
+                        isOwnProfile={isOwnProfile}
+                        onDelete={handleDeleteCredit}
+                      />
+                    ))}
+                    {displayCredits.length === 0 && (
+                      <tr>
+                        <td colSpan={isOwnProfile ? 6 : 5} className="py-8 text-center text-muted-foreground">
+                          {isOwnProfile ? 'No credits yet. Add your first credit!' : 'No credits listed.'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </ProfileSectionErrorBoundary>
           </CollapsibleContent>
         </section>
       </Collapsible>
@@ -1809,7 +1845,9 @@ const ProfilePage: React.FC = () => {
               <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-4">
-              <AttendedSection userId={resolvedUserId} />
+              <ProfileSectionErrorBoundary title="Attended">
+                <AttendedSection userId={resolvedUserId} />
+              </ProfileSectionErrorBoundary>
             </CollapsibleContent>
           </section>
         </Collapsible>
@@ -1824,7 +1862,9 @@ const ProfilePage: React.FC = () => {
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-4">
             {resolvedUserId && (
-              <MyProjects userId={resolvedUserId} isOwnProfile={isOwnProfile} />
+              <ProfileSectionErrorBoundary title="Projects">
+                <MyProjects userId={resolvedUserId} isOwnProfile={isOwnProfile} />
+              </ProfileSectionErrorBoundary>
             )}
           </CollapsibleContent>
         </section>
@@ -1839,7 +1879,9 @@ const ProfilePage: React.FC = () => {
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-4">
             {resolvedUserId && (
-              <UserPosts userId={resolvedUserId} />
+              <ProfileSectionErrorBoundary title="Posts">
+                <UserPosts userId={resolvedUserId} />
+              </ProfileSectionErrorBoundary>
             )}
           </CollapsibleContent>
         </section>
