@@ -23,12 +23,8 @@ function normalizeResetUrl(url: string) {
   return `${trimmed.replace(/\/+$/, "")}${DEFAULT_RESET_PATH}`;
 }
 
-function getResetRedirectUrl(redirectTo?: string) {
+function getResetRedirectUrl() {
   const configuredResetUrl = Deno.env.get("PASSWORD_RESET_REDIRECT_URL");
-  if (redirectTo) {
-    return normalizeResetUrl(redirectTo);
-  }
-
   if (configuredResetUrl) {
     return normalizeResetUrl(configuredResetUrl);
   }
@@ -84,7 +80,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, redirectTo, debug } = await req.json();
+    const { email, debug } = await req.json();
 
     if (!email) {
       return new Response(JSON.stringify({ error: "Missing email" }), {
@@ -99,7 +95,7 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false, autoRefreshToken: false } }
     );
 
-    const resetRedirectTo = getResetRedirectUrl(redirectTo);
+    const resetRedirectTo = getResetRedirectUrl();
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "recovery",
       email,

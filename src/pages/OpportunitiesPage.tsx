@@ -172,28 +172,6 @@ const OpportunitiesPage: React.FC = () => {
     setShowCreator(open);
   };
 
-  // Consume one credit (server-side, atomic) when a non-admin user's
-  // opportunity count increases.
-  const myCount = useMemo(
-    () => (user ? allOpportunities.filter(o => o.postedBy === user.id).length : 0),
-    [allOpportunities, user]
-  );
-  const [lastSeenMyCount, setLastSeenMyCount] = useState<number | null>(null);
-  useEffect(() => {
-    if (!user) return;
-    if (lastSeenMyCount === null) {
-      setLastSeenMyCount(myCount);
-      return;
-    }
-    if (myCount > lastSeenMyCount && !isAdmin) {
-      supabase.rpc('consume_job_credit', { _user_id: user.id }).then(() => {
-        refreshCredits();
-      });
-    }
-    setLastSeenMyCount(myCount);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myCount, user, isAdmin, lastSeenMyCount]);
-
   // Get unique locations
   const locations = useMemo(() => {
     const locs = new Set<string>();
