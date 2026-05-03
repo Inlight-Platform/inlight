@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, debug } = await req.json();
+    const { email } = await req.json();
 
     if (!email) {
       return new Response(JSON.stringify({ error: "Missing email" }), {
@@ -108,25 +108,8 @@ Deno.serve(async (req) => {
     if (linkError || !linkData?.properties?.action_link) {
       console.error("[send-password-reset] Failed generating recovery link:", linkError);
       const message = "If an account exists for that email, a reset link will be sent.";
-      const debugPayload = debug
-        ? {
-            message,
-            debug: {
-              stage: "generate_link",
-              redirectTo: resetRedirectTo,
-              linkError: linkError
-                ? {
-                    name: linkError.name,
-                    message: linkError.message,
-                    status: (linkError as { status?: number }).status ?? null,
-                  }
-                : null,
-              hasActionLink: Boolean(linkData?.properties?.action_link),
-            },
-          }
-        : { message };
       return new Response(
-        JSON.stringify(debugPayload),
+        JSON.stringify({ message }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -149,43 +132,20 @@ Deno.serve(async (req) => {
 
     if (emailError) {
       console.error("[send-password-reset] Resend error:", JSON.stringify(emailError));
-      const errorPayload = debug
-        ? {
-            error: "Failed to send email",
-            debug: {
-              stage: "send_email",
-              redirectTo: resetRedirectTo,
-              hasActionLink: true,
-              emailError,
-            },
-          }
-        : { error: "Failed to send email" };
-      return new Response(JSON.stringify(errorPayload), {
+      return new Response(JSON.stringify({ error: "Failed to send email" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const successPayload = debug
-      ? {
-          message: "If an account exists for that email, a reset link will be sent.",
-          debug: {
-            stage: "sent",
-            redirectTo: resetRedirectTo,
-            hasActionLink: true,
-            emailId: emailData?.id ?? null,
-          },
-        }
-      : { message: "If an account exists for that email, a reset link will be sent." };
-
     return new Response(
-      JSON.stringify(successPayload),
+      JSON.stringify({ message: "If an account exists for that email, a reset link will be sent." }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("[send-password-reset] Unhandled error:", error);
     return new Response(
-      JSON.stringify({ error: "Internal server error", message: String(error) }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

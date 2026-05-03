@@ -12,21 +12,44 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-  );
-
   try {
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
+
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
     const { data } = await supabaseClient.auth.getUser(token);
     const user = data.user;
     if (!user) throw new Error("Not authenticated");
 
-    const { event_id, title, price, currency } = await req.json();
-    if (!event_id || !title || !price || price <= 0) {
-      throw new Error("Missing required fields: event_id, title, price");
+    const { event_id, price, currency } = await req.json();
+    if (!event_id || !price || price <= 0) {
+      throw new Error("Missing required fields: event_id, price");
+    }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const { data: eventRecord, error: eventError } = await supabaseAdmin
+      .from("events")
+      .select("id, title, user_id, stripe_price_id")
+      .eq("id", event_id)
+      .maybeSingle();
+
+    if (eventError) throw eventError;
+    if (!eventRecord || eventRecord.user_id !== user.id) {
+      throw new Error("You do not have permission to configure tickets for this event");
+    }
+
+    if (eventRecord.stripe_price_id) {
+      return new Response(JSON.stringify({ price_id: eventRecord.stripe_price_id }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
     }
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -35,7 +58,7 @@ serve(async (req) => {
 
     // Create Stripe product + price
     const product = await stripe.products.create({
-      name: `Event Ticket: ${title}`,
+      name: `Event Ticket: ${eventRecord.title}`,
       metadata: { event_id, created_by: user.id },
     });
 
@@ -44,12 +67,6 @@ serve(async (req) => {
       unit_amount: Math.round(price * 100),
       currency: currency || "usd",
     });
-
-    // Update event with stripe_price_id using service role
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
 
     const { error: updateError } = await supabaseAdmin
       .from("events")
