@@ -43,9 +43,12 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
 
       if (memberError) throw memberError;
 
+      const safeCreatedProjects = (createdProjects || []).filter((project): project is Project => Boolean(project?.id));
+
       const memberProjectIds = memberships
         ?.map(m => m.project_id)
-        .filter(id => !createdProjects?.some(p => p.id === id)) || [];
+        .filter(Boolean)
+        .filter(id => !safeCreatedProjects.some(p => p.id === id)) || [];
 
       let memberProjects: Project[] = [];
       if (memberProjectIds.length > 0) {
@@ -54,14 +57,14 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
           .select('id, title, description, main_image_url, header_image_url, creator_id')
           .in('id', memberProjectIds);
 
-        memberProjects = (memberProjectsData || []).map(p => ({
+        memberProjects = (memberProjectsData || []).filter((project): project is Project => Boolean(project?.id)).map(p => ({
           ...p,
           role: memberships?.find(m => m.project_id === p.id)?.role || undefined
         }));
       }
 
       const allProjects = [
-        ...(createdProjects || []).map(p => ({ ...p, role: 'Creator' as string })),
+        ...safeCreatedProjects.map(p => ({ ...p, role: 'Creator' as string })),
         ...memberProjects
       ];
 
@@ -82,13 +85,13 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
       if (error) throw error;
       if (!saved?.length) return [];
 
-      const projectIds = saved.map(s => s.project_id);
+      const projectIds = saved.map(s => s.project_id).filter(Boolean);
       const { data: projectsData } = await supabase
         .from('projects')
         .select('id, title, description, main_image_url, header_image_url, creator_id')
         .in('id', projectIds);
 
-      return projectsData || [];
+      return (projectsData || []).filter((project): project is Project => Boolean(project?.id));
     },
     enabled: !!userId && isOwnProfile,
   });

@@ -45,7 +45,7 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
       const map = new Map<string, AttendedEvent>();
 
       (rsvpsRes.data || []).forEach((r: any) => {
-        if (!r.events) return;
+        if (!r?.events?.id) return;
         map.set(r.events.id, {
           id: r.events.id,
           source: 'rsvp',
@@ -58,7 +58,7 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
       });
 
       (ticketsRes.data || []).forEach((t: any) => {
-        if (!t.events) return;
+        if (!t?.events?.id) return;
         map.set(t.events.id, {
           id: t.events.id,
           source: 'ticket',

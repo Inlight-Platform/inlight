@@ -58,8 +58,8 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
       if (openRolesError) throw openRolesError;
 
       // Filter to only this user's projects
-      const userOpenRoles = openRolesData.filter(
-        role => (role.projects as any).creator_id === userId && (role.projects as any).is_public
+      const userOpenRoles = (openRolesData || []).filter(
+        role => role?.id && role?.projects && (role.projects as any).creator_id === userId && (role.projects as any).is_public
       );
 
       // Fetch user profile for creator info
@@ -70,7 +70,7 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
         .single();
 
       // Transform posts to FeedItemData format
-      const transformedPosts: FeedItemData[] = (postsData || []).map((post) => ({
+      const transformedPosts: FeedItemData[] = (postsData || []).filter(post => !!post?.id).map((post) => ({
         id: post.id,
         type: post.link_url?.includes('job') || post.content?.toLowerCase().includes('hiring') ? 'job' : 'post',
         user_id: post.user_id,
@@ -86,7 +86,7 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
       }));
 
       // Transform events to FeedItemData format
-      const transformedEvents: FeedItemData[] = (eventsData || []).map((event) => ({
+      const transformedEvents: FeedItemData[] = (eventsData || []).filter(event => !!event?.id).map((event) => ({
         id: event.id,
         type: 'event' as const,
         user_id: event.user_id,
