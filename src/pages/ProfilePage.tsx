@@ -133,19 +133,26 @@ interface ProfileData {
 
 class ProfileSectionErrorBoundary extends React.Component<
   { title: string; children: React.ReactNode },
-  { hasError: boolean }
+  { hasError: boolean; message?: string }
 > {
   constructor(props: { title: string; children: React.ReactNode }) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: unknown) {
+    return {
+      hasError: true,
+      message: error instanceof Error ? error.message : String(error),
+    };
   }
 
-  componentDidCatch(error: unknown) {
-    console.error(`Profile section failed to render: ${this.props.title}`, error);
+  componentDidCatch(error: unknown, info: unknown) {
+    console.error(
+      `[ProfileSection:${this.props.title}] render failed:`,
+      error,
+      info,
+    );
   }
 
   render() {
@@ -153,6 +160,9 @@ class ProfileSectionErrorBoundary extends React.Component<
       return (
         <div className="rounded-lg border border-border bg-card/50 p-4 text-sm text-muted-foreground">
           Some {this.props.title.toLowerCase()} information could not be displayed yet.
+          {this.state.message ? (
+            <div className="mt-1 text-xs opacity-70">({this.state.message})</div>
+          ) : null}
         </div>
       );
     }
@@ -160,6 +170,59 @@ class ProfileSectionErrorBoundary extends React.Component<
     return this.props.children;
   }
 }
+
+class ProfilePageErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; message?: string; stack?: string }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: unknown) {
+    return {
+      hasError: true,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    };
+  }
+
+  componentDidCatch(error: unknown, info: unknown) {
+    console.error('[ProfilePage] top-level render failure:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center p-6">
+          <div className="max-w-lg w-full rounded-lg border border-border bg-card p-6 space-y-3">
+            <h2 className="text-lg font-semibold">This profile couldn't load</h2>
+            <p className="text-sm text-muted-foreground">
+              Something on this profile failed to render. Other profiles may still work.
+            </p>
+            {this.state.message ? (
+              <pre className="text-xs bg-muted/50 p-2 rounded overflow-auto max-h-48 whitespace-pre-wrap">
+                {this.state.message}
+              </pre>
+            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                window.location.href = '/people';
+              }}
+            >
+              Back to People
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 
 const ProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -1963,10 +2026,10 @@ const ProfilePage: React.FC = () => {
       />
       {/* Floating chat icon for connected users - or minimized bubble */}
       {!isOwnProfile && isConnected && resolvedUserId && (
-        chatMinimized && chatOriginRoute === location.pathname ? (
+        chatMinimized && chatOriginRoute === location.pathname && chatRoute ? (
           <FloatingChatButton onClick={() => {
             expandChat();
-            navigate(chatRoute!, { state: { originRoute: location.pathname } });
+            navigate(chatRoute, { state: { originRoute: location.pathname } });
           }} />
         ) : !chatMinimized ? (
           <FloatingChatButton onClick={() => navigate(`/messages/direct/${resolvedUserId}`, { state: { originRoute: location.pathname } })} />
@@ -1976,4 +2039,10 @@ const ProfilePage: React.FC = () => {
   );
 };
 
-export default ProfilePage;
+const ProfilePageWithBoundary: React.FC = () => (
+  <ProfilePageErrorBoundary>
+    <ProfilePage />
+  </ProfilePageErrorBoundary>
+);
+
+export default ProfilePageWithBoundary;
