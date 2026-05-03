@@ -57,7 +57,7 @@ export const PublicMediaGallery: React.FC<PublicMediaGalleryProps> = ({
         }
 
         // Add URLs
-        const mediaWithUrls = (data || []).map((item) => ({
+        const mediaWithUrls = (data || []).filter((item): item is typeof item => Boolean(item?.id && item?.file_path)).map((item) => ({
           ...item,
           file_type: item.file_type as MediaType,
           url: supabase.storage.from('profile-media').getPublicUrl(item.file_path).data.publicUrl,

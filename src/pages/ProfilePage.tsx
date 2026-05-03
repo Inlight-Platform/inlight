@@ -315,7 +315,7 @@ const ProfilePage: React.FC = () => {
   const displayWebsite = dbProfile?.website_url || '';
   const displayGraduationStatus = dbProfile?.graduation_status || null;
   const displayGraduationYear = dbProfile?.graduation_year || null;
-  const displayCredits = dbCredits;
+  const displayCredits = (dbCredits || []).filter((credit): credit is Credit => Boolean(credit?.id));
   
   // Fetch user media from database
   const { data: userMedia = [], refetch: refetchMedia } = useQuery({

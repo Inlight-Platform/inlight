@@ -290,7 +290,9 @@ export function useCanVouchForCredit(creditOwnerId: string | undefined) {
 
       if (myError || !myProjects?.length) return false;
 
-      const myProjectIds = myProjects.map(p => p.project_id);
+      const myProjectIds = myProjects.map(p => p.project_id).filter(Boolean);
+
+      if (myProjectIds.length === 0) return false;
 
       // Check if credit owner is a member of any of these projects
       const { data: sharedProjects, error: sharedError } = await supabase
@@ -312,7 +314,11 @@ export function useCanVouchForCredit(creditOwnerId: string | undefined) {
 
       if (creatorError || !createdProjects?.length) return false;
 
-      const createdProjectIds = createdProjects.map(p => p.id);
+      const createdProjectIds = createdProjects
+        .map(p => p?.id)
+        .filter(Boolean);
+
+      if (createdProjectIds.length === 0) return false;
 
       const { data: ownerInMyProjects } = await supabase
         .from('project_members')
@@ -331,7 +337,11 @@ export function useCanVouchForCredit(creditOwnerId: string | undefined) {
 
       if (!ownerCreatedProjects?.length) return false;
 
-      const ownerCreatedIds = ownerCreatedProjects.map(p => p.id);
+      const ownerCreatedIds = ownerCreatedProjects
+        .map(p => p?.id)
+        .filter(Boolean);
+
+      if (ownerCreatedIds.length === 0) return false;
 
       const { data: meInOwnerProjects } = await supabase
         .from('project_members')
