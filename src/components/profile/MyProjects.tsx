@@ -43,7 +43,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
 
       if (memberError) throw memberError;
 
-      const safeCreatedProjects = (createdProjects || []).filter((project): project is Project => Boolean(project?.id));
+      const safeCreatedProjects = ((createdProjects || []) as unknown as Project[]).filter((project) => Boolean(project?.id));
 
       const memberProjectIds = memberships
         ?.map(m => m.project_id)
@@ -57,7 +57,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
           .select('id, title, description, main_image_url, header_image_url, creator_id')
           .in('id', memberProjectIds);
 
-        memberProjects = (memberProjectsData || []).filter((project): project is Project => Boolean(project?.id)).map(p => ({
+        memberProjects = ((memberProjectsData || []) as unknown as Project[]).filter((project) => Boolean(project?.id)).map(p => ({
           ...p,
           role: memberships?.find(m => m.project_id === p.id)?.role || undefined
         }));
@@ -91,7 +91,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
         .select('id, title, description, main_image_url, header_image_url, creator_id')
         .in('id', projectIds);
 
-      return (projectsData || []).filter((project): project is Project => Boolean(project?.id));
+      return ((projectsData || []) as unknown as Project[]).filter((project) => Boolean(project?.id));
     },
     enabled: !!userId && isOwnProfile,
   });

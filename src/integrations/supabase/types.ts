@@ -2201,6 +2201,7 @@ export type Database = {
     Views: {
       profiles_public: {
         Row: {
+          activity_score: number | null
           avatar_url: string | null
           badges: string[] | null
           bio: string | null
@@ -2210,7 +2211,6 @@ export type Database = {
           favorite_artist: string | null
           favorite_movie: string | null
           favorite_song: string | null
-          gear_list: string[] | null
           gear_list_display: string[] | null
           graduation_status: string | null
           graduation_year: number | null
@@ -2218,6 +2218,7 @@ export type Database = {
           id: string | null
           instagram_url: string | null
           location: string | null
+          message_privacy: string | null
           pronouns: string | null
           representation: string | null
           role: string | null
@@ -2229,10 +2230,12 @@ export type Database = {
           union_status: string | null
           updated_at: string | null
           user_id: string | null
+          vouch_count: number | null
           website_url: string | null
           why_artist: string | null
         }
         Insert: {
+          activity_score?: number | null
           avatar_url?: string | null
           badges?: string[] | null
           bio?: string | null
@@ -2242,7 +2245,6 @@ export type Database = {
           favorite_artist?: string | null
           favorite_movie?: string | null
           favorite_song?: string | null
-          gear_list?: string[] | null
           gear_list_display?: never
           graduation_status?: string | null
           graduation_year?: number | null
@@ -2250,6 +2252,7 @@ export type Database = {
           id?: string | null
           instagram_url?: string | null
           location?: string | null
+          message_privacy?: string | null
           pronouns?: string | null
           representation?: never
           role?: string | null
@@ -2261,10 +2264,12 @@ export type Database = {
           union_status?: never
           updated_at?: string | null
           user_id?: string | null
+          vouch_count?: number | null
           website_url?: string | null
           why_artist?: string | null
         }
         Update: {
+          activity_score?: number | null
           avatar_url?: string | null
           badges?: string[] | null
           bio?: string | null
@@ -2274,7 +2279,6 @@ export type Database = {
           favorite_artist?: string | null
           favorite_movie?: string | null
           favorite_song?: string | null
-          gear_list?: string[] | null
           gear_list_display?: never
           graduation_status?: string | null
           graduation_year?: number | null
@@ -2282,6 +2286,7 @@ export type Database = {
           id?: string | null
           instagram_url?: string | null
           location?: string | null
+          message_privacy?: string | null
           pronouns?: string | null
           representation?: never
           role?: string | null
@@ -2293,6 +2298,7 @@ export type Database = {
           union_status?: never
           updated_at?: string | null
           user_id?: string | null
+          vouch_count?: number | null
           website_url?: string | null
           why_artist?: string | null
         }
@@ -2300,6 +2306,14 @@ export type Database = {
       }
     }
     Functions: {
+      add_project_member_by_email: {
+        Args: {
+          target_email: string
+          target_project_id: string
+          target_role?: string
+        }
+        Returns: undefined
+      }
       bump_activity_score: {
         Args: { _delta: number; _user_id: string }
         Returns: undefined
@@ -2316,9 +2330,22 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_message_privacy: { Args: { target_user_id: string }; Returns: string }
       get_mutual_connections: {
         Args: { target_user_id: string }
         Returns: {
+          user_id: string
+        }[]
+      }
+      get_public_event_rsvps: {
+        Args: { target_event_id: string }
+        Returns: {
+          created_at: string
+          event_id: string
+          id: string
+          name: string
+          role_type: string
+          status: string
           user_id: string
         }[]
       }

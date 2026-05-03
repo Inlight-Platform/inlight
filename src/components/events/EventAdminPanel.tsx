@@ -97,7 +97,7 @@ interface RsvpRowProps {
   rsvp: {
     id: string;
     name: string;
-    email: string;
+    email?: string | null;
     role_type: string;
     status: string;
     created_at: string;
@@ -127,9 +127,13 @@ const RsvpRow: React.FC<RsvpRowProps> = ({ rsvp, formatDate }) => (
     </div>
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
       <Mail className="w-3 h-3" />
-      <a href={`mailto:${rsvp.email}`} className="hover:text-foreground transition-colors underline">
-        {rsvp.email}
-      </a>
+      {rsvp.email ? (
+        <a href={`mailto:${rsvp.email}`} className="hover:text-foreground transition-colors underline">
+          {rsvp.email}
+        </a>
+      ) : (
+        <span className="italic">email hidden</span>
+      )}
     </div>
     {(rsvp as any).custom_answer && (
       <p className="text-xs text-muted-foreground italic pl-5">"{(rsvp as any).custom_answer}"</p>

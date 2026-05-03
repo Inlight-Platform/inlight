@@ -73,21 +73,7 @@ const FeedPage: React.FC = () => {
         return profileByUserId;
       }
 
-      if (!user.email) {
-        return null;
-      }
-
-      const { data: profileByEmail, error: profileByEmailError } = await supabase
-        .from('profiles_public')
-        .select('display_name, avatar_url')
-        .eq('email', user.email)
-        .maybeSingle();
-
-      if (profileByEmailError) {
-        console.error('FeedPage: failed loading profile by email', profileByEmailError);
-      }
-
-      return profileByEmail;
+      return null;
     },
     enabled: !!user?.id
   });
