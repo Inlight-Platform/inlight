@@ -8,6 +8,11 @@ const corsHeaders = {
 };
 
 const PRICE_ID = "price_1TL3PFJfp4zksQID9WNgh2iE";
+const DEFAULT_SITE_URL = "https://inlight.social";
+
+function getBaseUrl() {
+  return (Deno.env.get("CHECKOUT_SITE_URL") || Deno.env.get("SITE_URL") || DEFAULT_SITE_URL).replace(/\/+$/, "");
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -36,7 +41,7 @@ serve(async (req) => {
       customerId = customers.data[0].id;
     }
 
-    const origin = req.headers.get("origin") || "https://inlight.lovable.app";
+    const origin = getBaseUrl();
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

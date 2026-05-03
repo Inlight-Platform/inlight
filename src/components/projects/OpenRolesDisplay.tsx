@@ -276,20 +276,6 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
             });
           }
 
-          // Create acceptance notification (triggers email via DB trigger)
-          await supabase.from('notifications').insert({
-            user_id: pendingAccept.applicantId,
-            type: 'application_accepted',
-            title: 'Congratulations! You\'ve been accepted!',
-            body: `You've been offered the role of ${pendingAccept.roleName} on ${projectData?.title || 'a project'}`,
-            data: {
-              sender_id: user.id,
-              project_id: projectId,
-              role_name: pendingAccept.roleName,
-              project_title: projectData?.title || '',
-            },
-          });
-
           setAcceptDialogOpen(false);
           setViewingApplication(null);
           setPendingAccept(null);

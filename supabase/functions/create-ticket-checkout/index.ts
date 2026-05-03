@@ -9,8 +9,8 @@ const corsHeaders = {
 
 const DEFAULT_SITE_URL = "https://inlight.social";
 
-function getBaseUrl(req: Request) {
-  return req.headers.get("origin") || Deno.env.get("SITE_URL") || DEFAULT_SITE_URL;
+function getBaseUrl() {
+  return (Deno.env.get("CHECKOUT_SITE_URL") || Deno.env.get("SITE_URL") || DEFAULT_SITE_URL).replace(/\/+$/, "");
 }
 
 serve(async (req) => {
@@ -69,7 +69,7 @@ serve(async (req) => {
       customerId = customers.data[0].id;
     }
 
-    const origin = getBaseUrl(req);
+    const origin = getBaseUrl();
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
