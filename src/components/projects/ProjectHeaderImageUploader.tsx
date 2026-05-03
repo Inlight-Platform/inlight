@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react';
-import { ImagePlus, X, Loader2, Upload } from 'lucide-react';
+import { X, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { ProjectImageCropper } from './ProjectImageCropper';
 
 // Supported image MIME types
 const SUPPORTED_IMAGE_TYPES = [
@@ -30,6 +31,13 @@ interface ProjectHeaderImageUploaderProps {
   onImageUploaded: (url: string) => void;
   onRemoveImage?: () => void;
   className?: string;
+  imageKind?: 'main' | 'header';
+  cropTitle?: string;
+  helperText?: string;
+  recommendedDimensions?: string;
+  aspect?: number;
+  outputWidth?: number;
+  outputHeight?: number;
 }
 
 const compressImage = async (file: File): Promise<File> => {
@@ -114,11 +122,21 @@ export const ProjectHeaderImageUploader: React.FC<ProjectHeaderImageUploaderProp
   onImageUploaded,
   onRemoveImage,
   className,
+  imageKind = 'header',
+  cropTitle = 'Crop project image',
+  helperText = 'Drag and drop or click to upload image',
+  recommendedDimensions = 'Recommended: 1920×480 or similar wide format',
+  aspect = 4,
+  outputWidth = 1920,
+  outputHeight = 480,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
   const [dragActive, setDragActive] = useState(false);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [cropperImageSrc, setCropperImageSrc] = useState('');
 
   const validateFile = (file: File): string | null => {
     if (file.size > MAX_FILE_SIZE) {
@@ -146,12 +164,11 @@ export const ProjectHeaderImageUploader: React.FC<ProjectHeaderImageUploaderProp
       const processedFile = await compressImage(file);
       setUploadStatus('Uploading...');
 
-      const fileExt = processedFile.type === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop()?.toLowerCase() || 'jpg');
+      const fileExt = processedFile.type === 'image/jpeg' ? 'jpg' : (processedFile.name.split('.').pop()?.toLowerCase() || 'jpg');
       const timestamp = Date.now();
       const randomId = Math.random().toString(36).substring(2, 9);
-      const fileName = `header-${timestamp}-${randomId}.${fileExt}`;
-      // Use temp folder for new projects, proper path for existing
-      const folderPath = projectId ? `projects/${projectId}` : `projects/temp-${userId}`;
+      const fileName = `${imageKind}-${timestamp}-${randomId}.${fileExt}`;
+      const folderPath = projectId ? `${userId}/projects/${projectId}` : `${userId}/projects/draft`;
       const filePath = `${folderPath}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -181,7 +198,20 @@ export const ProjectHeaderImageUploader: React.FC<ProjectHeaderImageUploaderProp
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) uploadFile(file);
+    if (file) {
+      const validationError = validateFile(file);
+      if (validationError) {
+        toast.error(validationError);
+      } else {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setSelectedFile(file);
+          setCropperImageSrc(reader.result as string);
+          setCropperOpen(true);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -197,7 +227,31 @@ export const ProjectHeaderImageUploader: React.FC<ProjectHeaderImageUploaderProp
     e.stopPropagation();
     setDragActive(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) uploadFile(file);
+    if (file) {
+      const validationError = validateFile(file);
+      if (validationError) {
+        toast.error(validationError);
+      } else {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setSelectedFile(file);
+          setCropperImageSrc(reader.result as string);
+          setCropperOpen(true);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
+  const handleCropComplete = async (blob: Blob) => {
+    const sourceFile = selectedFile ?? new File([blob], `${imageKind}.jpg`, { type: 'image/jpeg' });
+    const croppedFile = new File([blob], sourceFile.name.replace(/\.[^.]+$/, '.jpg'), {
+      type: 'image/jpeg',
+      lastModified: Date.now(),
+    });
+    await uploadFile(croppedFile);
+    setSelectedFile(null);
+    setCropperImageSrc('');
   };
 
   if (currentImageUrl) {
@@ -224,6 +278,20 @@ export const ProjectHeaderImageUploader: React.FC<ProjectHeaderImageUploaderProp
 
   return (
     <div className={className}>
+      <ProjectImageCropper
+        open={cropperOpen}
+        onClose={() => {
+          setCropperOpen(false);
+          setSelectedFile(null);
+          setCropperImageSrc('');
+        }}
+        imageSrc={cropperImageSrc}
+        onCropComplete={handleCropComplete}
+        title={cropTitle}
+        aspect={aspect}
+        outputWidth={outputWidth}
+        outputHeight={outputHeight}
+      />
       <input
         ref={fileInputRef}
         type="file"
@@ -254,10 +322,10 @@ export const ProjectHeaderImageUploader: React.FC<ProjectHeaderImageUploaderProp
           <div className="flex flex-col items-center gap-2">
             <Upload className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Drag and drop or click to upload header image
+              {helperText}
             </p>
             <p className="text-xs text-muted-foreground/70">
-              Recommended: 1920×480 or similar wide format
+              {recommendedDimensions}
             </p>
           </div>
         )}

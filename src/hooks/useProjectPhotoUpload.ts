@@ -27,7 +27,7 @@ export const useProjectPhotoUpload = () => {
       const timestamp = Date.now();
       const randomId = Math.random().toString(36).substring(2, 9);
       const fileName = `${timestamp}-${randomId}.${fileExt}`;
-      const filePath = `projects/${projectId}/${fileName}`;
+      const filePath = `${userId}/projects/${projectId}/photos/${fileName}`;
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage

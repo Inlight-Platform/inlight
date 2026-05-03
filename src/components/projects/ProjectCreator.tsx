@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { ProjectHeaderImageUploader } from './ProjectHeaderImageUploader';
 
 export const PROJECT_CATEGORIES = [
   { value: 'film', label: 'Film' },
@@ -150,28 +151,24 @@ export const ProjectCreator: React.FC<ProjectCreatorProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mainImage">Main Image URL</Label>
-            <Input
-              id="mainImage"
-              placeholder="https://example.com/image.jpg"
-              value={mainImageUrl}
-              onChange={(e) => setMainImageUrl(e.target.value)}
-              type="url"
+            <Label>Main Image</Label>
+            <p className="text-xs text-muted-foreground">
+              This is the project thumbnail shown in feeds and cards.
+            </p>
+            <ProjectHeaderImageUploader
+              userId={user.id}
+              currentImageUrl={mainImageUrl}
+              onImageUploaded={setMainImageUrl}
+              onRemoveImage={() => setMainImageUrl('')}
+              imageKind="main"
+              cropTitle="Crop main project image"
+              helperText="Drag and drop or click to upload main image"
+              recommendedDimensions="Recommended: 1200×900 or similar poster/card format"
+              aspect={4 / 3}
+              outputWidth={1200}
+              outputHeight={900}
             />
           </div>
-
-          {mainImageUrl && (
-            <div className="rounded-lg overflow-hidden">
-              <img
-                src={mainImageUrl}
-                alt="Preview"
-                className="w-full h-40 object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            </div>
-          )}
 
           <div className="flex gap-3 pt-4">
             <Button

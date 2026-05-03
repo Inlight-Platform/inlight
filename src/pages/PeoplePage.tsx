@@ -14,6 +14,7 @@ import { useConnectionRequests } from '@/hooks/useConnectionRequests';
 import PersonCard from '@/components/people/PersonCard';
 import CompanyCard from '@/components/people/CompanyCard';
 import { useCompanyFollows } from '@/hooks/useCompanyFollows';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Studio {
   id: string;
@@ -89,7 +90,9 @@ const GroupsSection: React.FC<{
 
 const PeoplePage: React.FC = () => {
   const navigate = useNavigate();
-  const currentUserId = useStore((s) => s.currentUserId);
+  const fallbackCurrentUserId = useStore((s) => s.currentUserId);
+  const { user: authUser } = useAuth();
+  const currentUserId = authUser?.id || fallbackCurrentUserId;
   
   const { isMutual, firstDegree } = useNetworkConnections();
   const { sentRequests, pendingRequests, cancelRequest, sendRequest, acceptRequest, rejectRequest } = useConnectionRequests();
@@ -111,7 +114,7 @@ const PeoplePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   // Fetch all users from the database
-  const { data: allUsers = [], isLoading } = useQuery({
+  const { data: allUsers = [], isLoading, error: allUsersError } = useQuery({
     queryKey: ['all-users'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -339,6 +342,11 @@ const PeoplePage: React.FC = () => {
               </div>
             ) : (
               <>
+                {allUsersError && (
+                  <p className="mb-4 text-sm text-destructive">
+                    We couldn&apos;t load the people directory just yet. Please refresh and try again.
+                  </p>
+                )}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {filteredUsers.map((user) => {
                     const userId = user.user_id || '';

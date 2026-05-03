@@ -308,26 +308,23 @@ const ProjectNewPage: React.FC = () => {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="mainImage">Main Image URL *</Label>
-              <Input
-                id="mainImage"
-                placeholder="https://example.com/image.jpg"
-                value={mainImageUrl}
-                onChange={(e) => setMainImageUrl(e.target.value)}
-                type="url"
+              <Label>Main Image *</Label>
+              <p className="text-sm text-muted-foreground">
+                This is the thumbnail people see in project cards across feeds and grids.
+              </p>
+              <ProjectHeaderImageUploader
+                userId={user.id}
+                currentImageUrl={mainImageUrl}
+                onImageUploaded={setMainImageUrl}
+                onRemoveImage={() => setMainImageUrl('')}
+                imageKind="main"
+                cropTitle="Crop main project image"
+                helperText="Drag and drop or click to upload main image"
+                recommendedDimensions="Recommended: 1200×900 or similar poster/card format"
+                aspect={4 / 3}
+                outputWidth={1200}
+                outputHeight={900}
               />
-              {mainImageUrl && (
-                <div className="rounded-lg overflow-hidden mt-2">
-                  <img
-                    src={mainImageUrl}
-                    alt="Preview"
-                    className="w-full h-40 object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
             </div>
 
             {/* Optional Link */}
@@ -362,13 +359,20 @@ const ProjectNewPage: React.FC = () => {
             <div className="space-y-2">
               <Label>Header Image</Label>
               <p className="text-sm text-muted-foreground">
-                This image appears at the top of your project page for all viewers
+                This wide image appears at the top of the project detail page.
               </p>
               <ProjectHeaderImageUploader
                 userId={user.id}
                 currentImageUrl={headerImageUrl}
                 onImageUploaded={setHeaderImageUrl}
                 onRemoveImage={() => setHeaderImageUrl('')}
+                imageKind="header"
+                cropTitle="Crop project header image"
+                helperText="Drag and drop or click to upload header image"
+                recommendedDimensions="Recommended: 1920×480 or similar wide banner format"
+                aspect={4}
+                outputWidth={1920}
+                outputHeight={480}
               />
             </div>
           </div>
