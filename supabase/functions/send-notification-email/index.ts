@@ -7,12 +7,41 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const DEFAULT_SITE_URL = "https://inlight.social";
+
+function getSiteUrl() {
+  return (Deno.env.get("SITE_URL") || DEFAULT_SITE_URL).replace(/\/+$/, "");
+}
+
+function assertInternalSecret(req: Request) {
+  const expected = Deno.env.get("NOTIFICATION_WEBHOOK_SECRET");
+  if (!expected) {
+    throw new Error("Missing NOTIFICATION_WEBHOOK_SECRET");
+  }
+
+  const provided = req.headers.get("x-internal-webhook-secret");
+  if (provided !== expected) {
+    throw new Error("Unauthorized");
+  }
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    assertInternalSecret(req);
+
     const { record } = await req.json();
     console.log("[send-notification-email] Received record:", JSON.stringify(record));
 
@@ -54,14 +83,14 @@ Deno.serve(async (req) => {
     }
 
     const notificationType = record.type || "notification";
-    const title = record.title || "New Notification";
-    const body = record.body || "";
+    const title = String(record.title || "New Notification");
+    const body = String(record.body || "");
     const data = record.data || {};
 
     console.log("[send-notification-email] Notification type:", notificationType, "| title:", title);
 
     const { emailSubject, emailBody } = await buildEmailContent(
-      supabase, notificationType, title, body, data
+      supabase, notificationType, title, body, data, getSiteUrl()
     );
 
     const html = wrapEmailTemplate(emailBody);
@@ -117,7 +146,8 @@ async function buildEmailContent(
   notificationType: string,
   title: string,
   body: string,
-  data: any
+  data: any,
+  siteUrl: string
 ): Promise<{ emailSubject: string; emailBody: string }> {
   let emailSubject = title;
   let emailBody = "";
@@ -125,19 +155,19 @@ async function buildEmailContent(
   if (notificationType === "message" && data.sender_id) {
     const senderName = await getDisplayName(supabase, data.sender_id);
     const isSharedItem = body && body.startsWith("Shared: ");
-    const threadUrl = `https://inlight.lovable.app/notifications?tab=messages&thread=${data.sender_id}`;
+    const threadUrl = `${siteUrl}/notifications?tab=messages&thread=${data.sender_id}`;
     if (isSharedItem) {
       const itemTitle = body.replace("Shared: ", "");
       emailSubject = `${senderName} shared something with you`;
       emailBody = `
-        <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${senderName} shared "${itemTitle}" with you!</h2>
+        <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${escapeHtml(senderName)} shared "${escapeHtml(itemTitle)}" with you!</h2>
         <a href="${threadUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View</a>
       `;
     } else {
       emailSubject = `New message from ${senderName} on Inlight`;
       emailBody = `
-        <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">You got a new message from ${senderName} on Inlight!</h2>
-        ${body ? `<p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">"${body}"</p>` : ""}
+        <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">You got a new message from ${escapeHtml(senderName)} on Inlight!</h2>
+        ${body ? `<p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">"${escapeHtml(body)}"</p>` : ""}
         <a href="${threadUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View</a>
       `;
     }
@@ -158,18 +188,18 @@ async function buildEmailContent(
       }
     }
 
-    const reviewUrl = `https://inlight.lovable.app/projects/${data.project_id}?application=${data.application_id}`;
+    const reviewUrl = `${siteUrl}/projects/${data.project_id}?application=${data.application_id}`;
     emailSubject = `${applicantName} applied for ${roleName}`;
     emailBody = `
-      <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${applicantName} applied for ${roleName} in ${projectTitle}!</h2>
+      <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${escapeHtml(applicantName)} applied for ${escapeHtml(roleName)} in ${escapeHtml(projectTitle)}!</h2>
       <a href="${reviewUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Review</a>
     `;
   } else if (notificationType === "connection_request" && data.sender_id) {
     const senderName = await getDisplayName(supabase, data.sender_id);
     emailSubject = `${senderName} wants to connect with you!`;
-    const profileUrl = `https://inlight.lovable.app/profile/${data.sender_id}`;
+    const profileUrl = `${siteUrl}/profile/${data.sender_id}`;
     emailBody = `
-      <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${senderName} wants to connect with you!</h2>
+      <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${escapeHtml(senderName)} wants to connect with you!</h2>
       <a href="${profileUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
     `;
   } else if (notificationType === "invitation" && data.sender_id) {
@@ -192,26 +222,26 @@ async function buildEmailContent(
     }
 
     const projectUrl = projectId
-      ? `https://inlight.lovable.app/projects/${projectId}`
-      : "https://inlight.lovable.app/notifications";
+      ? `${siteUrl}/projects/${projectId}`
+      : `${siteUrl}/notifications`;
 
     emailSubject = `${senderName} invited you to join ${projectTitle}!`;
     emailBody = `
       <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">You've been invited!</h2>
-      <p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${senderName} has invited you to join <strong>${projectTitle}</strong> as <strong>${roleName}</strong>.</p>
+      <p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${escapeHtml(senderName)} has invited you to join <strong>${escapeHtml(projectTitle)}</strong> as <strong>${escapeHtml(roleName)}</strong>.</p>
       <a href="${projectUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View Invitation</a>
     `;
   } else if (notificationType === "application_accepted" && data.sender_id && data.project_id) {
     const senderName = await getDisplayName(supabase, data.sender_id);
     const roleName = data.role_name || "a role";
     const projectTitle = data.project_title || "a project";
-    const projectUrl = `https://inlight.lovable.app/projects/${data.project_id}`;
+    const projectUrl = `${siteUrl}/projects/${data.project_id}`;
 
     emailSubject = `CONGRATULATIONS! You've just been hired!`;
     emailBody = `
       <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:22px;font-weight:700;">🎉 CONGRATULATIONS!</h2>
       <h3 style="margin:0 0 16px;color:#1a1a2e;font-size:18px;font-weight:600;">You've just been hired!</h3>
-      <p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${senderName} has offered you the role of <strong>${roleName}</strong> on <strong>${projectTitle}</strong>.</p>
+      <p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${escapeHtml(senderName)} has offered you the role of <strong>${escapeHtml(roleName)}</strong> on <strong>${escapeHtml(projectTitle)}</strong>.</p>
       <a href="${projectUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
     `;
   } else if (notificationType === "job_match" && data.opportunity_id) {
@@ -220,19 +250,19 @@ async function buildEmailContent(
     const matchText = matchedRoles.length > 0
       ? `matching your skills: <strong>${matchedRoles.join(", ")}</strong>`
       : "matching your skillset";
-    const jobUrl = `https://inlight.lovable.app/opportunities`;
+    const jobUrl = `${siteUrl}/opportunities`;
 
     emailSubject = `New opportunity matching your skills: ${opportunityTitle}`;
     emailBody = `
       <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">New opportunity for you!</h2>
-      <p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">A new job has been posted — <strong>${opportunityTitle}</strong> — ${matchText}.</p>
+      <p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">A new job has been posted — <strong>${escapeHtml(opportunityTitle)}</strong> — ${escapeHtml(matchText)}.</p>
       <a href="${jobUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View Opportunity</a>
     `;
   } else {
     emailBody = `
-      <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${title}</h2>
-      ${body ? `<p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${body}</p>` : ""}
-      <a href="https://inlight.lovable.app" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View on Inlight</a>
+      <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${escapeHtml(title)}</h2>
+      ${body ? `<p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${escapeHtml(body)}</p>` : ""}
+      <a href="${siteUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View on Inlight</a>
     `;
   }
 

@@ -7,6 +7,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const DEFAULT_SITE_URL = "https://inlight.social";
+
+function getBaseUrl(req: Request) {
+  return req.headers.get("origin") || Deno.env.get("SITE_URL") || DEFAULT_SITE_URL;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,9 +30,32 @@ serve(async (req) => {
     const user = data.user;
     if (!user?.email) throw new Error("Not authenticated");
 
-    const { event_id, stripe_price_id } = await req.json();
-    if (!event_id || !stripe_price_id) {
-      throw new Error("Missing event_id or stripe_price_id");
+    const { event_id } = await req.json();
+    if (!event_id) {
+      throw new Error("Missing event_id");
+    }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const { data: eventRecord, error: eventError } = await supabaseAdmin
+      .from("events")
+      .select("id, title, stripe_price_id, is_paid")
+      .eq("id", event_id)
+      .single();
+
+    if (eventError || !eventRecord) {
+      throw new Error("Event not found");
+    }
+
+    if (!eventRecord.is_paid) {
+      throw new Error("This event is not configured for paid ticket checkout");
+    }
+
+    if (!eventRecord.stripe_price_id) {
+      throw new Error("Tickets are not yet available for this event");
     }
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -40,12 +69,12 @@ serve(async (req) => {
       customerId = customers.data[0].id;
     }
 
-    const origin = req.headers.get("origin") || "https://inlight.lovable.app";
+    const origin = getBaseUrl(req);
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
-      line_items: [{ price: stripe_price_id, quantity: 1 }],
+      line_items: [{ price: eventRecord.stripe_price_id, quantity: 1 }],
       mode: "payment",
       success_url: `${origin}/events/${event_id}?ticket=success`,
       cancel_url: `${origin}/events/${event_id}?ticket=cancelled`,
@@ -53,11 +82,6 @@ serve(async (req) => {
     });
 
     // Create a pending ticket record
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
     await supabaseAdmin.from("tickets").insert({
       event_id,
       user_id: user.id,

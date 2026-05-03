@@ -217,7 +217,6 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
       const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {
         body: {
           event_id: item.id,
-          stripe_price_id: item.stripe_price_id,
         },
       });
 

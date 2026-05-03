@@ -9,6 +9,34 @@ export function useAuth() {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
+  const maybeSendShowcaseWelcome = async (activeSession: Session | null) => {
+    if (!activeSession?.user) return;
+
+    try {
+      const pending = localStorage.getItem('inlight_showcase_welcome_pending');
+      const sent = localStorage.getItem('inlight_showcase_welcome_sent');
+      const programName = localStorage.getItem('inlight_showcase_program');
+
+      if (pending !== '1' || sent === '1' || !programName) {
+        return;
+      }
+
+      const { error } = await supabase.functions.invoke('send-showcase-welcome', {
+        body: { programName },
+      });
+
+      if (error) {
+        console.error('Welcome email failed:', error);
+        return;
+      }
+
+      localStorage.setItem('inlight_showcase_welcome_sent', '1');
+      localStorage.removeItem('inlight_showcase_welcome_pending');
+    } catch (error) {
+      console.error('Welcome email scheduling failed:', error);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -106,6 +134,10 @@ export function useAuth() {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          void maybeSendShowcaseWelcome(session);
+        }
       }
     );
 

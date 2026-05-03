@@ -1,4 +1,4 @@
-project_id = "gbiostpdhvfxpppfqskw"
+project_id = "piofmmawwnermvaysonw"
 
 [functions.track-profile-view]
 verify_jwt = false
@@ -16,4 +16,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-showcase-welcome]
+verify_jwt = true
+
+[functions.send-password-reset]
 verify_jwt = false

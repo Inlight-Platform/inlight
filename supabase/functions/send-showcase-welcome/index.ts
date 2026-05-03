@@ -1,4 +1,5 @@
 import { Resend } from "npm:resend@4.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,10 +13,32 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, displayName, programName } = await req.json();
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
 
-    if (!email) {
-      return new Response(JSON.stringify({ error: "Missing email" }), {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !authData.user?.email) {
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { programName } = await req.json();
+
+    if (!programName) {
+      return new Response(JSON.stringify({ error: "Missing programName" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -30,8 +53,12 @@ Deno.serve(async (req) => {
     }
 
     const resend = new Resend(RESEND_API_KEY);
-    const firstName = (displayName || "there").split(" ")[0];
-    const program = programName || "your program";
+    const rawDisplayName =
+      authData.user.user_metadata?.display_name ||
+      authData.user.email.split("@")[0] ||
+      "there";
+    const firstName = escapeHtml(String(rawDisplayName).split(" ")[0].slice(0, 80));
+    const program = escapeHtml(String(programName).slice(0, 120));
 
     const html = `
 <!DOCTYPE html>
@@ -94,7 +121,7 @@ Deno.serve(async (req) => {
 
     const { data, error } = await resend.emails.send({
       from: "Inlight <notifications@inlight.social>",
-      to: [email],
+      to: [authData.user.email],
       subject: `Welcome to Inlight, ${firstName} — your showcase is live`,
       html,
     });
@@ -119,3 +146,12 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}

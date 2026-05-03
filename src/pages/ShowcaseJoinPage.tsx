@@ -40,14 +40,10 @@ const InlineAuth: React.FC<{ programSlug: string; programName: string }> = ({ pr
           localStorage.setItem('inlight_showcase_program', programName);
         } catch { /* noop */ }
 
-        // Fire welcome email (non-blocking — don't fail signup if email fails)
-        supabase.functions.invoke('send-showcase-welcome', {
-          body: {
-            email,
-            displayName: displayName || email.split('@')[0],
-            programName,
-          },
-        }).catch((err) => console.error('Welcome email failed:', err));
+        // Queue welcome email for the first authenticated session after signup.
+        try {
+          localStorage.setItem('inlight_showcase_welcome_pending', '1');
+        } catch { /* noop */ }
 
         toast.success('Account created! Check your email to verify, then log in.');
         setMode('login');
