@@ -2,7 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Users, Mail, Clock, Check, ExternalLink } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Users, Mail, Clock, Check, ExternalLink, MapPin, GraduationCap } from 'lucide-react';
 import { cn, capitalizeName } from '@/lib/utils';
 
 interface PersonCardProps {
@@ -80,177 +81,158 @@ const PersonCard: React.FC<PersonCardProps> = ({
 
   return (
     <div
-      className="group relative bg-card rounded-2xl border border-border overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
-      onClick={handleClick}>
+      className="group relative overflow-hidden rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-lg transition-all duration-300 cursor-pointer"
+      onClick={handleClick}
+    >
+      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-br from-primary/12 via-primary/6 to-transparent" />
 
-      {/* Gradient Header - Blue gradient */}
-      <div
-        className="h-24 relative bg-[#008094]"
-        style={{
-          background: 'linear-gradient(135deg, hsl(200 100% 50%) 0%, hsl(220 85% 55%) 100%)'
-        }}>
+      <div className="relative p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <Avatar className="h-16 w-16 border border-border shadow-sm ring-2 ring-background">
+            <AvatarImage src={avatarUrl || undefined} className="object-cover" />
+            <AvatarFallback className="bg-muted text-lg">
+              {displayName[0]?.toUpperCase() || 'U'}
+            </AvatarFallback>
+          </Avatar>
 
-        {/* Graduation Year Badge */}
-        {user.graduation_year &&
-        <div className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium">
-            Class of {user.graduation_year}
+          <div className="min-w-0 flex-1 pt-0.5">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="truncate font-display text-base font-semibold text-foreground">
+                  {displayName}
+                </h3>
+                {user.role ? (
+                  <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                    {user.role}
+                  </p>
+                ) : null}
+              </div>
+
+              {user.graduation_year ? (
+                <Badge variant="secondary" className="shrink-0 gap-1 rounded-full px-2 py-1 text-[10px]">
+                  <GraduationCap className="h-3 w-3" />
+                  {String(user.graduation_year).slice(-2)}
+                </Badge>
+              ) : null}
+            </div>
+
+            {user.badges && user.badges.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {user.badges.slice(0, 2).map((badge) => (
+                  <Badge key={badge} variant="outline" className="max-w-full rounded-full text-[10px]">
+                    <span className="truncate">#{badge}</span>
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
           </div>
-        }
-      </div>
+        </div>
 
-      {/* Avatar - Overlapping */}
-      <div className="flex justify-center -mt-12 relative z-10">
-        <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
-          <AvatarImage src={avatarUrl || undefined} className="object-cover" />
-          <AvatarFallback className="text-2xl bg-muted">
-            {displayName[0]?.toUpperCase() || 'U'}
-          </AvatarFallback>
-        </Avatar>
-      </div>
-
-      {/* Content */}
-      <div className="px-4 pt-3 pb-4 text-center">
-        {/* Name */}
-        <h3 className="font-display font-semibold text-lg truncate">
-          {displayName}
-        </h3>
-
-        {/* Role */}
-        {user.role &&
-        <p className="text-sm text-muted-foreground mt-0.5 truncate">
-            {user.role}
-          </p>
-        }
-
-        {/* Badges/Affiliations */}
-        {user.badges && user.badges.length > 0 &&
-        <p className="text-xs text-muted-foreground mt-1">
-            {user.badges[0]}
-          </p>
-        }
-
-        {/* Bio snippet */}
-        {user.bio &&
-        <p className="text-sm text-muted-foreground mt-3 line-clamp-2 px-2">
+        {user.bio ? (
+          <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
             {user.bio}
           </p>
-        }
+        ) : null}
 
-        {/* Skills */}
-        {user.skills && user.skills.length > 0 &&
-        <div className="flex flex-wrap justify-center gap-1.5 mt-3">
-            {user.skills.slice(0, 3).map((skill, idx) =>
-          <span
-            key={idx}
-            className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full border border-primary/20">
-
+        {(user.skills && user.skills.length > 0) || user.role ? (
+          <div className="mt-4 flex min-h-7 flex-wrap gap-1.5">
+            {user.skills?.slice(0, 3).map((skill) => (
+              <span
+                key={skill}
+                className="rounded-full border border-border bg-muted/60 px-2.5 py-1 text-[11px] text-muted-foreground"
+              >
                 {skill}
               </span>
-          )}
-            {user.skills.length > 3 &&
-          <span className="text-xs text-muted-foreground px-1">
+            ))}
+            {user.skills && user.skills.length > 3 ? (
+              <span className="rounded-full px-1.5 py-1 text-[11px] text-muted-foreground">
                 +{user.skills.length - 3}
               </span>
-          }
+            ) : null}
           </div>
-        }
+        ) : null}
 
-        {/* Action Buttons - Hide connect/pending for own profile */}
-        {!isOwnProfile &&
-        <div className="flex items-center justify-center gap-2 mt-4">
-            {/* Connected State */}
-            {connectionStatus === 'connected' &&
-          <>
-              <Button
-              variant="outline"
-              className="flex-1 h-10 rounded-full bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400 hover:bg-green-500/20"
-              onClick={handleMessage}>
+        {!isOwnProfile ? (
+          <div className="mt-5 flex items-center gap-2">
+            {connectionStatus === 'connected' ? (
+              <>
+                <Button
+                  variant="outline"
+                  className="h-10 flex-1 gap-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 dark:text-emerald-400"
+                  onClick={handleMessage}
+                >
+                  <Check className="h-4 w-4" />
+                  Connected
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                  onClick={handleMessage}
+                >
+                  <Mail className="h-4 w-4" />
+                </Button>
+              </>
+            ) : null}
 
-                <Check className="w-4 h-4 mr-2" />
-                Connected
-              </Button>
-              <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 rounded-full"
-              onClick={handleMessage}>
-
-                <Mail className="w-4 h-4" />
-              </Button>
-            </>
-          }
-
-          {/* Pending State */}
-          {connectionStatus === 'pending' && !showCancelButton &&
-          <>
-              <Button
-              variant="outline"
-              className="flex-1 h-10 rounded-full text-amber-600 dark:text-amber-400 border-amber-500/30"
-              disabled>
-
-                <Clock className="w-4 h-4 mr-2" />
-                Pending
-              </Button>
-            </>
-          }
-
-          {/* Cancel Request State */}
-          {showCancelButton && requestId &&
-          <Button
-            variant="outline"
-            className="flex-1 h-10 rounded-full text-muted-foreground hover:text-destructive hover:border-destructive/50"
-            onClick={handleCancel}>
-
-              <Clock className="w-4 h-4 mr-2" />
-              Cancel Request
-            </Button>
-          }
-
-          {/* Incoming Request Actions */}
-          {showIncomingActions && requestId &&
-          <div className="flex gap-2 w-full">
-              <Button
-                className="flex-1 h-10 rounded-full"
-                onClick={handleAccept}>
-                <Check className="w-4 h-4 mr-1" />
-                Accept
-              </Button>
+            {connectionStatus === 'pending' && !showCancelButton ? (
               <Button
                 variant="outline"
-                className="flex-1 h-10 rounded-full"
-                onClick={handleDecline}>
-                Decline
+                className="h-10 flex-1 gap-2 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                disabled
+              >
+                <Clock className="h-4 w-4" />
+                Pending
               </Button>
-            </div>
-          }
+            ) : null}
 
-          {/* Connect State */}
-            {connectionStatus === 'none' && !showCancelButton &&
-          <>
-                <Button
-              className="flex-1 h-10 rounded-full bg-gradient-to-r from-[hsl(264,100%,65%)] to-[hsl(280,100%,60%)] text-white hover:opacity-90"
-              onClick={handleConnect}>
+            {showCancelButton && requestId ? (
+              <Button
+                variant="outline"
+                className="h-10 flex-1 gap-2 text-muted-foreground hover:border-destructive/40 hover:text-destructive"
+                onClick={handleCancel}
+              >
+                <Clock className="h-4 w-4" />
+                Cancel Request
+              </Button>
+            ) : null}
 
-                  <Users className="w-4 h-4 mr-2" />
+            {showIncomingActions && requestId ? (
+              <div className="flex w-full gap-2">
+                <Button className="h-10 flex-1 gap-1.5" onClick={handleAccept}>
+                  <Check className="h-4 w-4" />
+                  Accept
+                </Button>
+                <Button variant="outline" className="h-10 flex-1" onClick={handleDecline}>
+                  Decline
+                </Button>
+              </div>
+            ) : null}
+
+            {connectionStatus === 'none' && !showCancelButton ? (
+              <>
+                <Button className="h-10 flex-1 gap-2" onClick={handleConnect}>
+                  <Users className="h-4 w-4" />
                   Connect
                 </Button>
                 <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 rounded-full"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (userId) navigate(`/profile/${userId}`);
-              }}>
-
-                  <ExternalLink className="w-4 h-4" />
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (userId) navigate(`/profile/${userId}`);
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" />
                 </Button>
               </>
-          }
+            ) : null}
           </div>
-        }
+        ) : null}
       </div>
-    </div>);
+    </div>
+  );
 
 };
 
