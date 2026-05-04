@@ -104,6 +104,10 @@ export const ProjectCreator: React.FC<ProjectCreatorProps> = ({
     createProjectMutation.mutate();
   };
 
+  // This dialog can be mounted while closed from routes that do not yet have
+  // an auth user resolved. Avoid dereferencing `user.id` during those renders.
+  if (!user) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">

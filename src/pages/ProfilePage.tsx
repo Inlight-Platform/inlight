@@ -189,7 +189,15 @@ class ProfilePageErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: unknown, info: unknown) {
+    const componentStack =
+      typeof info === 'object' && info !== null && 'componentStack' in info
+        ? String((info as { componentStack?: unknown }).componentStack ?? '')
+        : '';
+
     console.error('[ProfilePage] top-level render failure:', error, info);
+    if (componentStack) {
+      console.error('[ProfilePage] component stack text:\n' + componentStack);
+    }
   }
 
   render() {
@@ -2072,11 +2080,13 @@ const ProfilePage: React.FC = () => {
       </Dialog>
 
       {/* Project Creator Dialog */}
-      <ProjectCreator
-        open={showProjectCreator}
-        onOpenChange={setShowProjectCreator}
-        onSuccess={() => setShowProjectCreator(false)}
-      />
+      {isOwnProfile && authUser && (
+        <ProjectCreator
+          open={showProjectCreator}
+          onOpenChange={setShowProjectCreator}
+          onSuccess={() => setShowProjectCreator(false)}
+        />
+      )}
       {/* Floating chat icon for connected users - or minimized bubble */}
       {!isOwnProfile && isConnected && resolvedUserId && (
         chatMinimized && chatOriginRoute === location.pathname && chatRoute ? (
