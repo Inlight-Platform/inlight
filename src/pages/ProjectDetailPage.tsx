@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { safeBack } from '@/lib/safeBack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ChevronLeft, 
@@ -295,7 +296,7 @@ const ProjectDetailPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['projects-feed'] });
       queryClient.invalidateQueries({ queryKey: ['feed-projects'] });
       toast.success('Project deleted');
-      navigate('/projects');
+      safeBack(navigate, '/feed');
     },
     onError: () => toast.error('Failed to delete project'),
   });
@@ -447,7 +448,7 @@ const ProjectDetailPage: React.FC = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Project not found</p>
-          <Button onClick={() => navigate('/projects')}>Back to Projects</Button>
+          <Button onClick={() => safeBack(navigate, '/feed')}>Back to Home</Button>
         </div>
       </div>
     );
@@ -459,7 +460,7 @@ const ProjectDetailPage: React.FC = () => {
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/projects')}
+              onClick={() => safeBack(navigate, '/feed')}
               className="p-2 rounded-full hover:bg-accent transition-colors"
             >
               <ChevronLeft className="w-6 h-6" />

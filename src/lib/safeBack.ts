@@ -14,7 +14,6 @@ export const SIDEBAR_ROUTES = [
   '/notifications',
   '/network',
   '/resources',
-  '/projects',
   '/stage-whisper',
   '/saves',
   '/settings',
