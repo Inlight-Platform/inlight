@@ -287,6 +287,12 @@ const FeedPage: React.FC = () => {
     }
   };
 
+  const navVioletButtonClass =
+    "bg-gradient-to-r from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white shadow-lg shadow-[hsl(220_85%_55%/0.25)] hover:opacity-95";
+
+  const navVioletOutlineClass =
+    "border-[hsl(240_70%_50%/0.28)] bg-[hsl(240_70%_50%/0.08)] text-white hover:bg-[hsl(240_70%_50%/0.14)] hover:border-[hsl(240_70%_50%/0.4)]";
+
   // Helper to normalize status
   const normalizeStatus = (s: string | null): string => {
     const statusMap: Record<string, string> = {
@@ -673,7 +679,7 @@ const FeedPage: React.FC = () => {
           </div>
           
           {user && (
-            <Button onClick={() => setShowPostCreator(true)} className="gap-2">
+            <Button onClick={() => setShowPostCreator(true)} className={`gap-2 ${navVioletButtonClass}`}>
               <Plus className="h-4 w-4" />
               Make a Post
             </Button>
@@ -695,7 +701,9 @@ const FeedPage: React.FC = () => {
                     variant={contentFilter === filter.value ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setContentFilter(filter.value)}
-                    className="flex-shrink-0 gap-1.5"
+                    className={`flex-shrink-0 gap-1.5 ${
+                      contentFilter === filter.value ? navVioletButtonClass : navVioletOutlineClass
+                    }`}
                   >
                     {filter.icon}
                     {filter.label}
@@ -745,7 +753,11 @@ const FeedPage: React.FC = () => {
                       variant={networkFilter === filter.value ? 'secondary' : 'ghost'}
                       size="sm"
                       onClick={() => setNetworkFilter(filter.value)}
-                      className="flex-shrink-0"
+                      className={`flex-shrink-0 ${
+                        networkFilter === filter.value
+                          ? "bg-gradient-to-r from-[hsl(220_85%_55%)]/20 to-[hsl(240_70%_50%)]/20 text-white hover:from-[hsl(220_85%_55%)]/25 hover:to-[hsl(240_70%_50%)]/25"
+                          : "text-muted-foreground hover:bg-[hsl(240_70%_50%/0.08)] hover:text-white"
+                      }`}
                     >
                       {filter.label}
                       {filter.count !== undefined && filter.count > 0 && (
@@ -771,7 +783,7 @@ const FeedPage: React.FC = () => {
                         : `No content from your ${networkFilter === '1st' ? 'network' : networkFilter + ' degree connections'} yet.`}
                     </p>
                     {user && (
-                      <Button onClick={() => setShowPostCreator(true)} className="mt-4 gap-2">
+                      <Button onClick={() => setShowPostCreator(true)} className={`mt-4 gap-2 ${navVioletButtonClass}`}>
                         <Plus className="h-4 w-4" />
                         Create a post
                       </Button>
