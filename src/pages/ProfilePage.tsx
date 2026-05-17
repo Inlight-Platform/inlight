@@ -527,17 +527,23 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleCroppedAvatarUpload = async (blob: Blob) => {
-    if (!authUser?.id) return;
-
     setUploadingAvatar(true);
     try {
-      const fileName = `${authUser.id}/avatar.jpg`;
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+
+      const ownerId = authData.user?.id;
+      if (!ownerId) {
+        throw new Error('You must be signed in to update your profile picture.');
+      }
+
+      const fileName = `${ownerId}/avatars/avatar-${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
-        .upload(fileName, blob, { 
-          upsert: true,
-          contentType: 'image/jpeg'
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg',
+          upsert: false,
         });
 
       if (uploadError) throw uploadError;
@@ -548,12 +554,14 @@ const ProfilePage: React.FC = () => {
 
       const newAvatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       
-      await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: newAvatarUrl })
-        .eq('user_id', authUser.id);
+        .eq('user_id', ownerId);
 
-      await queryClient.invalidateQueries({ queryKey: ['profile', authUser.id] });
+      if (updateError) throw updateError;
+
+      await queryClient.invalidateQueries({ queryKey: ['profile', ownerId] });
       toast.success('Avatar updated!');
     } catch (error: any) {
       toast.error(error.message || 'Failed to upload avatar');
