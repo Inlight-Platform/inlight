@@ -51,7 +51,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
   const avatarUrl = user.avatar_url || user.avatar;
 
   const handleClick = () => {
-    if (userId) navigate(`/profile/${userId}`);
+    if (userId) navigate(`/profile/${userId}`, { state: { returnTo: '/people' } });
   };
 
   const handleConnect = (e: React.MouseEvent) => {
@@ -221,7 +221,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
                   className="h-10 w-10 shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (userId) navigate(`/profile/${userId}`);
+                    if (userId) navigate(`/profile/${userId}`, { state: { returnTo: '/people' } });
                   }}
                 >
                   <ExternalLink className="h-4 w-4" />

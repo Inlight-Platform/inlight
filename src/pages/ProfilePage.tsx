@@ -1000,6 +1000,16 @@ const ProfilePage: React.FC = () => {
       navigate(`/messages?user=${resolvedUserId}`);
     }
   };
+
+  const handleBackToPeople = () => {
+    const state = location.state as { returnTo?: string } | null;
+    if (state?.returnTo === '/people') {
+      navigate('/people');
+      return;
+    }
+
+    safeBack(navigate, '/people');
+  };
   
   const handleBadgeClick = (badge: string) => {
     navigate(`/directory/${badge}`);
@@ -1041,17 +1051,16 @@ const ProfilePage: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-background">
-      {/* Back button */}
-      <button
-        onClick={() => safeBack(navigate, '/people')}
-        className="fixed top-4 left-4 z-50 p-2 rounded-full bg-card/80 backdrop-blur-sm shadow-card hover:bg-accent transition-colors"
-        aria-label="Go back"
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </button>
-      
       {/* A. Header */}
       <header className="relative">
+        <button
+          onClick={handleBackToPeople}
+          className="absolute left-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/80 text-foreground shadow-card backdrop-blur-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:left-6 sm:top-6"
+          aria-label="Back to People"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+
         {/* Cover image */}
         <div className="relative h-[200px] sm:h-[280px] md:h-[350px] lg:h-[450px] overflow-hidden">
           <img
