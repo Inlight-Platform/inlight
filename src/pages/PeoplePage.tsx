@@ -290,7 +290,7 @@ const PeoplePage: React.FC = () => {
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Community</span> ({firstDegree.length})
               </TabsTrigger>
-              <TabsTrigger value="incoming" className="data-[state=active]:bg-blue-500/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+              <TabsTrigger value="incoming" className="data-[state=active]:bg-primary/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
                 <Inbox className="w-4 h-4" />
                 <span className="hidden sm:inline">Incoming</span>
                 {pendingRequests.length > 0 && (

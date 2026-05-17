@@ -23,8 +23,8 @@
     --popover: 220 20% 98%;
     --popover-foreground: 220 30% 10%;
 
-    /* Primary - Bright neon blue (matches landing page) */
-    --primary: 200 100% 50%;
+    /* Primary - Home CTA violet/indigo */
+    --primary: 240 70% 50%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary - Slate blue */
@@ -59,7 +59,7 @@
 
     /* Neon accent colors - updated palette */
     --neon-stories: 45 90% 55%;
-    --neon-mutuals: 200 100% 50%;
+    --neon-mutuals: 240 70% 50%;
     --neon-insights: 45 90% 55%;
     --neon-events: 25 100% 55%;
     --neon-opportunities: 160 100% 45%;
@@ -86,13 +86,13 @@
     /* Sidebar */
     --sidebar-background: 220 25% 98%;
     --sidebar-foreground: 220 30% 10%;
-    --sidebar-primary: 200 100% 50%;
+    --sidebar-primary: 240 70% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 45 90% 55%;
     --sidebar-accent-foreground: 220 30% 10%;
     --sidebar-border: 220 20% 90%;
     --sidebar-ring: 45 90% 55%;
-    --chart-1: 200 100% 50%;
+    --chart-1: 240 70% 50%;
     --chart-2: 45 90% 55%;
     --chart-3: 200 80% 50%;
     --chart-4: 160 80% 45%;
@@ -125,8 +125,8 @@
     --popover: 222 28% 12%;
     --popover-foreground: 220 15% 95%;
 
-    /* Primary - Bright neon blue (matches landing page) */
-    --primary: 200 100% 50%;
+    /* Primary - Home CTA violet/indigo */
+    --primary: 240 70% 50%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary - Muted blue-gray */
@@ -166,13 +166,13 @@
 
     --sidebar-background: 222 32% 8%;
     --sidebar-foreground: 220 15% 95%;
-    --sidebar-primary: 200 100% 50%;
+    --sidebar-primary: 240 70% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 45 95% 58%;
     --sidebar-accent-foreground: 222 35% 8%;
     --sidebar-border: 222 25% 15%;
     --sidebar-ring: 45 95% 58%;
-    --chart-1: 200 100% 55%;
+    --chart-1: 240 70% 50%;
     --chart-2: 45 95% 58%;
     --chart-3: 200 90% 55%;
     --chart-4: 160 85% 50%;
@@ -301,7 +301,7 @@
 
   /* Neon shadows with gold accents */
   .shadow-stories { filter: drop-shadow(0 0 14px hsl(45 95% 58% / 0.6)); }
-  .shadow-mutuals { filter: drop-shadow(0 0 14px hsl(200 100% 50% / 0.6)); }
+  .shadow-mutuals { filter: drop-shadow(0 0 14px hsl(240 70% 50% / 0.6)); }
   .shadow-insights { filter: drop-shadow(0 0 14px hsl(45 95% 58% / 0.6)); }
   .shadow-events { filter: drop-shadow(0 0 14px hsl(25 100% 55% / 0.6)); }
   .shadow-opportunities { filter: drop-shadow(0 0 14px hsl(160 100% 45% / 0.6)); }
@@ -379,7 +379,7 @@
 
   /* Verified checkmark */
   .verified-badge {
-    @apply inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white;
+    @apply inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground;
   }
 
   .unverified-badge {

@@ -24,7 +24,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, isFollowing, onFollo
       <div 
         className="h-20 w-full"
         style={{
-          background: 'linear-gradient(135deg, hsl(200 80% 50%), hsl(220 70% 45%))',
+          background: 'linear-gradient(135deg, hsl(220 85% 55%), hsl(240 70% 50%))',
         }}
       />
       <CardContent className="pt-0 pb-5 px-5 text-center -mt-8">

@@ -171,7 +171,7 @@ export const MainNav: React.FC = () => {
                 'flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 relative group',
                 collapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3',
                 active ?
-                'bg-gradient-to-r from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white shadow-lg shadow-[hsl(220_85%_55%/0.3)]' :
+                'bg-gradient-to-r from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white shadow-lg shadow-[hsl(220_85%_55%/0.25)]' :
                 item.accent ?
                 'text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)] hover:text-[hsl(45_95%_68%)]' :
                 'text-[hsl(220_15%_70%)] hover:bg-[hsl(220_30%_15%)] hover:text-white'
@@ -345,7 +345,7 @@ export const MainNav: React.FC = () => {
                 <TooltipTrigger asChild>
                   <Link
                 to="/auth"
-                className="flex items-center justify-center py-3 rounded-xl bg-gradient-to-r from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white font-medium shadow-lg shadow-[hsl(220_85%_55%/0.3)] hover:shadow-[hsl(220_85%_55%/0.5)] transition-shadow">
+                className="flex items-center justify-center py-3 rounded-xl bg-gradient-to-r from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white font-medium shadow-lg shadow-[hsl(220_85%_55%/0.25)] hover:shadow-[hsl(220_85%_55%/0.4)] transition-shadow">
 
                     <LogIn className="w-5 h-5" />
                   </Link>
@@ -355,7 +355,7 @@ export const MainNav: React.FC = () => {
 
           <Link
             to="/auth"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white font-medium shadow-lg shadow-[hsl(220_85%_55%/0.3)] hover:shadow-[hsl(220_85%_55%/0.5)] transition-shadow">
+            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white font-medium shadow-lg shadow-[hsl(220_85%_55%/0.25)] hover:shadow-[hsl(220_85%_55%/0.4)] transition-shadow">
 
                 <LogIn className="w-5 h-5" />
                 Sign in
