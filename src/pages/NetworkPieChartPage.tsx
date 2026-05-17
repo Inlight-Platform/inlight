@@ -95,7 +95,16 @@ const NetworkPieChartPage: React.FC = () => {
 
   // Build pie chart data
   const chartData = React.useMemo(() => {
-    if (!studios.length || !connectionProfiles.length) return [];
+    if (!connections.length) return [];
+    if (!studios.length || !connectionProfiles.length) {
+      return [
+        {
+          name: 'Other / No Affiliation',
+          value: connections.length,
+          color: COLORS[COLORS.length - 1],
+        },
+      ];
+    }
 
     const counts: Record<string, number> = {};
     studios.forEach((s) => {
@@ -140,7 +149,7 @@ const NetworkPieChartPage: React.FC = () => {
     }
 
     return result;
-  }, [studios, connectionProfiles]);
+  }, [studios, connectionProfiles, connections.length]);
 
   const total = chartData.reduce((sum, d) => sum + d.value, 0);
 
@@ -157,7 +166,7 @@ const NetworkPieChartPage: React.FC = () => {
         <div className="flex justify-center py-12">
           <Skeleton className="h-72 w-72 rounded-full" />
         </div>
-      ) : total === 0 ? (
+      ) : connections.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <p className="text-lg font-medium">No connections yet</p>
           <p className="text-sm mt-1">Connect with people to see your network breakdown.</p>

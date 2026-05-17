@@ -93,7 +93,7 @@ const LandingPage: React.FC = () => {
         <div className="w-full max-w-2xl space-y-10">
           {/* Hero text */}
           <div className="space-y-4 text-center">
-            <div className="w-20 h-20 rounded-full mx-auto mb-6 overflow-hidden" style={{ boxShadow: '0 0 20px hsl(195 80% 60% / 0.4), 0 0 40px hsl(195 80% 60% / 0.2)' }}>
+            <div className="w-20 h-20 rounded-full mx-auto mb-6 overflow-hidden" style={{ boxShadow: '0 0 20px hsl(240 70% 50% / 0.42), 0 0 44px hsl(220 85% 55% / 0.24)' }}>
               <img src={inlightLogo} alt="Inlight logo" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-accent font-['Dancing_Script']">
@@ -109,19 +109,19 @@ const LandingPage: React.FC = () => {
           <div className="grid gap-4 sm:grid-cols-3">
             <Card className="spotlight-card border-border bg-card">
               <CardContent className="pt-6 text-center space-y-2">
-                <Briefcase className="h-6 w-6 mx-auto" style={{ color: 'hsl(200 100% 50%)' }} />
+                <Briefcase className="h-6 w-6 mx-auto text-primary" />
                 <p className="text-sm text-foreground">Find and post jobs, events, and projects.</p>
               </CardContent>
             </Card>
             <Card className="spotlight-card border-border bg-card">
               <CardContent className="pt-6 text-center space-y-2">
-                <Users className="h-6 w-6 mx-auto" style={{ color: 'hsl(200 100% 50%)' }} />
+                <Users className="h-6 w-6 mx-auto text-primary" />
                 <p className="text-sm text-foreground">Look up people at your school.</p>
               </CardContent>
             </Card>
             <Card className="spotlight-card border-border bg-card">
               <CardContent className="pt-6 text-center space-y-2">
-                <Film className="h-6 w-6 mx-auto" style={{ color: 'hsl(200 100% 50%)' }} />
+                <Film className="h-6 w-6 mx-auto text-primary" />
                 <p className="text-sm text-foreground">Discover professional shows, films, and companies.</p>
               </CardContent>
             </Card>
@@ -130,8 +130,7 @@ const LandingPage: React.FC = () => {
           {/* Auth section */}
           <div className="flex flex-col items-center gap-3">
             <Button
-              className="w-full max-w-xs text-background font-semibold"
-              style={{ background: 'hsl(200 100% 50%)' }}
+              className="w-full max-w-xs font-semibold"
               onClick={() => navigate('/auth')}
             >
               Log in or Sign Up <ArrowRight className="ml-2 h-4 w-4" />
