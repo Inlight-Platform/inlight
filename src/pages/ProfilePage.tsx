@@ -60,6 +60,7 @@ import { PublicMediaGallery } from '@/components/profile/PublicMediaGallery';
 import { WhyIStarted } from '@/components/profile/WhyIStarted';
 import { MediaUploader } from '@/components/profile/MediaUploader';
 import { AvatarCropper } from '@/components/profile/AvatarCropper';
+import { CoverImageCropper } from '@/components/profile/CoverImageCropper';
 import { MyProjects } from '@/components/profile/MyProjects';
 import { UserPosts } from '@/components/profile/UserPosts';
 import { AttendedSection } from '@/components/profile/AttendedSection';
@@ -82,6 +83,7 @@ import ProfileCompletionBar from '@/components/profile/ProfileCompletionBar';
 import FloatingChatButton from '@/components/messages/FloatingChatButton';
 import { useMinimizedChat } from '@/hooks/useMinimizedChat';
 import { useLocation } from 'react-router-dom';
+import inlightLogo from '@/assets/inlight-logo.jpeg';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';
@@ -258,6 +260,8 @@ const ProfilePage: React.FC = () => {
   const [uploadingCover, setUploadingCover] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
   const [cropperImageSrc, setCropperImageSrc] = useState('');
+  const [coverCropperOpen, setCoverCropperOpen] = useState(false);
+  const [coverCropperImageSrc, setCoverCropperImageSrc] = useState('');
   
   // Post creator states
   const [showPostCreator, setShowPostCreator] = useState(false);
@@ -558,20 +562,41 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Cover image upload handler
-  const handleCoverSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !authUser?.id) return;
+    if (!file) return;
 
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCoverCropperImageSrc(reader.result as string);
+      setCoverCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+
+    if (coverInputRef.current) {
+      coverInputRef.current.value = '';
+    }
+  };
+
+  // Cover image upload handler
+  const handleCroppedCoverUpload = async (blob: Blob) => {
     setUploadingCover(true);
     try {
-      const fileName = `${authUser.id}/cover.jpg`;
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+
+      const ownerId = authData.user?.id;
+      if (!ownerId) {
+        throw new Error('You must be signed in to update your cover image.');
+      }
+
+      const fileName = `${ownerId}/covers/cover-${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
-        .upload(fileName, file, { 
-          upsert: true,
-          contentType: file.type
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg',
+          upsert: false,
         });
 
       if (uploadError) throw uploadError;
@@ -583,20 +608,19 @@ const ProfilePage: React.FC = () => {
       const newCoverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       
       // Save the cover URL to the database
-      await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ cover_url: newCoverUrl })
-        .eq('user_id', authUser.id);
+        .eq('user_id', ownerId);
 
-      await queryClient.invalidateQueries({ queryKey: ['profile', authUser.id] });
+      if (updateError) throw updateError;
+
+      await queryClient.invalidateQueries({ queryKey: ['profile', ownerId] });
       toast.success('Cover image updated!');
     } catch (error: any) {
       toast.error(error.message || 'Failed to upload cover');
     } finally {
       setUploadingCover(false);
-      if (coverInputRef.current) {
-        coverInputRef.current.value = '';
-      }
     }
   };
 
@@ -1063,11 +1087,28 @@ const ProfilePage: React.FC = () => {
 
         {/* Cover image */}
         <div className="relative h-[200px] sm:h-[280px] md:h-[350px] lg:h-[450px] overflow-hidden">
-          <img
-            src={dbProfile?.cover_url || '/placeholder.svg'}
-            alt={`${displayName}'s cover`}
-            className="w-full h-full object-cover"
-          />
+          {dbProfile?.cover_url ? (
+            <img
+              src={dbProfile.cover_url}
+              alt={`${displayName}'s cover`}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="relative h-full w-full overflow-hidden bg-[hsl(222_35%_6%)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,hsl(240_70%_50%/0.28),transparent_34%),radial-gradient(circle_at_78%_28%,hsl(45_95%_58%/0.14),transparent_28%),linear-gradient(135deg,hsl(222_35%_6%),hsl(222_38%_5%)_48%,hsl(240_45%_12%))]" />
+              <div
+                className="absolute inset-0 opacity-[0.08]"
+                style={{
+                  backgroundImage: 'radial-gradient(circle at 1px 1px, hsl(45 95% 58%) 1px, transparent 0)',
+                  backgroundSize: '34px 34px',
+                }}
+              />
+              <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-background via-background/35 to-transparent" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                <img src={inlightLogo} alt="" className="h-28 w-28 rounded-full object-cover blur-[1px] sm:h-36 sm:w-36" />
+              </div>
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
           
           {/* Cover edit button */}
@@ -1092,6 +1133,12 @@ const ProfilePage: React.FC = () => {
                   <Camera className="w-5 h-5" />
                 )}
               </button>
+              <CoverImageCropper
+                open={coverCropperOpen}
+                imageSrc={coverCropperImageSrc}
+                onClose={() => setCoverCropperOpen(false)}
+                onCropComplete={handleCroppedCoverUpload}
+              />
             </>
           )}
         </div>
@@ -1101,11 +1148,19 @@ const ProfilePage: React.FC = () => {
           {/* Avatar */}
           <div className="absolute -top-16 sm:-top-20 left-4 sm:left-6 lg:left-8" data-tour="profile-avatar">
             <div className="relative">
-              <img
-                src={displayAvatar || '/placeholder.svg'}
-                alt={displayName}
-                className="w-24 h-24 sm:w-32 sm:h-32 lg:w-[120px] lg:h-[120px] rounded-full border-4 border-background object-cover shadow-card"
-              />
+              {displayAvatar ? (
+                <img
+                  src={displayAvatar}
+                  alt={displayName}
+                  className="w-24 h-24 sm:w-32 sm:h-32 lg:w-[120px] lg:h-[120px] rounded-full border-4 border-background object-cover shadow-card"
+                />
+              ) : (
+                <div className="flex w-24 h-24 sm:w-32 sm:h-32 lg:w-[120px] lg:h-[120px] items-center justify-center rounded-full border-4 border-background bg-gradient-to-br from-[hsl(222_35%_8%)] via-[hsl(240_45%_14%)] to-[hsl(222_35%_6%)] shadow-card ring-1 ring-primary/25">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/25 bg-background/80 shadow-[0_0_28px_hsl(240_70%_50%/0.32)] sm:h-16 sm:w-16">
+                    <img src={inlightLogo} alt="" className="h-full w-full rounded-full object-cover opacity-90" />
+                  </div>
+                </div>
+              )}
               {isOwnProfile && (
                 <>
                   <input
