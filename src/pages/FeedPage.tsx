@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
@@ -25,6 +25,7 @@ type NetworkFilter = 'all' | '1st';
 type ContentFilter = 'all' | 'events' | 'projects' | 'updates';
 type ProjectSubTab = 'feed' | 'my-network' | 'saved' | 'archive';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
+type ViewMode = 'grid' | 'scroll';
 
 const PROJECT_CATEGORIES = [
   { value: 'film', label: 'Film' },
@@ -53,6 +54,7 @@ const FeedPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [feedSearchQuery, setFeedSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
   // Fetch current user's profile
   const { data: userProfile } = useQuery({
@@ -738,6 +740,30 @@ const FeedPage: React.FC = () => {
               </div>
             )}
 
+            {/* View Mode Toggle */}
+            {contentFilter !== 'projects' && contentFilter !== 'updates' && (
+              <div className="flex items-center justify-end gap-1 mb-4">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className={`gap-1.5 ${viewMode === 'grid' ? navVioletButtonClass : navVioletOutlineClass}`}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  Grid
+                </Button>
+                <Button
+                  variant={viewMode === 'scroll' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('scroll')}
+                  className={`gap-1.5 ${viewMode === 'scroll' ? navVioletButtonClass : navVioletOutlineClass}`}
+                >
+                  <Rows className="h-4 w-4" />
+                  Scroll
+                </Button>
+              </div>
+            )}
+
             {/* Show project sub-content when on projects tab */}
             {contentFilter === 'projects' ? (
               renderProjectsContent()
@@ -790,7 +816,7 @@ const FeedPage: React.FC = () => {
                       </Button>
                     )}
                   </div>
-                ) : contentFilter === 'updates' ? (
+                ) : contentFilter === 'updates' || viewMode === 'scroll' ? (
                   <div className="flex flex-col gap-4 max-w-xl mx-auto">
                     {feedItems.map((item) => (
                       <FeedItem
