@@ -828,13 +828,27 @@ const FeedPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {feedItems.map((item) => (
-                      <FeedGridCard
-                        key={`${item.type}-${item.id}`}
-                        item={item}
-                        onClick={() => setSelectedItem(item)}
-                      />
-                    ))}
+                     {feedItems.map((item) => (
+                       <FeedGridCard
+                         key={`${item.type}-${item.id}`}
+                         item={item}
+                         onClick={() => {
+                           if (item.type === 'project') {
+                             navigate(`/projects/${item.id}`);
+                           } else if (item.type === 'event') {
+                             navigate('/events');
+                           } else if (item.type === 'show') {
+                             navigate('/stage-whisper');
+                           } else if (item.type === 'open_role' && item.project_id) {
+                             navigate(`/projects/${item.project_id}`);
+                           } else if (item.type === 'job') {
+                             navigate('/opportunities');
+                           } else if (item.user_id) {
+                             navigate(`/profile/${item.user_id}`);
+                           }
+                         }}
+                       />
+                     ))}
                   </div>
                 )}
               </>
