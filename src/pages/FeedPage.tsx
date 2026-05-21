@@ -9,7 +9,7 @@ import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { Button } from '@/components/ui/button';
 import { PostCreator } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
-import { FeedGridCard } from '@/components/feed/FeedGridCard';
+import { FeedBentoCard, getBentoSize } from '@/components/feed/FeedBentoCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { WelcomeMessage } from '@/components/feed/WelcomeMessage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -25,7 +25,7 @@ type NetworkFilter = 'all' | '1st';
 type ContentFilter = 'all' | 'events' | 'projects' | 'updates';
 type ProjectSubTab = 'feed' | 'my-network' | 'saved' | 'archive';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
-type ViewMode = 'grid' | 'scroll';
+type ViewMode = 'bento' | 'scroll';
 
 const PROJECT_CATEGORIES = [
   { value: 'film', label: 'Film' },
@@ -54,7 +54,7 @@ const FeedPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [feedSearchQuery, setFeedSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('bento');
 
   // Fetch current user's profile
   const { data: userProfile } = useQuery({
@@ -744,13 +744,13 @@ const FeedPage: React.FC = () => {
             {contentFilter !== 'projects' && contentFilter !== 'updates' && (
               <div className="flex items-center justify-end gap-1 mb-4">
                 <Button
-                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  variant={viewMode === 'bento' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className={`gap-1.5 ${viewMode === 'grid' ? navVioletButtonClass : navVioletOutlineClass}`}
+                  onClick={() => setViewMode('bento')}
+                  className={`gap-1.5 ${viewMode === 'bento' ? navVioletButtonClass : navVioletOutlineClass}`}
                 >
                   <LayoutGrid className="h-4 w-4" />
-                  Grid
+                  Bento
                 </Button>
                 <Button
                   variant={viewMode === 'scroll' ? 'default' : 'outline'}
@@ -827,28 +827,32 @@ const FeedPage: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                     {feedItems.map((item) => (
-                       <FeedGridCard
-                         key={`${item.type}-${item.id}`}
-                         item={item}
-                         onClick={() => {
-                           if (item.type === 'project') {
-                             navigate(`/projects/${item.id}`);
-                           } else if (item.type === 'event') {
-                             navigate('/events');
-                           } else if (item.type === 'show') {
-                             navigate('/stage-whisper');
-                           } else if (item.type === 'open_role' && item.project_id) {
-                             navigate(`/projects/${item.project_id}`);
-                           } else if (item.type === 'job') {
-                             navigate('/opportunities');
-                           } else if (item.user_id) {
-                             navigate(`/profile/${item.user_id}`);
-                           }
-                         }}
-                       />
-                     ))}
+                  <div
+                    className="grid grid-cols-12 gap-4 sm:gap-5 auto-rows-[110px] sm:auto-rows-[120px]"
+                    style={{ gridAutoFlow: 'dense' }}
+                  >
+                    {feedItems.map((item, idx) => (
+                      <FeedBentoCard
+                        key={`${item.type}-${item.id}`}
+                        item={item}
+                        size={getBentoSize(idx)}
+                        onClick={() => {
+                          if (item.type === 'project') {
+                            navigate(`/projects/${item.id}`);
+                          } else if (item.type === 'event') {
+                            navigate('/events');
+                          } else if (item.type === 'show') {
+                            navigate('/stage-whisper');
+                          } else if (item.type === 'open_role' && item.project_id) {
+                            navigate(`/projects/${item.project_id}`);
+                          } else if (item.type === 'job') {
+                            navigate('/opportunities');
+                          } else if (item.user_id) {
+                            navigate(`/profile/${item.user_id}`);
+                          }
+                        }}
+                      />
+                    ))}
                   </div>
                 )}
               </>
