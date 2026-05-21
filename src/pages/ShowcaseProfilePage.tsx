@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useTrackPageView } from '@/hooks/usePageAnalytics';
 import { Loader2, ArrowLeft, Play, FileText } from 'lucide-react';
 import { capitalizeName } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,11 @@ const ShowcaseProfilePage: React.FC = () => {
   const { programId, userId } = useParams<{ programId: string; userId: string }>();
   const navigate = useNavigate();
   const { data: profile, isLoading } = useShowcaseProfile(programId, userId);
+  useTrackPageView({
+    eventName: 'showcase_profile_view',
+    siteSlug: programId,
+    enabled: !!programId && !!userId,
+  });
 
   if (isLoading) {
     return (

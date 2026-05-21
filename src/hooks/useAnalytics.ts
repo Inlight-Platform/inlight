@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const FALLBACK_SUPABASE_URL = 'https://piofmmawwnermvaysonw.supabase.co';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL;
 
 export const useTrackProfileView = (profileId: string) => {
   useEffect(() => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useShowcaseByProgram, useShowcaseProgram, ShowcaseProfile } from '@/hooks/useShowcase';
+import { useTrackPageView } from '@/hooks/usePageAnalytics';
 import { Loader2 } from 'lucide-react';
 
 const ShowcaseStudentCard: React.FC<{ profile: ShowcaseProfile; onViewProfile: (userId: string) => void }> = ({ profile, onViewProfile }) => {
@@ -59,6 +60,11 @@ const ShowcasePage: React.FC = () => {
   const navigate = useNavigate();
   const { data: students, isLoading } = useShowcaseByProgram(programId);
   const { data: program } = useShowcaseProgram(programId);
+  useTrackPageView({
+    eventName: 'showcase_site_view',
+    siteSlug: programId,
+    enabled: !!programId,
+  });
 
   const handleViewProfile = (userId: string) => {
     navigate(`/showcase/${programId}/${userId}`);

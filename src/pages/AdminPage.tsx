@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv, ShieldCheck, Calendar, Globe, BookOpen, Music } from 'lucide-react';
+import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv, ShieldCheck, Calendar, Globe, BookOpen, Music, BarChart3 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import BroadwayShowsManager from '@/components/admin/BroadwayShowsManager';
 import FilmContentManager from '@/components/admin/FilmContentManager';
@@ -22,6 +22,7 @@ import EventsManager from '@/components/admin/EventsManager';
 import SitesManager from '@/components/admin/SitesManager';
 import ResourcesManager from '@/components/admin/ResourcesManager';
 import MusicShowsManager from '@/components/admin/MusicShowsManager';
+import ProductInsightsManager from '@/components/admin/ProductInsightsManager';
 
 const AdminPage: React.FC = () => {
   const navigate = useNavigate();
@@ -74,6 +75,10 @@ const AdminPage: React.FC = () => {
             <TabsTrigger value="sites" className="gap-2 whitespace-nowrap">
               <Globe className="w-4 h-4" />
               <span className="hidden sm:inline">Sites</span>
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="gap-2 whitespace-nowrap">
+              <BarChart3 className="w-4 h-4" />
+              <span className="hidden sm:inline">Insights</span>
             </TabsTrigger>
             <TabsTrigger value="resources" className="gap-2 whitespace-nowrap">
               <BookOpen className="w-4 h-4" />
@@ -128,6 +133,10 @@ const AdminPage: React.FC = () => {
 
         <TabsContent value="sites">
           <SitesManager />
+        </TabsContent>
+
+        <TabsContent value="insights">
+          <ProductInsightsManager />
         </TabsContent>
 
         <TabsContent value="resources">

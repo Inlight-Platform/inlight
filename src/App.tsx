@@ -2,9 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, useLocation } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import RequireAuth from "@/components/layout/RequireAuth";
+import { useTrackPageView } from "@/hooks/usePageAnalytics";
 import Index from "./pages/Index";
 import ProfilePage from "./pages/ProfilePage";
 import DirectoryPage from "./pages/DirectoryPage";
@@ -36,6 +37,18 @@ import PlanSelectionPage from "./pages/PlanSelectionPage";
 
 const queryClient = new QueryClient();
 
+const RouteAnalytics = () => {
+  const location = useLocation();
+  useTrackPageView({
+    eventName: 'page_view',
+    path: location.pathname,
+    enabled: location.pathname !== '/admin',
+    trackDuration: true,
+  });
+
+  return null;
+};
+
 const AppShell = () => (
   <RequireAuth>
     <PageLayout>
@@ -50,6 +63,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <RouteAnalytics />
         <Routes>
           {/* Public routes - no shell */}
           <Route path="/" element={<Index />} />
