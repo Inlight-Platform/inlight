@@ -828,7 +828,7 @@ const FeedPage: React.FC = () => {
                   </div>
                 ) : (
                   <div
-                    className="grid grid-cols-12 gap-4 sm:gap-5 auto-rows-[110px] sm:auto-rows-[120px]"
+                    className="grid grid-cols-12 gap-4 sm:gap-5 auto-rows-[220px]"
                     style={{ gridAutoFlow: 'dense' }}
                   >
                     {feedItems.map((item, idx) => (
