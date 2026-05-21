@@ -1,0 +1,307 @@
+import React from 'react';
+import { formatDistanceToNow } from 'date-fns';
+import {
+  Calendar,
+  Briefcase,
+  FolderKanban,
+  MessageCircle,
+  Theater,
+  UserPlus,
+  ArrowRight,
+} from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
+import { FeedItemData } from './FeedItem';
+
+export type BentoSize = 'hero' | 'tall' | 'compact' | 'wide';
+
+interface FeedBentoCardProps {
+  item: FeedItemData;
+  size: BentoSize;
+  onClick: () => void;
+}
+
+const typeMeta = (item: FeedItemData) => {
+  switch (item.type) {
+    case 'project':
+      return { label: 'Project', icon: <FolderKanban className="h-4 w-4" />, accent: 'text-rose-300' };
+    case 'event':
+      return { label: 'Event', icon: <Calendar className="h-4 w-4" />, accent: 'text-sky-300' };
+    case 'job':
+      return { label: 'Opportunity', icon: <Briefcase className="h-4 w-4" />, accent: 'text-emerald-300' };
+    case 'show':
+      return { label: 'Show', icon: <Theater className="h-4 w-4" />, accent: 'text-pink-300' };
+    case 'open_role':
+      return { label: 'Open Role', icon: <UserPlus className="h-4 w-4" />, accent: 'text-amber-300' };
+    default:
+      return { label: 'Update', icon: <MessageCircle className="h-4 w-4" />, accent: 'text-amber-300' };
+  }
+};
+
+const sizeClasses: Record<BentoSize, string> = {
+  hero: 'sm:col-span-8 sm:row-span-2 min-h-[360px] sm:min-h-[420px]',
+  tall: 'sm:col-span-4 sm:row-span-2 min-h-[360px] sm:min-h-[420px]',
+  compact: 'sm:col-span-4 sm:row-span-1 min-h-[220px]',
+  wide: 'sm:col-span-4 sm:row-span-1 min-h-[220px]',
+};
+
+export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClick }) => {
+  const meta = typeMeta(item);
+  const hasImage = !!item.image_url;
+  const showAnonymous = item.type === 'show' && item.is_anonymous;
+  const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
+  const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
+  const title =
+    item.title ||
+    (item.content ? item.content.slice(0, 80) + (item.content.length > 80 ? '…' : '') : 'Untitled');
+  const subtitle = item.description || item.content;
+  const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
+  const objectPosition = `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%`;
+
+  const baseShell =
+    'group relative overflow-hidden rounded-3xl cursor-pointer transition-all duration-500 col-span-12';
+
+  /* ---------- HERO: big editorial image card ---------- */
+  if (size === 'hero') {
+    return (
+      <article
+        onClick={onClick}
+        className={cn(
+          baseShell,
+          sizeClasses.hero,
+          'border border-primary/10 bg-gradient-to-br from-[hsl(222_40%_8%)] to-[hsl(222_45%_5%)] shadow-2xl hover:border-primary/30 hover:shadow-primary/10'
+        )}
+      >
+        {hasImage && (
+          <>
+            <img
+              src={item.image_url!}
+              alt={title}
+              loading="lazy"
+              style={{ objectPosition }}
+              className="absolute inset-0 h-full w-full object-cover opacity-60 grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[hsl(222_45%_5%)] via-[hsl(222_45%_5%)]/60 to-transparent" />
+          </>
+        )}
+        <div className="relative flex h-full flex-col justify-end p-6 sm:p-10">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="rounded-full bg-primary/90 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-primary-foreground shadow-lg shadow-primary/30">
+              {meta.label}
+            </span>
+            <span className={cn('text-xs font-semibold', meta.accent)}>{timeAgo}</span>
+          </div>
+          <h3 className="font-display text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-5xl group-hover:translate-x-1 transition-transform duration-500 line-clamp-3">
+            {title}
+          </h3>
+          {subtitle && subtitle !== title && (
+            <p className="mt-4 max-w-xl text-sm text-white/70 line-clamp-2">{subtitle}</p>
+          )}
+          <div className="mt-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 ring-2 ring-primary/30">
+                <AvatarImage src={avatarUrl || undefined} />
+                <AvatarFallback>{displayName[0]}</AvatarFallback>
+              </Avatar>
+              <p className="text-sm font-bold text-white">{displayName}</p>
+            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-background transition-transform group-hover:scale-110">
+              <ArrowRight className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  /* ---------- TALL: light editorial magazine card ---------- */
+  if (size === 'tall') {
+    const isLight = item.type !== 'event' && item.type !== 'job';
+    return (
+      <article
+        onClick={onClick}
+        className={cn(
+          baseShell,
+          sizeClasses.tall,
+          isLight
+            ? 'bg-[hsl(45_30%_95%)] text-slate-900 hover:-translate-y-1'
+            : 'bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20 text-white hover:-translate-y-1'
+        )}
+      >
+        <div className="absolute right-6 top-6 rotate-6">
+          <span
+            className={cn(
+              'rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em]',
+              isLight ? 'bg-slate-900 text-white' : 'bg-primary text-primary-foreground'
+            )}
+          >
+            {meta.label}
+          </span>
+        </div>
+        <div className="flex h-full flex-col p-6 sm:p-8">
+          {hasImage && (
+            <div className="mb-6 h-40 overflow-hidden rounded-2xl transition-transform duration-500 group-hover:scale-[0.97]">
+              <img
+                src={item.image_url!}
+                alt={title}
+                style={{ objectPosition }}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            </div>
+          )}
+          <div className="flex flex-1 flex-col justify-center">
+            <h3
+              className={cn(
+                'font-display text-2xl font-black leading-tight tracking-tight sm:text-3xl line-clamp-4',
+                isLight && 'underline decoration-primary decoration-[3px] underline-offset-[6px]'
+              )}
+            >
+              {title}
+            </h3>
+            {subtitle && subtitle !== title && (
+              <p className={cn('mt-3 text-sm leading-relaxed line-clamp-3', isLight ? 'text-slate-600' : 'text-white/70')}>
+                {subtitle}
+              </p>
+            )}
+          </div>
+          <div
+            className={cn(
+              'mt-6 flex items-center gap-3 border-t pt-4',
+              isLight ? 'border-slate-200' : 'border-white/10'
+            )}
+          >
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={avatarUrl || undefined} />
+              <AvatarFallback>{displayName[0]}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className={cn('truncate text-xs font-bold', isLight ? 'text-slate-900' : 'text-white')}>
+                {displayName}
+              </p>
+              <p className={cn('text-[10px]', isLight ? 'text-slate-500' : 'text-white/50')}>{timeAgo}</p>
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  /* ---------- COMPACT: dark icon card ---------- */
+  if (size === 'compact') {
+    return (
+      <article
+        onClick={onClick}
+        className={cn(
+          baseShell,
+          sizeClasses.compact,
+          'border border-border bg-card hover:border-primary/50'
+        )}
+      >
+        <div className="flex h-full flex-col p-5">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <span className={cn('mb-1 block text-[10px] font-black uppercase tracking-[0.2em]', meta.accent)}>
+                {meta.label}
+              </span>
+              <h3 className="font-display text-lg font-black leading-tight tracking-tight text-foreground line-clamp-2">
+                {title}
+              </h3>
+            </div>
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-muted text-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground">
+              {meta.icon}
+            </div>
+          </div>
+          {hasImage ? (
+            <div className="mb-3 flex-1 overflow-hidden rounded-xl opacity-80 transition-opacity group-hover:opacity-100">
+              <img
+                src={item.image_url!}
+                alt={title}
+                style={{ objectPosition }}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            </div>
+          ) : subtitle ? (
+            <p className="mb-3 flex-1 text-sm text-muted-foreground line-clamp-3">{subtitle}</p>
+          ) : (
+            <div className="flex-1" />
+          )}
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex min-w-0 items-center gap-2">
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={avatarUrl || undefined} />
+                <AvatarFallback className="text-[8px]">{displayName[0]}</AvatarFallback>
+              </Avatar>
+              <span className="truncate font-semibold text-muted-foreground">{displayName}</span>
+            </div>
+            <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+              {timeAgo}
+            </span>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  /* ---------- WIDE: horizontal thumb + content ---------- */
+  return (
+    <article
+      onClick={onClick}
+      className={cn(
+        baseShell,
+        sizeClasses.wide,
+        'border border-primary/10 bg-gradient-to-br from-primary/10 to-[hsl(240_70%_15%)]/30 hover:scale-[1.01]'
+      )}
+    >
+      <div className="flex h-full flex-col justify-between p-5">
+        <div className="flex items-start gap-4">
+          <div className="h-20 w-20 flex-shrink-0 -rotate-3 overflow-hidden rounded-2xl bg-muted transition-transform duration-500 group-hover:rotate-0">
+            {hasImage ? (
+              <img
+                src={item.image_url!}
+                alt={title}
+                style={{ objectPosition }}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-foreground/60">{meta.icon}</div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className={cn('mb-1 inline-block rounded-lg bg-primary/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.2em]', meta.accent)}>
+              {meta.label}
+            </span>
+            <h3 className="font-display text-lg font-extrabold leading-tight text-foreground line-clamp-2">
+              {title}
+            </h3>
+            {subtitle && subtitle !== title && (
+              <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{subtitle}</p>
+            )}
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-3">
+          <div className="flex items-center gap-2">
+            <Avatar className="h-5 w-5">
+              <AvatarImage src={avatarUrl || undefined} />
+              <AvatarFallback className="text-[8px]">{displayName[0]}</AvatarFallback>
+            </Avatar>
+            <span className="truncate text-xs font-semibold text-muted-foreground">{displayName}</span>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+            {timeAgo}
+          </span>
+        </div>
+      </div>
+    </article>
+  );
+};
+
+/** Cycle through bento sizes to create varied, asymmetric editorial rhythm. */
+export const getBentoSize = (index: number): BentoSize => {
+  const pattern: BentoSize[] = ['hero', 'tall', 'compact', 'wide', 'compact', 'wide'];
+  return pattern[index % pattern.length];
+};
+
+export default FeedBentoCard;
