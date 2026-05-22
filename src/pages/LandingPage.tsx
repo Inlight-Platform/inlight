@@ -1,29 +1,43 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Sparkle } from "@/components/Sparkle";
 import { Starfield } from "@/components/Starfield";
-import {
-  ScrollSection,
-  Hero,
-  EventsStop,
-  ProjectsStop,
-  NetworkStop,
-  TrackStop,
-  CTAStop,
-} from "@/components/scrollytelling";
+import { Hero, EventsStop, ProjectsStop, NetworkStop, TrackStop, CTAStop } from "@/components/scrollytelling";
 import logo from "@/assets/inlight-logo.jpeg";
 
+function SectionWrapper({
+  children,
+  height = "150vh",
+}: {
+  children: (p: ReturnType<typeof useScroll>["scrollYProgress"]) => React.ReactNode;
+  height?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  return (
+    <div ref={ref} style={{ height }} className="relative">
+      <div className="sticky top-0 h-screen w-full">{children(scrollYProgress)}</div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
+  const heroRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: heroP } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const auroraY = useTransform(heroP, [0, 1], ["0%", "30%"]);
+
   useEffect(() => {
     const prevTitle = document.title;
-    document.title =
-      "Inlight — The Interactive Network for Entertainment Students & Alumni";
+    document.title = "Inlight — The Interactive Network for Entertainment Students & Alumni";
     const meta = document.querySelector('meta[name="description"]');
     const prevDesc = meta?.getAttribute("content") ?? "";
     meta?.setAttribute(
       "content",
-      "Inlight bridges the visibility gap in the creative economy — events, projects, and real-world connections inside your university entertainment network."
+      "Inlight bridges the visibility gap in the creative economy — events, projects, and real-world connections inside your university entertainment network.",
     );
     return () => {
       document.title = prevTitle;
@@ -35,7 +49,7 @@ export default function LandingPage() {
     <main className="dark relative bg-background text-foreground">
       {/* persistent background */}
       <div className="fixed inset-0 -z-10 bg-night">
-        <div className="absolute inset-0 bg-aurora opacity-70" />
+        <motion.div style={{ y: auroraY }} className="absolute inset-0 bg-aurora opacity-70" />
         <Starfield density={120} />
       </div>
 
@@ -52,12 +66,16 @@ export default function LandingPage() {
         </a>
       </nav>
 
+      {/* Hero */}
+      <div ref={heroRef}>
+        <Hero progress={heroP} />
+      </div>
+
       {/* Scroll stops */}
-      <ScrollSection>{(p) => <Hero progress={p} />}</ScrollSection>
-      <ScrollSection>{(p) => <EventsStop progress={p} />}</ScrollSection>
-      <ScrollSection>{(p) => <ProjectsStop progress={p} />}</ScrollSection>
-      <ScrollSection>{(p) => <NetworkStop progress={p} />}</ScrollSection>
-      <ScrollSection>{(p) => <TrackStop progress={p} />}</ScrollSection>
+      <SectionWrapper>{(p) => <EventsStop progress={p} />}</SectionWrapper>
+      <SectionWrapper>{(p) => <ProjectsStop progress={p} />}</SectionWrapper>
+      <SectionWrapper>{(p) => <NetworkStop progress={p} />}</SectionWrapper>
+      <SectionWrapper>{(p) => <TrackStop progress={p} />}</SectionWrapper>
 
       {/* Live Preview invitation */}
       <section className="relative py-40 px-6 flex items-center justify-center">
