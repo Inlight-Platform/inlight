@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { Sparkle } from "@/components/Sparkle";
 import { Starfield } from "@/components/Starfield";
 import {
+  ScrollSection,
   Hero,
   EventsStop,
   ProjectsStop,
@@ -13,30 +14,7 @@ import {
 } from "@/components/scrollytelling";
 import logo from "@/assets/inlight-logo.jpeg";
 
-function SectionWrapper({
-  children,
-  height = "200vh",
-}: {
-  children: (p: ReturnType<typeof useScroll>["scrollYProgress"]) => React.ReactNode;
-  height?: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  return (
-    <div ref={ref} style={{ height }} className="relative">
-      <div className="sticky top-0 h-screen w-full">{children(scrollYProgress)}</div>
-    </div>
-  );
-}
-
 export default function LandingPage() {
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress: heroP } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"],
-  });
-  const auroraY = useTransform(heroP, [0, 1], ["0%", "30%"]);
-
   useEffect(() => {
     const prevTitle = document.title;
     document.title =
@@ -57,7 +35,7 @@ export default function LandingPage() {
     <main className="dark relative bg-background text-foreground">
       {/* persistent background */}
       <div className="fixed inset-0 -z-10 bg-night">
-        <motion.div style={{ y: auroraY }} className="absolute inset-0 bg-aurora opacity-70" />
+        <div className="absolute inset-0 bg-aurora opacity-70" />
         <Starfield density={120} />
       </div>
 
@@ -74,16 +52,12 @@ export default function LandingPage() {
         </a>
       </nav>
 
-      {/* Hero */}
-      <div ref={heroRef}>
-        <Hero progress={heroP} />
-      </div>
-
       {/* Scroll stops */}
-      <SectionWrapper>{(p) => <EventsStop progress={p} />}</SectionWrapper>
-      <SectionWrapper>{(p) => <ProjectsStop progress={p} />}</SectionWrapper>
-      <SectionWrapper>{(p) => <NetworkStop progress={p} />}</SectionWrapper>
-      <SectionWrapper>{(p) => <TrackStop progress={p} />}</SectionWrapper>
+      <ScrollSection>{(p) => <Hero progress={p} />}</ScrollSection>
+      <ScrollSection>{(p) => <EventsStop progress={p} />}</ScrollSection>
+      <ScrollSection>{(p) => <ProjectsStop progress={p} />}</ScrollSection>
+      <ScrollSection>{(p) => <NetworkStop progress={p} />}</ScrollSection>
+      <ScrollSection>{(p) => <TrackStop progress={p} />}</ScrollSection>
 
       {/* Live Preview invitation */}
       <section className="relative py-40 px-6 flex items-center justify-center">
