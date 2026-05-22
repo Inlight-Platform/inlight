@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform, MotionValue, useSpring } from "framer-motion";
 import { Sparkle } from "./Sparkle";
-import logo from "@/assets/inlight-logo.png";
+import logo from "@/assets/inlight-logo.jpeg";
 import audience1 from "@/assets/audience-1.jpg";
 import audience2 from "@/assets/audience-2.jpg";
 import community from "@/assets/community.jpg";
@@ -385,6 +386,7 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
 export function CTAStop() {
   const [mode, setMode] = useState<"signup" | "login">("signup");
   const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end end"] });
   const scale = useSpring(useTransform(scrollYProgress, [0, 1], [0.7, 1]), { stiffness: 80, damping: 20 });
   const opacity = useTransform(scrollYProgress, [0, 0.4, 1], [0, 1, 1]);
@@ -426,7 +428,13 @@ export function CTAStop() {
             </button>
           </div>
 
-          <form className="space-y-3 text-left" onSubmit={(e) => e.preventDefault()}>
+          <form
+            className="space-y-3 text-left"
+            onSubmit={(e) => {
+              e.preventDefault();
+              navigate("/auth");
+            }}
+          >
             {mode === "signup" && (
               <input
                 type="text"
