@@ -51,13 +51,13 @@ export function Hero({ progress }: { progress: MotionValue<number> }) {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
-          className="font-display text-[14vw] sm:text-[10vw] md:text-[8.5vw] leading-[0.95] tracking-tighter"
+          className="font-editorial text-white text-[14vw] sm:text-[10vw] md:text-[8.5vw] leading-[0.95] tracking-tight"
         >
-          The <em className="text-glow">interactive</em>
+          The <em className="italic text-accent-blue font-normal">interactive</em>
           <br />
           network for entertainment
           <br />
-          <span className="text-muted-foreground">students & alumni.</span>
+          <span className="text-white/70">students &amp; alumni.</span>
         </motion.h1>
 
         <motion.p
@@ -96,7 +96,7 @@ function StopHeader({
         {number}
         <span className="h-px w-8 bg-border" />
       </div>
-      <h2 className="font-display text-5xl sm:text-7xl md:text-8xl leading-[1] tracking-tight">
+      <h2 className="font-editorial text-white text-5xl sm:text-7xl md:text-8xl leading-[1.05] tracking-tight">
         {title}
       </h2>
       <p className="mt-6 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto">{caption}</p>
@@ -123,7 +123,7 @@ export function EventsStop({ progress }: { progress: MotionValue<number> }) {
         number="Stop 01 — Events"
         title={
           <>
-            Find events that <em className="text-glow">move</em> you.
+            Find events that <em className="italic text-accent-blue font-normal">move</em> you.
           </>
         }
         caption="From senior thesis screenings to industry talkbacks — every showcase, workshop, and self-tape night, in one calendar."
@@ -194,7 +194,7 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
         number="Stop 02 — Projects"
         title={
           <>
-            Find collaborative <em className="text-glow">projects</em>
+            Find collaborative <em className="italic text-accent-blue font-normal">projects</em>
             <br />— or launch your own.
           </>
         }
@@ -266,7 +266,7 @@ export function NetworkStop({ progress }: { progress: MotionValue<number> }) {
           <>
             Real-world connections,
             <br />
-            inside your <em className="text-glow">university</em>.
+            inside your <em className="italic text-accent-blue font-normal">university</em>.
           </>
         }
         caption="Direct bridges from current students to alumni already working in the industry. No cold messages — shared rooms."
@@ -340,7 +340,7 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
         title={
           <>
             Track everyone you know
-            <br />— and what they're <em className="text-glow">working on</em>.
+            <br />— and what they're <em className="italic text-accent-blue font-normal">working on</em>.
           </>
         }
         caption="Rolling, real-time credits. New roles, singles, productions — surfaced from your circle the moment they happen."
@@ -399,8 +399,8 @@ export function CTAStop() {
           <Sparkle size={32} />
           <Sparkle size={16} className="opacity-40" />
         </div>
-        <h2 className="font-display text-6xl sm:text-8xl leading-[0.95] tracking-tighter">
-          Step into <em className="text-glow">the light</em>.
+        <h2 className="font-editorial text-white text-6xl sm:text-8xl leading-[1.05] tracking-tight">
+          Step into <em className="italic text-accent-blue font-normal">the light</em>.
         </h2>
         <p className="mt-6 text-muted-foreground max-w-md mx-auto">
           Claim your place in the network built by — and for — the next generation of entertainment.
