@@ -8,16 +8,21 @@ import logo from "@/assets/inlight-logo.jpeg";
 
 function SectionWrapper({
   children,
-  height = "150vh",
+  height = "200vh",
 }: {
   children: (p: ReturnType<typeof useScroll>["scrollYProgress"]) => React.ReactNode;
   height?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end start"],
+  });
   return (
     <div ref={ref} style={{ height }} className="relative">
-      <div className="sticky top-0 h-screen w-full">{children(scrollYProgress)}</div>
+      <div className="sticky top-0 h-screen w-full overflow-hidden" style={{ background: "hsl(222 35% 6%)" }}>
+        {children(scrollYProgress)}
+      </div>
     </div>
   );
 }
@@ -66,19 +71,24 @@ export default function LandingPage() {
         </a>
       </nav>
 
-      {/* Hero */}
-      <div ref={heroRef}>
-        <Hero progress={heroP} />
+      {/* Hero — 100vh, no scroll budget needed */}
+      <div ref={heroRef} style={{ height: "100vh" }}>
+        <div className="sticky top-0 h-screen w-full overflow-hidden" style={{ background: "hsl(222 35% 6%)" }}>
+          <Hero progress={heroP} />
+        </div>
       </div>
 
-      {/* Scroll stops */}
+      {/* Scroll stops — each is 200vh: 100vh sticky view + 100vh scroll budget */}
       <SectionWrapper>{(p) => <EventsStop progress={p} />}</SectionWrapper>
       <SectionWrapper>{(p) => <ProjectsStop progress={p} />}</SectionWrapper>
       <SectionWrapper>{(p) => <NetworkStop progress={p} />}</SectionWrapper>
       <SectionWrapper>{(p) => <TrackStop progress={p} />}</SectionWrapper>
 
       {/* Live Preview invitation */}
-      <section className="relative py-40 px-6 flex items-center justify-center">
+      <section
+        className="relative py-40 px-6 flex items-center justify-center"
+        style={{ background: "hsl(222 35% 6%)" }}
+      >
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -111,7 +121,7 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      <div id="cta">
+      <div id="cta" style={{ background: "hsl(222 35% 6%)" }}>
         <CTAStop />
       </div>
     </main>
