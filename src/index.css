@@ -10,6 +10,8 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
 
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap");
+
 @layer base {
   :root {
     /* Core backgrounds - Light mode (fallback) */
@@ -421,6 +423,16 @@
   .hover\:text-glow:hover {
     color: hsl(45 95% 65%);
     text-shadow: 0 0 24px hsl(45 95% 58% / 0.45);
+  }
+
+  /* Editorial serif headline + soft sky-blue italic accent */
+  .font-editorial {
+    font-family: 'Playfair Display', 'Lora', ui-serif, Georgia, serif;
+    font-feature-settings: "liga", "dlig";
+  }
+  .text-accent-blue {
+    color: #7ec8e3;
+    text-shadow: 0 0 24px rgba(126, 200, 227, 0.45);
   }
 
   @keyframes twinkle {

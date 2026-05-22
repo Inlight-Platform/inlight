@@ -102,14 +102,14 @@ export default function LandingPage() {
           <div className="text-[11px] tracking-[0.4em] uppercase text-muted-foreground mb-6">
             No account · no commitment
           </div>
-          <h2 className="font-display text-5xl sm:text-7xl md:text-8xl leading-[0.95] tracking-tighter">
-            Want to see it <em className="text-glow">in motion?</em>
+          <h2 className="font-editorial text-white text-5xl sm:text-7xl md:text-8xl leading-[1.05] tracking-tight">
+            Want to see it <em className="italic text-accent-blue font-normal">in motion?</em>
           </h2>
           <p className="mt-6 text-muted-foreground max-w-lg mx-auto">
             Take a tailored, three-question walk through the Inlight platform — fully interactive, no sign-up.
           </p>
           <Link
-            to="/auth"
+            to="/preview"
             className="group inline-flex items-center gap-3 mt-12 px-8 py-5 rounded-full bg-foreground text-background font-medium tracking-wide shadow-glow hover:scale-[1.03] transition-transform"
           >
             <Sparkle size={14} />

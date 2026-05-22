@@ -34,6 +34,7 @@ import ShowcasePage from "./pages/ShowcasePage";
 import ShowcaseProfilePage from "./pages/ShowcaseProfilePage";
 import ShowcaseJoinPage from "./pages/ShowcaseJoinPage";
 import PlanSelectionPage from "./pages/PlanSelectionPage";
+import PreviewPage from "./pages/PreviewPage";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,7 @@ const App = () => (
           {/* Public routes - no shell */}
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/preview" element={<PreviewPage />} />
           <Route path="/showcase/join/:programSlug" element={<ShowcaseJoinPage />} />
           <Route path="/showcase/:programId/:userId" element={<ShowcaseProfilePage />} />
           <Route path="/showcase/:programId" element={<ShowcasePage />} />
