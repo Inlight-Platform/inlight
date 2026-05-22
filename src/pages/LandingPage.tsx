@@ -1,154 +1,127 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { toast } from 'sonner';
-import { Loader2, GraduationCap, Briefcase, Users, Film, ArrowRight, ArrowLeft } from 'lucide-react';
-import inlightLogo from '@/assets/inlight-logo.jpeg';
+import { useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { Sparkle } from "@/components/Sparkle";
+import { Starfield } from "@/components/Starfield";
+import {
+  Hero,
+  EventsStop,
+  ProjectsStop,
+  NetworkStop,
+  TrackStop,
+  CTAStop,
+} from "@/components/scrollytelling";
+import logo from "@/assets/inlight-logo.jpeg";
 
-const LandingPage: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState<'info' | 'signup'>('info');
-
-  const { signUp } = useAuth();
-  const navigate = useNavigate();
-
-  const validateEduEmail = (email: string): boolean => {
-    const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com', 'clelyfdes@gmail.com'];
-    return email.toLowerCase().endsWith('.edu') || allowedEmails.includes(email.toLowerCase());
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateEduEmail(email)) {
-      toast.error('Only .edu email addresses are allowed to sign up.');
-      return;
-    }
-
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters.');
-      return;
-    }
-
-    setIsLoading(true);
-    const { error } = await signUp(email, password, displayName);
-
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Account created! Welcome to Inlight.');
-      navigate('/');
-    }
-    setIsLoading(false);
-  };
-
-  const today = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
+function SectionWrapper({
+  children,
+  height = "300vh",
+}: {
+  children: (p: ReturnType<typeof useScroll>["scrollYProgress"]) => React.ReactNode;
+  height?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{
-      background: 'linear-gradient(135deg, hsl(222 35% 6%) 0%, hsl(222 38% 5%) 40%, hsl(195 35% 8%) 100%)',
-      backgroundSize: '400% 400%',
-      animation: 'landing-bg-shift 20s ease infinite',
-    }}>
-      <style>{`
-        @keyframes landing-bg-shift {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
-        .spotlight-card {
-          position: relative;
-          overflow: hidden;
-        }
-        .spotlight-card::after {
-          content: '';
-          position: absolute;
-          top: -50%;
-          left: -75%;
-          width: 50%;
-          height: 200%;
-          background: linear-gradient(90deg, transparent, hsl(45 95% 58% / 0.07), transparent);
-          transform: skewX(-20deg);
-          transition: left 0.6s ease;
-          pointer-events: none;
-        }
-        .spotlight-card:hover::after {
-          left: 125%;
-        }
-      `}</style>
-
-
-      {/* Main content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-16 relative z-10">
-        <div className="w-full max-w-2xl space-y-10">
-          {/* Hero text */}
-          <div className="space-y-4 text-center">
-            <div className="w-20 h-20 rounded-full mx-auto mb-6 overflow-hidden" style={{ boxShadow: '0 0 20px hsl(240 70% 50% / 0.42), 0 0 44px hsl(220 85% 55% / 0.24)' }}>
-              <img src={inlightLogo} alt="Inlight logo" className="w-full h-full object-cover" />
-            </div>
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-accent font-['Dancing_Script']">
-              Welcome to Inlight
-            </h1>
-            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              Where university creatives connect, collaborate, and come to life.
-            </p>
-            <p className="text-sm font-medium text-accent italic">Made for the makers.</p>
-          </div>
-
-          {/* Features */}
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Card className="spotlight-card border-border bg-card">
-              <CardContent className="pt-6 text-center space-y-2">
-                <Briefcase className="h-6 w-6 mx-auto text-primary" />
-                <p className="text-sm text-foreground">Find and post jobs, events, and projects.</p>
-              </CardContent>
-            </Card>
-            <Card className="spotlight-card border-border bg-card">
-              <CardContent className="pt-6 text-center space-y-2">
-                <Users className="h-6 w-6 mx-auto text-primary" />
-                <p className="text-sm text-foreground">Look up people at your school.</p>
-              </CardContent>
-            </Card>
-            <Card className="spotlight-card border-border bg-card">
-              <CardContent className="pt-6 text-center space-y-2">
-                <Film className="h-6 w-6 mx-auto text-primary" />
-                <p className="text-sm text-foreground">Discover professional shows, films, and companies.</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Auth section */}
-          <div className="flex flex-col items-center gap-3">
-            <Button
-              className="w-full max-w-xs font-semibold"
-              onClick={() => navigate('/auth')}
-            >
-              Log in or Sign Up <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <GraduationCap className="h-3 w-3" />
-              Only .edu emails are allowed
-            </p>
-          </div>
-
-          {/* Disclaimer */}
-          <p className="text-xs text-muted-foreground text-center leading-relaxed max-w-lg mx-auto">
-            This is a platform designed by students, for students, and is not officially affiliated with New York University as of {today}.
-          </p>
-        </div>
-      </main>
+    <div ref={ref} style={{ height }} className="relative">
+      <div className="sticky top-0 h-screen w-full">{children(scrollYProgress)}</div>
     </div>
   );
-};
+}
 
-export default LandingPage;
+export default function LandingPage() {
+  const heroRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: heroP } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const auroraY = useTransform(heroP, [0, 1], ["0%", "30%"]);
+
+  useEffect(() => {
+    const prevTitle = document.title;
+    document.title =
+      "Inlight — The Interactive Network for Entertainment Students & Alumni";
+    const meta = document.querySelector('meta[name="description"]');
+    const prevDesc = meta?.getAttribute("content") ?? "";
+    meta?.setAttribute(
+      "content",
+      "Inlight bridges the visibility gap in the creative economy — events, projects, and real-world connections inside your university entertainment network."
+    );
+    return () => {
+      document.title = prevTitle;
+      if (meta && prevDesc) meta.setAttribute("content", prevDesc);
+    };
+  }, []);
+
+  return (
+    <main className="dark relative bg-background text-foreground">
+      {/* persistent background */}
+      <div className="fixed inset-0 -z-10 bg-night">
+        <motion.div style={{ y: auroraY }} className="absolute inset-0 bg-aurora opacity-70" />
+        <Starfield density={120} />
+      </div>
+
+      {/* nav */}
+      <nav className="fixed top-0 inset-x-0 z-50 px-6 sm:px-10 py-5 flex items-center justify-between">
+        <a href="#" className="flex items-center gap-2">
+          <img src={logo} alt="Inlight" className="h-8 w-8 rounded-full object-cover" />
+        </a>
+        <a
+          href="#cta"
+          className="text-xs tracking-[0.25em] uppercase px-4 py-2 rounded-full border border-border hover:border-glow hover:text-glow transition"
+        >
+          Sign in
+        </a>
+      </nav>
+
+      {/* Hero */}
+      <div ref={heroRef}>
+        <Hero progress={heroP} />
+      </div>
+
+      {/* Scroll stops */}
+      <SectionWrapper>{(p) => <EventsStop progress={p} />}</SectionWrapper>
+      <SectionWrapper>{(p) => <ProjectsStop progress={p} />}</SectionWrapper>
+      <SectionWrapper>{(p) => <NetworkStop progress={p} />}</SectionWrapper>
+      <SectionWrapper>{(p) => <TrackStop progress={p} />}</SectionWrapper>
+
+      {/* Live Preview invitation */}
+      <section className="relative py-40 px-6 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-20%" }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+          className="relative max-w-3xl text-center"
+        >
+          <div className="flex justify-center gap-2 mb-6 text-glow">
+            <Sparkle size={16} className="opacity-60" />
+            <Sparkle size={24} />
+            <Sparkle size={12} className="opacity-40" />
+          </div>
+          <div className="text-[11px] tracking-[0.4em] uppercase text-muted-foreground mb-6">
+            No account · no commitment
+          </div>
+          <h2 className="font-display text-5xl sm:text-7xl md:text-8xl leading-[0.95] tracking-tighter">
+            Want to see it <em className="text-glow">in motion?</em>
+          </h2>
+          <p className="mt-6 text-muted-foreground max-w-lg mx-auto">
+            Take a tailored, three-question walk through the Inlight platform — fully interactive, no sign-up.
+          </p>
+          <Link
+            to="/auth"
+            className="group inline-flex items-center gap-3 mt-12 px-8 py-5 rounded-full bg-foreground text-background font-medium tracking-wide shadow-glow hover:scale-[1.03] transition-transform"
+          >
+            <Sparkle size={14} />
+            Enter the live preview
+            <span className="transition-transform group-hover:translate-x-1">→</span>
+          </Link>
+        </motion.div>
+      </section>
+
+      <div id="cta">
+        <CTAStop />
+      </div>
+    </main>
+  );
+}
