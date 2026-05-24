@@ -20,14 +20,7 @@ function SectionWrapper({
   });
   return (
     <div ref={ref} style={{ height }} className="relative">
-      <div
-        className="sticky top-0 w-full"
-        style={{
-          height: "100vh",
-          background: "hsl(222 35% 6%)",
-          overflow: "clip",
-        }}
-      >
+      <div className="sticky top-0 h-screen w-full overflow-hidden" style={{ background: "hsl(222 35% 6%)" }}>
         {children(scrollYProgress)}
       </div>
     </div>
@@ -59,11 +52,13 @@ export default function LandingPage() {
 
   return (
     <main className="dark relative bg-background text-foreground">
+      {/* persistent background */}
       <div className="fixed inset-0 -z-10 bg-night">
         <motion.div style={{ y: auroraY }} className="absolute inset-0 bg-aurora opacity-70" />
         <Starfield density={120} />
       </div>
 
+      {/* nav */}
       <nav className="fixed top-0 inset-x-0 z-50 px-6 sm:px-10 py-5 flex items-center justify-between">
         <a href="#" className="flex items-center gap-2">
           <img src={logo} alt="Inlight" className="h-8 w-8 rounded-full object-cover" />
@@ -76,20 +71,20 @@ export default function LandingPage() {
         </a>
       </nav>
 
+      {/* Hero — 100vh, no scroll budget needed */}
       <div ref={heroRef} style={{ height: "100vh" }}>
-        <div
-          className="sticky top-0 w-full"
-          style={{ height: "100vh", background: "hsl(222 35% 6%)", overflow: "clip" }}
-        >
+        <div className="sticky top-0 h-screen w-full overflow-hidden" style={{ background: "hsl(222 35% 6%)" }}>
           <Hero progress={heroP} />
         </div>
       </div>
 
+      {/* Scroll stops — each is 200vh: 100vh sticky view + 100vh scroll budget */}
       <SectionWrapper>{(p) => <EventsStop progress={p} />}</SectionWrapper>
       <SectionWrapper>{(p) => <ProjectsStop progress={p} />}</SectionWrapper>
       <SectionWrapper>{(p) => <NetworkStop progress={p} />}</SectionWrapper>
       <SectionWrapper>{(p) => <TrackStop progress={p} />}</SectionWrapper>
 
+      {/* Live Preview invitation */}
       <section
         className="relative py-40 px-6 flex items-center justify-center"
         style={{ background: "hsl(222 35% 6%)" }}
