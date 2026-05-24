@@ -349,7 +349,7 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
       />
       <motion.div
         style={{ opacity, x }}
-        className="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl px-6 w-full"
+        className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-5xl px-6 w-full"
       >
         {people.map((p, i) => (
           <motion.div
