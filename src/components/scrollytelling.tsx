@@ -334,7 +334,7 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
   ];
 
   return (
-    <div className="sticky top-0 h-screen flex flex-col items-center justify-center overflow-hidden">
+    <div className="relative h-screen flex flex-col items-center justify-center overflow-hidden py-12">
       <StopHeader
         number="Stop 04 — Track"
         title={
@@ -345,11 +345,11 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
         }
         caption="Rolling, real-time credits. New roles, singles, productions — surfaced from your circle the moment they happen."
         progress={progress}
-        range={[0, 0.25, 0.7, 1]}
+        range={[0, 0.15, 0.85, 1]}
       />
       <motion.div
         style={{ opacity, x }}
-        className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-6xl px-6 w-full"
+        className="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl px-6 w-full"
       >
         {people.map((p, i) => (
           <motion.div
@@ -358,7 +358,7 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: i * 0.08 }}
-            className="rounded-2xl border border-border bg-card/60 backdrop-blur-xl p-5 shadow-soft"
+            className="rounded-2xl border border-border bg-card/60 backdrop-blur-xl p-4 shadow-soft"
           >
             <div className="flex items-center gap-3">
               <img src={p.img} alt={p.name} className="h-12 w-12 rounded-full object-cover grayscale" />
