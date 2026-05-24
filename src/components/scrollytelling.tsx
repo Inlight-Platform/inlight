@@ -204,7 +204,7 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
       />
       <motion.div
         style={{ opacity, y, rotateX, perspective: 1200 }}
-        className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl px-6"
+        className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-5xl px-6"
       >
         {projects.map((p, i) => (
           <motion.div
@@ -212,7 +212,7 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
             whileHover={{ y: -8 }}
             className="group rounded-2xl border border-border bg-card/60 backdrop-blur-xl overflow-hidden shadow-soft"
           >
-            <div className="aspect-[4/3] overflow-hidden">
+            <div className="aspect-square overflow-hidden">
               <img
                 src={p.img}
                 alt=""
