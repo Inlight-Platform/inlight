@@ -45,7 +45,7 @@ const InlineAuth: React.FC<{ programSlug: string; programName: string }> = ({ pr
           localStorage.setItem('inlight_showcase_welcome_pending', '1');
         } catch { /* noop */ }
 
-        toast.success('Check your .edu inbox to confirm your email, then sign in.');
+        toast.success('Account created! Check your email to verify, then log in.');
         setMode('login');
       } else {
         const { error } = await signIn(email, password);

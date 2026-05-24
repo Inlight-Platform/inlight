@@ -54,7 +54,7 @@ const AuthPage: React.FC = () => {
   }, [mode]);
 
   const validateEduEmail = (email: string): boolean => {
-    const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com', 'clelyfdes@gmail.com', 'clelyfernandes19@gmail.com'];
+    const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com', 'clelyfdes@gmail.com'];
     return email.toLowerCase().endsWith('@nyu.edu') || allowedEmails.includes(email.toLowerCase());
   };
 
@@ -100,11 +100,11 @@ const AuthPage: React.FC = () => {
     if (error) {
       toast.error(error.message);
     } else if (!data?.session) {
-      toast.success('Check your .edu inbox to confirm your email, then sign in.');
+      toast.success('Account created. Check your .edu inbox and confirm your email before signing in.');
       setView('login');
     } else {
-      toast.success('Check your .edu inbox to confirm your email, then sign in.');
-      setView('login');
+      toast.success('Account created! Welcome to Inlight.');
+      navigate('/feed');
     }
 
     setIsLoading(false);

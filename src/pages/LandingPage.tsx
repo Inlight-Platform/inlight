@@ -3,26 +3,28 @@ import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Sparkle } from "@/components/Sparkle";
 import { Starfield } from "@/components/Starfield";
-import { Hero, EventsStop, ProjectsStop, NetworkStop, TrackStop, CTAStop } from "@/components/scrollytelling";
+import {
+  Hero,
+  EventsStop,
+  ProjectsStop,
+  NetworkStop,
+  TrackStop,
+  CTAStop,
+} from "@/components/scrollytelling";
 import logo from "@/assets/inlight-logo.jpeg";
 
 function SectionWrapper({
   children,
-  height = "200vh",
+  height = "300vh",
 }: {
   children: (p: ReturnType<typeof useScroll>["scrollYProgress"]) => React.ReactNode;
   height?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start start", "end start"],
-  });
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
   return (
     <div ref={ref} style={{ height }} className="relative">
-      <div className="sticky top-0 h-screen w-full overflow-hidden" style={{ background: "hsl(222 35% 6%)" }}>
-        {children(scrollYProgress)}
-      </div>
+      <div className="sticky top-0 h-screen w-full">{children(scrollYProgress)}</div>
     </div>
   );
 }
@@ -37,12 +39,13 @@ export default function LandingPage() {
 
   useEffect(() => {
     const prevTitle = document.title;
-    document.title = "Inlight — The Interactive Network for Entertainment Students & Alumni";
+    document.title =
+      "Inlight — The Interactive Network for Entertainment Students & Alumni";
     const meta = document.querySelector('meta[name="description"]');
     const prevDesc = meta?.getAttribute("content") ?? "";
     meta?.setAttribute(
       "content",
-      "Inlight bridges the visibility gap in the creative economy — events, projects, and real-world connections inside your university entertainment network.",
+      "Inlight bridges the visibility gap in the creative economy — events, projects, and real-world connections inside your university entertainment network."
     );
     return () => {
       document.title = prevTitle;
@@ -71,24 +74,19 @@ export default function LandingPage() {
         </a>
       </nav>
 
-      {/* Hero — 100vh, no scroll budget needed */}
-      <div ref={heroRef} style={{ height: "100vh" }}>
-        <div className="sticky top-0 h-screen w-full overflow-hidden" style={{ background: "hsl(222 35% 6%)" }}>
-          <Hero progress={heroP} />
-        </div>
+      {/* Hero */}
+      <div ref={heroRef}>
+        <Hero progress={heroP} />
       </div>
 
-      {/* Scroll stops — each is 200vh: 100vh sticky view + 100vh scroll budget */}
+      {/* Scroll stops */}
       <SectionWrapper>{(p) => <EventsStop progress={p} />}</SectionWrapper>
       <SectionWrapper>{(p) => <ProjectsStop progress={p} />}</SectionWrapper>
       <SectionWrapper>{(p) => <NetworkStop progress={p} />}</SectionWrapper>
       <SectionWrapper>{(p) => <TrackStop progress={p} />}</SectionWrapper>
 
       {/* Live Preview invitation */}
-      <section
-        className="relative py-40 px-6 flex items-center justify-center"
-        style={{ background: "hsl(222 35% 6%)" }}
-      >
+      <section className="relative py-40 px-6 flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -121,7 +119,7 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      <div id="cta" style={{ background: "hsl(222 35% 6%)" }}>
+      <div id="cta">
         <CTAStop />
       </div>
     </main>

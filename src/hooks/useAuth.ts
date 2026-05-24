@@ -151,7 +151,7 @@ export function useAuth() {
 
   const signUp = async (email: string, password: string, displayName?: string) => {
     // Validate nyu.edu email (admin/whitelisted emails bypass this check)
-    const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com', 'clelyfdes@gmail.com', 'clelyfernandes19@gmail.com'];
+    const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com', 'clelyfdes@gmail.com'];
     if (!email.toLowerCase().endsWith('@nyu.edu') && !allowedEmails.includes(email.toLowerCase())) {
       return { error: { message: 'Only nyu.edu email addresses are allowed to sign up.' } };
     }
