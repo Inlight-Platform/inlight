@@ -9,6 +9,7 @@ import community from "@/assets/community.jpg";
 import winner from "@/assets/winner.jpg";
 import panel from "@/assets/panel.jpg";
 import collage from "@/assets/collage.jpg";
+import dance from "@/assets/dance.jpg";
 
 /* ---------- HERO ---------- */
 export function Hero({ progress }: { progress: MotionValue<number> }) {
@@ -111,6 +112,7 @@ export function EventsStop({ progress }: { progress: MotionValue<number> }) {
   const cardOpacity = useTransform(progress, [0, 0.3, 0.8, 1], [0, 1, 1, 0]);
 
   const events = [
+    { day: "SUN", date: "08", title: "Dance for Camera", tag: "Workshop", loc: "Gibney Dance, Studio U · 7–9pm", img: dance },
     { day: "FRI", date: "12", title: "Tisch Senior Film Showcase", tag: "Screening", loc: "Cantor Film Center", img: audience1 },
     { day: "SAT", date: "13", title: "Self-Tape Night with Casting Society", tag: "Workshop", loc: "USC SCA · 7pm", img: winner },
     { day: "SUN", date: "14", title: "Juilliard Composers' Concert", tag: "Performance", loc: "Alice Tully Hall", img: community },
@@ -138,9 +140,9 @@ export function EventsStop({ progress }: { progress: MotionValue<number> }) {
           <div className="flex items-center justify-between px-6 py-4 border-b border-border">
             <div className="flex items-center gap-3">
               <span className="h-2.5 w-2.5 rounded-full bg-glow" />
-              <span className="font-display italic text-lg">November</span>
+              <span className="font-display italic text-lg">June</span>
             </div>
-            <div className="text-xs tracking-widest uppercase text-muted-foreground">Week 46</div>
+            <div className="text-xs tracking-widest uppercase text-muted-foreground">Week 23</div>
           </div>
           <div className="divide-y divide-border">
             {events.map((e, i) => (
