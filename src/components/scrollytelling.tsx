@@ -480,5 +480,3 @@ export function CTAStop() {
     </section>
   );
 }
-
-export { ScrollSection } from "./scrollytelling";
