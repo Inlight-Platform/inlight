@@ -96,10 +96,10 @@ function StopHeader({
         {number}
         <span className="h-px w-8 bg-border" />
       </div>
-      <h2 className="font-editorial text-white text-5xl sm:text-7xl md:text-8xl leading-[1.05] tracking-tight">
+      <h2 className="font-editorial text-white text-4xl sm:text-5xl md:text-6xl leading-[1.05] tracking-tight">
         {title}
       </h2>
-      <p className="mt-6 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto">{caption}</p>
+      <p className="mt-4 text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">{caption}</p>
     </motion.div>
   );
 }
@@ -118,7 +118,7 @@ export function EventsStop({ progress }: { progress: MotionValue<number> }) {
   ];
 
   return (
-    <div className="sticky top-0 h-screen flex flex-col items-center justify-center overflow-hidden">
+    <div className="relative h-screen flex flex-col items-center justify-center overflow-hidden py-12">
       <StopHeader
         number="Stop 01 — Events"
         title={
@@ -128,11 +128,11 @@ export function EventsStop({ progress }: { progress: MotionValue<number> }) {
         }
         caption="From senior thesis screenings to industry talkbacks — every showcase, workshop, and self-tape night, in one calendar."
         progress={progress}
-        range={[0, 0.25, 0.7, 1]}
+        range={[0, 0.15, 0.85, 1]}
       />
       <motion.div
         style={{ y: cardY, scale: cardScale, opacity: cardOpacity }}
-        className="mt-10 w-full max-w-5xl px-6"
+        className="mt-6 w-full max-w-4xl px-6"
       >
         <div className="rounded-3xl border border-border bg-card/60 backdrop-blur-xl shadow-soft overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -150,17 +150,17 @@ export function EventsStop({ progress }: { progress: MotionValue<number> }) {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.05 }}
-                className="grid grid-cols-[80px_1fr_auto] sm:grid-cols-[100px_80px_1fr_auto] items-center gap-4 px-6 py-5 hover:bg-secondary/40 transition-colors"
+                className="grid grid-cols-[60px_1fr_auto] sm:grid-cols-[80px_60px_1fr_auto] items-center gap-3 px-5 py-3 hover:bg-secondary/40 transition-colors"
               >
                 <div className="text-center">
                   <div className="text-xs tracking-widest text-muted-foreground">{e.day}</div>
-                  <div className="font-display text-3xl">{e.date}</div>
+                  <div className="font-display text-2xl">{e.date}</div>
                 </div>
-                <div className="hidden sm:block h-14 w-14 rounded-lg overflow-hidden">
+                <div className="hidden sm:block h-11 w-11 rounded-lg overflow-hidden">
                   <img src={e.img} alt="" className="h-full w-full object-cover" />
                 </div>
                 <div>
-                  <div className="font-medium">{e.title}</div>
+                  <div className="font-medium text-sm">{e.title}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">{e.loc}</div>
                 </div>
                 <span className="hidden sm:inline-block text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-full border border-border text-muted-foreground">
@@ -189,7 +189,7 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
   ];
 
   return (
-    <div className="sticky top-0 h-screen flex flex-col items-center justify-center overflow-hidden">
+    <div className="relative h-screen flex flex-col items-center justify-center overflow-hidden py-12">
       <StopHeader
         number="Stop 02 — Projects"
         title={
@@ -200,11 +200,11 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
         }
         caption="Crew calls, casting boards, songwriting rooms. Reputation-verified tags, gathered by craft."
         progress={progress}
-        range={[0, 0.25, 0.7, 1]}
+        range={[0, 0.15, 0.85, 1]}
       />
       <motion.div
         style={{ opacity, y, rotateX, perspective: 1200 }}
-        className="mt-10 grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl px-6"
+        className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl px-6"
       >
         {projects.map((p, i) => (
           <motion.div
@@ -212,19 +212,19 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
             whileHover={{ y: -8 }}
             className="group rounded-2xl border border-border bg-card/60 backdrop-blur-xl overflow-hidden shadow-soft"
           >
-            <div className="aspect-[4/5] overflow-hidden">
+            <div className="aspect-[4/3] overflow-hidden">
               <img
                 src={p.img}
                 alt=""
                 className="h-full w-full object-cover grayscale opacity-80 group-hover:opacity-100 group-hover:grayscale-0 transition duration-700"
               />
             </div>
-            <div className="p-4">
+            <div className="p-3">
               <div className="text-[10px] tracking-widest uppercase text-muted-foreground">
                 {p.maker}
               </div>
-              <div className="font-display text-xl leading-tight mt-1">{p.title}</div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              <div className="font-display text-base leading-tight mt-1">{p.title}</div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
                 {p.tags.map((t) => (
                   <span
                     key={t}
@@ -259,7 +259,7 @@ export function NetworkStop({ progress }: { progress: MotionValue<number> }) {
   ];
 
   return (
-    <div className="sticky top-0 h-screen flex flex-col items-center justify-center overflow-hidden">
+    <div className="relative h-screen flex flex-col items-center justify-center overflow-hidden py-12">
       <StopHeader
         number="Stop 03 — Network"
         title={
@@ -271,11 +271,11 @@ export function NetworkStop({ progress }: { progress: MotionValue<number> }) {
         }
         caption="Direct bridges from current students to alumni already working in the industry. No cold messages — shared rooms."
         progress={progress}
-        range={[0, 0.25, 0.7, 1]}
+        range={[0, 0.15, 0.85, 1]}
       />
       <motion.div
         style={{ opacity, scale }}
-        className="mt-12 relative w-full max-w-4xl aspect-[16/10] mx-auto px-6"
+        className="mt-6 relative w-full max-w-3xl aspect-[16/9] mx-auto px-6"
       >
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 62" preserveAspectRatio="none">
           {schools.map((a, i) =>
