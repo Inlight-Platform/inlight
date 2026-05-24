@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRef } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { motion, useScroll, useTransform, MotionValue, useSpring } from "framer-motion";
 import { Sparkle } from "./Sparkle";
 import logo from "@/assets/inlight-logo.jpeg";
@@ -384,7 +384,6 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
 
 /* ---------- FINAL CTA ---------- */
 export function CTAStop() {
-  const [mode, setMode] = useState<"signup" | "login">("signup");
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end end"] });
@@ -407,41 +406,22 @@ export function CTAStop() {
         </p>
 
         <div className="mt-12 rounded-3xl border border-border bg-card/60 backdrop-blur-xl p-6 sm:p-8 shadow-soft">
-          <div className="relative grid grid-cols-2 mb-6 p-1 rounded-full bg-secondary/60">
-            <motion.div
-              layout
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="absolute inset-y-1 w-[calc(50%-4px)] rounded-full bg-foreground"
-              style={{ left: mode === "signup" ? "4px" : "calc(50% + 0px)" }}
-            />
-            <button
-              onClick={() => setMode("signup")}
-              className={`relative z-10 py-2.5 text-sm tracking-wide transition-colors ${mode === "signup" ? "text-background" : "text-muted-foreground"}`}
-            >
-              Create account
-            </button>
-            <button
-              onClick={() => setMode("login")}
-              className={`relative z-10 py-2.5 text-sm tracking-wide transition-colors ${mode === "login" ? "text-background" : "text-muted-foreground"}`}
-            >
-              Log in
-            </button>
+          <div className="mb-6 text-center text-sm tracking-[0.25em] uppercase text-muted-foreground">
+            Create account
           </div>
 
           <form
             className="space-y-3 text-left"
             onSubmit={(e) => {
               e.preventDefault();
-              navigate("/auth");
+              navigate("/auth?mode=signup");
             }}
           >
-            {mode === "signup" && (
-              <input
-                type="text"
-                placeholder="Full name"
-                className="w-full bg-secondary/40 border border-border rounded-xl px-4 py-3.5 text-sm placeholder:text-muted-foreground outline-none focus:border-glow transition"
-              />
-            )}
+            <input
+              type="text"
+              placeholder="Full name"
+              className="w-full bg-secondary/40 border border-border rounded-xl px-4 py-3.5 text-sm placeholder:text-muted-foreground outline-none focus:border-glow transition"
+            />
             <input
               type="email"
               placeholder=".edu or alumni email"
@@ -457,7 +437,7 @@ export function CTAStop() {
               className="group relative w-full mt-2 py-4 rounded-xl bg-foreground text-background font-medium tracking-wide overflow-hidden"
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
-                {mode === "signup" ? "Create my account" : "Sign in"}
+                Create my account
                 <span className="transition-transform group-hover:translate-x-1">→</span>
               </span>
             </button>
@@ -465,6 +445,12 @@ export function CTAStop() {
 
           <p className="mt-5 text-[11px] text-muted-foreground">
             By continuing you agree to Inlight's Terms & Privacy.
+          </p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link to="/auth" className="text-accent-blue hover:underline">
+              Click here to sign in
+            </Link>
           </p>
         </div>
 
