@@ -15,7 +15,7 @@ import logo from "@/assets/inlight-logo.jpeg";
 
 function SectionWrapper({
   children,
-  height = "180vh",
+  height = "140vh",
 }: {
   children: (p: ReturnType<typeof useScroll>["scrollYProgress"]) => React.ReactNode;
   height?: string;
