@@ -125,7 +125,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
           sizeClasses.tall,
           isLight
             ? 'bg-[hsl(45_30%_95%)] text-slate-900 hover:-translate-y-1'
-            : 'bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20 text-white hover:-translate-y-1'
+            : 'bg-gradient-to-br from-[hsl(222_40%_10%)] to-[hsl(222_45%_6%)] border border-primary/30 text-white hover:-translate-y-1'
         )}
       >
         <div className="absolute right-6 top-6 rotate-6">
