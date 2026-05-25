@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Sparkle } from "@/components/Sparkle";
 import { Starfield } from "@/components/Starfield";
+import { useForceTheme } from "@/hooks/useTheme";
 import {
   Hero,
   EventsStop,
@@ -30,6 +31,9 @@ function SectionWrapper({
 }
 
 export default function LandingPage() {
+  // Landing page is designed exclusively in dark — always force it
+  // regardless of the user's app-wide light/dark preference.
+  useForceTheme("dark");
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress: heroP } = useScroll({
     target: heroRef,
