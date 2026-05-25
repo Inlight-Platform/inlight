@@ -797,16 +797,6 @@ const FeedPage: React.FC = () => {
                       </Button>
                     )}
                   </div>
-                ) : contentFilter === 'updates' || viewMode === 'scroll' ? (
-                  <div className="flex flex-col gap-4 max-w-xl mx-auto">
-                    {feedItems.map((item) => (
-                      <FeedItem
-                        key={`${item.type}-${item.id}`}
-                        item={item}
-                        networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
-                      />
-                    ))}
-                  </div>
                 ) : (
                   <div
                     className="grid grid-cols-12 gap-4 sm:gap-5 auto-rows-[220px]"
