@@ -692,7 +692,12 @@ const FeedPage: React.FC = () => {
       <div className="px-3 sm:px-6 lg:px-8 py-6 w-full overflow-x-hidden">
         <div className="max-w-5xl mx-auto w-full">
           <div className="w-full">
-            <WelcomeMessage />
+            {(() => {
+              const count = Number(
+                (typeof window !== 'undefined' && window.localStorage.getItem('inlight-login-count')) ?? '0'
+              );
+              return count <= 2 ? <WelcomeMessage /> : null;
+            })()}
 
             {/* Content Type Filters */}
             <div className="mb-4">
@@ -836,11 +841,11 @@ const FeedPage: React.FC = () => {
                         key={`${item.type}-${item.id}`}
                         item={item}
                         size={getBentoSize(idx)}
-                        onClick={() => {
+                       onClick={() => {
                           if (item.type === 'project') {
                             navigate(`/projects/${item.id}`);
                           } else if (item.type === 'event') {
-                            navigate('/events');
+                            setSelectedItem(item);
                           } else if (item.type === 'show') {
                             navigate('/stage-whisper');
                           } else if (item.type === 'open_role' && item.project_id) {

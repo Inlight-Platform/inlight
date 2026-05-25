@@ -3,7 +3,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const COLORS = [
@@ -156,7 +155,7 @@ const NetworkPieChartPage: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Network Breakdown</h1>
+        <h1 className="text-2xl font-display font-bold text-foreground">Your Network</h1>
         <p className="text-sm text-muted-foreground mt-1">
           See how your connections are distributed across group affiliations.
         </p>
@@ -174,47 +173,56 @@ const NetworkPieChartPage: React.FC = () => {
       ) : (
         <>
           <div className="w-full flex justify-center">
-            <ResponsiveContainer width="100%" height={isMobile ? 420 : 360}>
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy={isMobile ? '35%' : '50%'}
-                  innerRadius={isMobile ? 45 : 60}
-                  outerRadius={isMobile ? 95 : 140}
-                  paddingAngle={2}
-                  dataKey="value"
-                  stroke="hsl(var(--background))"
-                  strokeWidth={2}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
+            {(() => {
+              const size = isMobile ? 320 : 420;
+              const cx = size / 2;
+              const cy = size / 2;
+              const radius = size * 0.36;
+              const maxVal = Math.max(...chartData.map((d) => d.value), 1);
+              const nodes = chartData.map((d, i) => {
+                const angle = (i / chartData.length) * Math.PI * 2 - Math.PI / 2;
+                return {
+                  ...d,
+                  x: cx + Math.cos(angle) * radius,
+                  y: cy + Math.sin(angle) * radius,
+                  r: 6 + (d.value / maxVal) * 12,
+                };
+              });
+              return (
+                <svg width={size} height={size} className="overflow-visible">
+                  {nodes.map((n, i) => (
+                    <line
+                      key={`line-${i}`}
+                      x1={cx}
+                      y1={cy}
+                      x2={n.x}
+                      y2={n.y}
+                      stroke={n.color}
+                      strokeOpacity="0.35"
+                      strokeWidth="1"
+                    />
                   ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: number) => [
-                    `${value} (${total ? ((value / total) * 100).toFixed(1) : 0}%)`,
-                    'Connections',
-                  ]}
-                  contentStyle={{
-                    background: 'hsl(var(--background))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                  }}
-                />
-                <Legend
-                  layout={isMobile ? 'horizontal' : 'vertical'}
-                  align={isMobile ? 'center' : 'right'}
-                  verticalAlign={isMobile ? 'bottom' : 'middle'}
-                  wrapperStyle={
-                    isMobile
-                      ? { fontSize: '11px', paddingTop: '12px' }
-                      : { fontSize: '12px', paddingLeft: '16px' }
-                  }
-                />
-              </PieChart>
-            </ResponsiveContainer>
+                  {/* center node = you */}
+                  <circle cx={cx} cy={cy} r="10" fill="hsl(var(--primary))" />
+                  <text x={cx} y={cy + 26} textAnchor="middle" className="fill-foreground text-[11px] font-semibold">
+                    You
+                  </text>
+                  {nodes.map((n, i) => (
+                    <g key={`node-${i}`}>
+                      <circle cx={n.x} cy={n.y} r={n.r} fill={n.color} fillOpacity="0.85" />
+                      <text
+                        x={n.x}
+                        y={n.y + n.r + 12}
+                        textAnchor="middle"
+                        className="fill-foreground text-[10px]"
+                      >
+                        {n.name.length > 18 ? `${n.name.slice(0, 16)}…` : n.name}
+                      </text>
+                    </g>
+                  ))}
+                </svg>
+              );
+            })()}
           </div>
 
           <div className="space-y-2">

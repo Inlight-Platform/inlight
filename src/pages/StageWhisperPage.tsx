@@ -97,9 +97,9 @@ const StageWhisperPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
-  const [activeTab, setActiveTab] = useState('broadway');
+  const [activeTab, setActiveTab] = useState('school');
   const [viewTab, setViewTab] = useState<'discover' | 'my-list'>('discover');
-  const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'streaming' | 'student'>('theatres');
+  const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'streaming' | 'student' | 'festivals'>('theatres');
   const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
   const [archiveMode, setArchiveMode] = useState(false);
   const [selectedFilm, setSelectedFilm] = useState<FilmMetric | null>(null);
@@ -340,14 +340,6 @@ const StageWhisperPage: React.FC = () => {
   );
 
   return <div className="w-full">
-      {/* Promo Banner */}
-      <a
-        href="mailto:info@inlight.social"
-        className="block w-full bg-primary/10 border-b border-primary/20 px-4 py-2.5 text-center text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
-      >
-        Build a website for your project. Inquire about pricing here →
-      </a>
-
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -435,21 +427,21 @@ const StageWhisperPage: React.FC = () => {
         {industryTab === 'theatre' && viewTab === 'discover' && <div className="overflow-x-auto scrollbar-thin px-4 sm:px-6 lg:px-8">
             <Tabs value={activeTab} onValueChange={v => handleTabSwitch(setActiveTab, v)}>
               <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
-                <TabsTrigger value="broadway" className="flex-shrink-0 whitespace-nowrap">
-                  ⭐ Broadway
-                  <span className="ml-1 text-xs opacity-70">({showCounts.broadway})</span>
-                </TabsTrigger>
-                <TabsTrigger value="off-broadway" className="flex-shrink-0 whitespace-nowrap">
-                  🌟 Off-Broadway
-                  <span className="ml-1 text-xs opacity-70">({showCounts['off-broadway']})</span>
+                <TabsTrigger value="school" className="flex-shrink-0 whitespace-nowrap">
+                  🎓 School
+                  <span className="ml-1 text-xs opacity-70">({showCounts['school']})</span>
                 </TabsTrigger>
                 <TabsTrigger value="off-off-broadway" className="flex-shrink-0 whitespace-nowrap">
                   ✨ Off-Off
                   <span className="ml-1 text-xs opacity-70">({showCounts['off-off-broadway']})</span>
                 </TabsTrigger>
-                <TabsTrigger value="school" className="flex-shrink-0 whitespace-nowrap">
-                  🎓 School
-                  <span className="ml-1 text-xs opacity-70">({showCounts['school']})</span>
+                <TabsTrigger value="off-broadway" className="flex-shrink-0 whitespace-nowrap">
+                  🌟 Off-Broadway
+                  <span className="ml-1 text-xs opacity-70">({showCounts['off-broadway']})</span>
+                </TabsTrigger>
+                <TabsTrigger value="broadway" className="flex-shrink-0 whitespace-nowrap">
+                  ⭐ Broadway
+                  <span className="ml-1 text-xs opacity-70">({showCounts.broadway})</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -468,6 +460,10 @@ const StageWhisperPage: React.FC = () => {
             <Button variant={filmViewTab === 'student' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setFilmViewTab, 'student')} className="gap-2">
               <Sparkles className="w-4 h-4" />
               Community
+            </Button>
+            <Button variant={filmViewTab === 'festivals' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setFilmViewTab, 'festivals')} className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              Festivals
             </Button>
           </div>}
       </header>
@@ -695,6 +691,7 @@ const StageWhisperPage: React.FC = () => {
             {/* Community / Student Films */}
             {filmViewTab === 'student' && <>
                 <ArchiveToggle archiveCount={0} />
+                {/* Festivals tab is added separately below */}
                 {archiveMode ? <div className="text-center py-12">
                     <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No archived community films.</p>
@@ -755,6 +752,15 @@ const StageWhisperPage: React.FC = () => {
                   </div>}
                 </>}
               </>}
+
+            {/* Festivals */}
+            {filmViewTab === 'festivals' && (
+              <div className="text-center py-16 border border-border rounded-xl bg-card/40">
+                <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No festivals listed yet.</p>
+                <p className="text-sm text-muted-foreground mt-1">Check back soon — festival listings coming.</p>
+              </div>
+            )}
           </>}
 
         {/* MUSIC CONTENT */}

@@ -1,34 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2, ChevronLeft, Send, Loader2, MessageSquare, PenSquare } from 'lucide-react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
-import { useMessages } from '@/hooks/useMessages';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import { NewMessageDialog } from '@/components/messages/NewMessageDialog';
-import SharedItemCard, { parseSharedItem } from '@/components/messages/SharedItemCard';
 
 const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useAuth();
-  const initialTab = searchParams.get('tab') === 'messages' ? 'messages' : 'notifications';
-  const [activeTab, setActiveTab] = useState<'notifications' | 'messages'>(initialTab);
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(
-    searchParams.get('thread') || null
-  );
-  const [messageText, setMessageText] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const {
     notifications,
@@ -40,51 +22,6 @@ const NotificationsPage: React.FC = () => {
 
   const { follow, isFollowing, isFollowPending } = useNetworkConnections();
   const { acceptRequest, rejectRequest } = useConnectionRequests();
-  const {
-    conversations,
-    loadingConversations,
-    totalUnread,
-    useConversation,
-    sendMessage,
-    markAsRead: markMessagesRead,
-  } = useMessages();
-
-  const { data: threadMessages = [], isLoading: threadLoading } = useConversation(
-    selectedThreadId || undefined
-  );
-
-  const selectedConversation = conversations.find((c) => c.user_id === selectedThreadId);
-
-  // Mark thread as read when opened
-  useEffect(() => {
-    if (selectedThreadId && selectedConversation?.unread_count) {
-      markMessagesRead.mutate(selectedThreadId);
-    }
-  }, [selectedThreadId, selectedConversation?.unread_count]);
-
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [threadMessages]);
-
-  // Sync tab to URL
-  useEffect(() => {
-    if (activeTab === 'messages') {
-      searchParams.set('tab', 'messages');
-    } else {
-      searchParams.delete('tab');
-    }
-    setSearchParams(searchParams, { replace: true });
-  }, [activeTab]);
-
-  // Open thread from ?thread= URL param (e.g., from email deep links)
-  useEffect(() => {
-    const threadParam = searchParams.get('thread');
-    if (threadParam) {
-      setActiveTab('messages');
-      setSelectedThreadId(threadParam);
-    }
-  }, [searchParams]);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -126,10 +63,8 @@ const NotificationsPage: React.FC = () => {
     const data = notification.data as Record<string, string>;
     switch (notification.type) {
       case 'message':
-        if (data.sender_id) {
-          setActiveTab('messages');
-          setSelectedThreadId(data.sender_id);
-        }
+        if (data.sender_id) navigate(`/messages/direct/${data.sender_id}`);
+        else navigate('/messages');
         break;
       case 'application':
         if (data.project_id) navigate(`/projects/${data.project_id}?application=${data.application_id || ''}`);
@@ -142,61 +77,24 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedThreadId) return;
-    await sendMessage.mutateAsync({ receiverId: selectedThreadId, content: messageText.trim() });
-    setMessageText('');
-  };
-
-  const formatThreadTime = (date: string) => {
-    const d = new Date(date);
-    const now = new Date();
-    const diffHours = (now.getTime() - d.getTime()) / (1000 * 60 * 60);
-    if (diffHours < 24) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (diffHours < 168) return d.toLocaleDateString([], { weekday: 'short' });
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-2xl font-display font-bold">Inbox</h1>
+          <h1 className="text-2xl font-display font-bold">Notifications</h1>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'notifications' | 'messages')}>
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="notifications" className="gap-2">
-              <Bell className="w-4 h-4" />
-              Notifications
-              {unreadCount > 0 && (
-                <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1 text-xs">
-                  {unreadCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="messages" className="gap-2">
-              <Mail className="w-4 h-4" />
-              Messages
-              {totalUnread > 0 && (
-                <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1 text-xs">
-                  {totalUnread}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="notifications" className="mt-0">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted-foreground">{notifications.length} notifications</span>
-              {unreadCount > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => markAllAsRead.mutate()} className="text-xs">
-                  <Check className="w-3 h-3 mr-1" /> Mark all read
-                </Button>
-              )}
-            </div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-muted-foreground">{notifications.length} notifications</span>
+            {unreadCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => markAllAsRead.mutate()} className="text-xs">
+                <Check className="w-3 h-3 mr-1" /> Mark all read
+              </Button>
+            )}
+          </div>
 
             {notifications.length === 0 ? (
           <div className="py-16 text-center text-muted-foreground">
@@ -278,172 +176,7 @@ const NotificationsPage: React.FC = () => {
             ))}
           </div>
         )}
-          </TabsContent>
-
-          <TabsContent value="messages" className="mt-0">
-            {selectedThreadId ? (
-              // Thread view
-              <div className="rounded-lg border border-border overflow-hidden flex flex-col h-[70vh]">
-                <div className="flex items-center gap-3 p-3 border-b border-border bg-muted/30">
-                  <Button variant="ghost" size="icon" onClick={() => setSelectedThreadId(null)}>
-                    <ChevronLeft className="w-5 h-5" />
-                  </Button>
-                  <Avatar
-                    className="w-9 h-9 cursor-pointer"
-                    onClick={() => navigate(`/profile/${selectedThreadId}`)}
-                  >
-                    <AvatarImage src={selectedConversation?.avatar_url || undefined} />
-                    <AvatarFallback>{selectedConversation?.display_name?.[0] || 'U'}</AvatarFallback>
-                  </Avatar>
-                  <p
-                    className="font-semibold text-sm cursor-pointer hover:underline"
-                    onClick={() => navigate(`/profile/${selectedThreadId}`)}
-                  >
-                    {selectedConversation?.display_name || 'Conversation'}
-                  </p>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {threadLoading ? (
-                    <div className="flex items-center justify-center h-full">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : threadMessages.length === 0 ? (
-                    <div className="text-center text-muted-foreground text-sm py-8">
-                      No messages yet — say hi!
-                    </div>
-                  ) : (
-                    threadMessages.map((msg) => {
-                      const sharedItem = parseSharedItem(msg.content);
-                      const isOwn = msg.sender_id === user?.id;
-                      return (
-                        <div key={msg.id} className={cn('flex', isOwn ? 'justify-end' : 'justify-start')}>
-                          <div
-                            className={cn(
-                              'max-w-[70%] rounded-2xl',
-                              sharedItem ? 'p-1' : 'px-4 py-2',
-                              isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                            )}
-                          >
-                            {sharedItem ? (
-                              <SharedItemCard data={sharedItem} isOwn={isOwn} />
-                            ) : (
-                              <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                            )}
-                            <p className={cn(
-                              'text-xs mt-1',
-                              sharedItem ? 'px-3 pb-1' : '',
-                              isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                            )}>
-                              {formatThreadTime(msg.created_at)}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                <form
-                  onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-                  className="flex gap-2 p-3 border-t border-border"
-                >
-                  <Input
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    placeholder="Type a message..."
-                    className="flex-1"
-                  />
-                  <Button type="submit" size="icon" disabled={!messageText.trim() || sendMessage.isPending}>
-                    {sendMessage.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                  </Button>
-                </form>
-              </div>
-            ) : (
-              // Conversation list
-              <>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">
-                    {conversations.length} conversation{conversations.length === 1 ? '' : 's'}
-                  </span>
-                  <NewMessageDialog
-                    onSelectUser={(uid) => setSelectedThreadId(uid)}
-                    trigger={
-                      <Button variant="ghost" size="sm" className="text-xs">
-                        <PenSquare className="w-3 h-3 mr-1" /> New message
-                      </Button>
-                    }
-                  />
-                </div>
-
-                {loadingConversations ? (
-                  <div className="py-16 flex justify-center">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : conversations.length === 0 ? (
-                  <div className="py-16 text-center text-muted-foreground">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-sm">No conversations yet</p>
-                    <p className="text-xs mt-1">Start a new message above</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-border rounded-lg border border-border overflow-hidden">
-                    {conversations.map((conv) => {
-                      const sharedItem = parseSharedItem(conv.last_message.content);
-                      const previewText = sharedItem
-                        ? `Shared: ${sharedItem.title || 'an item'}`
-                        : conv.last_message.content;
-                      const isOwn = conv.last_message.sender_id === user?.id;
-                      return (
-                        <button
-                          key={conv.user_id}
-                          onClick={() => setSelectedThreadId(conv.user_id)}
-                          className={cn(
-                            'w-full p-4 flex items-center gap-3 hover:bg-accent/50 transition-colors text-left',
-                            conv.unread_count > 0 && 'bg-accent/30'
-                          )}
-                        >
-                          <div className="relative">
-                            <Avatar className="w-12 h-12">
-                              <AvatarImage src={conv.avatar_url || undefined} />
-                              <AvatarFallback>{conv.display_name?.[0] || 'U'}</AvatarFallback>
-                            </Avatar>
-                            {conv.unread_count > 0 && (
-                              <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-medium">
-                                {conv.unread_count}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className={cn('truncate', conv.unread_count > 0 ? 'font-semibold' : 'font-medium')}>
-                                {conv.display_name || 'Unknown'}
-                              </span>
-                              <span className="text-xs text-muted-foreground shrink-0">
-                                {formatThreadTime(conv.last_message.created_at)}
-                              </span>
-                            </div>
-                            <p className={cn(
-                              'text-sm truncate mt-0.5',
-                              conv.unread_count > 0 ? 'text-foreground' : 'text-muted-foreground'
-                            )}>
-                              {isOwn && 'You: '}{previewText}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
     </div>
   );

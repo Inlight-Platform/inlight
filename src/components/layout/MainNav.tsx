@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, PieChart, Sun, Moon } from 'lucide-react';
+import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, Network, Sun, Moon, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
@@ -38,11 +38,12 @@ const InlightHomeIcon: React.FC<{className?: string;}> = ({ className }) =>
 
 const navItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
+{ label: 'Messages', icon: MessageSquare, path: '/messages' },
 { label: 'People', icon: Users, path: '/people' },
 { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
 { label: 'Industry Now', icon: Theater, path: '/stage-whisper' },
 { label: 'Resources', icon: BookOpen, path: '/resources' },
-{ label: 'Pie Chart', icon: PieChart, path: '/pie-chart' }];
+{ label: 'Your Network', icon: Network, path: '/pie-chart' }];
 
 
 export const MainNav: React.FC = () => {
@@ -52,7 +53,7 @@ export const MainNav: React.FC = () => {
   const { collapsed, toggleCollapsed } = useSidebarState();
   const { totalUnread } = useMessages();
   const { unreadCount: notifUnreadCount } = useNotifications();
-  const combinedUnread = totalUnread + notifUnreadCount;
+  const combinedUnread = notifUnreadCount;
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const { isDark, toggleTheme } = useTheme();
 
@@ -101,9 +102,16 @@ export const MainNav: React.FC = () => {
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
   // Build nav items with notifications at top when user is logged in
-  const allNavItems: NavItem[] = user ?
-  [{ label: 'Notifications', icon: Bell, path: '/notifications', badge: combinedUnread > 0 ? combinedUnread : undefined }, ...navItems] :
-  navItems;
+  const allNavItems: NavItem[] = user
+    ? [
+        { label: 'Notifications', icon: Bell, path: '/notifications', badge: combinedUnread > 0 ? combinedUnread : undefined },
+        ...navItems.map((item) =>
+          item.path === '/messages' && totalUnread > 0
+            ? { ...item, badge: totalUnread }
+            : item
+        ),
+      ]
+    : navItems;
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -141,26 +149,6 @@ export const MainNav: React.FC = () => {
               }
             </Link>
             <div className="flex items-center gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleTheme}
-                    aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                    className={cn(
-                      "h-7 w-7 transition-colors flex-shrink-0",
-                      isDark
-                        ? "text-[hsl(220_15%_60%)] hover:text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)]"
-                        : "text-[hsl(222_25%_30%)] hover:text-[hsl(45_85%_45%)] hover:bg-[hsl(45_95%_58%/0.15)]"
-                    )}>
-                    {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
-                  {isDark ? 'Light mode' : 'Dark mode'}
-                </TooltipContent>
-              </Tooltip>
               <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -298,6 +286,19 @@ export const MainNav: React.FC = () => {
                     </TooltipTrigger>
                     <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">Settings</TooltipContent>
                   </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={toggleTheme}
+                        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                        className="w-full flex items-center justify-center py-3 rounded-xl text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-white transition-colors">
+                        {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
+                      {isDark ? 'Light mode' : 'Dark mode'}
+                    </TooltipContent>
+                  </Tooltip>
                   {isAdmin &&
               <Tooltip>
                       <TooltipTrigger asChild>
@@ -346,6 +347,13 @@ export const MainNav: React.FC = () => {
                     <Settings className="w-5 h-5" />
                     Settings
                   </Link>
+                  <button
+                    onClick={toggleTheme}
+                    aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-white transition-colors">
+                    {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                    {isDark ? 'Light mode' : 'Dark mode'}
+                  </button>
                   {isAdmin &&
               <Link
                 to="/admin"
