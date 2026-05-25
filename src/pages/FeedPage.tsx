@@ -745,30 +745,6 @@ const FeedPage: React.FC = () => {
               </div>
             )}
 
-            {/* View Mode Toggle */}
-            {contentFilter !== 'projects' && contentFilter !== 'updates' && (
-              <div className="flex items-center justify-end gap-1 mb-4">
-                <Button
-                  variant={viewMode === 'bento' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('bento')}
-                  className={`gap-1.5 ${viewMode === 'bento' ? navVioletButtonClass : navVioletOutlineClass}`}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                  Bento
-                </Button>
-                <Button
-                  variant={viewMode === 'scroll' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('scroll')}
-                  className={`gap-1.5 ${viewMode === 'scroll' ? navVioletButtonClass : navVioletOutlineClass}`}
-                >
-                  <Rows className="h-4 w-4" />
-                  Scroll
-                </Button>
-              </div>
-            )}
-
             {/* Show project sub-content when on projects tab */}
             {contentFilter === 'projects' ? (
               renderProjectsContent()
