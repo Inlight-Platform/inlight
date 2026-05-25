@@ -149,6 +149,7 @@ const ProfileSettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { startTour } = useTour();
+  const { theme, setTheme } = useTheme();
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState('');
