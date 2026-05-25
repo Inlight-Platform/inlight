@@ -654,7 +654,7 @@ html.light [data-nav-shell] [class~="hover:bg-[hsl(220_30%_15%)]"]:hover {
 html.light [data-nav-shell] [class~="from-white"] {
   --tw-gradient-from: hsl(222 35% 12%) var(--tw-gradient-from-position);
   --tw-gradient-to: hsl(222 35% 12% / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), hsl(45 85% 45%) var(--tw-gradient-via-position, 50%), var(--tw-gradient-to);
+  --tw-gradient-stops: var(--tw-gradient-from), hsl(38 95% 28%) var(--tw-gradient-via-position, 50%), var(--tw-gradient-to);
 }
 /* Decorative gold hairlines look harsh on light bg — soften them. */
 html.light [data-nav-shell] [class~="border-[hsl(45_95%_58%/0.1)]"] {
