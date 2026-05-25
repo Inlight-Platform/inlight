@@ -1,34 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2, ChevronLeft, Send, Loader2, MessageSquare, PenSquare } from 'lucide-react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
-import { useMessages } from '@/hooks/useMessages';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import { NewMessageDialog } from '@/components/messages/NewMessageDialog';
-import SharedItemCard, { parseSharedItem } from '@/components/messages/SharedItemCard';
 
 const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useAuth();
-  const initialTab = searchParams.get('tab') === 'messages' ? 'messages' : 'notifications';
-  const [activeTab, setActiveTab] = useState<'notifications' | 'messages'>(initialTab);
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(
-    searchParams.get('thread') || null
-  );
-  const [messageText, setMessageText] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const {
     notifications,
@@ -40,51 +22,6 @@ const NotificationsPage: React.FC = () => {
 
   const { follow, isFollowing, isFollowPending } = useNetworkConnections();
   const { acceptRequest, rejectRequest } = useConnectionRequests();
-  const {
-    conversations,
-    loadingConversations,
-    totalUnread,
-    useConversation,
-    sendMessage,
-    markAsRead: markMessagesRead,
-  } = useMessages();
-
-  const { data: threadMessages = [], isLoading: threadLoading } = useConversation(
-    selectedThreadId || undefined
-  );
-
-  const selectedConversation = conversations.find((c) => c.user_id === selectedThreadId);
-
-  // Mark thread as read when opened
-  useEffect(() => {
-    if (selectedThreadId && selectedConversation?.unread_count) {
-      markMessagesRead.mutate(selectedThreadId);
-    }
-  }, [selectedThreadId, selectedConversation?.unread_count]);
-
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [threadMessages]);
-
-  // Sync tab to URL
-  useEffect(() => {
-    if (activeTab === 'messages') {
-      searchParams.set('tab', 'messages');
-    } else {
-      searchParams.delete('tab');
-    }
-    setSearchParams(searchParams, { replace: true });
-  }, [activeTab]);
-
-  // Open thread from ?thread= URL param (e.g., from email deep links)
-  useEffect(() => {
-    const threadParam = searchParams.get('thread');
-    if (threadParam) {
-      setActiveTab('messages');
-      setSelectedThreadId(threadParam);
-    }
-  }, [searchParams]);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -126,10 +63,8 @@ const NotificationsPage: React.FC = () => {
     const data = notification.data as Record<string, string>;
     switch (notification.type) {
       case 'message':
-        if (data.sender_id) {
-          setActiveTab('messages');
-          setSelectedThreadId(data.sender_id);
-        }
+        if (data.sender_id) navigate(`/messages/direct/${data.sender_id}`);
+        else navigate('/messages');
         break;
       case 'application':
         if (data.project_id) navigate(`/projects/${data.project_id}?application=${data.application_id || ''}`);
@@ -142,61 +77,24 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedThreadId) return;
-    await sendMessage.mutateAsync({ receiverId: selectedThreadId, content: messageText.trim() });
-    setMessageText('');
-  };
-
-  const formatThreadTime = (date: string) => {
-    const d = new Date(date);
-    const now = new Date();
-    const diffHours = (now.getTime() - d.getTime()) / (1000 * 60 * 60);
-    if (diffHours < 24) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (diffHours < 168) return d.toLocaleDateString([], { weekday: 'short' });
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-2xl font-display font-bold">Inbox</h1>
+          <h1 className="text-2xl font-display font-bold">Notifications</h1>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'notifications' | 'messages')}>
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="notifications" className="gap-2">
-              <Bell className="w-4 h-4" />
-              Notifications
-              {unreadCount > 0 && (
-                <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1 text-xs">
-                  {unreadCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="messages" className="gap-2">
-              <Mail className="w-4 h-4" />
-              Messages
-              {totalUnread > 0 && (
-                <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1 text-xs">
-                  {totalUnread}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="notifications" className="mt-0">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted-foreground">{notifications.length} notifications</span>
-              {unreadCount > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => markAllAsRead.mutate()} className="text-xs">
-                  <Check className="w-3 h-3 mr-1" /> Mark all read
-                </Button>
-              )}
-            </div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-muted-foreground">{notifications.length} notifications</span>
+            {unreadCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => markAllAsRead.mutate()} className="text-xs">
+                <Check className="w-3 h-3 mr-1" /> Mark all read
+              </Button>
+            )}
+          </div>
 
             {notifications.length === 0 ? (
           <div className="py-16 text-center text-muted-foreground">
