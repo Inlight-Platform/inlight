@@ -28,10 +28,12 @@ export default {
   				'sans-serif'
   			],
   			display: [
-  				'Space Grotesk',
-  				'system-ui',
-  				'sans-serif'
-  			],
+  			'Playfair Display',
+  			'Lora',
+  			'ui-serif',
+  			'Georgia',
+  			'serif'
+  		],
   			serif: [
   				'Lora',
   				'ui-serif',
