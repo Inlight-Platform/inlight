@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, PieChart } from 'lucide-react';
+import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, PieChart, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ import { useMessages } from '@/hooks/useMessages';
 import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/hooks/useNotifications';
 import { SignOutDialog } from '@/components/ui/sign-out-dialog';
+import { useTheme } from '@/hooks/useTheme';
 
 interface NavItem {
   label: string;
@@ -49,6 +50,7 @@ export const MainNav: React.FC = () => {
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
   const { collapsed, toggleCollapsed } = useSidebarState();
+  const { effectiveTheme, toggleTheme, isForced } = useTheme();
   const { totalUnread } = useMessages();
   const { unreadCount: notifUnreadCount } = useNotifications();
   const combinedUnread = totalUnread + notifUnreadCount;
@@ -261,6 +263,20 @@ export const MainNav: React.FC = () => {
                       {profile?.display_name || 'My Profile'}
                     </TooltipContent>
                   </Tooltip>
+                  {!isForced && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={toggleTheme}
+                          className="w-full flex items-center justify-center py-3 rounded-xl text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-[hsl(45_95%_58%)] transition-colors">
+                          {effectiveTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
+                        {effectiveTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Link
@@ -313,6 +329,14 @@ export const MainNav: React.FC = () => {
                       {profile?.display_name || 'My Profile'}
                     </span>
                   </Link>
+                  {!isForced && (
+                    <button
+                      onClick={toggleTheme}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-white transition-colors">
+                      {effectiveTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                      {effectiveTheme === 'dark' ? 'Light mode' : 'Dark mode'}
+                    </button>
+                  )}
                   <Link
                 to="/settings"
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-white transition-colors">
