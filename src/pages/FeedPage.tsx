@@ -355,6 +355,39 @@ const FeedPage: React.FC = () => {
   const savedProjectsList = applyProjectFilters(allProjects.filter(p => savedProjectIds.has(p.id)));
   const archivedProjectsList = applyProjectFilters(archivedProjects);
 
+  // Helper to convert project rows to FeedItemData for bento rendering
+  const projectsToFeedItems = (list: typeof allProjects): FeedItemData[] =>
+    list.map((project) => ({
+      id: project.id,
+      type: 'project' as const,
+      user_id: project.creator_id,
+      title: project.title,
+      description: project.description,
+      image_url: project.header_image_url || project.main_image_url,
+      created_at: project.created_at,
+      category: project.category,
+      project_status: project.status,
+      link_url: (project as any).link_url,
+      link_title: (project as any).link_title,
+      creator_profile: project.creator_profile,
+    }));
+
+  const renderProjectBento = (list: typeof allProjects) => (
+    <div
+      className="grid grid-cols-12 gap-4 sm:gap-5 auto-rows-[220px]"
+      style={{ gridAutoFlow: 'dense' }}
+    >
+      {projectsToFeedItems(list).map((item, idx) => (
+        <FeedBentoCard
+          key={`project-${item.id}`}
+          item={item}
+          size={getBentoSize(idx)}
+          onClick={() => navigate(`/projects/${item.id}`)}
+        />
+      ))}
+    </div>
+  );
+
   // Convert projects to feed items for grid display
   const projectFeedItems: FeedItemData[] = useMemo(() => {
     return activeProjects.map((project) => ({
@@ -589,11 +622,7 @@ const FeedPage: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {feedProjects.map(project => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
-              </div>
+              renderProjectBento(feedProjects)
             )}
           </TabsContent>
 
@@ -612,11 +641,7 @@ const FeedPage: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {networkProjects.map(project => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
-              </div>
+              renderProjectBento(networkProjects)
             )}
           </TabsContent>
 
@@ -633,11 +658,7 @@ const FeedPage: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {savedProjectsList.map(project => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
-              </div>
+              renderProjectBento(savedProjectsList)
             )}
           </TabsContent>
 
@@ -654,11 +675,7 @@ const FeedPage: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {archivedProjectsList.map(project => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
-              </div>
+              renderProjectBento(archivedProjectsList)
             )}
           </TabsContent>
         </Tabs>
