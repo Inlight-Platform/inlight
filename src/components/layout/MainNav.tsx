@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, PieChart } from 'lucide-react';
+import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, PieChart, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ import { useMessages } from '@/hooks/useMessages';
 import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/hooks/useNotifications';
 import { SignOutDialog } from '@/components/ui/sign-out-dialog';
+import { useTheme } from '@/hooks/useTheme';
 
 interface NavItem {
   label: string;
@@ -49,6 +50,7 @@ export const MainNav: React.FC = () => {
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
   const { collapsed, toggleCollapsed } = useSidebarState();
+  const { effectiveTheme, toggleTheme, isForced } = useTheme();
   const { totalUnread } = useMessages();
   const { unreadCount: notifUnreadCount } = useNotifications();
   const combinedUnread = totalUnread + notifUnreadCount;
