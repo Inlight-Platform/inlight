@@ -836,11 +836,11 @@ const FeedPage: React.FC = () => {
                         key={`${item.type}-${item.id}`}
                         item={item}
                         size={getBentoSize(idx)}
-                        onClick={() => {
+                       onClick={() => {
                           if (item.type === 'project') {
                             navigate(`/projects/${item.id}`);
                           } else if (item.type === 'event') {
-                            navigate('/events');
+                            setSelectedItem(item);
                           } else if (item.type === 'show') {
                             navigate('/stage-whisper');
                           } else if (item.type === 'open_role' && item.project_id) {
