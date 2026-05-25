@@ -598,10 +598,6 @@ const FeedPage: React.FC = () => {
           <div className="overflow-x-auto scrollbar-thin -mx-3 px-3 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mb-4">
               <TabsTrigger value="feed" className="flex-shrink-0 whitespace-nowrap">All</TabsTrigger>
-              <TabsTrigger value="my-network" className="gap-1 flex-shrink-0 whitespace-nowrap">
-                <Users className="w-3 h-3" />
-                <span className="hidden sm:inline">My </span>Network
-              </TabsTrigger>
               <TabsTrigger value="saved" className="flex-shrink-0 whitespace-nowrap">Saved</TabsTrigger>
               <TabsTrigger value="archive" className="gap-1 flex-shrink-0 whitespace-nowrap">
                 <Archive className="w-3 h-3" />
@@ -767,26 +763,6 @@ const FeedPage: React.FC = () => {
               renderProjectsContent()
             ) : (
               <>
-                {/* Network Filters (for non-project tabs) */}
-                <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-                  <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span className="text-sm text-muted-foreground flex-shrink-0">From:</span>
-                  {networkFilters.map((filter) => (
-                    <Button
-                      key={filter.value}
-                      variant={networkFilter === filter.value ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => setNetworkFilter(filter.value)}
-                      className="flex-shrink-0"
-                    >
-                      {filter.label}
-                      {filter.count !== undefined && filter.count > 0 && (
-                        <span className="ml-1.5 text-xs opacity-70">({filter.count})</span>
-                      )}
-                    </Button>
-                  ))}
-                </div>
-
                 {/* Feed Items */}
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">
