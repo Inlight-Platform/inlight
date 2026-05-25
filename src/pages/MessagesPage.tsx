@@ -181,12 +181,78 @@ const MessagesPage: React.FC = () => {
             <h1 className="text-2xl font-display font-bold">Messages</h1>
           </div>
         </header>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center text-muted-foreground">
-            <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">No conversation selected</p>
-            <p className="text-sm">Open a chat from a profile or project page</p>
-          </div>
+        <div className="flex-1 overflow-y-auto">
+          {loadingConversations || loadingGroupChats ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : conversations.length === 0 && groupChats.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+              <MessageSquare className="w-16 h-16 mb-4 opacity-50" />
+              <p className="text-lg font-medium">No conversations yet</p>
+              <p className="text-sm">Open a chat from a profile or project page</p>
+            </div>
+          ) : (
+            <div className="max-w-2xl mx-auto py-2">
+              {groupChats.map((gc) => (
+                <button
+                  key={`g-${gc.id}`}
+                  onClick={() => navigate(`/messages/group/${gc.project_id}`)}
+                  className="w-full p-4 flex items-center gap-3 hover:bg-accent/50 transition-colors text-left border-b border-border"
+                >
+                  <Avatar className="w-12 h-12 bg-primary/10">
+                    <AvatarFallback className="bg-primary/10">
+                      <Users className="w-5 h-5 text-primary" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{gc.name}</p>
+                    <p className="text-xs text-muted-foreground">Team chat</p>
+                  </div>
+                </button>
+              ))}
+              {conversations.map((c) => (
+                <button
+                  key={`d-${c.user_id}`}
+                  onClick={() => navigate(`/messages/direct/${c.user_id}`)}
+                  className="w-full p-4 flex items-center gap-3 hover:bg-accent/50 transition-colors text-left border-b border-border"
+                >
+                  <div className="relative">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={c.avatar_url || undefined} />
+                      <AvatarFallback>{c.display_name?.[0] || 'U'}</AvatarFallback>
+                    </Avatar>
+                    {c.unread_count > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                        {c.unread_count}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={cn('font-medium truncate', c.unread_count > 0 && 'font-semibold')}>
+                        {c.display_name || 'Unknown'}
+                      </span>
+                      {c.last_message && (
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {formatTime(c.last_message.created_at)}
+                        </span>
+                      )}
+                    </div>
+                    {c.last_message && (
+                      <p className={cn(
+                        'text-sm truncate',
+                        c.unread_count > 0 ? 'text-foreground' : 'text-muted-foreground'
+                      )}>
+                        {c.last_message.sender_id === user?.id && 'You: '}
+                        {c.last_message.content}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
