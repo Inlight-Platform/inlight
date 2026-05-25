@@ -251,7 +251,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
       className={cn(
         baseShell,
         sizeClasses.wide,
-        'border border-primary/10 bg-gradient-to-br from-primary/10 to-[hsl(240_70%_15%)]/30 hover:scale-[1.01]'
+        'border border-primary/20 bg-gradient-to-br from-[hsl(240_50%_14%)] to-[hsl(222_45%_7%)] text-white hover:scale-[1.01]'
       )}
     >
       <div className="flex h-full flex-col justify-between p-5">
@@ -273,23 +273,23 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
             <span className={cn('mb-1 inline-block rounded-lg bg-primary/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.2em]', meta.accent)}>
               {meta.label}
             </span>
-            <h3 className="font-display text-lg font-extrabold leading-tight text-foreground line-clamp-2">
+            <h3 className="font-display text-lg font-extrabold leading-tight text-white line-clamp-2">
               {title}
             </h3>
             {subtitle && subtitle !== title && (
-              <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{subtitle}</p>
+              <p className="mt-1 text-xs text-white/70 line-clamp-2">{subtitle}</p>
             )}
           </div>
         </div>
-        <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-3">
+        <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
           <div className="flex items-center gap-2">
             <Avatar className="h-5 w-5">
               <AvatarImage src={avatarUrl || undefined} />
               <AvatarFallback className="text-[8px]">{displayName[0]}</AvatarFallback>
             </Avatar>
-            <span className="truncate text-xs font-semibold text-muted-foreground">{displayName}</span>
+            <span className="truncate text-xs font-semibold text-white/80">{displayName}</span>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-white/60">
             {timeAgo}
           </span>
         </div>
