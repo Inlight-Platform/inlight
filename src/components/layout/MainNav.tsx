@@ -150,26 +150,6 @@ export const MainNav: React.FC = () => {
             </Link>
             <div className="flex items-center gap-1">
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleTheme}
-                    aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                    className={cn(
-                      "h-7 w-7 transition-colors flex-shrink-0",
-                      isDark
-                        ? "text-[hsl(220_15%_60%)] hover:text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)]"
-                        : "text-[hsl(222_25%_30%)] hover:text-[hsl(45_85%_45%)] hover:bg-[hsl(45_95%_58%/0.15)]"
-                    )}>
-                    {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
-                  {isDark ? 'Light mode' : 'Dark mode'}
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
