@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera, MessageCircle, Lock, Globe, Bell, Mail, Briefcase, X, Plus, Eye, EyeOff, KeyRound, Star, Compass } from 'lucide-react';
+import { Sun, Moon, Palette } from 'lucide-react';
 import ShowcaseSettings from '@/components/profile/ShowcaseSettings';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MediaUploader } from '@/components/profile/MediaUploader';
@@ -21,6 +22,7 @@ import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidat
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useTour } from '@/hooks/useTour';
+import { useTheme } from '@/hooks/useTheme';
 
 interface Profile {
   id: string;
@@ -54,6 +56,49 @@ interface MediaItem {
 }
 
 const ChangePasswordCard: React.FC = () => {
+  return _ChangePasswordCardImpl();
+};
+
+const AppearanceCard: React.FC = () => {
+  const { isDark, setTheme } = useTheme();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Palette className="h-5 w-5" />
+          Appearance
+        </CardTitle>
+        <CardDescription>
+          Choose how Inlight looks to you. Switches the entire app between dark and light mode.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-muted">
+              {isDark ? <Moon className="w-4 h-4 text-muted-foreground" /> : <Sun className="w-4 h-4 text-muted-foreground" />}
+            </div>
+            <div>
+              <p className="font-medium">{isDark ? 'Dark mode' : 'Light mode'}</p>
+              <p className="text-sm text-muted-foreground">
+                {isDark
+                  ? 'The signature deep-space Inlight aesthetic.'
+                  : 'A bright, blue-tinted surface for daytime browsing.'}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={!isDark}
+            onCheckedChange={(checked) => setTheme(checked ? 'light' : 'dark')}
+            aria-label="Toggle light mode"
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const _ChangePasswordCardImpl = () => {
   const { updatePassword } = useAuth();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -585,6 +630,9 @@ const ProfileSettingsPage: React.FC = () => {
             </RadioGroup>
           </CardContent>
         </Card>
+
+        {/* Appearance / Theme */}
+        <AppearanceCard />
 
         {/* Email Notification Settings */}
         <Card>

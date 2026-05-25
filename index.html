@@ -4,6 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Inlight | The Professional Network for Creatives</title>
+    <script>
+      // Apply persisted theme before first paint to avoid flash.
+      (function () {
+        try {
+          var t = localStorage.getItem('inlight-theme');
+          if (t !== 'light' && t !== 'dark') t = 'dark';
+          var h = document.documentElement;
+          h.classList.toggle('dark', t === 'dark');
+          h.classList.toggle('light', t === 'light');
+          h.style.colorScheme = t;
+        } catch (e) {}
+      })();
+    </script>
     <meta name="description" content="A humanity-first networking platform for the entertainment industry.">
     <meta name="author" content="Inlight" />
     <link rel="icon" type="image/png" href="/inlight-logo.png">
