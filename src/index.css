@@ -621,3 +621,42 @@
 .driver-popover-arrow-side-right.driver-popover-arrow {
   border-right-color: hsl(var(--card));
 }
+
+/* ============================================ */
+/* Light-mode overrides for the nav shell        */
+/* The sidebar + mobile nav use hard-coded HSL   */
+/* arbitrary Tailwind classes for the dark look. */
+/* When the user opts into light mode we re-map  */
+/* the muted greys and the white wordmark so     */
+/* text remains legible on the light surface,    */
+/* without touching the colored CTA gradients.   */
+/* ============================================ */
+html.light [data-nav-shell] [class~="text-[hsl(220_15%_70%)]"],
+html.light [data-nav-shell] [class~="text-[hsl(220_15%_60%)]"] {
+  color: hsl(222 25% 30%);
+}
+html.light [data-nav-shell] [class~="hover:text-white"]:hover,
+html.light [data-nav-shell] [class~="text-white"]:not([class~="bg-gradient-to-r"]):not([class~="from-[hsl(220_85%_55%)]"]):not([class*="AvatarFallback"]) {
+  /* leave .text-white that sits on a blue gradient button untouched */
+}
+/* Plain text-white that's directly on the nav surface (the user's
+   display name) needs darkening in light mode. */
+html.light [data-nav-shell] .truncate[class~="text-white"] {
+  color: hsl(222 35% 12%);
+}
+/* Replace hover dark slate surface with a light slate surface. */
+html.light [data-nav-shell] [class~="hover:bg-[hsl(220_30%_15%)]"]:hover {
+  background-color: hsl(220 20% 92%);
+  color: hsl(222 35% 10%);
+}
+/* Inlight wordmark gradient — swap the white stop for ink so the
+   text stays readable against the light sidebar background. */
+html.light [data-nav-shell] [class~="from-white"] {
+  --tw-gradient-from: hsl(222 35% 12%) var(--tw-gradient-from-position);
+  --tw-gradient-to: hsl(222 35% 12% / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), hsl(45 85% 45%) var(--tw-gradient-via-position, 50%), var(--tw-gradient-to);
+}
+/* Decorative gold hairlines look harsh on light bg — soften them. */
+html.light [data-nav-shell] [class~="border-[hsl(45_95%_58%/0.1)]"] {
+  border-color: hsl(222 20% 88%);
+}
