@@ -4,7 +4,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { capitalizeName } from '@/lib/utils';
 
 const COLORS = [
   'hsl(0, 70%, 55%)',    // red
@@ -33,6 +35,7 @@ const COLORS = [
 const NetworkPieChartPage: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   // Fetch current user's profile (for role + school context)
   const { data: myProfile } = useQuery({
@@ -106,6 +109,25 @@ const NetworkPieChartPage: React.FC = () => {
   });
 
   const isLoading = loadingConnections || loadingProfiles;
+
+  // Fetch 3 suggested profiles for the Daily Match card section
+  const { data: suggestedPeople = [] } = useQuery({
+    queryKey: ['network-suggested-people', user?.id, connections],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const excludeIds = [user.id, ...connections];
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, role, avatar_url, bio, badges, location')
+        .not('user_id', 'in', `(${excludeIds.join(',')})`)
+        .not('display_name', 'is', null)
+        .limit(20);
+      if (error) throw error;
+      const shuffled = [...(data || [])].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, 3);
+    },
+    enabled: !!user?.id,
+  });
 
   // Build suggestions for missing affiliations
   const suggestions = React.useMemo(() => {
@@ -269,7 +291,7 @@ const NetworkPieChartPage: React.FC = () => {
           {hasPersonalization ? (
             <>
               Your network as a{' '}
-              <em className="italic font-display">{userRole.toLowerCase()}</em> from{' '}
+              <span className="font-display">{userRole.toLowerCase()}</span> from{' '}
               {userSchoolName}.
             </>
           ) : (
@@ -422,6 +444,115 @@ const NetworkPieChartPage: React.FC = () => {
                     <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                   </button>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {suggestedPeople.length > 0 && (
+            <div className="space-y-4 pt-2">
+              <div className="text-center space-y-2">
+                <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+                  Daily Matches · Picked for you
+                </div>
+                <h2 className="font-display text-2xl sm:text-3xl text-foreground">
+                  People, picked for today.
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {suggestedPeople.map((p, idx) => {
+                  const name = capitalizeName(p.display_name || 'Member');
+                  const studioBadge = (p.badges || []).find((b: string) => {
+                    const tag = b.replace('#', '').toLowerCase();
+                    return studios.some((s) => s.badge_tag?.toLowerCase() === tag);
+                  });
+                  const studio = studioBadge
+                    ? studios.find(
+                        (s) => s.badge_tag?.toLowerCase() === studioBadge.replace('#', '').toLowerCase()
+                      )
+                    : null;
+                  const meta = [p.role, studio?.name].filter(Boolean).join(' · ').toUpperCase();
+                  const tags = (p.badges || []).slice(0, 3).map((b: string) => b.replace('#', ''));
+                  return (
+                    <div
+                      key={p.user_id}
+                      className="rounded-2xl bg-card border border-border overflow-hidden flex flex-col shadow-sm"
+                    >
+                      <div
+                        className="relative aspect-[3/4] bg-muted cursor-pointer"
+                        onClick={() => navigate(`/profile/${p.user_id}`)}
+                      >
+                        {p.avatar_url ? (
+                          <img
+                            src={p.avatar_url}
+                            alt={name}
+                            className="absolute inset-0 h-full w-full object-cover grayscale"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-3xl font-display text-muted-foreground">
+                            {initialsOf(name)}
+                          </div>
+                        )}
+                        <div className="absolute top-3 left-3 text-[9px] tracking-[0.2em] text-white/90 uppercase">
+                          Inlight · Daily Match
+                        </div>
+                        <div className="absolute top-3 right-3 rounded-full bg-black/60 px-2 py-0.5 text-[9px] tracking-widest text-white">
+                          #{String(idx + 1).padStart(3, '0')}
+                        </div>
+                        <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent text-white">
+                          {meta && (
+                            <div className="text-[9px] tracking-[0.2em] mb-1 opacity-90">{meta}</div>
+                          )}
+                          <div className="font-display text-xl leading-tight">{name}</div>
+                          {p.location && (
+                            <div className="text-[11px] opacity-80 mt-0.5">{p.location}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="p-4 flex flex-col gap-3 flex-1">
+                        {p.bio && (
+                          <p className="text-sm text-muted-foreground line-clamp-3">{p.bio}</p>
+                        )}
+                        {tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {tags.map((t: string) => (
+                              <span
+                                key={t}
+                                className="rounded-full border border-border px-2.5 py-1 text-[10px] uppercase tracking-wider text-muted-foreground"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex gap-2 mt-auto pt-1">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/profile/${p.user_id}`)}
+                            className="flex-1 rounded-full border border-border px-3 py-2 text-[11px] tracking-widest uppercase text-foreground hover:bg-muted/60 transition-colors"
+                          >
+                            View Profile
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/profile/${p.user_id}`)}
+                            className="flex-1 rounded-full bg-foreground text-background px-3 py-2 text-[11px] tracking-widest uppercase inline-flex items-center justify-center gap-1 hover:opacity-90 transition-opacity"
+                          >
+                            <Plus className="h-3 w-3" /> Connect
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => navigate('/people')}
+                  className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Explore more people →
+                </button>
               </div>
             </div>
           )}
