@@ -752,6 +752,15 @@ const StageWhisperPage: React.FC = () => {
                   </div>}
                 </>}
               </>}
+
+            {/* Festivals */}
+            {filmViewTab === 'festivals' && (
+              <div className="text-center py-16 border border-border rounded-xl bg-card/40">
+                <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No festivals listed yet.</p>
+                <p className="text-sm text-muted-foreground mt-1">Check back soon — festival listings coming.</p>
+              </div>
+            )}
           </>}
 
         {/* MUSIC CONTENT */}
