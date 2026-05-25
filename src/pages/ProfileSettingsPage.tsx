@@ -588,6 +588,9 @@ const ProfileSettingsPage: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Appearance / Theme */}
+        <AppearanceCard />
+
         {/* Email Notification Settings */}
         <Card>
           <CardHeader>
