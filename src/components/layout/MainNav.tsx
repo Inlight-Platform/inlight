@@ -286,6 +286,19 @@ export const MainNav: React.FC = () => {
                     </TooltipTrigger>
                     <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">Settings</TooltipContent>
                   </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={toggleTheme}
+                        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                        className="w-full flex items-center justify-center py-3 rounded-xl text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-white transition-colors">
+                        {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
+                      {isDark ? 'Light mode' : 'Dark mode'}
+                    </TooltipContent>
+                  </Tooltip>
                   {isAdmin &&
               <Tooltip>
                       <TooltipTrigger asChild>
