@@ -293,7 +293,7 @@ const FeedPage: React.FC = () => {
     "bg-gradient-to-r from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white shadow-lg shadow-[hsl(220_85%_55%/0.25)] hover:text-white hover:from-[hsl(220_85%_58%)] hover:to-[hsl(240_70%_53%)]";
 
   const navVioletOutlineClass =
-    "border-[hsl(240_70%_50%/0.28)] bg-[hsl(240_70%_50%/0.08)] text-[hsl(220_15%_86%)] hover:text-white hover:bg-[hsl(220_30%_15%)] hover:border-[hsl(45_95%_58%/0.24)]";
+    "border-[hsl(240_70%_50%/0.28)] bg-[hsl(240_70%_50%/0.08)] text-[hsl(222_35%_12%)] dark:text-[hsl(220_15%_86%)] hover:text-[hsl(222_35%_8%)] dark:hover:text-white hover:bg-[hsl(220_20%_92%)] dark:hover:bg-[hsl(220_30%_15%)] hover:border-[hsl(45_95%_58%/0.24)]";
 
   // Helper to normalize status
   const normalizeStatus = (s: string | null): string => {
