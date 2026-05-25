@@ -691,6 +691,7 @@ const StageWhisperPage: React.FC = () => {
             {/* Community / Student Films */}
             {filmViewTab === 'student' && <>
                 <ArchiveToggle archiveCount={0} />
+                {/* Festivals tab is added separately below */}
                 {archiveMode ? <div className="text-center py-12">
                     <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No archived community films.</p>
