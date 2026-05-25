@@ -138,6 +138,16 @@ export function useAuth() {
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           void maybeSendShowcaseWelcome(session);
         }
+
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            const key = 'inlight-login-count';
+            const current = Number(localStorage.getItem(key) ?? '0');
+            localStorage.setItem(key, String(current + 1));
+          } catch {
+            /* ignore storage errors */
+          }
+        }
       }
     );
 
