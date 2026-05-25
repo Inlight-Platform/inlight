@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, PieChart, Sun, Moon } from 'lucide-react';
+import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, Network, Sun, Moon, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
@@ -38,11 +38,12 @@ const InlightHomeIcon: React.FC<{className?: string;}> = ({ className }) =>
 
 const navItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
+{ label: 'Messages', icon: MessageSquare, path: '/messages' },
 { label: 'People', icon: Users, path: '/people' },
 { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
 { label: 'Industry Now', icon: Theater, path: '/stage-whisper' },
 { label: 'Resources', icon: BookOpen, path: '/resources' },
-{ label: 'Pie Chart', icon: PieChart, path: '/pie-chart' }];
+{ label: 'Your Network', icon: Network, path: '/pie-chart' }];
 
 
 export const MainNav: React.FC = () => {
@@ -52,7 +53,7 @@ export const MainNav: React.FC = () => {
   const { collapsed, toggleCollapsed } = useSidebarState();
   const { totalUnread } = useMessages();
   const { unreadCount: notifUnreadCount } = useNotifications();
-  const combinedUnread = totalUnread + notifUnreadCount;
+  const combinedUnread = notifUnreadCount;
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const { isDark, toggleTheme } = useTheme();
 
@@ -101,9 +102,16 @@ export const MainNav: React.FC = () => {
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
   // Build nav items with notifications at top when user is logged in
-  const allNavItems: NavItem[] = user ?
-  [{ label: 'Notifications', icon: Bell, path: '/notifications', badge: combinedUnread > 0 ? combinedUnread : undefined }, ...navItems] :
-  navItems;
+  const allNavItems: NavItem[] = user
+    ? [
+        { label: 'Notifications', icon: Bell, path: '/notifications', badge: combinedUnread > 0 ? combinedUnread : undefined },
+        ...navItems.map((item) =>
+          item.path === '/messages' && totalUnread > 0
+            ? { ...item, badge: totalUnread }
+            : item
+        ),
+      ]
+    : navItems;
 
   return (
     <TooltipProvider delayDuration={0}>
