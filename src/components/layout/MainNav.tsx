@@ -347,6 +347,13 @@ export const MainNav: React.FC = () => {
                     <Settings className="w-5 h-5" />
                     Settings
                   </Link>
+                  <button
+                    onClick={toggleTheme}
+                    aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-white transition-colors">
+                    {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                    {isDark ? 'Light mode' : 'Dark mode'}
+                  </button>
                   {isAdmin &&
               <Link
                 to="/admin"
