@@ -745,30 +745,6 @@ const FeedPage: React.FC = () => {
               </div>
             )}
 
-            {/* View Mode Toggle */}
-            {contentFilter !== 'projects' && contentFilter !== 'updates' && (
-              <div className="flex items-center justify-end gap-1 mb-4">
-                <Button
-                  variant={viewMode === 'bento' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('bento')}
-                  className={`gap-1.5 ${viewMode === 'bento' ? navVioletButtonClass : navVioletOutlineClass}`}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                  Bento
-                </Button>
-                <Button
-                  variant={viewMode === 'scroll' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('scroll')}
-                  className={`gap-1.5 ${viewMode === 'scroll' ? navVioletButtonClass : navVioletOutlineClass}`}
-                >
-                  <Rows className="h-4 w-4" />
-                  Scroll
-                </Button>
-              </div>
-            )}
-
             {/* Show project sub-content when on projects tab */}
             {contentFilter === 'projects' ? (
               renderProjectsContent()
@@ -820,16 +796,6 @@ const FeedPage: React.FC = () => {
                         Log in to post
                       </Button>
                     )}
-                  </div>
-                ) : contentFilter === 'updates' || viewMode === 'scroll' ? (
-                  <div className="flex flex-col gap-4 max-w-xl mx-auto">
-                    {feedItems.map((item) => (
-                      <FeedItem
-                        key={`${item.type}-${item.id}`}
-                        item={item}
-                        networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
-                      />
-                    ))}
                   </div>
                 ) : (
                   <div
