@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera, MessageCircle, Lock, Globe, Bell, Mail, Briefcase, X, Plus, Eye, EyeOff, KeyRound, Star, Compass } from 'lucide-react';
+import { Sun, Moon, Palette } from 'lucide-react';
 import ShowcaseSettings from '@/components/profile/ShowcaseSettings';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MediaUploader } from '@/components/profile/MediaUploader';
@@ -21,6 +22,7 @@ import { validateProfileField, PROFILE_FIELD_LIMITS } from '@/lib/profileValidat
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useTour } from '@/hooks/useTour';
+import { useTheme } from '@/hooks/useTheme';
 
 interface Profile {
   id: string;
