@@ -4,7 +4,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { capitalizeName } from '@/lib/utils';
 
 const COLORS = [
   'hsl(0, 70%, 55%)',    // red
@@ -33,6 +35,7 @@ const COLORS = [
 const NetworkPieChartPage: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   // Fetch current user's profile (for role + school context)
   const { data: myProfile } = useQuery({
@@ -106,6 +109,25 @@ const NetworkPieChartPage: React.FC = () => {
   });
 
   const isLoading = loadingConnections || loadingProfiles;
+
+  // Fetch 3 suggested profiles for the Daily Match card section
+  const { data: suggestedPeople = [] } = useQuery({
+    queryKey: ['network-suggested-people', user?.id, connections],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const excludeIds = [user.id, ...connections];
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, role, avatar_url, bio, badges, location')
+        .not('user_id', 'in', `(${excludeIds.join(',')})`)
+        .not('display_name', 'is', null)
+        .limit(20);
+      if (error) throw error;
+      const shuffled = [...(data || [])].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, 3);
+    },
+    enabled: !!user?.id,
+  });
 
   // Build suggestions for missing affiliations
   const suggestions = React.useMemo(() => {
@@ -269,7 +291,7 @@ const NetworkPieChartPage: React.FC = () => {
           {hasPersonalization ? (
             <>
               Your network as a{' '}
-              <em className="italic font-display">{userRole.toLowerCase()}</em> from{' '}
+              <span className="font-display">{userRole.toLowerCase()}</span> from{' '}
               {userSchoolName}.
             </>
           ) : (
