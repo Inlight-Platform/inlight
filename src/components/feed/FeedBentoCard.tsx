@@ -24,19 +24,52 @@ interface FeedBentoCardProps {
 const typeMeta = (item: FeedItemData) => {
   switch (item.type) {
     case 'project':
-      return { label: 'Project', icon: <FolderKanban className="h-4 w-4" />, accent: 'text-rose-300' };
+      return {
+        label: 'Project',
+        icon: <FolderKanban className="h-4 w-4" />,
+        accent: 'text-blue-300',
+        pillClass: 'bg-blue-900 text-white',
+      };
     case 'event':
-      return { label: 'Event', icon: <Calendar className="h-4 w-4" />, accent: 'text-sky-300' };
+      return {
+        label: 'Event',
+        icon: <Calendar className="h-4 w-4" />,
+        accent: 'text-sky-300',
+        pillClass: 'bg-sky-300 text-slate-900',
+      };
     case 'job':
-      return { label: 'Opportunity', icon: <Briefcase className="h-4 w-4" />, accent: 'text-emerald-300' };
+      return {
+        label: 'Opportunity',
+        icon: <Briefcase className="h-4 w-4" />,
+        accent: 'text-emerald-300',
+        pillClass: 'bg-emerald-400 text-slate-900',
+      };
     case 'show':
-      return { label: 'Show', icon: <Theater className="h-4 w-4" />, accent: 'text-pink-300' };
+      return {
+        label: 'Show',
+        icon: <Theater className="h-4 w-4" />,
+        accent: 'text-pink-300',
+        pillClass: 'bg-pink-400 text-slate-900',
+      };
     case 'open_role':
-      return { label: 'Open Role', icon: <UserPlus className="h-4 w-4" />, accent: 'text-amber-300' };
+      return {
+        label: 'Open Role',
+        icon: <UserPlus className="h-4 w-4" />,
+        accent: 'text-amber-300',
+        pillClass: 'bg-amber-300 text-slate-900',
+      };
     default:
-      return { label: 'Update', icon: <MessageCircle className="h-4 w-4" />, accent: 'text-amber-300' };
+      return {
+        label: 'Update',
+        icon: <MessageCircle className="h-4 w-4" />,
+        accent: 'text-yellow-300',
+        pillClass: 'bg-yellow-400 text-slate-900',
+      };
   }
 };
+
+const labelPillClass =
+  'rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] shadow-sm';
 
 const sizeClasses: Record<BentoSize, string> = {
   hero: 'sm:col-span-8 sm:row-span-2 min-h-[360px] sm:min-h-[420px]',
@@ -86,9 +119,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
         )}
         <div className="relative flex h-full flex-col justify-end p-6 sm:p-10">
           <div className="mb-4 flex items-center gap-3">
-            <span className="rounded-full bg-primary/90 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-primary-foreground shadow-lg shadow-primary/30">
-              {meta.label}
-            </span>
+            <span className={cn(labelPillClass, meta.pillClass)}>{meta.label}</span>
             <span className={cn('text-xs font-semibold', meta.accent)}>{timeAgo}</span>
           </div>
           <h3 className="font-display text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-5xl group-hover:translate-x-1 transition-transform duration-500 line-clamp-3">
@@ -128,15 +159,8 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
             : 'bg-gradient-to-br from-[hsl(222_40%_10%)] to-[hsl(222_45%_6%)] border border-primary/30 text-white hover:-translate-y-1'
         )}
       >
-        <div className="absolute right-6 top-6 rotate-6">
-          <span
-            className={cn(
-              'rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em]',
-              isLight ? 'bg-slate-900 text-white' : 'bg-primary text-primary-foreground'
-            )}
-          >
-            {meta.label}
-          </span>
+        <div className="absolute right-6 top-6 z-10">
+          <span className={cn(labelPillClass, meta.pillClass)}>{meta.label}</span>
         </div>
         <div className="flex h-full flex-col p-6 sm:p-8">
           {hasImage && (
@@ -201,7 +225,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
         <div className="flex h-full flex-col p-5">
           <div className="mb-3 flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <span className={cn('mb-1 block text-[10px] font-black uppercase tracking-[0.2em]', meta.accent)}>
+              <span className={cn(labelPillClass, meta.pillClass, 'mb-2 inline-block')}>
                 {meta.label}
               </span>
               <h3 className="font-display text-lg font-black leading-tight tracking-tight text-foreground line-clamp-2">
@@ -270,7 +294,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <span className={cn('mb-1 inline-block rounded-lg bg-primary/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.2em]', meta.accent)}>
+            <span className={cn(labelPillClass, meta.pillClass, 'mb-1 inline-block')}>
               {meta.label}
             </span>
             <h3 className="font-display text-lg font-extrabold leading-tight text-white line-clamp-2">
