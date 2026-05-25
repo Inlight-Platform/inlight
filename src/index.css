@@ -15,28 +15,27 @@
 @layer base {
   :root {
     /* Core backgrounds - Light mode (fallback) */
-    /* Light mode — soft blue-tinted white with deep navy text */
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    --background: 220 20% 97%;
+    --foreground: 220 30% 10%;
 
     /* Cards and surfaces */
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 220 20% 100%;
+    --card-foreground: 220 30% 10%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 220 20% 98%;
+    --popover-foreground: 220 30% 10%;
 
     /* Primary - Home CTA violet/indigo */
     --primary: 240 70% 50%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary - Slate blue */
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 220 25% 25%;
+    --secondary-foreground: 0 0% 100%;
 
     /* Muted */
-    --muted: 214 32% 94%;
-    --muted-foreground: 222 20% 40%;
+    --muted: 220 15% 85%;
+    --muted-foreground: 220 15% 40%;
 
     /* Accent - Gold */
     --accent: 45 90% 55%;
@@ -47,8 +46,8 @@
     --destructive-foreground: 0 85% 97%;
 
     /* Borders and inputs */
-    --border: 214 32% 88%;
-    --input: 214 32% 88%;
+    --border: 220 20% 85%;
+    --input: 220 20% 85%;
     --ring: 45 90% 55%;
 
     --radius: 0.75rem;

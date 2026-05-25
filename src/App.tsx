@@ -35,7 +35,6 @@ import ShowcaseProfilePage from "./pages/ShowcaseProfilePage";
 import ShowcaseJoinPage from "./pages/ShowcaseJoinPage";
 import PlanSelectionPage from "./pages/PlanSelectionPage";
 import PreviewPage from "./pages/PreviewPage";
-import { ThemeProvider } from "@/hooks/useTheme";
 
 const queryClient = new QueryClient();
 
@@ -66,7 +65,6 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <RouteAnalytics />
-        <ThemeProvider>
         <Routes>
           {/* Public routes - no shell */}
           <Route path="/" element={<Index />} />
@@ -106,7 +104,6 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
-        </ThemeProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

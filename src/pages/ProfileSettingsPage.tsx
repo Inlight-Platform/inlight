@@ -11,8 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera, MessageCircle, Lock, Globe, Bell, Mail, Briefcase, X, Plus, Eye, EyeOff, KeyRound, Star, Compass, Sun, Moon, Palette } from 'lucide-react';
-import { useTheme } from '@/hooks/useTheme';
+import { Loader2, ArrowLeft, Save, User, Image, Video, Music, FileText, Camera, MessageCircle, Lock, Globe, Bell, Mail, Briefcase, X, Plus, Eye, EyeOff, KeyRound, Star, Compass } from 'lucide-react';
 import ShowcaseSettings from '@/components/profile/ShowcaseSettings';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MediaUploader } from '@/components/profile/MediaUploader';
@@ -149,7 +148,6 @@ const ProfileSettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { startTour } = useTour();
-  const { theme, setTheme } = useTheme();
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState('');
@@ -536,57 +534,6 @@ const ProfileSettingsPage: React.FC = () => {
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
-
-        {/* Appearance Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Palette className="h-5 w-5" />
-              Appearance
-            </CardTitle>
-            <CardDescription>
-              Choose how Inlight looks for you. Applies across the platform.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup
-              value={theme}
-              onValueChange={(value) => setTheme(value as 'dark' | 'light')}
-              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-            >
-              <label
-                htmlFor="theme-dark"
-                className="flex items-start space-x-3 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
-              >
-                <RadioGroupItem value="dark" id="theme-dark" className="mt-1" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 font-medium">
-                    <Moon className="w-4 h-4 text-muted-foreground" />
-                    Dark
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Deep space theme with gold accents.
-                  </p>
-                </div>
-              </label>
-              <label
-                htmlFor="theme-light"
-                className="flex items-start space-x-3 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
-              >
-                <RadioGroupItem value="light" id="theme-light" className="mt-1" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 font-medium">
-                    <Sun className="w-4 h-4 text-muted-foreground" />
-                    Light
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Soft blue-tinted white with navy text.
-                  </p>
-                </div>
-              </label>
-            </RadioGroup>
           </CardContent>
         </Card>
 
