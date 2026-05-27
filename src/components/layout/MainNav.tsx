@@ -171,7 +171,7 @@ export const MainNav: React.FC = () => {
         </div>
 
         {/* Nav Items */}
-        <nav className={cn("flex-1 space-y-1", collapsed ? "p-2" : "p-4")}>
+        <nav className={cn("flex-1 min-h-0 overflow-y-auto space-y-1", collapsed ? "p-2" : "p-4")}>
 
           {allNavItems.map((item) => {
             const Icon = item.icon;
@@ -250,7 +250,7 @@ export const MainNav: React.FC = () => {
 
 
         {/* User Section - Premium styling */}
-        <div className={cn("border-t border-[hsl(45_95%_58%/0.1)]", collapsed ? "p-2" : "p-4")}>
+        <div className={cn("flex-shrink-0 border-t border-[hsl(45_95%_58%/0.1)]", collapsed ? "p-2" : "p-4")}>
           {user ?
           <div className="space-y-2">
               {collapsed ?
