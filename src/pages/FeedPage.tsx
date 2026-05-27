@@ -714,7 +714,7 @@ const FeedPage: React.FC = () => {
 
             {/* Content Type Filters */}
             <div className="mb-4">
-              <div className="flex items-center gap-2 overflow-x-auto pb-2">
+              <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2">
                 {contentFilters.map((filter) => (
                   <Button
                     key={filter.value}
