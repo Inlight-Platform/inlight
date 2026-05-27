@@ -54,7 +54,7 @@ const InsightsPage: React.FC = () => {
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="industry" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mx-auto">
             <TabsTrigger value="industry" className="flex items-center gap-2">
               <Globe className="w-4 h-4" />
               Industry

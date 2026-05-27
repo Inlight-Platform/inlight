@@ -62,7 +62,7 @@ const AdminPage: React.FC = () => {
       </div>
 
       <Tabs defaultValue="verification" className="space-y-4">
-        <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex sm:justify-center">
           <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 h-auto gap-1 p-1">
             <TabsTrigger value="verification" className="gap-2 whitespace-nowrap">
               <ShieldCheck className="w-4 h-4" />

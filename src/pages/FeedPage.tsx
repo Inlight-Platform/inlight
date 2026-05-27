@@ -595,7 +595,7 @@ const FeedPage: React.FC = () => {
 
         {/* Sub-tabs */}
         <Tabs value={projectSubTab} onValueChange={(v) => setProjectSubTab(v as ProjectSubTab)} className="w-full">
-          <div className="overflow-x-auto scrollbar-thin -mx-3 px-3 sm:mx-0 sm:px-0">
+          <div className="overflow-x-auto scrollbar-thin -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex sm:justify-center">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mb-4">
               <TabsTrigger value="feed" className="flex-shrink-0 whitespace-nowrap">All</TabsTrigger>
               <TabsTrigger value="saved" className="flex-shrink-0 whitespace-nowrap">Saved</TabsTrigger>

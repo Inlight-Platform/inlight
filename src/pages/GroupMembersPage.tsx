@@ -165,7 +165,7 @@ const GroupMembersPage: React.FC = () => {
       <div className="px-4 sm:px-6 lg:px-8 py-6">
         {/* Tabs for All / Students / Alumni */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 mx-auto flex justify-center">
             <TabsTrigger value="all" className="flex items-center gap-1.5">
               <Users className="w-4 h-4" />
               All ({members.length})

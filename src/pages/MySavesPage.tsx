@@ -272,7 +272,7 @@ const MySavesPage: React.FC = () => {
           </div>
         ) : (
           <Tabs defaultValue="projects" className="space-y-6">
-            <TabsList className="grid w-full max-w-3xl grid-cols-5">
+            <TabsList className="grid w-full max-w-3xl grid-cols-5 mx-auto">
               <TabsTrigger value="projects" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <FolderKanban className="w-4 h-4" />
                 <span className="hidden sm:inline">Projects</span> ({savedProjects.length})
