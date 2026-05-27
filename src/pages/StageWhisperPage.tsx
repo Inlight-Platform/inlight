@@ -424,9 +424,9 @@ const StageWhisperPage: React.FC = () => {
           </div>}
 
         {/* Theatre Category Tabs */}
-        {industryTab === 'theatre' && viewTab === 'discover' && <div className="overflow-x-auto scrollbar-thin px-4 sm:px-6 lg:px-8">
+        {industryTab === 'theatre' && viewTab === 'discover' && <div className="overflow-x-auto scrollbar-thin px-4 sm:px-6 lg:px-8 sm:flex sm:justify-center">
             <Tabs value={activeTab} onValueChange={v => handleTabSwitch(setActiveTab, v)}>
-              <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
+              <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mx-auto">
                 <TabsTrigger value="school" className="flex-shrink-0 whitespace-nowrap">
                   🎓 School
                   <span className="ml-1 text-xs opacity-70">({showCounts['school']})</span>
