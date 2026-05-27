@@ -347,7 +347,7 @@ const ResourcesPage: React.FC = () => {
           }}
           className="w-full"
         >
-          <TabsList className="grid w-full max-w-md grid-cols-3 mb-6">
+          <TabsList className="grid w-full max-w-md grid-cols-3 mb-6 mx-auto">
             <TabsTrigger value="theatre" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
               <Theater className="w-4 h-4" />
               Theatre

@@ -412,7 +412,7 @@ const ProjectsPage: React.FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex sm:justify-center">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mb-6">
               <TabsTrigger value="feed" className="flex-shrink-0 whitespace-nowrap">Feed</TabsTrigger>
               <TabsTrigger value="my-network" className="gap-1 flex-shrink-0 whitespace-nowrap">

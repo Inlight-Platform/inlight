@@ -242,7 +242,7 @@ const NetworkPage: React.FC = () => {
           
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full justify-start mb-4">
+            <TabsList className="mx-auto flex justify-center mb-4">
               <TabsTrigger value="connections" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Connections
