@@ -315,7 +315,7 @@ const PeoplePage: React.FC = () => {
                   <p className="text-sm text-muted-foreground">{userCount} creators found</p>
                 </div>
               </div>
-              <div className="relative max-w-xl" data-tour="people-search">
+              <div className="relative max-w-xl mx-auto" data-tour="people-search">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, skills, or program..."
