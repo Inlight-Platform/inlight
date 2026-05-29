@@ -978,6 +978,7 @@ export type Database = {
           favorite_movie: string | null
           favorite_song: string | null
           gear_list: string[] | null
+          goals: string[]
           graduation_status: string | null
           graduation_year: number | null
           has_completed_tour: boolean
@@ -986,10 +987,13 @@ export type Database = {
           instagram_url: string | null
           location: string | null
           message_privacy: string
+          onboarding_completed_at: string | null
           plan_type: string
+          primary_discipline: string | null
           pronouns: string | null
           representation: string | null
           role: string | null
+          secondary_disciplines: string[]
           show_gear_list: boolean
           show_representation: boolean
           show_union_status: boolean
@@ -1017,6 +1021,7 @@ export type Database = {
           favorite_movie?: string | null
           favorite_song?: string | null
           gear_list?: string[] | null
+          goals?: string[]
           graduation_status?: string | null
           graduation_year?: number | null
           has_completed_tour?: boolean
@@ -1025,10 +1030,13 @@ export type Database = {
           instagram_url?: string | null
           location?: string | null
           message_privacy?: string
+          onboarding_completed_at?: string | null
           plan_type?: string
+          primary_discipline?: string | null
           pronouns?: string | null
           representation?: string | null
           role?: string | null
+          secondary_disciplines?: string[]
           show_gear_list?: boolean
           show_representation?: boolean
           show_union_status?: boolean
@@ -1056,6 +1064,7 @@ export type Database = {
           favorite_movie?: string | null
           favorite_song?: string | null
           gear_list?: string[] | null
+          goals?: string[]
           graduation_status?: string | null
           graduation_year?: number | null
           has_completed_tour?: boolean
@@ -1064,10 +1073,13 @@ export type Database = {
           instagram_url?: string | null
           location?: string | null
           message_privacy?: string
+          onboarding_completed_at?: string | null
           plan_type?: string
+          primary_discipline?: string | null
           pronouns?: string | null
           representation?: string | null
           role?: string | null
+          secondary_disciplines?: string[]
           show_gear_list?: boolean
           show_representation?: boolean
           show_union_status?: boolean
