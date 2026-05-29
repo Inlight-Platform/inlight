@@ -23,14 +23,8 @@ const PlanSelectionPage: React.FC = () => {
   // Handle return from Stripe checkout success
   useEffect(() => {
     if (searchParams.get('success') === 'true' && user) {
-      // Webhook will set plan_type to 'pro', but also update client-side as fallback
-      supabase
-        .from('profiles')
-        .update({ plan_type: 'pro' })
-        .eq('user_id', user.id)
-        .then(() => {
-          navigate('/feed', { replace: true });
-        });
+      // Stripe webhook is the sole writer of plan_type = 'pro'. Just navigate.
+      navigate('/feed', { replace: true });
     }
   }, [searchParams, user, navigate]);
 
@@ -53,11 +47,7 @@ const PlanSelectionPage: React.FC = () => {
   const handleSkip = async () => {
     setIsSkipping(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ plan_type: 'free' })
-        .eq('user_id', user?.id);
-      if (error) throw error;
+      // plan_type defaults to 'free'; no client-side update needed.
       navigate('/feed', { replace: true });
     } catch (err: any) {
       toast.error('Something went wrong.');
