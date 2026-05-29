@@ -343,12 +343,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
 
         {/* Image - skip for open roles */}
         {item.image_url && item.type !== 'open_role' && (
-          <div className="rounded-lg overflow-hidden mb-3">
-            <img 
-              src={item.image_url} 
-              alt={item.title || 'Post image'} 
-              className="w-full max-h-80 object-cover"
-              style={{ objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` }}
+          <div className="rounded-lg overflow-hidden mb-3 bg-muted flex items-center justify-center">
+            <img
+              src={item.image_url}
+              alt={item.title || 'Post image'}
+              className="w-full max-h-[32rem] object-contain"
             />
           </div>
         )}
