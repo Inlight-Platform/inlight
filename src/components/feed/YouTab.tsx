@@ -1,17 +1,32 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Sparkles, UserPlus, Clock, Check, MapPin, Briefcase, ArrowRight, Heart, Compass, BookOpen, Calendar, FolderPlus, Users } from 'lucide-react';
+import { Sparkles, UserPlus, Clock, Check, MapPin, Briefcase, ArrowRight, Heart, Compass, BookOpen, Calendar, FolderPlus, Users, Bookmark, BookmarkCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
+import { useSavedItems, SaveItemInput } from '@/hooks/useSavedItems';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { capitalizeName } from '@/lib/utils';
 import { COMPLEMENTARY } from '@/data/disciplines';
+
+// A small curated set of resources used for the daily "specific resource" pick.
+// Keeping this inline avoids reaching into the full ResourcesPage list.
+const CURATED_RESOURCES: { name: string; description: string; url: string; category: string }[] = [
+  { name: 'Backstage', description: 'Casting calls and audition notices.', url: 'https://www.backstage.com', category: 'Casting' },
+  { name: 'The Black List', description: 'Screenplay hosting and industry access.', url: 'https://blcklst.com', category: 'Scripts' },
+  { name: 'Film Independent', description: 'Grants, labs, and Spirit Awards programs.', url: 'https://www.filmindependent.org', category: 'Education' },
+  { name: 'No Film School', description: 'Filmmaking tutorials and industry insights.', url: 'https://nofilmschool.com', category: 'Education' },
+  { name: 'Playbill', description: 'Broadway news, reviews, and show listings.', url: 'https://www.playbill.com', category: 'News' },
+  { name: 'Broadway World', description: 'Theatre news and a national job board.', url: 'https://www.broadwayworld.com', category: 'News' },
+  { name: 'New Play Exchange', description: 'Database of new plays by living writers.', url: 'https://newplayexchange.org', category: 'Scripts' },
+  { name: 'Sundance Co//ab', description: 'Educational courses from Sundance Institute.', url: 'https://collab.sundance.org', category: 'Education' },
+  { name: 'Stage 32', description: 'Networking platform for film professionals.', url: 'https://www.stage32.com', category: 'Networking' },
+];
 
 interface SuggestedUser {
   user_id: string;
@@ -48,6 +63,7 @@ export const YouTab: React.FC = () => {
   const { user } = useAuth();
   const { following, isMutual } = useNetworkConnections();
   const { sendRequest, hasSentRequestTo } = useConnectionRequests();
+  const { isSaved, getSavedItem, toggleSave } = useSavedItems();
 
   const dailySeed = getDailySeed();
 
@@ -159,7 +175,15 @@ export const YouTab: React.FC = () => {
     [opportunities, dailySeed]
   );
 
-  // "Your Daily Actions" — mapped from goals
+  // Pick a specific resource for the day (used in Daily Actions and Explorations)
+  const dailyResource = useMemo(
+    () => seededShuffle(CURATED_RESOURCES, dailySeed + 31)[0],
+    [dailySeed]
+  );
+
+  // "Your Daily Actions" — mapped from goals.
+  // Post-style actions route to /feed?compose=... so the user lands in the
+  // Create-a-Post dialog instead of a separate page.
   const dailyActions = useMemo(() => {
     const myGoals = (mySurvey?.goals as string[]) || [];
     const all: { key: string; title: string; description: string; icon: React.ReactNode; path: string; goals: string[] }[] = [
@@ -168,7 +192,7 @@ export const YouTab: React.FC = () => {
         title: 'Post a project',
         description: 'Open roles, share the vision, and start a team.',
         icon: <FolderPlus className="w-4 h-4" />,
-        path: '/projects/new',
+        path: '/feed?compose=project',
         goals: ['Starting a new project', 'Finding collaborators'],
       },
       {
@@ -176,7 +200,7 @@ export const YouTab: React.FC = () => {
         title: 'Host an event',
         description: 'Bring your community together IRL or online.',
         icon: <Calendar className="w-4 h-4" />,
-        path: '/events',
+        path: '/feed?compose=event',
         goals: ['Building my community'],
       },
       {
@@ -184,15 +208,15 @@ export const YouTab: React.FC = () => {
         title: 'Offer a service',
         description: 'Share what you do — coaching, editing, sessions.',
         icon: <Briefcase className="w-4 h-4" />,
-        path: '/opportunities',
+        path: '/feed?compose=job',
         goals: ['Building my community', 'Finding collaborators'],
       },
       {
-        key: 'resources',
-        title: 'Explore the resource library',
-        description: 'Tools, grants, and reads for your craft.',
+        key: 'resource',
+        title: `Read: ${dailyResource.name}`,
+        description: dailyResource.description,
         icon: <BookOpen className="w-4 h-4" />,
-        path: '/resources',
+        path: dailyResource.url,
         goals: ['Finding resources & tools', 'Learning about the industry'],
       },
       {
@@ -207,40 +231,64 @@ export const YouTab: React.FC = () => {
     const ranked = all
       .map((a) => ({ a, score: a.goals.filter((g) => myGoals.includes(g)).length }))
       .sort((x, y) => y.score - x.score);
-    // If no survey goals, just fall back to first three
     const pool = ranked.filter((r) => r.score > 0).map((r) => r.a);
     const fallback = ranked.map((r) => r.a);
     return (pool.length >= 3 ? pool : [...pool, ...fallback.filter((a) => !pool.includes(a))]).slice(0, 3);
-  }, [mySurvey]);
+  }, [mySurvey, dailyResource]);
 
-  // Explorations — features the user might not know about
+  // Explorations — features the user might not know about.
+  // One slot is always a specific resource (savable); the rest are actions
+  // that route to the Create-a-Post dialog or another contextual page.
   const explorations = useMemo(() => {
-    const items = [
+    const exploreResource = seededShuffle(
+      CURATED_RESOURCES.filter((r) => r.name !== dailyResource.name),
+      dailySeed + 47
+    )[0];
+
+    const items: {
+      key: string;
+      title: string;
+      description: string;
+      icon: React.ReactNode;
+      path: string;
+      saveData?: SaveItemInput;
+    }[] = [
       {
+        key: 'explore-resource',
+        title: exploreResource.name,
+        description: exploreResource.description,
+        icon: <BookOpen className="w-4 h-4" />,
+        path: exploreResource.url,
+        saveData: {
+          item_type: 'resource',
+          item_title: exploreResource.name,
+          item_url: exploreResource.url,
+          item_metadata: { description: exploreResource.description, category: exploreResource.category },
+        },
+      },
+      {
+        key: 'explore-project',
         title: 'Post a project',
         description: 'Spin up a new production and recruit your team.',
         icon: <FolderPlus className="w-4 h-4" />,
-        path: '/projects/new',
+        path: '/feed?compose=project',
       },
       {
+        key: 'explore-service',
         title: 'Offer a service',
         description: 'List a gig — coaching, editing, mixing, design.',
         icon: <Briefcase className="w-4 h-4" />,
-        path: '/opportunities',
+        path: '/feed?compose=job',
       },
       {
-        title: 'Browse the resource library',
-        description: 'Curated tools and references for your craft.',
-        icon: <BookOpen className="w-4 h-4" />,
-        path: '/resources',
-      },
-      {
+        key: 'explore-event',
         title: 'Host an event',
         description: 'Mixers, screenings, table reads — your turn.',
         icon: <Calendar className="w-4 h-4" />,
-        path: '/events',
+        path: '/feed?compose=event',
       },
       {
+        key: 'explore-people',
         title: 'Meet new disciplines',
         description: 'Find collaborators outside your usual circle.',
         icon: <Users className="w-4 h-4" />,
@@ -251,8 +299,12 @@ export const YouTab: React.FC = () => {
     const usedPaths = new Set(dailyActions.map((a) => a.path));
     const filtered = items.filter((i) => !usedPaths.has(i.path));
     const pool = filtered.length >= 3 ? filtered : items;
-    return seededShuffle(pool, dailySeed + 21).slice(0, 3);
-  }, [dailyActions, dailySeed]);
+    // Always keep the resource exploration if present
+    const resourceItem = pool.find((i) => i.key === 'explore-resource');
+    const rest = seededShuffle(pool.filter((i) => i.key !== 'explore-resource'), dailySeed + 21);
+    const ordered = resourceItem ? [resourceItem, ...rest] : rest;
+    return ordered.slice(0, 3);
+  }, [dailyActions, dailySeed, dailyResource]);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -284,6 +336,27 @@ export const YouTab: React.FC = () => {
       >
         <UserPlus className="w-3.5 h-3.5" /> Connect
       </Button>
+    );
+  };
+
+  // Small bookmark toggle overlay used in the upper-right of every savable card.
+  const SaveIcon: React.FC<{ data: SaveItemInput; className?: string }> = ({ data, className = '' }) => {
+    const saved = isSaved(data.item_type, data.item_title, data.item_url);
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleSave(data);
+        }}
+        className={`absolute top-2 right-2 z-10 p-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/60 hover:bg-background transition ${className}`}
+        aria-label={saved ? 'Remove from saves' : 'Save'}
+      >
+        {saved ? (
+          <BookmarkCheck className="w-4 h-4 text-primary" />
+        ) : (
+          <Bookmark className="w-4 h-4 text-muted-foreground" />
+        )}
+      </button>
     );
   };
 
@@ -319,9 +392,22 @@ export const YouTab: React.FC = () => {
           {dailySuggestions.map((p) => (
             <Card
               key={p.user_id}
-              className="cursor-pointer hover:shadow-xl transition-shadow"
+              className="relative cursor-pointer hover:shadow-xl transition-shadow"
               onClick={() => navigate(`/profile/${p.user_id}`)}
             >
+              <SaveIcon
+                data={{
+                  item_type: 'person',
+                  item_id: p.user_id,
+                  item_title: p.display_name || 'Unknown',
+                  item_url: `/profile/${p.user_id}`,
+                  item_metadata: {
+                    headline: p.headline,
+                    avatar_url: p.avatar_url,
+                    location: p.location,
+                  },
+                }}
+              />
               <CardContent className="p-5 flex flex-col items-center text-center space-y-3">
                 <Avatar className="h-16 w-16">
                   <AvatarImage src={p.avatar_url || undefined} />
@@ -366,7 +452,13 @@ export const YouTab: React.FC = () => {
             <Card
               key={a.key}
               className="cursor-pointer hover:shadow-xl transition-shadow group"
-              onClick={() => navigate(a.path)}
+              onClick={() => {
+                if (/^https?:\/\//.test(a.path)) {
+                  window.open(a.path, '_blank', 'noopener,noreferrer');
+                } else {
+                  navigate(a.path);
+                }
+              }}
             >
               <CardContent className="p-5 space-y-3">
                 <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center">
@@ -398,9 +490,24 @@ export const YouTab: React.FC = () => {
           {dailyOpportunities.map((o: any) => (
             <Card
               key={o.id}
-              className="cursor-pointer hover:shadow-xl transition-shadow"
+              className="relative cursor-pointer hover:shadow-xl transition-shadow"
               onClick={() => navigate('/opportunities')}
             >
+              <SaveIcon
+                data={{
+                  item_type: 'job',
+                  item_id: o.id,
+                  item_title: o.title,
+                  item_url: `/opportunities`,
+                  item_metadata: {
+                    company: o.company,
+                    location: o.location,
+                    type: o.type,
+                    is_remote: o.is_remote,
+                    compensation: o.compensation,
+                  },
+                }}
+              />
               <CardContent className="p-5 space-y-3">
                 <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
                   {o.type || 'Opportunity'}
@@ -440,10 +547,17 @@ export const YouTab: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {explorations.map((e) => (
             <Card
-              key={e.path + e.title}
-              className="cursor-pointer hover:shadow-xl transition-shadow group bg-muted/30"
-              onClick={() => navigate(e.path)}
+              key={e.key}
+              className="relative cursor-pointer hover:shadow-xl transition-shadow group bg-muted/30"
+              onClick={() => {
+                if (/^https?:\/\//.test(e.path)) {
+                  window.open(e.path, '_blank', 'noopener,noreferrer');
+                } else {
+                  navigate(e.path);
+                }
+              }}
             >
+              {e.saveData && <SaveIcon data={e.saveData} />}
               <CardContent className="p-5 space-y-3">
                 <div className="h-9 w-9 rounded-full bg-background text-primary flex items-center justify-center border border-border">
                   {e.icon}
@@ -472,9 +586,25 @@ export const YouTab: React.FC = () => {
             </h3>
           </div>
           <Card
-            className="max-w-md mx-auto cursor-pointer hover:shadow-2xl transition-shadow overflow-hidden"
+            className="relative max-w-md mx-auto cursor-pointer hover:shadow-2xl transition-shadow overflow-hidden"
             onClick={() => navigate(`/profile/${dailyMatch.user_id}`)}
           >
+            <SaveIcon
+              data={{
+                item_type: 'person',
+                item_id: dailyMatch.user_id,
+                item_title: dailyMatch.display_name || 'Unknown',
+                item_url: `/profile/${dailyMatch.user_id}`,
+                item_metadata: {
+                  headline: dailyMatch.headline,
+                  avatar_url: dailyMatch.avatar_url,
+                  location: dailyMatch.location,
+                  bio: dailyMatch.bio,
+                  match: true,
+                },
+              }}
+              className="bg-background/90"
+            />
             <div className="relative aspect-[4/5] bg-muted">
               {dailyMatch.avatar_url ? (
                 <img

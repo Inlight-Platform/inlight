@@ -58,7 +58,7 @@ const OnboardingSurveyPage: React.FC = () => {
     }
     qc.invalidateQueries({ queryKey: ['onboarding-status', user.id] });
     qc.invalidateQueries({ queryKey: ['you-tab-survey', user.id] });
-    navigate('/feed', { replace: true });
+    navigate('/feed?tab=you', { replace: true });
   };
 
   const canNext =

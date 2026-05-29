@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
-export type SavedItemType = 'resource' | 'job' | 'open_role';
+export type SavedItemType = 'resource' | 'job' | 'open_role' | 'person' | 'project';
 
 interface SavedItem {
   id: string;

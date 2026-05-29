@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft, Film } from 'lucide-react';
+import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft, Film, User } from 'lucide-react';
 import { buildSharedItemMessage } from '@/components/messages/SharedItemCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -216,6 +216,7 @@ const MySavesPage: React.FC = () => {
   // Filter saved items by type
   const savedResources = savedItems.filter(i => i.item_type === 'resource');
   const savedJobs = savedItems.filter(i => i.item_type === 'job' || i.item_type === 'open_role');
+  const savedPeople = savedItems.filter(i => i.item_type === 'person');
 
   const unsaveProject = async (projectId: string) => {
     if (!user?.id) return;
@@ -229,7 +230,7 @@ const MySavesPage: React.FC = () => {
 
   const isLoading = loadingProjects || loadingShows || loadingFilms;
 
-  const totalSaves = savedProjects.length + savedShows.length + savedFilms.length + savedResources.length + savedJobs.length;
+  const totalSaves = savedProjects.length + savedShows.length + savedFilms.length + savedResources.length + savedJobs.length + savedPeople.length;
 
   if (!user) {
     return (
@@ -272,7 +273,7 @@ const MySavesPage: React.FC = () => {
           </div>
         ) : (
           <Tabs defaultValue="projects" className="space-y-6">
-            <TabsList className="grid w-full max-w-3xl grid-cols-5 mx-auto">
+            <TabsList className="grid w-full max-w-3xl grid-cols-6 mx-auto">
               <TabsTrigger value="projects" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <FolderKanban className="w-4 h-4" />
                 <span className="hidden sm:inline">Projects</span> ({savedProjects.length})
@@ -284,6 +285,10 @@ const MySavesPage: React.FC = () => {
               <TabsTrigger value="films" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <Film className="w-4 h-4" />
                 <span className="hidden sm:inline">Films</span> ({savedFilms.length})
+              </TabsTrigger>
+              <TabsTrigger value="people" className="flex items-center gap-1.5 text-xs sm:text-sm">
+                <User className="w-4 h-4" />
+                <span className="hidden sm:inline">People</span> ({savedPeople.length})
               </TabsTrigger>
               <TabsTrigger value="resources" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <BookOpen className="w-4 h-4" />
@@ -399,6 +404,52 @@ const MySavesPage: React.FC = () => {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* People */}
+            <TabsContent value="people">
+              {savedPeople.length === 0 ? (
+                <EmptyCategory icon={User} label="people" />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {savedPeople.map(item => {
+                    const avatarUrl = item.item_metadata?.avatar_url as string | undefined;
+                    const headline = item.item_metadata?.headline as string | undefined;
+                    const location = item.item_metadata?.location as string | undefined;
+                    return (
+                      <Card
+                        key={item.id}
+                        className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                        onClick={() => item.item_url && navigate(item.item_url)}
+                      >
+                        <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                          <Avatar className="h-14 w-14">
+                            <AvatarImage src={avatarUrl || undefined} />
+                            <AvatarFallback>{item.item_title[0] || 'U'}</AvatarFallback>
+                          </Avatar>
+                          <h3 className="font-semibold truncate w-full">{item.item_title}</h3>
+                          {headline && <p className="text-xs text-muted-foreground line-clamp-2">{headline}</p>}
+                          {location && <p className="text-xs text-muted-foreground">{location}</p>}
+                          <div className="flex items-center justify-end gap-1 w-full mt-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: item.item_title, url: item.item_url || undefined, type: 'Profile', imageUrl: avatarUrl }); }}
+                              className="p-1.5 rounded-full hover:bg-accent"
+                            >
+                              <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); unsaveItem(item.id); }}
+                              className="p-1.5 rounded-full hover:bg-accent"
+                            >
+                              <BookmarkCheck className="w-4 h-4 text-primary" />
+                            </button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
