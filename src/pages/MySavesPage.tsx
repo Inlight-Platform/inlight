@@ -408,6 +408,52 @@ const MySavesPage: React.FC = () => {
               )}
             </TabsContent>
 
+            {/* People */}
+            <TabsContent value="people">
+              {savedPeople.length === 0 ? (
+                <EmptyCategory icon={User} label="people" />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {savedPeople.map(item => {
+                    const avatarUrl = item.item_metadata?.avatar_url as string | undefined;
+                    const headline = item.item_metadata?.headline as string | undefined;
+                    const location = item.item_metadata?.location as string | undefined;
+                    return (
+                      <Card
+                        key={item.id}
+                        className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                        onClick={() => item.item_url && navigate(item.item_url)}
+                      >
+                        <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                          <Avatar className="h-14 w-14">
+                            <AvatarImage src={avatarUrl || undefined} />
+                            <AvatarFallback>{item.item_title[0] || 'U'}</AvatarFallback>
+                          </Avatar>
+                          <h3 className="font-semibold truncate w-full">{item.item_title}</h3>
+                          {headline && <p className="text-xs text-muted-foreground line-clamp-2">{headline}</p>}
+                          {location && <p className="text-xs text-muted-foreground">{location}</p>}
+                          <div className="flex items-center justify-end gap-1 w-full mt-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: item.item_title, url: item.item_url || undefined, type: 'Profile', imageUrl: avatarUrl }); }}
+                              className="p-1.5 rounded-full hover:bg-accent"
+                            >
+                              <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); unsaveItem(item.id); }}
+                              className="p-1.5 rounded-full hover:bg-accent"
+                            >
+                              <BookmarkCheck className="w-4 h-4 text-primary" />
+                            </button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+
             {/* Resources */}
             <TabsContent value="resources">
               {savedResources.length === 0 ? (
