@@ -175,7 +175,15 @@ export const YouTab: React.FC = () => {
     [opportunities, dailySeed]
   );
 
-  // "Your Daily Actions" — mapped from goals
+  // Pick a specific resource for the day (used in Daily Actions and Explorations)
+  const dailyResource = useMemo(
+    () => seededShuffle(CURATED_RESOURCES, dailySeed + 31)[0],
+    [dailySeed]
+  );
+
+  // "Your Daily Actions" — mapped from goals.
+  // Post-style actions route to /feed?compose=... so the user lands in the
+  // Create-a-Post dialog instead of a separate page.
   const dailyActions = useMemo(() => {
     const myGoals = (mySurvey?.goals as string[]) || [];
     const all: { key: string; title: string; description: string; icon: React.ReactNode; path: string; goals: string[] }[] = [
@@ -184,7 +192,7 @@ export const YouTab: React.FC = () => {
         title: 'Post a project',
         description: 'Open roles, share the vision, and start a team.',
         icon: <FolderPlus className="w-4 h-4" />,
-        path: '/projects/new',
+        path: '/feed?compose=project',
         goals: ['Starting a new project', 'Finding collaborators'],
       },
       {
@@ -192,7 +200,7 @@ export const YouTab: React.FC = () => {
         title: 'Host an event',
         description: 'Bring your community together IRL or online.',
         icon: <Calendar className="w-4 h-4" />,
-        path: '/events',
+        path: '/feed?compose=event',
         goals: ['Building my community'],
       },
       {
@@ -200,15 +208,15 @@ export const YouTab: React.FC = () => {
         title: 'Offer a service',
         description: 'Share what you do — coaching, editing, sessions.',
         icon: <Briefcase className="w-4 h-4" />,
-        path: '/opportunities',
+        path: '/feed?compose=job',
         goals: ['Building my community', 'Finding collaborators'],
       },
       {
-        key: 'resources',
-        title: 'Explore the resource library',
-        description: 'Tools, grants, and reads for your craft.',
+        key: 'resource',
+        title: `Read: ${dailyResource.name}`,
+        description: dailyResource.description,
         icon: <BookOpen className="w-4 h-4" />,
-        path: '/resources',
+        path: dailyResource.url,
         goals: ['Finding resources & tools', 'Learning about the industry'],
       },
       {
@@ -223,40 +231,64 @@ export const YouTab: React.FC = () => {
     const ranked = all
       .map((a) => ({ a, score: a.goals.filter((g) => myGoals.includes(g)).length }))
       .sort((x, y) => y.score - x.score);
-    // If no survey goals, just fall back to first three
     const pool = ranked.filter((r) => r.score > 0).map((r) => r.a);
     const fallback = ranked.map((r) => r.a);
     return (pool.length >= 3 ? pool : [...pool, ...fallback.filter((a) => !pool.includes(a))]).slice(0, 3);
-  }, [mySurvey]);
+  }, [mySurvey, dailyResource]);
 
-  // Explorations — features the user might not know about
+  // Explorations — features the user might not know about.
+  // One slot is always a specific resource (savable); the rest are actions
+  // that route to the Create-a-Post dialog or another contextual page.
   const explorations = useMemo(() => {
-    const items = [
+    const exploreResource = seededShuffle(
+      CURATED_RESOURCES.filter((r) => r.name !== dailyResource.name),
+      dailySeed + 47
+    )[0];
+
+    const items: {
+      key: string;
+      title: string;
+      description: string;
+      icon: React.ReactNode;
+      path: string;
+      saveData?: SaveItemInput;
+    }[] = [
       {
+        key: 'explore-resource',
+        title: exploreResource.name,
+        description: exploreResource.description,
+        icon: <BookOpen className="w-4 h-4" />,
+        path: exploreResource.url,
+        saveData: {
+          item_type: 'resource',
+          item_title: exploreResource.name,
+          item_url: exploreResource.url,
+          item_metadata: { description: exploreResource.description, category: exploreResource.category },
+        },
+      },
+      {
+        key: 'explore-project',
         title: 'Post a project',
         description: 'Spin up a new production and recruit your team.',
         icon: <FolderPlus className="w-4 h-4" />,
-        path: '/projects/new',
+        path: '/feed?compose=project',
       },
       {
+        key: 'explore-service',
         title: 'Offer a service',
         description: 'List a gig — coaching, editing, mixing, design.',
         icon: <Briefcase className="w-4 h-4" />,
-        path: '/opportunities',
+        path: '/feed?compose=job',
       },
       {
-        title: 'Browse the resource library',
-        description: 'Curated tools and references for your craft.',
-        icon: <BookOpen className="w-4 h-4" />,
-        path: '/resources',
-      },
-      {
+        key: 'explore-event',
         title: 'Host an event',
         description: 'Mixers, screenings, table reads — your turn.',
         icon: <Calendar className="w-4 h-4" />,
-        path: '/events',
+        path: '/feed?compose=event',
       },
       {
+        key: 'explore-people',
         title: 'Meet new disciplines',
         description: 'Find collaborators outside your usual circle.',
         icon: <Users className="w-4 h-4" />,
@@ -267,8 +299,12 @@ export const YouTab: React.FC = () => {
     const usedPaths = new Set(dailyActions.map((a) => a.path));
     const filtered = items.filter((i) => !usedPaths.has(i.path));
     const pool = filtered.length >= 3 ? filtered : items;
-    return seededShuffle(pool, dailySeed + 21).slice(0, 3);
-  }, [dailyActions, dailySeed]);
+    // Always keep the resource exploration if present
+    const resourceItem = pool.find((i) => i.key === 'explore-resource');
+    const rest = seededShuffle(pool.filter((i) => i.key !== 'explore-resource'), dailySeed + 21);
+    const ordered = resourceItem ? [resourceItem, ...rest] : rest;
+    return ordered.slice(0, 3);
+  }, [dailyActions, dailySeed, dailyResource]);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
