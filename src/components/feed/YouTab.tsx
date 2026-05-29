@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Sparkles, UserPlus, Clock, Check, MapPin, Briefcase, ArrowRight, Heart } from 'lucide-react';
+import { Sparkles, UserPlus, Clock, Check, MapPin, Briefcase, ArrowRight, Heart, Compass, BookOpen, Calendar, FolderPlus, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { capitalizeName } from '@/lib/utils';
+import { COMPLEMENTARY } from '@/data/disciplines';
 
 interface SuggestedUser {
   user_id: string;
@@ -20,6 +21,9 @@ interface SuggestedUser {
   bio: string | null;
   location: string | null;
   badges: string[] | null;
+  primary_discipline?: string | null;
+  secondary_disciplines?: string[] | null;
+  goals?: string[] | null;
 }
 
 // Deterministic daily seed (changes once per day)
@@ -47,16 +51,32 @@ export const YouTab: React.FC = () => {
 
   const dailySeed = getDailySeed();
 
+  // Current user's survey
+  const { data: mySurvey } = useQuery({
+    queryKey: ['you-tab-survey', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('primary_discipline, secondary_disciplines, goals, display_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id,
+    staleTime: 10 * 60 * 1000,
+  });
+
   // Fetch candidate profiles for suggestions + daily match
   const { data: candidates = [] } = useQuery({
     queryKey: ['you-tab-candidates', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       const { data } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url, headline, bio, location, badges')
+        .from('profiles')
+        .select('user_id, display_name, avatar_url, headline, bio, location, badges, primary_discipline, secondary_disciplines, goals')
         .neq('user_id', user.id)
-        .limit(50);
+        .limit(200);
       return (data || []) as SuggestedUser[];
     },
     enabled: !!user?.id,
@@ -78,24 +98,161 @@ export const YouTab: React.FC = () => {
   });
 
   const notConnected = useMemo(
-    () => candidates.filter(c => !following.includes(c.user_id)),
+    () => candidates.filter((c) => !following.includes(c.user_id)),
     [candidates, following]
   );
 
-  const dailySuggestions = useMemo(
-    () => seededShuffle(notConnected, dailySeed).slice(0, 3),
-    [notConnected, dailySeed]
-  );
+  // Score candidates against the current user's survey
+  const scored = useMemo(() => {
+    const myPrimary = mySurvey?.primary_discipline || null;
+    const mySecondary = (mySurvey?.secondary_disciplines as string[]) || [];
+    const myGoals = (mySurvey?.goals as string[]) || [];
+    const wantsCollab =
+      myGoals.includes('Finding collaborators') ||
+      myGoals.includes('Starting a new project');
+    const complements = myPrimary ? COMPLEMENTARY[myPrimary] || [] : [];
 
-  const dailyMatch = useMemo(
-    () => seededShuffle(notConnected, dailySeed + 7).find(c => !dailySuggestions.some(s => s.user_id === c.user_id)) || null,
-    [notConnected, dailySeed, dailySuggestions]
-  );
+    return notConnected
+      .map((c) => {
+        let score = 0;
+        const cPrimary = c.primary_discipline || null;
+        const cSecondary = (c.secondary_disciplines as string[]) || [];
+        const cGoals = (c.goals as string[]) || [];
+
+        // Complementary primary discipline (for collaboration goals)
+        if (wantsCollab && cPrimary && complements.includes(cPrimary)) score += 5;
+        // Shared secondary disciplines
+        const sharedSecondary = mySecondary.filter((d) => cSecondary.includes(d)).length;
+        score += sharedSecondary * 2;
+        // Shared goals
+        const sharedGoals = myGoals.filter((g) => cGoals.includes(g)).length;
+        score += sharedGoals * 2;
+        // Has set up survey
+        if (cPrimary) score += 1;
+        // Has avatar / headline (quality boost)
+        if (c.avatar_url) score += 1;
+        if (c.headline) score += 1;
+
+        return { c, score };
+      })
+      .sort((a, b) => b.score - a.score);
+  }, [notConnected, mySurvey]);
+
+  // Take the top-scoring pool, then deterministically shuffle for daily rotation
+  const dailySuggestions = useMemo(() => {
+    const pool = scored.slice(0, 20).map((s) => s.c);
+    return seededShuffle(pool, dailySeed).slice(0, 3);
+  }, [scored, dailySeed]);
+
+  const dailyMatch = useMemo(() => {
+    // Highest scoring candidate not already in the suggestions
+    const usedIds = new Set(dailySuggestions.map((s) => s.user_id));
+    const topPool = scored
+      .filter((s) => !usedIds.has(s.c.user_id))
+      .slice(0, 5)
+      .map((s) => s.c);
+    return seededShuffle(topPool, dailySeed + 7)[0] || null;
+  }, [scored, dailySeed, dailySuggestions]);
 
   const dailyOpportunities = useMemo(
     () => seededShuffle(opportunities, dailySeed + 13).slice(0, 3),
     [opportunities, dailySeed]
   );
+
+  // "Your Daily Actions" — mapped from goals
+  const dailyActions = useMemo(() => {
+    const myGoals = (mySurvey?.goals as string[]) || [];
+    const all: { key: string; title: string; description: string; icon: React.ReactNode; path: string; goals: string[] }[] = [
+      {
+        key: 'project',
+        title: 'Post a project',
+        description: 'Open roles, share the vision, and start a team.',
+        icon: <FolderPlus className="w-4 h-4" />,
+        path: '/projects/new',
+        goals: ['Starting a new project', 'Finding collaborators'],
+      },
+      {
+        key: 'event',
+        title: 'Host an event',
+        description: 'Bring your community together IRL or online.',
+        icon: <Calendar className="w-4 h-4" />,
+        path: '/events',
+        goals: ['Building my community'],
+      },
+      {
+        key: 'service',
+        title: 'Offer a service',
+        description: 'Share what you do — coaching, editing, sessions.',
+        icon: <Briefcase className="w-4 h-4" />,
+        path: '/opportunities',
+        goals: ['Building my community', 'Finding collaborators'],
+      },
+      {
+        key: 'resources',
+        title: 'Explore the resource library',
+        description: 'Tools, grants, and reads for your craft.',
+        icon: <BookOpen className="w-4 h-4" />,
+        path: '/resources',
+        goals: ['Finding resources & tools', 'Learning about the industry'],
+      },
+      {
+        key: 'crossdept',
+        title: 'Cross-department networking',
+        description: 'Meet people outside your discipline.',
+        icon: <Users className="w-4 h-4" />,
+        path: '/people',
+        goals: ['Building my community', 'Learning about the industry'],
+      },
+    ];
+    const ranked = all
+      .map((a) => ({ a, score: a.goals.filter((g) => myGoals.includes(g)).length }))
+      .sort((x, y) => y.score - x.score);
+    // If no survey goals, just fall back to first three
+    const pool = ranked.filter((r) => r.score > 0).map((r) => r.a);
+    const fallback = ranked.map((r) => r.a);
+    return (pool.length >= 3 ? pool : [...pool, ...fallback.filter((a) => !pool.includes(a))]).slice(0, 3);
+  }, [mySurvey]);
+
+  // Explorations — features the user might not know about
+  const explorations = useMemo(() => {
+    const items = [
+      {
+        title: 'Post a project',
+        description: 'Spin up a new production and recruit your team.',
+        icon: <FolderPlus className="w-4 h-4" />,
+        path: '/projects/new',
+      },
+      {
+        title: 'Offer a service',
+        description: 'List a gig — coaching, editing, mixing, design.',
+        icon: <Briefcase className="w-4 h-4" />,
+        path: '/opportunities',
+      },
+      {
+        title: 'Browse the resource library',
+        description: 'Curated tools and references for your craft.',
+        icon: <BookOpen className="w-4 h-4" />,
+        path: '/resources',
+      },
+      {
+        title: 'Host an event',
+        description: 'Mixers, screenings, table reads — your turn.',
+        icon: <Calendar className="w-4 h-4" />,
+        path: '/events',
+      },
+      {
+        title: 'Meet new disciplines',
+        description: 'Find collaborators outside your usual circle.',
+        icon: <Users className="w-4 h-4" />,
+        path: '/people',
+      },
+    ];
+    // Don't duplicate the daily actions
+    const usedPaths = new Set(dailyActions.map((a) => a.path));
+    const filtered = items.filter((i) => !usedPaths.has(i.path));
+    const pool = filtered.length >= 3 ? filtered : items;
+    return seededShuffle(pool, dailySeed + 21).slice(0, 3);
+  }, [dailyActions, dailySeed]);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -141,16 +298,18 @@ export const YouTab: React.FC = () => {
           Your daily picks
         </h2>
         <p className="text-sm text-muted-foreground mt-2">
-          A fresh selection of people, opportunities, and one perfect match — refreshed every day.
+          {mySurvey?.primary_discipline
+            ? `Curated for a ${mySurvey.primary_discipline.toLowerCase()} — refreshed every day.`
+            : 'A fresh selection of people, opportunities, and one perfect match — refreshed every day.'}
         </p>
       </div>
 
-      {/* Connection Suggestions */}
+      {/* Section 1: Connect Today */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
-            3 People to meet
+            Connect today
           </h3>
           <Button variant="ghost" size="sm" onClick={() => navigate('/people')} className="gap-1 text-xs">
             See all <ArrowRight className="w-3 h-3" />
@@ -194,12 +353,42 @@ export const YouTab: React.FC = () => {
         </div>
       </section>
 
+      {/* Section 2: Your Daily Actions */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Compass className="w-4 h-4 text-primary" />
+            Your daily actions
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {dailyActions.map((a) => (
+            <Card
+              key={a.key}
+              className="cursor-pointer hover:shadow-xl transition-shadow group"
+              onClick={() => navigate(a.path)}
+            >
+              <CardContent className="p-5 space-y-3">
+                <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                  {a.icon}
+                </div>
+                <h4 className="font-semibold leading-tight">{a.title}</h4>
+                <p className="text-xs text-muted-foreground line-clamp-2">{a.description}</p>
+                <div className="text-xs text-primary inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                  Start <ArrowRight className="w-3 h-3" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
       {/* Opportunities */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Briefcase className="w-4 h-4 text-primary" />
-            3 Opportunities for you
+            Opportunities for you
           </h3>
           <Button variant="ghost" size="sm" onClick={() => navigate('/opportunities')} className="gap-1 text-xs">
             See all <ArrowRight className="w-3 h-3" />
@@ -240,7 +429,37 @@ export const YouTab: React.FC = () => {
         </div>
       </section>
 
-      {/* Daily Match */}
+      {/* Section 4: Explorations */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Compass className="w-4 h-4 text-primary" />
+            3 Explorations
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {explorations.map((e) => (
+            <Card
+              key={e.path + e.title}
+              className="cursor-pointer hover:shadow-xl transition-shadow group bg-muted/30"
+              onClick={() => navigate(e.path)}
+            >
+              <CardContent className="p-5 space-y-3">
+                <div className="h-9 w-9 rounded-full bg-background text-primary flex items-center justify-center border border-border">
+                  {e.icon}
+                </div>
+                <h4 className="font-semibold leading-tight">{e.title}</h4>
+                <p className="text-xs text-muted-foreground line-clamp-2">{e.description}</p>
+                <div className="text-xs text-primary inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                  Explore <ArrowRight className="w-3 h-3" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Section 3: Match of the Day */}
       {dailyMatch && (
         <section>
           <div className="text-center mb-4">
