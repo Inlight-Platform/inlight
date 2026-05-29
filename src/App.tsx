@@ -35,6 +35,8 @@ import ShowcaseProfilePage from "./pages/ShowcaseProfilePage";
 import ShowcaseJoinPage from "./pages/ShowcaseJoinPage";
 import PlanSelectionPage from "./pages/PlanSelectionPage";
 import PreviewPage from "./pages/PreviewPage";
+import OnboardingSurveyPage from "./pages/OnboardingSurveyPage";
+import OnboardingGate from "@/components/layout/OnboardingGate";
 
 const queryClient = new QueryClient();
 
@@ -52,9 +54,11 @@ const RouteAnalytics = () => {
 
 const AppShell = () => (
   <RequireAuth>
-    <PageLayout>
-      <Outlet />
-    </PageLayout>
+    <OnboardingGate>
+      <PageLayout>
+        <Outlet />
+      </PageLayout>
+    </OnboardingGate>
   </RequireAuth>
 );
 
@@ -74,6 +78,7 @@ const App = () => (
           <Route path="/showcase/:programId/:userId" element={<ShowcaseProfilePage />} />
           <Route path="/showcase/:programId" element={<ShowcasePage />} />
           <Route path="/plan-selection" element={<RequireAuth><PlanSelectionPage /></RequireAuth>} />
+          <Route path="/onboarding" element={<RequireAuth><OnboardingSurveyPage /></RequireAuth>} />
 
           {/* App shell (sidebar on desktop, bottom nav on mobile) */}
           <Route element={<AppShell />}>
