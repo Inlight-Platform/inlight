@@ -852,7 +852,7 @@ const FeedPage: React.FC = () => {
       </div>
 
       {/* Post Creator Dialog */}
-      <Dialog open={showPostCreator} onOpenChange={setShowPostCreator}>
+      <Dialog open={showPostCreator} onOpenChange={(o) => { setShowPostCreator(o); if (!o) setComposePostType('update'); }}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create a Post</DialogTitle>
@@ -860,6 +860,7 @@ const FeedPage: React.FC = () => {
           <PostCreator
             userProfile={userProfile || undefined}
             defaultOpen={true}
+            defaultPostType={composePostType}
             onClose={() => setShowPostCreator(false)}
           />
         </DialogContent>
