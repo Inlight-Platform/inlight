@@ -452,7 +452,13 @@ export const YouTab: React.FC = () => {
             <Card
               key={a.key}
               className="cursor-pointer hover:shadow-xl transition-shadow group"
-              onClick={() => navigate(a.path)}
+              onClick={() => {
+                if (/^https?:\/\//.test(a.path)) {
+                  window.open(a.path, '_blank', 'noopener,noreferrer');
+                } else {
+                  navigate(a.path);
+                }
+              }}
             >
               <CardContent className="p-5 space-y-3">
                 <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center">
