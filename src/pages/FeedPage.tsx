@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows } from 'lucide-react';
+import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
@@ -12,6 +12,7 @@ import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
 import { FeedBentoCard, getBentoSize } from '@/components/feed/FeedBentoCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { WelcomeMessage } from '@/components/feed/WelcomeMessage';
+import { YouTab } from '@/components/feed/YouTab';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,7 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 type NetworkFilter = 'all' | '1st';
-type ContentFilter = 'all' | 'events' | 'projects' | 'updates';
+type ContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates';
 type ProjectSubTab = 'feed' | 'my-network' | 'saved' | 'archive';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 type ViewMode = 'bento' | 'scroll';
@@ -454,6 +455,7 @@ const FeedPage: React.FC = () => {
 
   const contentFilters: { value: ContentFilter; label: string; icon: React.ReactNode }[] = [
     { value: 'all', label: 'All', icon: <Filter className="h-4 w-4" /> },
+    { value: 'you', label: 'You', icon: <Sparkles className="h-4 w-4" /> },
     { value: 'events', label: 'Events', icon: <Calendar className="h-4 w-4" /> },
     { value: 'projects', label: 'Projects', icon: <FolderKanban className="h-4 w-4" /> },
     { value: 'updates', label: 'Updates', icon: <User className="h-4 w-4" /> },
