@@ -63,6 +63,7 @@ export const YouTab: React.FC = () => {
   const { user } = useAuth();
   const { following, isMutual } = useNetworkConnections();
   const { sendRequest, hasSentRequestTo } = useConnectionRequests();
+  const { isSaved, getSavedItem, toggleSave } = useSavedItems();
 
   const dailySeed = getDailySeed();
 
