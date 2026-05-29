@@ -1564,7 +1564,10 @@ const ProfilePage: React.FC = () => {
         </div>
       </header>
 
+      {/* Centered content rectangle — matches Profile Completion Bar width */}
+      <div className="max-w-5xl mx-auto">
       {/* Profile Completion Bar - only visible to profile owner */}
+
       {isOwnProfile && dbProfile && (
         <ProfileCompletionBar
           userId={authUser!.id}
@@ -2117,8 +2120,11 @@ const ProfilePage: React.FC = () => {
           </div>
         </section>
       )}
-      
+      </div>
+      {/* /Centered content rectangle */}
+
       {/* Lightbox */}
+
       {lightboxImage && (
         <div 
           className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center p-4"
