@@ -541,10 +541,17 @@ export const YouTab: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {explorations.map((e) => (
             <Card
-              key={e.path + e.title}
-              className="cursor-pointer hover:shadow-xl transition-shadow group bg-muted/30"
-              onClick={() => navigate(e.path)}
+              key={e.key}
+              className="relative cursor-pointer hover:shadow-xl transition-shadow group bg-muted/30"
+              onClick={() => {
+                if (/^https?:\/\//.test(e.path)) {
+                  window.open(e.path, '_blank', 'noopener,noreferrer');
+                } else {
+                  navigate(e.path);
+                }
+              }}
             >
+              {e.saveData && <SaveIcon data={e.saveData} />}
               <CardContent className="p-5 space-y-3">
                 <div className="h-9 w-9 rounded-full bg-background text-primary flex items-center justify-center border border-border">
                   {e.icon}
