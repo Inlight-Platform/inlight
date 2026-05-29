@@ -392,9 +392,22 @@ export const YouTab: React.FC = () => {
           {dailySuggestions.map((p) => (
             <Card
               key={p.user_id}
-              className="cursor-pointer hover:shadow-xl transition-shadow"
+              className="relative cursor-pointer hover:shadow-xl transition-shadow"
               onClick={() => navigate(`/profile/${p.user_id}`)}
             >
+              <SaveIcon
+                data={{
+                  item_type: 'person',
+                  item_id: p.user_id,
+                  item_title: p.display_name || 'Unknown',
+                  item_url: `/profile/${p.user_id}`,
+                  item_metadata: {
+                    headline: p.headline,
+                    avatar_url: p.avatar_url,
+                    location: p.location,
+                  },
+                }}
+              />
               <CardContent className="p-5 flex flex-col items-center text-center space-y-3">
                 <Avatar className="h-16 w-16">
                   <AvatarImage src={p.avatar_url || undefined} />
