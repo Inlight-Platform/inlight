@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft, Film } from 'lucide-react';
+import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft, Film, User } from 'lucide-react';
 import { buildSharedItemMessage } from '@/components/messages/SharedItemCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -216,6 +216,7 @@ const MySavesPage: React.FC = () => {
   // Filter saved items by type
   const savedResources = savedItems.filter(i => i.item_type === 'resource');
   const savedJobs = savedItems.filter(i => i.item_type === 'job' || i.item_type === 'open_role');
+  const savedPeople = savedItems.filter(i => i.item_type === 'person');
 
   const unsaveProject = async (projectId: string) => {
     if (!user?.id) return;
@@ -229,7 +230,7 @@ const MySavesPage: React.FC = () => {
 
   const isLoading = loadingProjects || loadingShows || loadingFilms;
 
-  const totalSaves = savedProjects.length + savedShows.length + savedFilms.length + savedResources.length + savedJobs.length;
+  const totalSaves = savedProjects.length + savedShows.length + savedFilms.length + savedResources.length + savedJobs.length + savedPeople.length;
 
   if (!user) {
     return (
@@ -272,7 +273,7 @@ const MySavesPage: React.FC = () => {
           </div>
         ) : (
           <Tabs defaultValue="projects" className="space-y-6">
-            <TabsList className="grid w-full max-w-3xl grid-cols-5 mx-auto">
+            <TabsList className="grid w-full max-w-3xl grid-cols-6 mx-auto">
               <TabsTrigger value="projects" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <FolderKanban className="w-4 h-4" />
                 <span className="hidden sm:inline">Projects</span> ({savedProjects.length})
@@ -284,6 +285,10 @@ const MySavesPage: React.FC = () => {
               <TabsTrigger value="films" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <Film className="w-4 h-4" />
                 <span className="hidden sm:inline">Films</span> ({savedFilms.length})
+              </TabsTrigger>
+              <TabsTrigger value="people" className="flex items-center gap-1.5 text-xs sm:text-sm">
+                <User className="w-4 h-4" />
+                <span className="hidden sm:inline">People</span> ({savedPeople.length})
               </TabsTrigger>
               <TabsTrigger value="resources" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <BookOpen className="w-4 h-4" />
