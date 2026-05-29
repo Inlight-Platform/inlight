@@ -185,14 +185,15 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
         try {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('display_name, email')
+            .select('display_name')
             .eq('user_id', user.id)
             .single();
-          if (profile) {
+          const ownerEmail = user.email ?? '';
+          if (profile && ownerEmail) {
             submitRsvp.mutate({
               event_id: item.id,
-              name: profile.display_name || profile.email.split('@')[0],
-              email: profile.email,
+              name: profile.display_name || ownerEmail.split('@')[0],
+              email: ownerEmail,
               role_type: 'attendee',
               status: 'going',
             });
