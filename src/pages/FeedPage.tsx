@@ -718,7 +718,7 @@ const FeedPage: React.FC = () => {
           </div>
           
           {user && (
-            <Button onClick={() => setShowPostCreator(true)} className={`gap-2 ${navVioletButtonClass}`}>
+            <Button onClick={() => { setComposePostType('update'); setShowPostCreator(true); }} className={`gap-2 ${navVioletButtonClass}`}>
               <Plus className="h-4 w-4" />
               Make a Post
             </Button>
