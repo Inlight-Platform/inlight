@@ -1,13 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import inlightLogo from '@/assets/inlight-logo.jpeg';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { Button } from '@/components/ui/button';
-import { PostCreator } from '@/components/feed/PostCreator';
+import { PostCreator, PostType } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
 import { FeedBentoCard, getBentoSize } from '@/components/feed/FeedBentoCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -46,7 +46,29 @@ const FeedPage: React.FC = () => {
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
   const [showPostCreator, setShowPostCreator] = useState(false);
+  const [composePostType, setComposePostType] = useState<PostType>('update');
   const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Honor ?tab=you and ?compose=update|event|job|project URL params
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const compose = searchParams.get('compose');
+    let changed = false;
+    if (tab && ['all', 'you', 'events', 'projects', 'updates'].includes(tab)) {
+      setContentFilter(tab as ContentFilter);
+      searchParams.delete('tab');
+      changed = true;
+    }
+    if (compose && ['update', 'event', 'job', 'project'].includes(compose)) {
+      setComposePostType(compose as PostType);
+      setShowPostCreator(true);
+      searchParams.delete('compose');
+      changed = true;
+    }
+    if (changed) setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const { firstDegree, secondDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
 
   // Project-specific state
