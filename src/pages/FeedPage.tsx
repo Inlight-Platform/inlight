@@ -44,7 +44,13 @@ const FeedPage: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
-  const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
+  const [searchParamsInit] = [new URLSearchParams(window.location.search)];
+  const _initialTab = searchParamsInit.get('tab');
+  const [contentFilter, setContentFilter] = useState<ContentFilter>(
+    _initialTab && ['all', 'you', 'events', 'projects', 'updates'].includes(_initialTab)
+      ? (_initialTab as ContentFilter)
+      : 'all'
+  );
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [composePostType, setComposePostType] = useState<PostType>('update');
   const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
