@@ -586,9 +586,25 @@ export const YouTab: React.FC = () => {
             </h3>
           </div>
           <Card
-            className="max-w-md mx-auto cursor-pointer hover:shadow-2xl transition-shadow overflow-hidden"
+            className="relative max-w-md mx-auto cursor-pointer hover:shadow-2xl transition-shadow overflow-hidden"
             onClick={() => navigate(`/profile/${dailyMatch.user_id}`)}
           >
+            <SaveIcon
+              data={{
+                item_type: 'person',
+                item_id: dailyMatch.user_id,
+                item_title: dailyMatch.display_name || 'Unknown',
+                item_url: `/profile/${dailyMatch.user_id}`,
+                item_metadata: {
+                  headline: dailyMatch.headline,
+                  avatar_url: dailyMatch.avatar_url,
+                  location: dailyMatch.location,
+                  bio: dailyMatch.bio,
+                  match: true,
+                },
+              }}
+              className="bg-background/90"
+            />
             <div className="relative aspect-[4/5] bg-muted">
               {dailyMatch.avatar_url ? (
                 <img
