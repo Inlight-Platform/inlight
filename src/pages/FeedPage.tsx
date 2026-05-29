@@ -805,7 +805,7 @@ const FeedPage: React.FC = () => {
                         : `No content from your ${networkFilter === '1st' ? 'network' : networkFilter + ' degree connections'} yet.`}
                     </p>
                     {user && (
-                      <Button onClick={() => setShowPostCreator(true)} className={`mt-4 gap-2 ${navVioletButtonClass}`}>
+                      <Button onClick={() => { setComposePostType('update'); setShowPostCreator(true); }} className={`mt-4 gap-2 ${navVioletButtonClass}`}>
                         <Plus className="h-4 w-4" />
                         Create a post
                       </Button>
