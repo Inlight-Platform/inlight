@@ -34,12 +34,7 @@ const OnboardingGate: React.FC<{ children: React.ReactNode }> = ({ children }) =
     );
   }
 
-  const needsOnboarding = !data?.onboarding_completed_at && !data?.primary_discipline;
-
-  if (needsOnboarding && location.pathname !== '/onboarding') {
-    return <Navigate to="/onboarding" replace />;
-  }
-
+  // Onboarding gating disabled — users can access the app without completing the survey.
   return <>{children}</>;
 };
 

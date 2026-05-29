@@ -42,20 +42,23 @@ const OnboardingSurveyPage: React.FC = () => {
   const submit = async () => {
     if (!user?.id || !primary || goals.length === 0) return;
     setSaving(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        primary_discipline: primary,
-        secondary_disciplines: secondary,
-        goals,
-        onboarding_completed_at: new Date().toISOString(),
-      })
-      .eq('user_id', user.id);
-    setSaving(false);
-    if (error) {
-      toast({ title: 'Could not save', description: error.message, variant: 'destructive' });
-      return;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          primary_discipline: primary,
+          secondary_disciplines: secondary,
+          goals,
+          onboarding_completed_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id);
+      if (error) {
+        console.warn('Onboarding save failed, continuing anyway:', error.message);
+      }
+    } catch (err) {
+      console.warn('Onboarding save threw, continuing anyway:', err);
     }
+    setSaving(false);
     qc.invalidateQueries({ queryKey: ['onboarding-status', user.id] });
     qc.invalidateQueries({ queryKey: ['you-tab-survey', user.id] });
     navigate('/feed?tab=you', { replace: true });
