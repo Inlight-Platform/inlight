@@ -232,25 +232,7 @@ const ProfileSettingsPage: React.FC = () => {
         console.error('ProfileSettingsPage: failed loading profile by user id', profileByUserIdError);
       }
 
-      if (profileByUserId) {
-        return profileByUserId as Profile;
-      }
-
-      if (!user.email) {
-        return null;
-      }
-
-      const { data: profileByEmail, error: profileByEmailError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', user.email)
-        .maybeSingle();
-
-      if (profileByEmailError) {
-        throw profileByEmailError;
-      }
-
-      return profileByEmail as Profile | null;
+      return (profileByUserId as Profile | null) ?? null;
     },
     enabled: !!user?.id,
   });
