@@ -1,17 +1,32 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Sparkles, UserPlus, Clock, Check, MapPin, Briefcase, ArrowRight, Heart, Compass, BookOpen, Calendar, FolderPlus, Users } from 'lucide-react';
+import { Sparkles, UserPlus, Clock, Check, MapPin, Briefcase, ArrowRight, Heart, Compass, BookOpen, Calendar, FolderPlus, Users, Bookmark, BookmarkCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
+import { useSavedItems, SaveItemInput } from '@/hooks/useSavedItems';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { capitalizeName } from '@/lib/utils';
 import { COMPLEMENTARY } from '@/data/disciplines';
+
+// A small curated set of resources used for the daily "specific resource" pick.
+// Keeping this inline avoids reaching into the full ResourcesPage list.
+const CURATED_RESOURCES: { name: string; description: string; url: string; category: string }[] = [
+  { name: 'Backstage', description: 'Casting calls and audition notices.', url: 'https://www.backstage.com', category: 'Casting' },
+  { name: 'The Black List', description: 'Screenplay hosting and industry access.', url: 'https://blcklst.com', category: 'Scripts' },
+  { name: 'Film Independent', description: 'Grants, labs, and Spirit Awards programs.', url: 'https://www.filmindependent.org', category: 'Education' },
+  { name: 'No Film School', description: 'Filmmaking tutorials and industry insights.', url: 'https://nofilmschool.com', category: 'Education' },
+  { name: 'Playbill', description: 'Broadway news, reviews, and show listings.', url: 'https://www.playbill.com', category: 'News' },
+  { name: 'Broadway World', description: 'Theatre news and a national job board.', url: 'https://www.broadwayworld.com', category: 'News' },
+  { name: 'New Play Exchange', description: 'Database of new plays by living writers.', url: 'https://newplayexchange.org', category: 'Scripts' },
+  { name: 'Sundance Co//ab', description: 'Educational courses from Sundance Institute.', url: 'https://collab.sundance.org', category: 'Education' },
+  { name: 'Stage 32', description: 'Networking platform for film professionals.', url: 'https://www.stage32.com', category: 'Networking' },
+];
 
 interface SuggestedUser {
   user_id: string;
