@@ -740,7 +740,7 @@ const FeedPage: React.FC = () => {
             </div>
 
             {/* Search Bar (for non-project tabs) */}
-            {contentFilter !== 'projects' && (
+            {contentFilter !== 'projects' && contentFilter !== 'you' && (
               <div className="relative mb-4 max-w-xl mx-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -761,7 +761,9 @@ const FeedPage: React.FC = () => {
             )}
 
             {/* Show project sub-content when on projects tab */}
-            {contentFilter === 'projects' ? (
+            {contentFilter === 'you' ? (
+              <YouTab />
+            ) : contentFilter === 'projects' ? (
               renderProjectsContent()
             ) : (
               <>
