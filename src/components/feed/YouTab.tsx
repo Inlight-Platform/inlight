@@ -484,9 +484,24 @@ export const YouTab: React.FC = () => {
           {dailyOpportunities.map((o: any) => (
             <Card
               key={o.id}
-              className="cursor-pointer hover:shadow-xl transition-shadow"
+              className="relative cursor-pointer hover:shadow-xl transition-shadow"
               onClick={() => navigate('/opportunities')}
             >
+              <SaveIcon
+                data={{
+                  item_type: 'job',
+                  item_id: o.id,
+                  item_title: o.title,
+                  item_url: `/opportunities`,
+                  item_metadata: {
+                    company: o.company,
+                    location: o.location,
+                    type: o.type,
+                    is_remote: o.is_remote,
+                    compensation: o.compensation,
+                  },
+                }}
+              />
               <CardContent className="p-5 space-y-3">
                 <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
                   {o.type || 'Opportunity'}
