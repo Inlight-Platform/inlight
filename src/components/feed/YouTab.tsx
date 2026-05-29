@@ -339,6 +339,27 @@ export const YouTab: React.FC = () => {
     );
   };
 
+  // Small bookmark toggle overlay used in the upper-right of every savable card.
+  const SaveIcon: React.FC<{ data: SaveItemInput; className?: string }> = ({ data, className = '' }) => {
+    const saved = isSaved(data.item_type, data.item_title, data.item_url);
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleSave(data);
+        }}
+        className={`absolute top-2 right-2 z-10 p-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/60 hover:bg-background transition ${className}`}
+        aria-label={saved ? 'Remove from saves' : 'Save'}
+      >
+        {saved ? (
+          <BookmarkCheck className="w-4 h-4 text-primary" />
+        ) : (
+          <Bookmark className="w-4 h-4 text-muted-foreground" />
+        )}
+      </button>
+    );
+  };
+
   return (
     <div className="space-y-10">
       {/* Header */}
