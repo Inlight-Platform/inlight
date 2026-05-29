@@ -181,30 +181,45 @@ export const YouTab: React.FC = () => {
     [dailySeed]
   );
 
-  // "Your Daily Actions" — mapped from goals.
-  // Post-style actions route to /feed?compose=... so the user lands in the
-  // Create-a-Post dialog instead of a separate page.
-  const dailyActions = useMemo(() => {
+  // Explorations — merged "daily actions" + platform features the user might
+  // not know about. Ranked by the user's stated goals, with one savable
+  // resource pick always included. Internal actions route to the dedicated
+  // create template (project → /projects/new; event/service → compose dialog).
+  const explorations = useMemo(() => {
     const myGoals = (mySurvey?.goals as string[]) || [];
-    const all: { key: string; title: string; description: string; icon: React.ReactNode; path: string; goals: string[] }[] = [
+    const items: {
+      key: string;
+      title: string;
+      description: string;
+      icon: React.ReactNode;
+      path: string;
+      goals: string[];
+      saveData?: SaveItemInput;
+    }[] = [
       {
-        key: 'project',
+        key: 'explore-resource',
+        title: dailyResource.name,
+        description: dailyResource.description,
+        icon: <BookOpen className="w-4 h-4" />,
+        path: dailyResource.url,
+        goals: ['Finding resources & tools', 'Learning about the industry'],
+        saveData: {
+          item_type: 'resource',
+          item_title: dailyResource.name,
+          item_url: dailyResource.url,
+          item_metadata: { description: dailyResource.description, category: dailyResource.category },
+        },
+      },
+      {
+        key: 'explore-project',
         title: 'Post a project',
         description: 'Open roles, share the vision, and start a team.',
         icon: <FolderPlus className="w-4 h-4" />,
-        path: '/feed?compose=project',
+        path: '/projects/new',
         goals: ['Starting a new project', 'Finding collaborators'],
       },
       {
-        key: 'event',
-        title: 'Host an event',
-        description: 'Bring your community together IRL or online.',
-        icon: <Calendar className="w-4 h-4" />,
-        path: '/feed?compose=event',
-        goals: ['Building my community'],
-      },
-      {
-        key: 'service',
+        key: 'explore-service',
         title: 'Offer a service',
         description: 'Share what you do — coaching, editing, sessions.',
         icon: <Briefcase className="w-4 h-4" />,
@@ -212,99 +227,30 @@ export const YouTab: React.FC = () => {
         goals: ['Building my community', 'Finding collaborators'],
       },
       {
-        key: 'resource',
-        title: `Read: ${dailyResource.name}`,
-        description: dailyResource.description,
-        icon: <BookOpen className="w-4 h-4" />,
-        path: dailyResource.url,
-        goals: ['Finding resources & tools', 'Learning about the industry'],
+        key: 'explore-event',
+        title: 'Host an event',
+        description: 'Bring your community together IRL or online.',
+        icon: <Calendar className="w-4 h-4" />,
+        path: '/feed?compose=event',
+        goals: ['Building my community'],
       },
       {
-        key: 'crossdept',
+        key: 'explore-people',
         title: 'Cross-department networking',
-        description: 'Meet people outside your discipline.',
+        description: 'Find collaborators outside your usual circle.',
         icon: <Users className="w-4 h-4" />,
         path: '/people',
         goals: ['Building my community', 'Learning about the industry'],
       },
     ];
-    const ranked = all
+    const ranked = items
       .map((a) => ({ a, score: a.goals.filter((g) => myGoals.includes(g)).length }))
       .sort((x, y) => y.score - x.score);
-    const pool = ranked.filter((r) => r.score > 0).map((r) => r.a);
-    const fallback = ranked.map((r) => r.a);
-    return (pool.length >= 3 ? pool : [...pool, ...fallback.filter((a) => !pool.includes(a))]).slice(0, 3);
+    // Always keep the resource pick; fill remaining slots by goal score
+    const resourceItem = items.find((i) => i.key === 'explore-resource')!;
+    const others = ranked.map((r) => r.a).filter((i) => i.key !== 'explore-resource');
+    return [resourceItem, ...others].slice(0, 3);
   }, [mySurvey, dailyResource]);
-
-  // Explorations — features the user might not know about.
-  // One slot is always a specific resource (savable); the rest are actions
-  // that route to the Create-a-Post dialog or another contextual page.
-  const explorations = useMemo(() => {
-    const exploreResource = seededShuffle(
-      CURATED_RESOURCES.filter((r) => r.name !== dailyResource.name),
-      dailySeed + 47
-    )[0];
-
-    const items: {
-      key: string;
-      title: string;
-      description: string;
-      icon: React.ReactNode;
-      path: string;
-      saveData?: SaveItemInput;
-    }[] = [
-      {
-        key: 'explore-resource',
-        title: exploreResource.name,
-        description: exploreResource.description,
-        icon: <BookOpen className="w-4 h-4" />,
-        path: exploreResource.url,
-        saveData: {
-          item_type: 'resource',
-          item_title: exploreResource.name,
-          item_url: exploreResource.url,
-          item_metadata: { description: exploreResource.description, category: exploreResource.category },
-        },
-      },
-      {
-        key: 'explore-project',
-        title: 'Post a project',
-        description: 'Spin up a new production and recruit your team.',
-        icon: <FolderPlus className="w-4 h-4" />,
-        path: '/feed?compose=project',
-      },
-      {
-        key: 'explore-service',
-        title: 'Offer a service',
-        description: 'List a gig — coaching, editing, mixing, design.',
-        icon: <Briefcase className="w-4 h-4" />,
-        path: '/feed?compose=job',
-      },
-      {
-        key: 'explore-event',
-        title: 'Host an event',
-        description: 'Mixers, screenings, table reads — your turn.',
-        icon: <Calendar className="w-4 h-4" />,
-        path: '/feed?compose=event',
-      },
-      {
-        key: 'explore-people',
-        title: 'Meet new disciplines',
-        description: 'Find collaborators outside your usual circle.',
-        icon: <Users className="w-4 h-4" />,
-        path: '/people',
-      },
-    ];
-    // Don't duplicate the daily actions
-    const usedPaths = new Set(dailyActions.map((a) => a.path));
-    const filtered = items.filter((i) => !usedPaths.has(i.path));
-    const pool = filtered.length >= 3 ? filtered : items;
-    // Always keep the resource exploration if present
-    const resourceItem = pool.find((i) => i.key === 'explore-resource');
-    const rest = seededShuffle(pool.filter((i) => i.key !== 'explore-resource'), dailySeed + 21);
-    const ordered = resourceItem ? [resourceItem, ...rest] : rest;
-    return ordered.slice(0, 3);
-  }, [dailyActions, dailySeed, dailyResource]);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -436,42 +382,6 @@ export const YouTab: React.FC = () => {
               No new suggestions today. Check back tomorrow.
             </p>
           )}
-        </div>
-      </section>
-
-      {/* Section 2: Your Daily Actions */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Compass className="w-4 h-4 text-primary" />
-            Your daily actions
-          </h3>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {dailyActions.map((a) => (
-            <Card
-              key={a.key}
-              className="cursor-pointer hover:shadow-xl transition-shadow group"
-              onClick={() => {
-                if (/^https?:\/\//.test(a.path)) {
-                  window.open(a.path, '_blank', 'noopener,noreferrer');
-                } else {
-                  navigate(a.path);
-                }
-              }}
-            >
-              <CardContent className="p-5 space-y-3">
-                <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                  {a.icon}
-                </div>
-                <h4 className="font-semibold leading-tight">{a.title}</h4>
-                <p className="text-xs text-muted-foreground line-clamp-2">{a.description}</p>
-                <div className="text-xs text-primary inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                  Start <ArrowRight className="w-3 h-3" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
         </div>
       </section>
 
