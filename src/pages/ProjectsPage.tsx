@@ -425,7 +425,7 @@ const ProjectsPage: React.FC = () => {
               <TabsTrigger value="saved" className="flex-shrink-0 whitespace-nowrap">Saved</TabsTrigger>
               <TabsTrigger value="archive" className="gap-1 flex-shrink-0 whitespace-nowrap">
                 <Archive className="w-3 h-3" />
-                Archive
+                History
               </TabsTrigger>
             </TabsList>
           </div>

@@ -1,16 +1,21 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2 } from 'lucide-react';
+import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2, MessageSquare, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useNotifications } from '@/hooks/useNotifications';
-import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
+import { useMessages } from '@/hooks/useMessages';
+import { useGroupChats } from '@/hooks/useGroupChats';
+import { useAuth } from '@/hooks/useAuth';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const {
     notifications,
@@ -20,8 +25,9 @@ const NotificationsPage: React.FC = () => {
     deleteNotification,
   } = useNotifications();
 
-  const { follow, isFollowing, isFollowPending } = useNetworkConnections();
   const { acceptRequest, rejectRequest } = useConnectionRequests();
+  const { conversations, loadingConversations, totalUnread } = useMessages();
+  const { groupChats, loadingGroupChats } = useGroupChats();
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -51,13 +57,6 @@ const NotificationsPage: React.FC = () => {
     });
   };
 
-  const handleFollowBack = (e: React.MouseEvent, followerId: string, notificationId: string) => {
-    e.stopPropagation();
-    follow(followerId);
-    markAsRead.mutate(notificationId);
-    toast.success('Following back!');
-  };
-
   const handleNotificationClick = (notification: typeof notifications[0]) => {
     if (!notification.read_at) markAsRead.mutate(notification.id);
     const data = notification.data as Record<string, string>;
@@ -77,16 +76,43 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
+  const formatTime = (date: string) => {
+    const d = new Date(date);
+    const now = new Date();
+    const diffHours = (now.getTime() - d.getTime()) / (1000 * 60 * 60);
+    if (diffHours < 24) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (diffHours < 168) return d.toLocaleDateString([], { weekday: 'short' });
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-2xl font-display font-bold">Notifications</h1>
+          <h1 className="text-2xl font-display font-bold">Inbox</h1>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
-        <div>
+        <Tabs defaultValue="notifications" className="w-full">
+          <TabsList className="grid grid-cols-2 w-full mb-4">
+            <TabsTrigger value="notifications" className="gap-2">
+              <Bell className="w-4 h-4" />
+              Notifications
+              {unreadCount > 0 && (
+                <span className="ml-1 text-xs bg-primary text-primary-foreground rounded-full px-1.5">{unreadCount}</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Messages
+              {totalUnread > 0 && (
+                <span className="ml-1 text-xs bg-primary text-primary-foreground rounded-full px-1.5">{totalUnread}</span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="notifications">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-muted-foreground">{notifications.length} notifications</span>
             {unreadCount > 0 && (
@@ -129,20 +155,6 @@ const NotificationsPage: React.FC = () => {
                     <p className="text-xs text-muted-foreground mt-1">
                       {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                     </p>
-                    {notification.type === 'follow' && (() => {
-                      const data = notification.data as Record<string, string>;
-                      const followerId = data?.follower_id;
-                      if (followerId && !isFollowing(followerId)) {
-                        return (
-                          <Button size="sm" variant="outline" className="mt-2 h-7 text-xs"
-                            onClick={(e) => handleFollowBack(e, followerId, notification.id)}
-                            disabled={isFollowPending}>
-                            <UserPlus className="w-3 h-3 mr-1" /> Follow Back
-                          </Button>
-                        );
-                      }
-                      return null;
-                    })()}
                     {notification.type === 'connection_request' && !notification.read_at && (() => {
                       const data = notification.data as Record<string, string>;
                       const requestId = data?.request_id;
@@ -176,7 +188,82 @@ const NotificationsPage: React.FC = () => {
             ))}
           </div>
         )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="messages">
+            {loadingConversations || loadingGroupChats ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : conversations.length === 0 && groupChats.length === 0 ? (
+              <div className="py-16 text-center text-muted-foreground">
+                <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm font-medium">No conversations yet</p>
+                <p className="text-xs">Open a chat from a profile or project page</p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border overflow-hidden divide-y divide-border">
+                {groupChats.map((gc) => (
+                  <button
+                    key={`g-${gc.id}`}
+                    onClick={() => navigate(`/messages/group/${gc.project_id}`)}
+                    className="w-full p-4 flex items-center gap-3 hover:bg-accent/50 transition-colors text-left"
+                  >
+                    <Avatar className="w-12 h-12 bg-primary/10">
+                      <AvatarFallback className="bg-primary/10">
+                        <Users className="w-5 h-5 text-primary" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{gc.name}</p>
+                      <p className="text-xs text-muted-foreground">Team chat</p>
+                    </div>
+                  </button>
+                ))}
+                {conversations.map((c) => (
+                  <button
+                    key={`d-${c.user_id}`}
+                    onClick={() => navigate(`/messages/direct/${c.user_id}`)}
+                    className="w-full p-4 flex items-center gap-3 hover:bg-accent/50 transition-colors text-left"
+                  >
+                    <div className="relative">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={c.avatar_url || undefined} />
+                        <AvatarFallback>{c.display_name?.[0] || 'U'}</AvatarFallback>
+                      </Avatar>
+                      {c.unread_count > 0 && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                          {c.unread_count}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={cn('font-medium truncate', c.unread_count > 0 && 'font-semibold')}>
+                          {c.display_name || 'Unknown'}
+                        </span>
+                        {c.last_message && (
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {formatTime(c.last_message.created_at)}
+                          </span>
+                        )}
+                      </div>
+                      {c.last_message && (
+                        <p className={cn(
+                          'text-sm truncate',
+                          c.unread_count > 0 ? 'text-foreground' : 'text-muted-foreground'
+                        )}>
+                          {c.last_message.sender_id === user?.id && 'You: '}
+                          {c.last_message.content}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

@@ -1477,6 +1477,48 @@ const ProfilePage: React.FC = () => {
             </CollapsibleContent>
           </Collapsible>
 
+          {/* Bio — moved beneath Skills */}
+          <div className="text-left">
+            {isOwnProfile && isEditingBio ? (
+              <div className="space-y-3">
+                <Textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  className="min-h-[120px] text-base leading-relaxed resize-none"
+                  placeholder="Tell your story... What drives you? What are you working on?"
+                  autoFocus
+                  maxLength={2000}
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{editBio.length}/2000</span>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSaveBio}>
+                      <Save className="w-4 h-4 mr-1" /> Save
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setIsEditingBio(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                className={`${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-3 -m-3 rounded-lg transition-colors group' : ''}`}
+                onClick={isOwnProfile ? startEditingBio : undefined}
+              >
+                <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">
+                  {displayBio || ''}
+                </p>
+                {isOwnProfile && !displayBio && (
+                  <p className="text-muted-foreground text-sm italic">
+                    Add a bio to let others know who you are
+                  </p>
+                )}
+                {isOwnProfile && displayBio && <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-50 transition-opacity" />}
+              </div>
+            )}
+          </div>
+
           {/* Network Counts */}
           <div className="flex items-center gap-4">
                 <button
@@ -1490,16 +1532,16 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {/* RIGHT column — avatar rectangle + saves/community/etc */}
-        <div className="flex flex-col items-center gap-3 w-full sm:w-[200px] order-1 sm:order-2">
+        <div className="flex flex-col items-center gap-3 w-full sm:w-[300px] order-1 sm:order-2">
           <div className="relative" data-tour="profile-avatar">
             {displayAvatar ? (
               <img
                 src={displayAvatar}
                 alt={displayName}
-                className="w-44 h-56 sm:w-[200px] sm:h-[260px] rounded-2xl object-cover shadow-card border border-border"
+                className="w-[264px] h-[336px] sm:w-[300px] sm:h-[390px] rounded-2xl object-cover shadow-card border border-border"
               />
             ) : (
-              <div className="flex w-44 h-56 sm:w-[200px] sm:h-[260px] items-center justify-center rounded-2xl border border-border bg-gradient-to-br from-[hsl(222_35%_8%)] via-[hsl(240_45%_14%)] to-[hsl(222_35%_6%)] shadow-card ring-1 ring-primary/25">
+              <div className="flex w-[264px] h-[336px] sm:w-[300px] sm:h-[390px] items-center justify-center rounded-2xl border border-border bg-gradient-to-br from-[hsl(222_35%_8%)] via-[hsl(240_45%_14%)] to-[hsl(222_35%_6%)] shadow-card ring-1 ring-primary/25">
                 <img src={inlightLogo} alt="" className="h-20 w-20 rounded-full object-cover opacity-90" />
               </div>
             )}
@@ -1586,26 +1628,6 @@ const ProfilePage: React.FC = () => {
                     targetName={displayName}
                   />
                   
-                  {/* Follow Button */}
-                  <Button
-                    variant={userIsFollowing ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={handleFollowToggle}
-                    disabled={isFollowPending || isUnfollowPending}
-                  >
-                    {userIsFollowing ? (
-                      <>
-                        <Check className="w-4 h-4 mr-1" />
-                        Following
-                      </>
-                    ) : (
-                      <>
-                        <Users className="w-4 h-4 mr-1" />
-                        Follow
-                      </>
-                    )}
-                  </Button>
-                  
                   {/* Connect/Cancel/Message Button */}
                   <button
                     onClick={
@@ -1673,55 +1695,6 @@ const ProfilePage: React.FC = () => {
 
       {/* Boxed rectangle — all sections below are centered within */}
       <div className="rounded-2xl border border-border bg-card/30 overflow-hidden text-center">
-
-      {/* A. Bio & Social Links - Prominent Section */}
-      <section className="px-4 sm:px-6 lg:px-8 py-6 border-b border-border bg-gradient-to-b from-muted/30 to-transparent">
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left side - Bio and social links */}
-          <div className="flex-1 max-w-3xl">
-          <div className="mb-4">
-            {isOwnProfile && isEditingBio ? (
-              <div className="space-y-3">
-                <Textarea
-                  value={editBio}
-                  onChange={(e) => setEditBio(e.target.value)}
-                  className="min-h-[120px] text-base leading-relaxed resize-none"
-                  placeholder="Tell your story... What drives you? What are you working on?"
-                  autoFocus
-                  maxLength={2000}
-                />
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{editBio.length}/2000</span>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveBio}>
-                      <Save className="w-4 h-4 mr-1" /> Save
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setIsEditingBio(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div 
-                className={`${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-3 -m-3 rounded-lg transition-colors group' : ''}`}
-                onClick={isOwnProfile ? startEditingBio : undefined}
-              >
-                <p className="text-foreground text-base leading-relaxed whitespace-pre-wrap">
-                  {displayBio || (isOwnProfile ? '' : '')}
-                </p>
-                {isOwnProfile && !displayBio && (
-                  <p className="text-muted-foreground text-sm italic">
-                    Add a bio to let others know who you are
-                  </p>
-                )}
-                {isOwnProfile && displayBio && <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-50 transition-opacity" />}
-              </div>
-            )}
-          </div>
-          </div>
-        </div>
-      </section>
 
       {/* Conditional Details Display - shown at the bottom if user opted in */}
       {/* Materials - Collapsible (own profile) */}
