@@ -41,11 +41,6 @@ const InsightsPage: React.FC = () => {
             <ChevronLeft className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-3">
-            <img
-              src={inlightLogo}
-              alt="Inlight"
-              className="w-10 h-10 rounded-full object-cover"
-            />
             <h1 className="text-2xl font-display font-bold">Industry Insights</h1>
           </div>
         </div>

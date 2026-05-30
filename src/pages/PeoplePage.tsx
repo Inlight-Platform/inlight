@@ -264,11 +264,6 @@ const PeoplePage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
-            <img
-              src={inlightLogo}
-              alt="Inlight"
-              className="w-10 h-10 rounded-full object-cover"
-            />
             <h1 className="text-2xl font-display font-bold">People</h1>
           </div>
         </div>

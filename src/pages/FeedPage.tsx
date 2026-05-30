@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles } from 'lucide-react';
@@ -715,11 +714,6 @@ const FeedPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img
-              src={inlightLogo}
-              alt="Inlight"
-              className="w-10 h-10 rounded-full object-cover"
-            />
             <h1 className="text-2xl font-display font-bold">Home</h1>
           </div>
           
