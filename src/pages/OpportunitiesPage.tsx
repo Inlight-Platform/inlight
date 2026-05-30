@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, addMonths, isPast } from 'date-fns';
-import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { Plus, Briefcase, TrendingUp, Clock, Loader2, Calendar, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -237,11 +236,6 @@ const OpportunitiesPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img
-              src={inlightLogo}
-              alt="Inlight"
-              className="w-10 h-10 rounded-full object-cover"
-            />
             <div>
               <h1 className="text-2xl font-display font-bold">Jobs</h1>
               <p className="text-sm text-muted-foreground">

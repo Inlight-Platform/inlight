@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { ExternalLink, GraduationCap, Mic, Music, Video, Theater, Building2, Film, Bookmark, BookmarkCheck, Guitar } from 'lucide-react';
 import { useSavedItems } from '@/hooks/useSavedItems';
 import { Card, CardContent } from '@/components/ui/card';
@@ -326,11 +325,6 @@ const ResourcesPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-6 sm:px-8 lg:px-10 py-4">
           <div className="flex items-center gap-4">
-            <img
-              src={inlightLogo}
-              alt="Inlight"
-              className="w-10 h-10 rounded-full object-cover"
-            />
             <h1 className="text-2xl font-display font-bold">Resources</h1>
           </div>
         </div>
