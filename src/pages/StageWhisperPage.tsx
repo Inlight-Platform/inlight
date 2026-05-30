@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music, ExternalLink, Archive, Trash2 } from 'lucide-react';
 import { isPast } from 'date-fns';

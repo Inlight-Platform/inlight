@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Globe, GraduationCap } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
