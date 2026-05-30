@@ -28,31 +28,22 @@ export default {
   				'sans-serif'
   			],
   			display: [
-  			'Playfair Display',
-  			'Lora',
-  			'ui-serif',
-  			'Georgia',
-  			'serif'
+  			'Space Grotesk',
+  			'ui-sans-serif',
+  			'system-ui',
+  			'sans-serif'
   		],
   			serif: [
-  				'Lora',
-  				'ui-serif',
-  				'Georgia',
-  				'Cambria',
-  				'Times New Roman',
-  				'Times',
-  				'serif'
+  				'Space Grotesk',
+  				'ui-sans-serif',
+  				'system-ui',
+  				'sans-serif'
   			],
   			mono: [
-  				'Space Mono',
-  				'ui-monospace',
-  				'SFMono-Regular',
-  				'Menlo',
-  				'Monaco',
-  				'Consolas',
-  				'Liberation Mono',
-  				'Courier New',
-  				'monospace'
+  				'Inter',
+  				'ui-sans-serif',
+  				'system-ui',
+  				'sans-serif'
   			]
   		},
   		colors: {
