@@ -89,8 +89,8 @@ export const YouTab: React.FC = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       const { data } = await supabase
-        .from('profiles')
-        .select('user_id, display_name, avatar_url, headline, bio, location, badges, primary_discipline, secondary_disciplines, goals')
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url, headline, bio, location, badges')
         .neq('user_id', user.id)
         .limit(200);
       return (data || []) as SuggestedUser[];
