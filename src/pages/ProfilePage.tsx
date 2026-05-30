@@ -1490,16 +1490,16 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {/* RIGHT column — avatar rectangle + saves/community/etc */}
-        <div className="flex flex-col items-center gap-3 w-full sm:w-[200px] order-1 sm:order-2">
+        <div className="flex flex-col items-center gap-3 w-full sm:w-[300px] order-1 sm:order-2">
           <div className="relative" data-tour="profile-avatar">
             {displayAvatar ? (
               <img
                 src={displayAvatar}
                 alt={displayName}
-                className="w-44 h-56 sm:w-[200px] sm:h-[260px] rounded-2xl object-cover shadow-card border border-border"
+                className="w-[264px] h-[336px] sm:w-[300px] sm:h-[390px] rounded-2xl object-cover shadow-card border border-border"
               />
             ) : (
-              <div className="flex w-44 h-56 sm:w-[200px] sm:h-[260px] items-center justify-center rounded-2xl border border-border bg-gradient-to-br from-[hsl(222_35%_8%)] via-[hsl(240_45%_14%)] to-[hsl(222_35%_6%)] shadow-card ring-1 ring-primary/25">
+              <div className="flex w-[264px] h-[336px] sm:w-[300px] sm:h-[390px] items-center justify-center rounded-2xl border border-border bg-gradient-to-br from-[hsl(222_35%_8%)] via-[hsl(240_45%_14%)] to-[hsl(222_35%_6%)] shadow-card ring-1 ring-primary/25">
                 <img src={inlightLogo} alt="" className="h-20 w-20 rounded-full object-cover opacity-90" />
               </div>
             )}
@@ -1585,26 +1585,6 @@ const ProfilePage: React.FC = () => {
                     isPending={vouchPending}
                     targetName={displayName}
                   />
-                  
-                  {/* Follow Button */}
-                  <Button
-                    variant={userIsFollowing ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={handleFollowToggle}
-                    disabled={isFollowPending || isUnfollowPending}
-                  >
-                    {userIsFollowing ? (
-                      <>
-                        <Check className="w-4 h-4 mr-1" />
-                        Following
-                      </>
-                    ) : (
-                      <>
-                        <Users className="w-4 h-4 mr-1" />
-                        Follow
-                      </>
-                    )}
-                  </Button>
                   
                   {/* Connect/Cancel/Message Button */}
                   <button
