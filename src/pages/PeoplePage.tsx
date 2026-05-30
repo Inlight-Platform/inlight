@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Compass, Users, GraduationCap, Clock, Building2, ChevronDown, Inbox } from 'lucide-react';
+import { Search, Compass, Users, GraduationCap, Clock, Building2, ChevronDown, Inbox, ArrowLeft, UserRound } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -111,6 +111,7 @@ const PeoplePage: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState('explore');
   const [searchQuery, setSearchQuery] = useState('');
+  const [section, setSection] = useState<null | 'people' | 'groups' | 'companies'>(null);
   
   // Fetch all users from the database
   const { data: allUsers = [], isLoading, error: allUsersError } = useQuery({
@@ -262,17 +263,84 @@ const PeoplePage: React.FC = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-display font-bold">People</h1>
+          <div className="flex items-center gap-3">
+            {section && (
+              <button
+                onClick={() => setSection(null)}
+                className="p-1.5 rounded-full hover:bg-accent transition-colors"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
+            <h1 className="text-2xl font-display font-bold capitalize">
+              {section ?? 'People'}
+            </h1>
           </div>
         </div>
       </header>
-      
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        {/* Explore by Groups Section */}
-        <GroupsSection studios={studios} studiosLoading={studiosLoading} onStudioClick={handleStudioClick} />
 
-        {/* Tabs for Network */}
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        {section === null && (
+          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-4">
+            {[
+              { key: 'people', label: 'People', icon: UserRound, desc: 'Discover and connect with creators' },
+              { key: 'groups', label: 'Groups', icon: GraduationCap, desc: 'Explore by program or affiliation' },
+              { key: 'companies', label: 'Companies', icon: Building2, desc: 'Browse company portfolios and profiles' },
+            ].map(({ key, label, icon: Icon, desc }) => (
+              <button
+                key={key}
+                onClick={() => setSection(key as 'people' | 'groups' | 'companies')}
+                className="group aspect-square rounded-2xl border border-border bg-card hover:bg-accent/40 hover:border-primary/50 transition-all p-6 flex flex-col items-center justify-center text-center gap-3"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Icon className="w-7 h-7 text-primary" />
+                </div>
+                <h2 className="text-xl font-display font-semibold">{label}</h2>
+                <p className="text-xs text-muted-foreground">{desc}</p>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {section === 'groups' && (
+          <GroupsSection studios={studios} studiosLoading={studiosLoading} onStudioClick={handleStudioClick} />
+        )}
+
+        {section === 'companies' && (
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Building2 className="w-5 h-5 text-primary" />
+              <h2 className="text-xl font-display font-semibold">Companies</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-6">
+              {companies.length} companies sharing their portfolios and profiles
+            </p>
+            {companiesLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-48 rounded-xl" />
+                ))}
+              </div>
+            ) : companies.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {companies.map((company) => (
+                  <CompanyCard
+                    key={company.id}
+                    company={company}
+                    isFollowing={isFollowingCompany(company.id)}
+                    onFollow={(id) => followCompany.mutate(id)}
+                    onUnfollow={(id) => unfollowCompany.mutate(id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">No companies yet.</p>
+            )}
+          </section>
+        )}
+
+        {section === 'people' && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex sm:justify-center">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mb-6">
@@ -370,38 +438,6 @@ const PeoplePage: React.FC = () => {
                 )}
               </>
             )}
-
-            {/* Companies Section */}
-            {!searchQuery && (
-              <section className="mt-12">
-                <div className="flex items-center gap-2 mb-4">
-                  <Building2 className="w-5 h-5 text-primary" />
-                  <h2 className="text-xl font-display font-semibold">Companies to Connect With</h2>
-                </div>
-                <p className="text-sm text-muted-foreground mb-6">{companies.length} companies</p>
-                {companiesLoading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <Skeleton key={i} className="h-48 rounded-xl" />
-                    ))}
-                  </div>
-                ) : companies.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {companies.map((company) => (
-                      <CompanyCard
-                        key={company.id}
-                        company={company}
-                        isFollowing={isFollowingCompany(company.id)}
-                        onFollow={(id) => followCompany.mutate(id)}
-                        onUnfollow={(id) => unfollowCompany.mutate(id)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">No companies yet.</p>
-                )}
-              </section>
-            )}
           </TabsContent>
           
           <TabsContent value="network">
@@ -483,6 +519,7 @@ const PeoplePage: React.FC = () => {
             )}
           </TabsContent>
         </Tabs>
+        )}
       </div>
     </div>
   );
