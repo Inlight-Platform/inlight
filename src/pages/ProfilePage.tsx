@@ -1083,127 +1083,49 @@ const ProfilePage: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-background">
-      {/* A. Header */}
-      <header className="relative">
-        <button
-          onClick={handleBackToPeople}
-          className="absolute left-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/80 text-foreground shadow-card backdrop-blur-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:left-6 sm:top-6"
-          aria-label="Back to People"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-
-        {/* Cover image */}
-        <div className="relative h-[200px] sm:h-[280px] md:h-[350px] lg:h-[450px] overflow-hidden">
-          {dbProfile?.cover_url ? (
-            <img
-              src={dbProfile.cover_url}
-              alt={`${displayName}'s cover`}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="relative h-full w-full overflow-hidden bg-[hsl(222_35%_6%)]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,hsl(240_70%_50%/0.28),transparent_34%),radial-gradient(circle_at_78%_28%,hsl(45_95%_58%/0.14),transparent_28%),linear-gradient(135deg,hsl(222_35%_6%),hsl(222_38%_5%)_48%,hsl(240_45%_12%))]" />
-              <div
-                className="absolute inset-0 opacity-[0.08]"
-                style={{
-                  backgroundImage: 'radial-gradient(circle at 1px 1px, hsl(45 95% 58%) 1px, transparent 0)',
-                  backgroundSize: '34px 34px',
-                }}
-              />
-              <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-background via-background/35 to-transparent" />
-              <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                <img src={inlightLogo} alt="" className="h-28 w-28 rounded-full object-cover blur-[1px] sm:h-36 sm:w-36" />
-              </div>
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-          
-          {/* Cover edit button */}
-          {isOwnProfile && (
-            <>
-              <input
-                ref={coverInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                onChange={handleCoverSelect}
-                className="hidden"
-              />
-              <button
-                onClick={() => coverInputRef.current?.click()}
-                disabled={uploadingCover}
-                className="absolute top-4 right-4 p-2 rounded-full bg-card/80 backdrop-blur-sm shadow-lg hover:bg-card transition-colors disabled:opacity-50"
-                aria-label="Change cover image"
-              >
-                {uploadingCover ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Camera className="w-5 h-5" />
-                )}
-              </button>
-              <CoverImageCropper
-                open={coverCropperOpen}
-                imageSrc={coverCropperImageSrc}
-                onClose={() => setCoverCropperOpen(false)}
-                onCropComplete={handleCroppedCoverUpload}
-              />
-            </>
-          )}
+      {/* Top bar — back button only */}
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center">
+          <button
+            onClick={handleBackToPeople}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/80 text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Back to People"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
         </div>
-        
-        {/* Profile info */}
-        <div className="relative px-4 sm:px-6 lg:px-8 pb-6">
-          {/* Avatar */}
-          <div className="absolute -top-16 sm:-top-20 left-4 sm:left-6 lg:left-8" data-tour="profile-avatar">
-            <div className="relative">
-              {displayAvatar ? (
-                <img
-                  src={displayAvatar}
-                  alt={displayName}
-                  className="w-24 h-24 sm:w-32 sm:h-32 lg:w-[120px] lg:h-[120px] rounded-full border-4 border-background object-cover shadow-card"
-                />
-              ) : (
-                <div className="flex w-24 h-24 sm:w-32 sm:h-32 lg:w-[120px] lg:h-[120px] items-center justify-center rounded-full border-4 border-background bg-gradient-to-br from-[hsl(222_35%_8%)] via-[hsl(240_45%_14%)] to-[hsl(222_35%_6%)] shadow-card ring-1 ring-primary/25">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/25 bg-background/80 shadow-[0_0_28px_hsl(240_70%_50%/0.32)] sm:h-16 sm:w-16">
-                    <img src={inlightLogo} alt="" className="h-full w-full rounded-full object-cover opacity-90" />
-                  </div>
-                </div>
-              )}
-              {isOwnProfile && (
-                <>
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    onChange={handleAvatarSelect}
-                    className="hidden"
-                  />
-                  <button 
-                    onClick={() => avatarInputRef.current?.click()}
-                    disabled={uploadingAvatar}
-                    className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-                    aria-label="Change profile picture"
-                  >
-                    {uploadingAvatar ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Camera className="w-4 h-4" />
-                    )}
-                  </button>
-                  <AvatarCropper
-                    open={cropperOpen}
-                    onClose={() => setCropperOpen(false)}
-                    imageSrc={cropperImageSrc}
-                    onCropComplete={handleCroppedAvatarUpload}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-          
-          {/* Name and info */}
-          <div className="pt-12 sm:pt-16 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="flex-1">
+      </div>
+
+      {/* Centered content rectangle — matches Profile Completion Bar width */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      {/* Profile Completion Bar - only visible to profile owner */}
+      {isOwnProfile && dbProfile && (
+        <div className="mt-4 -mx-4 sm:-mx-6 lg:-mx-8">
+          <ProfileCompletionBar
+            userId={authUser!.id}
+            profile={{
+              role: dbProfile.role,
+              graduation_year: dbProfile.graduation_year,
+              location: dbProfile.location,
+              pronouns: dbProfile.pronouns,
+              instagram_url: dbProfile.instagram_url,
+              website_url: dbProfile.website_url,
+              badges: dbProfile.badges,
+              skills: dbProfile.skills,
+              bio: dbProfile.bio,
+            }}
+            creditsCount={dbCredits.length}
+          />
+        </div>
+      )}
+
+      {/* Two-column header: info bubbles on the LEFT, avatar rectangle on the RIGHT */}
+      <section className="py-6 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 sm:gap-8 items-start">
+        {/* LEFT column — name, bubbles, skills */}
+        <div className="flex flex-col gap-4 min-w-0 order-2 sm:order-1">
+          {/* Name area */}
+          <div className="flex-1">
               {/* Editable Name */}
               {isOwnProfile && isEditingName ? (
                 <div className="flex items-center gap-2">
@@ -1265,9 +1187,10 @@ const ProfilePage: React.FC = () => {
                   )}
                 </div>
               )}
-              
-              {/* Editable Role, Location, Pronouns */}
-              <div className="flex flex-wrap items-center gap-2 mt-2" data-tour="profile-roles">
+          </div>
+
+          {/* Fill-in-the-blank bubble row */}
+          <div className="flex flex-wrap items-center gap-2" data-tour="profile-roles">
                 {/* Role Badges - Multiple roles support (up to 4) */}
                 {isOwnProfile && isEditingRole ? (
                   <div className="flex items-center gap-1">
@@ -1374,13 +1297,14 @@ const ProfilePage: React.FC = () => {
                     </Button>
                   </div>
                 ) : (
-                  <span 
-                    className={`text-muted-foreground text-sm ${isOwnProfile ? 'cursor-pointer hover:text-foreground transition-colors' : ''}`}
+                  <Badge
+                    variant="outline"
+                    className={`text-sm font-medium ${isOwnProfile ? 'cursor-pointer hover:bg-secondary/80' : ''}`}
                     onClick={isOwnProfile ? startEditingLocation : undefined}
                   >
-                    {displayLocation || (isOwnProfile ? 'Add location' : '')}
+                    {displayLocation || (isOwnProfile ? 'Add location' : '—')}
                     {isOwnProfile && <Pencil className="w-3 h-3 ml-1 inline" />}
-                  </span>
+                  </Badge>
                 )}
 
                 {/* Pronouns */}
@@ -1402,18 +1326,159 @@ const ProfilePage: React.FC = () => {
                     </Button>
                   </div>
                 ) : (
-                  <span 
-                    className={`text-muted-foreground text-sm ${isOwnProfile ? 'cursor-pointer hover:text-foreground transition-colors' : ''}`}
+                  <Badge
+                    variant="outline"
+                    className={`text-sm font-medium ${isOwnProfile ? 'cursor-pointer hover:bg-secondary/80' : ''}`}
                     onClick={isOwnProfile ? startEditingPronouns : undefined}
                   >
-                    ({displayPronouns || (isOwnProfile ? 'Add pronouns' : '')})
+                    {displayPronouns || (isOwnProfile ? 'Add pronouns' : '—')}
                     {isOwnProfile && <Pencil className="w-3 h-3 ml-1 inline" />}
-                  </span>
+                  </Badge>
+                )}
+
+                {/* Instagram bubble */}
+                {isOwnProfile && isEditingInstagram ? (
+                  <div className="flex items-center gap-1">
+                    <Instagram className="w-4 h-4 text-muted-foreground" />
+                    <Input
+                      value={editInstagram}
+                      onChange={(e) => setEditInstagram(e.target.value)}
+                      className="w-40 h-7 text-sm"
+                      placeholder="@username"
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveInstagram()}
+                      autoFocus
+                    />
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSaveInstagram}>
+                      <Save className="w-3 h-3" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setIsEditingInstagram(false)}>
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : displayInstagram ? (
+                  <a
+                    href={displayInstagram.startsWith('http') ? displayInstagram : `https://www.instagram.com/${displayInstagram.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer external"
+                    onClick={(e) => {
+                      const url = displayInstagram.startsWith('http')
+                        ? displayInstagram
+                        : `https://www.instagram.com/${displayInstagram.replace('@', '')}`;
+                      e.preventDefault();
+                      try { window.open(url, '_blank', 'noopener,noreferrer'); }
+                      catch { window.location.href = url; }
+                    }}
+                  >
+                    <Badge variant="outline" className="text-sm font-medium gap-1 cursor-pointer hover:bg-secondary/80">
+                      <Instagram className="w-3 h-3" />
+                      {displayInstagram.startsWith('@') ? displayInstagram : `@${displayInstagram.split('/').pop()}`}
+                    </Badge>
+                  </a>
+                ) : isOwnProfile ? (
+                  <Badge
+                    variant="outline"
+                    className="text-sm font-medium cursor-pointer hover:bg-secondary/80 gap-1"
+                    onClick={startEditingInstagram}
+                  >
+                    <Instagram className="w-3 h-3" />
+                    Add Instagram
+                  </Badge>
+                ) : null}
+
+                {/* Affiliation badges */}
+                {displayBadges.map((badge) => (
+                  <div key={badge} className="relative group">
+                    <button onClick={() => handleBadgeClick(badge)} className="badge-pill">
+                      #{badge}
+                    </button>
+                    {isOwnProfile && (
+                      <button
+                        onClick={() => handleRemoveBadge(badge)}
+                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label={`Remove ${badge} badge`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {isOwnProfile && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Badge variant="outline" className="text-sm font-medium cursor-pointer hover:bg-secondary/80 gap-1">
+                        <Plus className="w-3 h-3" />
+                        Affiliation
+                      </Badge>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56 bg-popover border border-border z-50">
+                      {studioBadgeOptions
+                        .filter(option => !displayBadges?.includes(option.tag.toLowerCase()))
+                        .map((option) => (
+                          <DropdownMenuItem
+                            key={option.tag}
+                            onClick={() => handleAddBadgeToDb(option.tag)}
+                            className="cursor-pointer"
+                          >
+                            <span className="text-primary font-medium">#{option.tag}</span>
+                            <span className="ml-2 text-muted-foreground text-sm">{option.label}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      {studioBadgeOptions.filter(option => !displayBadges?.includes(option.tag.toLowerCase())).length === 0 && (
+                        <DropdownMenuItem disabled className="text-muted-foreground">
+                          All affiliations added
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+          </div>
+
+          {/* Skills compact dropdown */}
+          <Collapsible>
+            <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-2 rounded-xl border border-border bg-card text-sm font-medium hover:bg-accent/30 transition-colors">
+              <span>Skills{displaySkills.length > 0 && ` (${displaySkills.length})`}</span>
+              <ChevronDown className="w-4 h-4 transition-transform data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 p-3 rounded-xl border border-border bg-card/40">
+              <div className="flex flex-wrap items-center gap-2">
+                {displaySkills.map((skill) => (
+                  <div key={skill} className="relative group">
+                    <Badge variant="secondary" className="px-3 py-1">
+                      {skill}
+                      {isOwnProfile && (
+                        <button
+                          onClick={() => handleRemoveSkill(skill)}
+                          className="ml-1.5 hover:text-destructive transition-colors"
+                          aria-label={`Remove ${skill} skill`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </Badge>
+                  </div>
+                ))}
+                {isOwnProfile && (
+                  <SkillsCombobox
+                    existingSkills={displaySkills}
+                    onAddSkill={async (skill) => {
+                      const currentSkills = displaySkills || [];
+                      if (currentSkills.some(s => s.toLowerCase() === skill.toLowerCase())) {
+                        toast.error('Skill already exists');
+                        return;
+                      }
+                      await saveProfileField('skills', [...currentSkills, skill]);
+                    }}
+                  />
+                )}
+                {displaySkills.length === 0 && !isOwnProfile && (
+                  <span className="text-muted-foreground text-sm">No skills added</span>
                 )}
               </div>
-              
-              {/* Network Counts */}
-              <div className="flex items-center gap-4 mt-3">
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Network Counts */}
+          <div className="flex items-center gap-4">
                 <button
                   onClick={() => navigate(isOwnProfile ? '/network' : `/mutuals/${resolvedUserId}`)}
                   className="text-sm text-muted-foreground hover:text-primary hover:underline transition-colors"
@@ -1421,29 +1486,72 @@ const ProfilePage: React.FC = () => {
                   <span className="font-semibold text-foreground">{networkCounts?.networkCount || 0}</span>
                   {' '}connection{networkCounts?.networkCount !== 1 ? 's' : ''}
                 </button>
+          </div>
+        </div>
+
+        {/* RIGHT column — avatar rectangle + saves/community/etc */}
+        <div className="flex flex-col items-center gap-3 w-full sm:w-[200px] order-1 sm:order-2">
+          <div className="relative" data-tour="profile-avatar">
+            {displayAvatar ? (
+              <img
+                src={displayAvatar}
+                alt={displayName}
+                className="w-44 h-56 sm:w-[200px] sm:h-[260px] rounded-2xl object-cover shadow-card border border-border"
+              />
+            ) : (
+              <div className="flex w-44 h-56 sm:w-[200px] sm:h-[260px] items-center justify-center rounded-2xl border border-border bg-gradient-to-br from-[hsl(222_35%_8%)] via-[hsl(240_45%_14%)] to-[hsl(222_35%_6%)] shadow-card ring-1 ring-primary/25">
+                <img src={inlightLogo} alt="" className="h-20 w-20 rounded-full object-cover opacity-90" />
               </div>
-            </div>
-            
-            {/* Actions */}
-            <div className="flex items-center gap-3">
+            )}
+            {isOwnProfile && (
+              <>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleAvatarSelect}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute bottom-2 right-2 p-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  aria-label="Change profile picture"
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Camera className="w-4 h-4" />
+                  )}
+                </button>
+                <AvatarCropper
+                  open={cropperOpen}
+                  onClose={() => setCropperOpen(false)}
+                  imageSrc={cropperImageSrc}
+                  onCropComplete={handleCroppedAvatarUpload}
+                />
+              </>
+            )}
+          </div>
+
+          {/* Action bubbles below avatar */}
+          <div className="flex flex-col gap-2 w-full items-stretch">
               {isOwnProfile && authUser && (
                 <>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
+                  <button
                     onClick={() => navigate('/saves')}
+                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-primary/15 hover:bg-primary/25 text-sm font-medium text-primary border border-primary/20 transition-colors"
                   >
-                    <Bookmark className="w-4 h-4 mr-2" />
+                    <Bookmark className="w-4 h-4" />
                     My Saves
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
+                  </button>
+                  <button
                     onClick={() => navigate('/network')}
+                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-primary/15 hover:bg-primary/25 text-sm font-medium text-primary border border-primary/20 transition-colors"
                   >
-                    <Users className="w-4 h-4 mr-2" />
+                    <Users className="w-4 h-4" />
                     My Community
-                  </Button>
+                  </button>
                 </>
               )}
               {!isOwnProfile && authUser && (
@@ -1520,7 +1628,7 @@ const ProfilePage: React.FC = () => {
               {!isOwnProfile && authUser && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-full">
+                    <Button variant="outline" size="icon" className="rounded-full self-center">
                       <MoreHorizontal className="w-5 h-5" />
                       <span className="sr-only">More options</span>
                     </Button>
@@ -1546,7 +1654,7 @@ const ProfilePage: React.FC = () => {
               {isOwnProfile && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-full">
+                    <Button variant="outline" size="icon" className="rounded-full self-center">
                       <MoreHorizontal className="w-5 h-5" />
                       <span className="sr-only">More options</span>
                     </Button>
@@ -1559,32 +1667,12 @@ const ProfilePage: React.FC = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-            </div>
           </div>
         </div>
-      </header>
+      </section>
 
-      {/* Centered content rectangle — matches Profile Completion Bar width */}
-      <div className="max-w-5xl mx-auto">
-      {/* Profile Completion Bar - only visible to profile owner */}
-
-      {isOwnProfile && dbProfile && (
-        <ProfileCompletionBar
-          userId={authUser!.id}
-          profile={{
-            role: dbProfile.role,
-            graduation_year: dbProfile.graduation_year,
-            location: dbProfile.location,
-            pronouns: dbProfile.pronouns,
-            instagram_url: dbProfile.instagram_url,
-            website_url: dbProfile.website_url,
-            badges: dbProfile.badges,
-            skills: dbProfile.skills,
-            bio: dbProfile.bio,
-          }}
-          creditsCount={dbCredits.length}
-        />
-      )}
+      {/* Boxed rectangle — all sections below are centered within */}
+      <div className="rounded-2xl border border-border bg-card/30 overflow-hidden text-center">
 
       {/* A. Bio & Social Links - Prominent Section */}
       <section className="px-4 sm:px-6 lg:px-8 py-6 border-b border-border bg-gradient-to-b from-muted/30 to-transparent">
@@ -1631,216 +1719,7 @@ const ProfilePage: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* Social Links */}
-          <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-border/50">
-            {/* Instagram */}
-            {isOwnProfile && isEditingInstagram ? (
-              <div className="flex items-center gap-2">
-                <Instagram className="w-4 h-4 text-muted-foreground" />
-                <Input
-                  value={editInstagram}
-                  onChange={(e) => setEditInstagram(e.target.value)}
-                  className="w-48 h-8 text-sm"
-                  placeholder="@username or URL"
-                  onKeyDown={(e) => e.key === 'Enter' && handleSaveInstagram()}
-                  autoFocus
-                />
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveInstagram}>
-                  <Save className="w-4 h-4" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingInstagram(false)}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            ) : displayInstagram ? (
-              <a 
-                href={displayInstagram.startsWith('http') ? displayInstagram : `https://www.instagram.com/${displayInstagram.replace('@', '')}`}
-                target="_blank"
-                rel="noopener noreferrer external"
-                onClick={(e) => {
-                  // Escape preview iframe sandboxing by opening on the top window
-                  const url = displayInstagram.startsWith('http')
-                    ? displayInstagram
-                    : `https://www.instagram.com/${displayInstagram.replace('@', '')}`;
-                  e.preventDefault();
-                  try {
-                    window.open(url, '_blank', 'noopener,noreferrer');
-                  } catch {
-                    window.location.href = url;
-                  }
-                }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted text-sm transition-colors"
-              >
-                <Instagram className="w-4 h-4" />
-                <span>{displayInstagram.startsWith('@') ? displayInstagram : `@${displayInstagram.split('/').pop()}`}</span>
-              </a>
-            ) : isOwnProfile ? (
-              <button
-                onClick={startEditingInstagram}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-dashed border-border hover:bg-muted/50 text-sm text-muted-foreground transition-colors"
-              >
-                <Instagram className="w-4 h-4" />
-                <span>Add Instagram</span>
-              </button>
-            ) : null}
-
-            {/* Website */}
-            {isOwnProfile && isEditingWebsite ? (
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-muted-foreground" />
-                <Input
-                  value={editWebsite}
-                  onChange={(e) => setEditWebsite(e.target.value)}
-                  className="w-48 h-8 text-sm"
-                  placeholder="https://yourwebsite.com"
-                  onKeyDown={(e) => e.key === 'Enter' && handleSaveWebsite()}
-                  autoFocus
-                />
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveWebsite}>
-                  <Save className="w-4 h-4" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingWebsite(false)}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            ) : displayWebsite ? (
-              <a 
-                href={displayWebsite.startsWith('http') ? displayWebsite : `https://${displayWebsite}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted text-sm transition-colors"
-              >
-                <Globe className="w-4 h-4" />
-                <span>{displayWebsite.replace(/^https?:\/\//, '').split('/')[0]}</span>
-              </a>
-            ) : isOwnProfile ? (
-              <button
-                onClick={startEditingWebsite}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-dashed border-border hover:bg-muted/50 text-sm text-muted-foreground transition-colors"
-              >
-                <Globe className="w-4 h-4" />
-                <span>Add Website</span>
-              </button>
-            ) : null}
-
-            {/* Edit links button for own profile when links exist */}
-            {isOwnProfile && (displayInstagram || displayWebsite) && (
-              <button
-                onClick={() => {
-                  if (!isEditingInstagram && !isEditingWebsite) {
-                    startEditingInstagram();
-                  }
-                }}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Pencil className="w-3 h-3 inline mr-1" />
-                Edit links
-              </button>
-            )}
           </div>
-          </div>
-        </div>
-      </section>
-      
-      {/* B. Affiliation */}
-      <section className="px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
-        <h3 className="text-sm font-medium text-muted-foreground mb-2">Affiliation</h3>
-        <div className="flex items-center gap-3 overflow-x-auto scrollbar-thin pb-2">
-          {displayBadges.map((badge) => (
-            <div key={badge} className="relative group flex-shrink-0">
-              <button
-                onClick={() => handleBadgeClick(badge)}
-                className="badge-pill"
-              >
-                #{badge}
-              </button>
-              {isOwnProfile && (
-                <button
-                  onClick={() => handleRemoveBadge(badge)}
-                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label={`Remove ${badge} badge`}
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          ))}
-          
-          {isOwnProfile && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline" className="h-8 px-3 gap-1">
-                  <Plus className="w-4 h-4" />
-                  Add Affiliation
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 bg-popover border border-border z-50">
-                {studioBadgeOptions
-                  .filter(option => !displayBadges?.includes(option.tag.toLowerCase()))
-                  .map((option) => (
-                    <DropdownMenuItem 
-                      key={option.tag}
-                      onClick={() => handleAddBadgeToDb(option.tag)}
-                      className="cursor-pointer"
-                    >
-                      <span className="text-primary font-medium">#{option.tag}</span>
-                      <span className="ml-2 text-muted-foreground text-sm">{option.label}</span>
-                    </DropdownMenuItem>
-                  ))}
-                {studioBadgeOptions.filter(option => !displayBadges?.includes(option.tag.toLowerCase())).length === 0 && (
-                  <DropdownMenuItem disabled className="text-muted-foreground">
-                    All affiliations added
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          
-          {displayBadges.length === 0 && !isOwnProfile && (
-            <span className="text-muted-foreground text-sm">No affiliations added</span>
-          )}
-        </div>
-      </section>
-
-      {/* B2. Skills */}
-      <section className="px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
-        <h3 className="text-sm font-medium text-muted-foreground mb-2">Skills</h3>
-        <div className="flex flex-wrap items-center gap-2">
-          {displaySkills.map((skill) => (
-            <div key={skill} className="relative group">
-              <Badge variant="secondary" className="px-3 py-1">
-                {skill}
-                {isOwnProfile && (
-                  <button
-                    onClick={() => handleRemoveSkill(skill)}
-                    className="ml-1.5 hover:text-destructive transition-colors"
-                    aria-label={`Remove ${skill} skill`}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </Badge>
-            </div>
-          ))}
-          
-          {isOwnProfile && (
-            <SkillsCombobox
-              existingSkills={displaySkills}
-              onAddSkill={async (skill) => {
-                const currentSkills = displaySkills || [];
-                if (currentSkills.some(s => s.toLowerCase() === skill.toLowerCase())) {
-                  toast.error('Skill already exists');
-                  return;
-                }
-                await saveProfileField('skills', [...currentSkills, skill]);
-              }}
-            />
-          )}
-          
-          {displaySkills.length === 0 && !isOwnProfile && (
-            <span className="text-muted-foreground text-sm">No skills added</span>
-          )}
         </div>
       </section>
 
@@ -2120,6 +1999,8 @@ const ProfilePage: React.FC = () => {
           </div>
         </section>
       )}
+      </div>
+      {/* /Boxed rectangle */}
       </div>
       {/* /Centered content rectangle */}
 
