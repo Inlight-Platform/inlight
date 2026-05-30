@@ -38,7 +38,6 @@ const InlightHomeIcon: React.FC<{className?: string;}> = ({ className }) =>
 
 const navItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
-{ label: 'Messages', icon: MessageSquare, path: '/messages' },
 { label: 'People', icon: Users, path: '/people' },
 { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
 { label: 'Industry Now', icon: Theater, path: '/stage-whisper' },
@@ -53,7 +52,7 @@ export const MainNav: React.FC = () => {
   const { collapsed, toggleCollapsed } = useSidebarState();
   const { totalUnread } = useMessages();
   const { unreadCount: notifUnreadCount } = useNotifications();
-  const combinedUnread = notifUnreadCount;
+  const combinedUnread = notifUnreadCount + totalUnread;
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const { isDark, toggleTheme } = useTheme();
 
@@ -105,11 +104,7 @@ export const MainNav: React.FC = () => {
   const allNavItems: NavItem[] = user
     ? [
         { label: 'Notifications', icon: Bell, path: '/notifications', badge: combinedUnread > 0 ? combinedUnread : undefined },
-        ...navItems.map((item) =>
-          item.path === '/messages' && totalUnread > 0
-            ? { ...item, badge: totalUnread }
-            : item
-        ),
+        ...navItems,
       ]
     : navItems;
 
