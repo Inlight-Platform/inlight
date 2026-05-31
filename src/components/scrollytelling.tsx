@@ -1,7 +1,15 @@
-import { useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform, MotionValue, useSpring } from "framer-motion";
+import { ArrowLeft, GraduationCap, Loader2 } from "lucide-react";
 import { Sparkle } from "./Sparkle";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import logo from "@/assets/inlight-logo.jpeg";
 import audience1 from "@/assets/audience-1.jpg";
 import audience2 from "@/assets/audience-2.jpg";
@@ -10,6 +18,17 @@ import winner from "@/assets/winner.jpg";
 import panel from "@/assets/panel.jpg";
 import collage from "@/assets/collage.jpg";
 import dance from "@/assets/dance.jpg";
+
+type EmbeddedAuthView = "login" | "signup" | "forgot";
+
+const authFieldClass =
+  "h-12 rounded-xl border-border bg-secondary/40 text-sm text-white placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-[hsl(45_95%_58%/0.55)] focus-visible:ring-offset-0";
+
+const authPrimaryButtonClass =
+  "!h-12 !rounded-xl !bg-none !bg-foreground !text-background font-medium tracking-wide hover:!bg-none hover:!bg-foreground/90";
+
+const authSecondaryButtonClass =
+  "!h-12 !rounded-xl !border-border !bg-none !bg-secondary/30 !text-muted-foreground hover:!bg-none hover:!bg-secondary/50 hover:!text-white";
 
 /* ---------- HERO ---------- */
 export function Hero({ progress }: { progress: MotionValue<number> }) {
@@ -386,11 +405,84 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
 
 /* ---------- FINAL CTA ---------- */
 export function CTAStop() {
+  const [mode, setMode] = useState<EmbeddedAuthView>("signup");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { signIn, signUp, resetPassword } = useAuth();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end end"] });
   const scale = useSpring(useTransform(scrollYProgress, [0, 1], [0.7, 1]), { stiffness: 80, damping: 20 });
   const opacity = useTransform(scrollYProgress, [0, 0.4, 1], [0, 1, 1]);
+
+  const validateEduEmail = (value: string): boolean => {
+    const allowedEmails = ["info@inlight.social", "alabfestival@gmail.com", "clelyfdes@gmail.com"];
+    return value.toLowerCase().endsWith(".edu") || allowedEmails.includes(value.toLowerCase());
+  };
+
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setIsLoading(true);
+
+    const { error } = await signIn(email, password);
+    if (error) {
+      toast.error("Login failed. If you had an account before the migration, reset your password once to continue.");
+    } else {
+      toast.success("Welcome back!");
+      navigate("/feed");
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleSignup = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!validateEduEmail(email)) {
+      toast.error("Only university email addresses are allowed to sign up.");
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsLoading(true);
+    const { data, error } = await signUp(email, password, displayName);
+    if (error) {
+      toast.error(error.message);
+    } else if (!data?.session) {
+      toast.success("Account created. Check your .edu inbox and confirm your email before signing in.");
+      setMode("login");
+    } else {
+      toast.success("Account created! Welcome to Inlight.");
+      navigate("/feed");
+    }
+    setIsLoading(false);
+  };
+
+  const handleForgotPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!email) {
+      toast.error("Please enter your email address.");
+      return;
+    }
+
+    setIsLoading(true);
+    const { error } = await resetPassword(email);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Password reset email sent. Use the same email as before the migration to set a new password.");
+      setMode("login");
+      setPassword("");
+    }
+    setIsLoading(false);
+  };
 
   return (
     <section ref={ref} className="relative min-h-screen flex items-center justify-center px-6 py-24">
@@ -408,52 +500,221 @@ export function CTAStop() {
         </p>
 
         <div className="mt-12 rounded-3xl border border-border bg-card/60 backdrop-blur-xl p-6 sm:p-8 shadow-soft">
-          <div className="mb-6 text-center text-sm tracking-[0.25em] uppercase text-muted-foreground">
-            Create account
-          </div>
+          {mode !== "forgot" ? (
+            <div className="relative mb-6 grid grid-cols-2 rounded-full bg-secondary/60 p-1">
+              <button
+                type="button"
+                onClick={() => setMode("login")}
+                className={cn(
+                  "rounded-full py-2.5 text-sm tracking-wide transition",
+                  mode === "login" ? "bg-foreground text-background" : "text-muted-foreground hover:text-white"
+                )}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("signup")}
+                className={cn(
+                  "rounded-full py-2.5 text-sm tracking-wide transition",
+                  mode === "signup" ? "bg-foreground text-background" : "text-muted-foreground hover:text-white"
+                )}
+              >
+                Create account
+              </button>
+            </div>
+          ) : (
+            <div className="mb-6 text-center text-sm tracking-[0.25em] uppercase text-muted-foreground">
+              Reset password
+            </div>
+          )}
 
-          <form
-            className="space-y-3 text-left"
-            onSubmit={(e) => {
-              e.preventDefault();
-              navigate("/auth?mode=signup");
-            }}
-          >
-            <input
-              type="text"
-              placeholder="Full name"
-              className="w-full bg-secondary/40 border border-border rounded-xl px-4 py-3.5 text-sm placeholder:text-muted-foreground outline-none focus:border-glow transition"
-            />
-            <input
-              type="email"
-              placeholder=".edu or alumni email"
-              className="w-full bg-secondary/40 border border-border rounded-xl px-4 py-3.5 text-sm placeholder:text-muted-foreground outline-none focus:border-glow transition"
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              className="w-full bg-secondary/40 border border-border rounded-xl px-4 py-3.5 text-sm placeholder:text-muted-foreground outline-none focus:border-glow transition"
-            />
-            <button
-              type="submit"
-              className="group relative w-full mt-2 py-4 rounded-xl bg-foreground text-background font-medium tracking-wide overflow-hidden"
-            >
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                Create my account
-                <span className="transition-transform group-hover:translate-x-1">→</span>
-              </span>
-            </button>
-          </form>
+          {mode === "login" && (
+            <form className="space-y-4 text-left" onSubmit={handleLogin}>
+              <Alert className="border-border bg-secondary/30 text-white">
+                <GraduationCap className="h-4 w-4" />
+                <AlertTitle>Already had an account?</AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  We moved to a new sign-in system. Existing users should reset their password once, then log in normally.
+                </AlertDescription>
+              </Alert>
+              <div className="space-y-2">
+                <Label htmlFor="landing-login-email" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Email
+                </Label>
+                <Input
+                  id="landing-login-email"
+                  type="email"
+                  placeholder="you@university.edu"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  className={authFieldClass}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="landing-login-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Password
+                </Label>
+                <Input
+                  id="landing-login-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  className={authFieldClass}
+                />
+              </div>
+              <Button type="submit" className={cn("w-full", authPrimaryButtonClass)} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign in"
+                )}
+              </Button>
+              <button
+                type="button"
+                className="w-full text-center text-sm text-accent-blue hover:underline"
+                onClick={() => {
+                  setMode("forgot");
+                  setPassword("");
+                }}
+              >
+                Reset your password
+              </button>
+            </form>
+          )}
 
-          <p className="mt-5 text-[11px] text-muted-foreground">
+          {mode === "signup" && (
+            <form className="space-y-4 text-left" onSubmit={handleSignup}>
+              <div className="space-y-2">
+                <Label htmlFor="landing-signup-name" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Full name
+                </Label>
+                <Input
+                  id="landing-signup-name"
+                  type="text"
+                  placeholder="Jane Doe"
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  className={authFieldClass}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="landing-signup-email" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Email
+                </Label>
+                <Input
+                  id="landing-signup-email"
+                  type="email"
+                  placeholder="you@university.edu"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  className={authFieldClass}
+                />
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <GraduationCap className="h-3 w-3" />
+                  Only university emails are allowed
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="landing-signup-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Password
+                </Label>
+                <Input
+                  id="landing-signup-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  minLength={6}
+                  className={authFieldClass}
+                />
+                <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
+              </div>
+              <Button type="submit" className={cn("w-full", authPrimaryButtonClass)} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create my account"
+                )}
+              </Button>
+            </form>
+          )}
+
+          {mode === "forgot" && (
+            <form className="space-y-4 text-left" onSubmit={handleForgotPassword}>
+              <Alert className="border-border bg-secondary/30 text-white">
+                <GraduationCap className="h-4 w-4" />
+                <AlertTitle>Returning after the migration?</AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  Your account still exists, but you need to set a new password once before signing in again.
+                </AlertDescription>
+              </Alert>
+              <div className="space-y-2">
+                <Label htmlFor="landing-reset-email" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Email
+                </Label>
+                <Input
+                  id="landing-reset-email"
+                  type="email"
+                  placeholder="you@university.edu"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  className={authFieldClass}
+                />
+              </div>
+              <Button type="submit" className={cn("w-full", authPrimaryButtonClass)} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  "Send reset link"
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className={cn("w-full", authSecondaryButtonClass)}
+                onClick={() => setMode("login")}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Sign In
+              </Button>
+            </form>
+          )}
+
+          <p className="mt-5 text-center text-[11px] text-muted-foreground">
             By continuing you agree to Inlight's Terms & Privacy.
           </p>
-          <p className="mt-4 text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link to="/auth" className="text-accent-blue hover:underline">
-              Click here to sign in
-            </Link>
-          </p>
+          {mode === "signup" && (
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <button type="button" onClick={() => setMode("login")} className="text-accent-blue hover:underline">
+                Sign in
+              </button>
+            </p>
+          )}
+          {mode === "login" && (
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              New to Inlight?{" "}
+              <button type="button" onClick={() => setMode("signup")} className="text-accent-blue hover:underline">
+                Create an account
+              </button>
+            </p>
+          )}
         </div>
 
         <div className="mt-16 flex items-center justify-center gap-3 opacity-60">

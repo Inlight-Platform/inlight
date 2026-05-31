@@ -1,33 +1,104 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, GraduationCap, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, GraduationCap, Loader2 } from 'lucide-react';
 import inlightLogo from '@/assets/inlight-logo.jpeg';
+import { Sparkle } from '@/components/Sparkle';
+import { Starfield } from '@/components/Starfield';
+import { useForceTheme } from '@/hooks/useTheme';
+import { cn } from '@/lib/utils';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset';
 
+interface AuthRouteState {
+  email?: string;
+  password?: string;
+  displayName?: string;
+  mode?: AuthView;
+}
+
+const fieldClass =
+  'h-12 rounded-xl border-border bg-secondary/40 text-sm text-white placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-[hsl(45_95%_58%/0.55)] focus-visible:ring-offset-0';
+
+const primaryButtonClass =
+  '!h-12 !rounded-xl !bg-none !bg-foreground !text-background font-medium tracking-wide hover:!bg-none hover:!bg-foreground/90';
+
+const secondaryButtonClass =
+  '!h-12 !rounded-xl !border-border !bg-none !bg-secondary/30 !text-muted-foreground hover:!bg-none hover:!bg-secondary/50 hover:!text-white';
+
+const AuthFrame: React.FC<{
+  children: React.ReactNode;
+  eyebrow: string;
+  title: React.ReactNode;
+  caption: string;
+  maxWidth?: string;
+}> = ({ children, eyebrow, title, caption, maxWidth = 'max-w-md' }) => (
+  <main className="dark relative min-h-screen overflow-hidden bg-night text-foreground">
+    <div className="fixed inset-0 -z-10 bg-night">
+      <div className="absolute inset-0 bg-aurora opacity-70" />
+      <Starfield density={110} />
+    </div>
+
+    <nav className="fixed top-0 inset-x-0 z-50 px-6 sm:px-10 py-5 flex items-center justify-between">
+      <Link to="/" className="flex items-center gap-2">
+        <img src={inlightLogo} alt="Inlight" className="h-8 w-8 rounded-full object-cover" />
+      </Link>
+      <Link
+        to="/"
+        className="text-xs tracking-[0.25em] uppercase px-4 py-2 rounded-full border border-border hover:border-glow hover:text-glow transition"
+      >
+        Back home
+      </Link>
+    </nav>
+
+    <section className="relative flex min-h-screen items-center justify-center px-6 py-28">
+      <div className={cn('relative w-full text-center', maxWidth)}>
+        <div className="mb-8 flex justify-center gap-2 text-glow">
+          <Sparkle size={16} className="opacity-60" />
+          <Sparkle size={24} />
+          <Sparkle size={12} className="opacity-40" />
+        </div>
+        <div className="mb-5 text-[11px] tracking-[0.4em] uppercase text-muted-foreground">
+          {eyebrow}
+        </div>
+        <h1 className="font-editorial text-5xl leading-[1.05] tracking-tight text-white sm:text-7xl">
+          {title}
+        </h1>
+        <p className="mx-auto mt-5 max-w-md text-sm leading-6 text-muted-foreground">
+          {caption}
+        </p>
+        <div className="mt-10 rounded-3xl border border-border bg-card/60 p-6 text-left shadow-soft backdrop-blur-xl sm:p-8">
+          {children}
+        </div>
+      </div>
+    </section>
+  </main>
+);
+
 const AuthPage: React.FC = () => {
+  useForceTheme('dark');
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const routeState = (location.state || {}) as AuthRouteState;
   const mode = searchParams.get('mode');
   
   const getInitialView = (): AuthView => {
+    if (routeState.mode) return routeState.mode;
     if (mode === 'signup') return 'signup';
     if (mode === 'reset') return 'reset';
     return 'login';
   };
   
   const [view, setView] = useState<AuthView>(getInitialView());
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(routeState.email || '');
+  const [password, setPassword] = useState(routeState.password || '');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [displayName, setDisplayName] = useState(routeState.displayName || '');
   const [isLoading, setIsLoading] = useState(false);
   
   const { user, loading, signIn, signUp, resetPassword, updatePassword, isPasswordRecovery, recoveryError } = useAuth();
@@ -55,7 +126,7 @@ const AuthPage: React.FC = () => {
 
   const validateEduEmail = (email: string): boolean => {
     const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com', 'clelyfdes@gmail.com'];
-    return email.toLowerCase().endsWith('@nyu.edu') || allowedEmails.includes(email.toLowerCase());
+    return email.toLowerCase().endsWith('.edu') || allowedEmails.includes(email.toLowerCase());
   };
 
   const openForgotPassword = () => {
@@ -84,7 +155,7 @@ const AuthPage: React.FC = () => {
     e.preventDefault();
     
     if (!validateEduEmail(email)) {
-      toast.error('Only nyu.edu email addresses are allowed to sign up.');
+      toast.error('Only university email addresses are allowed to sign up.');
       return;
     }
 
@@ -161,9 +232,15 @@ const AuthPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <AuthFrame
+        eyebrow="Opening Inlight"
+        title={<>Hold <em className="italic text-accent-blue font-normal">tight</em>.</>}
+        caption="We are checking your session."
+      >
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-glow" />
+        </div>
+      </AuthFrame>
     );
   }
 
@@ -181,281 +258,303 @@ const AuthPage: React.FC = () => {
     // If no user session and not in password recovery, the link might be invalid/expired
     if ((!user && !isPasswordRecovery) || recoveryError) {
       return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader className="text-center space-y-2">
-              <div className="mx-auto w-12 h-12 bg-destructive rounded-full flex items-center justify-center">
-                <GraduationCap className="h-6 w-6 text-destructive-foreground" />
-              </div>
-              <CardTitle className="text-2xl font-bold">Link Expired</CardTitle>
-              <CardDescription>
-                This password reset link has expired or is invalid. Please request a new one.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {recoveryError && (
-                <Alert className="mb-4" variant="destructive">
-                  <AlertTitle>Reset link could not be verified</AlertTitle>
-                  <AlertDescription>{recoveryError}</AlertDescription>
-                </Alert>
-              )}
-              <Button
-                className="w-full"
-                onClick={() => {
-                  openForgotPassword();
-                  navigate('/auth');
-                }}
-              >
-                Request New Reset Link
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+        <AuthFrame
+          eyebrow="Reset link"
+          title={<>Link <em className="italic text-accent-blue font-normal">expired</em>.</>}
+          caption="This password reset link has expired or is invalid. Request a fresh one and continue with the same email."
+        >
+          {recoveryError && (
+            <Alert className="mb-4 border-destructive/40 bg-destructive/10 text-white" variant="destructive">
+              <AlertTitle>Reset link could not be verified</AlertTitle>
+              <AlertDescription>{recoveryError}</AlertDescription>
+            </Alert>
+          )}
+          <Button
+            className={cn('w-full', primaryButtonClass)}
+            onClick={() => {
+              openForgotPassword();
+              navigate('/auth');
+            }}
+          >
+            Request New Reset Link
+          </Button>
+        </AuthFrame>
       );
     }
 
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center space-y-2">
-            <img src={inlightLogo} alt="Inlight" className="mx-auto w-12 h-12 rounded-full object-cover" />
-            <CardTitle className="text-2xl font-bold">Set New Password</CardTitle>
-            <CardDescription>
-              Enter your new password below
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleResetPassword} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  'Update Password'
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthFrame
+        eyebrow="Password recovery"
+        title={<>Set a new <em className="italic text-accent-blue font-normal">password</em>.</>}
+        caption="Choose a new password below. Your existing Inlight profile and account data stay connected."
+      >
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="new-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              New Password
+            </Label>
+            <Input
+              id="new-password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className={fieldClass}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Confirm Password
+            </Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={6}
+              className={fieldClass}
+            />
+          </div>
+          <Button type="submit" className={cn('w-full', primaryButtonClass)} disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              'Update Password'
+            )}
+          </Button>
+        </form>
+      </AuthFrame>
     );
   }
 
   // Forgot password view
   if (view === 'forgot') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center space-y-2">
-            <img src={inlightLogo} alt="Inlight" className="mx-auto w-12 h-12 rounded-full object-cover" />
-            <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
-            <CardDescription>
-              Enter the same email tied to your old account and we'll send you a reset link
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              <Alert>
-                <GraduationCap className="h-4 w-4" />
-                <AlertTitle>Returning after the migration?</AlertTitle>
-                <AlertDescription>
-                  Your account still exists, but you need to set a new password once before signing in again.
-                </AlertDescription>
-              </Alert>
-              <div className="space-y-2">
-                <Label htmlFor="reset-email">Email</Label>
-                <Input
-                  id="reset-email"
-                  type="email"
-                  placeholder="you@university.edu"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  'Send Reset Link'
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full"
-                onClick={() => setView('login')}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Login
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthFrame
+        eyebrow="Account recovery"
+        title={<>Reset your <em className="italic text-accent-blue font-normal">password</em>.</>}
+        caption="Enter the same email tied to your old account and we will send you a reset link."
+      >
+        <form onSubmit={handleForgotPassword} className="space-y-4">
+          <Alert className="border-border bg-secondary/30 text-white">
+            <GraduationCap className="h-4 w-4" />
+            <AlertTitle>Returning after the migration?</AlertTitle>
+            <AlertDescription className="text-muted-foreground">
+              Your account still exists, but you need to set a new password once before signing in again.
+            </AlertDescription>
+          </Alert>
+          <div className="space-y-2">
+            <Label htmlFor="reset-email" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Email
+            </Label>
+            <Input
+              id="reset-email"
+              type="email"
+              placeholder="you@university.edu"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className={fieldClass}
+            />
+          </div>
+          <Button type="submit" className={cn('w-full', primaryButtonClass)} disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              'Send Reset Link'
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn('w-full', secondaryButtonClass)}
+            onClick={() => setView('login')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Sign In
+          </Button>
+        </form>
+      </AuthFrame>
     );
   }
 
   // Login/Signup view
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-2">
-          <img src={inlightLogo} alt="Inlight" className="mx-auto w-12 h-12 rounded-full object-cover" />
-          <CardTitle className="text-2xl font-bold">Inlight</CardTitle>
-          <CardDescription>
-            Connect with your creative community
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={view} onValueChange={(v) => setView(v as AuthView)}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
+    <AuthFrame
+      eyebrow={view === 'signup' ? 'Create account' : 'Welcome back'}
+      title={
+        view === 'signup' ? (
+          <>
+            Step into <em className="italic text-accent-blue font-normal">the light</em>.
+          </>
+        ) : (
+          <>
+            Return to <em className="italic text-accent-blue font-normal">Inlight</em>.
+          </>
+        )
+      }
+      caption={
+        view === 'signup'
+          ? 'Claim your place in the network built by, and for, the next generation of entertainment.'
+          : 'Sign in to continue to your feed, projects, messages, and creative network.'
+      }
+    >
+      <div className="relative mb-6 grid grid-cols-2 rounded-full bg-secondary/60 p-1">
+        <button
+          type="button"
+          onClick={() => setView('login')}
+          className={cn(
+            'rounded-full py-2.5 text-sm tracking-wide transition',
+            view === 'login' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-white'
+          )}
+        >
+          Sign in
+        </button>
+        <button
+          type="button"
+          onClick={() => setView('signup')}
+          className={cn(
+            'rounded-full py-2.5 text-sm tracking-wide transition',
+            view === 'signup' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-white'
+          )}
+        >
+          Create account
+        </button>
+      </div>
 
-            <TabsContent value="login" className="space-y-4 mt-4">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <Alert>
-                  <GraduationCap className="h-4 w-4" />
-                  <AlertTitle>Already had an account?</AlertTitle>
-                  <AlertDescription>
-                    We moved to a new sign-in system. Existing users should reset their password once, then log in normally.
-                  </AlertDescription>
-                </Alert>
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="you@university.edu"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Logging in...
-                    </>
-                  ) : (
-                    'Login'
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="w-full text-sm"
-                  onClick={openForgotPassword}
-                >
-                  Already had an account? Reset your password
-                </Button>
-                <p className="text-center text-xs text-muted-foreground">
-                  If your old password no longer works, use the reset flow with the same email address.
-                </p>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="signup" className="space-y-4 mt-4">
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Display Name</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="Jane Doe"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="you@nyu.edu"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <GraduationCap className="h-3 w-3" />
-                    Only nyu.edu emails are allowed
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Minimum 6 characters
-                  </p>
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating account...
-                    </>
-                  ) : (
-                    'Create Account'
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+      {view === 'login' ? (
+        <form onSubmit={handleLogin} className="space-y-4">
+          <Alert className="border-border bg-secondary/30 text-white">
+            <GraduationCap className="h-4 w-4" />
+            <AlertTitle>Already had an account?</AlertTitle>
+            <AlertDescription className="text-muted-foreground">
+              We moved to a new sign-in system. Existing users should reset their password once, then log in normally.
+            </AlertDescription>
+          </Alert>
+          <div className="space-y-2">
+            <Label htmlFor="login-email" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Email
+            </Label>
+            <Input
+              id="login-email"
+              type="email"
+              placeholder="you@university.edu"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className={fieldClass}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="login-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Password
+            </Label>
+            <Input
+              id="login-password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className={fieldClass}
+            />
+          </div>
+          <Button type="submit" className={cn('w-full', primaryButtonClass)} disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              'Sign in'
+            )}
+          </Button>
+          <button
+            type="button"
+            className="w-full text-center text-sm text-accent-blue hover:underline"
+            onClick={openForgotPassword}
+          >
+            Reset your password
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleSignup} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="signup-name" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Full name
+            </Label>
+            <Input
+              id="signup-name"
+              type="text"
+              placeholder="Jane Doe"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className={fieldClass}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="signup-email" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Email
+            </Label>
+            <Input
+              id="signup-email"
+              type="email"
+              placeholder="you@university.edu"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className={fieldClass}
+            />
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <GraduationCap className="h-3 w-3" />
+              Only university emails are allowed
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="signup-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Password
+            </Label>
+            <Input
+              id="signup-password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className={fieldClass}
+            />
+            <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
+          </div>
+          <Button type="submit" className={cn('w-full', primaryButtonClass)} disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating account...
+              </>
+            ) : (
+              'Create my account'
+            )}
+          </Button>
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <button type="button" onClick={() => setView('login')} className="text-accent-blue hover:underline">
+              Sign in
+            </button>
+          </p>
+        </form>
+      )}
+    </AuthFrame>
   );
 };
 

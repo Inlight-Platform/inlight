@@ -70,12 +70,12 @@ export default function LandingPage() {
         <a href="#" className="flex items-center gap-2">
           <img src={logo} alt="Inlight" className="h-8 w-8 rounded-full object-cover" />
         </a>
-        <Link
-          to="/auth"
+        <a
+          href="#cta"
           className="text-xs tracking-[0.25em] uppercase px-4 py-2 rounded-full border border-border hover:border-glow hover:text-glow transition"
         >
           Sign in
-        </Link>
+        </a>
       </nav>
 
       {/* Hero */}
