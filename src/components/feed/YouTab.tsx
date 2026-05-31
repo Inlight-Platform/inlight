@@ -41,6 +41,33 @@ interface SuggestedUser {
   goals?: string[] | null;
 }
 
+interface Opportunity {
+  id: string;
+  title: string;
+  company: string | null;
+  location: string | null;
+  type: string | null;
+  compensation: string | null;
+  is_remote: boolean | null;
+  tags: string[] | null;
+}
+
+const SURVEY_ROLE_TO_DISCIPLINE: Record<string, string> = {
+  Director: 'Filmmaker',
+  Songwriter: 'Recording Artist',
+  Dancer: 'Actor',
+  Composer: 'Musician',
+  Writer: 'Filmmaker',
+};
+
+const SURVEY_GOAL_TO_PROFILE_GOAL: Record<string, string> = {
+  'Finding Crew': 'Finding collaborators',
+  'Professional Networking': 'Building my community',
+  'Funding Projects': 'Finding resources & tools',
+  'Booking Auditions': 'Finding resources & tools',
+  'Releasing Music': 'Learning about the industry',
+};
+
 // Deterministic daily seed (changes once per day)
 const getDailySeed = () => {
   const d = new Date();
@@ -74,7 +101,7 @@ export const YouTab: React.FC = () => {
       if (!user?.id) return null;
       const { data } = await supabase
         .from('profiles')
-        .select('primary_discipline, secondary_disciplines, goals, display_name')
+        .select('primary_discipline, secondary_disciplines, goals, display_name, preview_survey_role, preview_survey_goal, preview_survey_school')
         .eq('user_id', user.id)
         .maybeSingle();
       return data;
@@ -100,7 +127,7 @@ export const YouTab: React.FC = () => {
   });
 
   // Fetch opportunities
-  const { data: opportunities = [] } = useQuery({
+  const { data: opportunities = [] } = useQuery<Opportunity[]>({
     queryKey: ['you-tab-opportunities'],
     queryFn: async () => {
       const { data } = await supabase
@@ -118,11 +145,25 @@ export const YouTab: React.FC = () => {
     [candidates, following]
   );
 
+  const myPrimaryDiscipline = useMemo(() => {
+    const profileDiscipline = mySurvey?.primary_discipline || null;
+    const surveyRole = mySurvey?.preview_survey_role || null;
+    return profileDiscipline || (surveyRole ? SURVEY_ROLE_TO_DISCIPLINE[surveyRole] || surveyRole : null);
+  }, [mySurvey]);
+
+  const myProfileGoals = useMemo(() => {
+    const profileGoals = (mySurvey?.goals as string[]) || [];
+    if (profileGoals.length > 0) return profileGoals;
+
+    const surveyGoal = mySurvey?.preview_survey_goal || null;
+    return surveyGoal ? [SURVEY_GOAL_TO_PROFILE_GOAL[surveyGoal] || surveyGoal] : [];
+  }, [mySurvey]);
+
   // Score candidates against the current user's survey
   const scored = useMemo(() => {
-    const myPrimary = mySurvey?.primary_discipline || null;
+    const myPrimary = myPrimaryDiscipline;
     const mySecondary = (mySurvey?.secondary_disciplines as string[]) || [];
-    const myGoals = (mySurvey?.goals as string[]) || [];
+    const myGoals = myProfileGoals;
     const wantsCollab =
       myGoals.includes('Finding collaborators') ||
       myGoals.includes('Starting a new project');
@@ -152,7 +193,7 @@ export const YouTab: React.FC = () => {
         return { c, score };
       })
       .sort((a, b) => b.score - a.score);
-  }, [notConnected, mySurvey]);
+  }, [notConnected, myPrimaryDiscipline, myProfileGoals, mySurvey]);
 
   // Take the top-scoring pool, then deterministically shuffle for daily rotation
   const dailySuggestions = useMemo(() => {
@@ -186,7 +227,7 @@ export const YouTab: React.FC = () => {
   // resource pick always included. Internal actions route to the dedicated
   // create template (project → /projects/new; event/service → compose dialog).
   const explorations = useMemo(() => {
-    const myGoals = (mySurvey?.goals as string[]) || [];
+    const myGoals = myProfileGoals;
     const items: {
       key: string;
       title: string;
@@ -250,7 +291,7 @@ export const YouTab: React.FC = () => {
     const resourceItem = items.find((i) => i.key === 'explore-resource')!;
     const others = ranked.map((r) => r.a).filter((i) => i.key !== 'explore-resource');
     return [resourceItem, ...others].slice(0, 3);
-  }, [mySurvey, dailyResource]);
+  }, [myProfileGoals, dailyResource]);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -317,9 +358,9 @@ export const YouTab: React.FC = () => {
           Your daily picks
         </h2>
         <p className="text-sm text-muted-foreground mt-2">
-          {mySurvey?.primary_discipline
-            ? `Curated for a ${mySurvey.primary_discipline.toLowerCase()} — refreshed every day.`
-            : 'A fresh selection of people, opportunities, and one perfect match — refreshed every day.'}
+          {myPrimaryDiscipline
+            ? `Fresh picks for your ${myPrimaryDiscipline.toLowerCase()} path, updated daily.`
+            : 'Fresh people, opportunities, and one match picked for you each day.'}
         </p>
       </div>
 
@@ -397,7 +438,7 @@ export const YouTab: React.FC = () => {
           </Button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {dailyOpportunities.map((o: any) => (
+          {dailyOpportunities.map((o) => (
             <Card
               key={o.id}
               className="relative cursor-pointer hover:shadow-xl transition-shadow"

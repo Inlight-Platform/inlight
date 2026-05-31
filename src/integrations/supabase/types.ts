@@ -991,6 +991,10 @@ export type Database = {
           plan_type: string
           primary_discipline: string | null
           pronouns: string | null
+          preview_survey_completed_at: string | null
+          preview_survey_goal: string | null
+          preview_survey_role: string | null
+          preview_survey_school: string | null
           representation: string | null
           role: string | null
           secondary_disciplines: string[]
@@ -1034,6 +1038,10 @@ export type Database = {
           plan_type?: string
           primary_discipline?: string | null
           pronouns?: string | null
+          preview_survey_completed_at?: string | null
+          preview_survey_goal?: string | null
+          preview_survey_role?: string | null
+          preview_survey_school?: string | null
           representation?: string | null
           role?: string | null
           secondary_disciplines?: string[]
@@ -1077,6 +1085,10 @@ export type Database = {
           plan_type?: string
           primary_discipline?: string | null
           pronouns?: string | null
+          preview_survey_completed_at?: string | null
+          preview_survey_goal?: string | null
+          preview_survey_role?: string | null
+          preview_survey_school?: string | null
           representation?: string | null
           role?: string | null
           secondary_disciplines?: string[]
