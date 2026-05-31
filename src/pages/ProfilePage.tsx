@@ -1097,11 +1097,11 @@ const ProfilePage: React.FC = () => {
       </div>
 
       {/* Centered content rectangle — matches Profile Completion Bar width */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pb-10">
 
       {/* Profile Completion Bar - only visible to profile owner */}
       {isOwnProfile && dbProfile && (
-        <div className="mt-4 -mx-4 sm:-mx-6 lg:-mx-8">
+        <div>
           <ProfileCompletionBar
             userId={authUser!.id}
             profile={{
@@ -1120,15 +1120,16 @@ const ProfilePage: React.FC = () => {
         </div>
       )}
 
+      <div className="mt-4 rounded-2xl border border-border bg-card/30 overflow-hidden text-center">
       {/* Two-column header: info bubbles on the LEFT, avatar rectangle on the RIGHT */}
-      <section className="py-6 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 sm:gap-8 items-start">
+      <section className="px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-6 sm:gap-8 items-start justify-items-center">
         {/* LEFT column — name, bubbles, skills */}
-        <div className="flex flex-col gap-4 min-w-0 order-2 sm:order-1">
+        <div className="flex w-full min-w-0 flex-col items-center gap-4 order-2 sm:order-1">
           {/* Name area */}
-          <div className="flex-1">
+          <div className="w-full">
               {/* Editable Name */}
               {isOwnProfile && isEditingName ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center gap-2">
                   <Input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
@@ -1144,8 +1145,8 @@ const ProfilePage: React.FC = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center justify-center gap-3">
                     {/* Stage Name - shown above real name if present */}
                     {displayStageName && (
                       <h1 className="text-2xl sm:text-3xl font-display font-bold">
@@ -1161,7 +1162,7 @@ const ProfilePage: React.FC = () => {
                     )}
                   </div>
                   {/* Real name - shown below stage name or as main name */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     <span 
                       className={cn(
                         displayStageName ? "text-lg text-muted-foreground" : "text-2xl sm:text-3xl font-display font-bold",
@@ -1190,7 +1191,7 @@ const ProfilePage: React.FC = () => {
           </div>
 
           {/* Fill-in-the-blank bubble row */}
-          <div className="flex flex-wrap items-center gap-2" data-tour="profile-roles">
+          <div className="flex flex-wrap items-center justify-center gap-2" data-tour="profile-roles">
                 {/* Role Badges - Multiple roles support (up to 4) */}
                 {isOwnProfile && isEditingRole ? (
                   <div className="flex items-center gap-1">
@@ -1440,7 +1441,7 @@ const ProfilePage: React.FC = () => {
               <ChevronDown className="w-4 h-4 transition-transform data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2 p-3 rounded-xl border border-border bg-card/40">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 {displaySkills.map((skill) => (
                   <div key={skill} className="relative group">
                     <Badge variant="secondary" className="px-3 py-1">
@@ -1478,7 +1479,7 @@ const ProfilePage: React.FC = () => {
           </Collapsible>
 
           {/* Bio — moved beneath Skills */}
-          <div className="text-left">
+          <div className="w-full text-center">
             {isOwnProfile && isEditingBio ? (
               <div className="space-y-3">
                 <Textarea
@@ -1520,7 +1521,7 @@ const ProfilePage: React.FC = () => {
           </div>
 
           {/* Network Counts */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-center gap-4">
                 <button
                   onClick={() => navigate(isOwnProfile ? '/network' : `/mutuals/${resolvedUserId}`)}
                   className="text-sm text-muted-foreground hover:text-primary hover:underline transition-colors"
@@ -1693,8 +1694,7 @@ const ProfilePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Boxed rectangle — all sections below are centered within */}
-      <div className="rounded-2xl border border-border bg-card/30 overflow-hidden text-center">
+      <div className="border-t border-border text-center">
 
       {/* Conditional Details Display - shown at the bottom if user opted in */}
       {/* Materials - Collapsible (own profile) */}

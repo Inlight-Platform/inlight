@@ -89,7 +89,7 @@ const ProfileCompletionBar: React.FC<ProfileCompletionBarProps> = ({ userId, pro
   if (percentage === 100) return null;
 
   return (
-    <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-4 rounded-xl bg-card border border-border">
+    <div className="mt-4 p-4 rounded-xl bg-card border border-border">
       <div className="flex items-center justify-between mb-1">
         <h3 className="text-sm font-semibold">Profile Completion</h3>
         <span className="text-sm font-medium text-primary">{percentage}%</span>
