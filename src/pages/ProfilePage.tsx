@@ -1976,6 +1976,7 @@ const ProfilePage: React.FC = () => {
       {/* /Boxed rectangle */}
       </div>
       {/* /Centered content rectangle */}
+      </div>
 
       {/* Lightbox */}
 
