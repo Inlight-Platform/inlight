@@ -658,6 +658,7 @@ export type Database = {
           run_end: string | null
           run_start: string | null
           rush_policy: string | null
+          saves_count: number | null
           show_times: string | null
           show_type: string
           submitted_by: string | null
@@ -682,6 +683,7 @@ export type Database = {
           run_end?: string | null
           run_start?: string | null
           rush_policy?: string | null
+          saves_count?: number | null
           show_times?: string | null
           show_type?: string
           submitted_by?: string | null
@@ -706,6 +708,7 @@ export type Database = {
           run_end?: string | null
           run_start?: string | null
           rush_policy?: string | null
+          saves_count?: number | null
           show_times?: string | null
           show_type?: string
           submitted_by?: string | null
@@ -989,12 +992,12 @@ export type Database = {
           message_privacy: string
           onboarding_completed_at: string | null
           plan_type: string
-          primary_discipline: string | null
-          pronouns: string | null
           preview_survey_completed_at: string | null
           preview_survey_goal: string | null
           preview_survey_role: string | null
           preview_survey_school: string | null
+          primary_discipline: string | null
+          pronouns: string | null
           representation: string | null
           role: string | null
           secondary_disciplines: string[]
@@ -1036,12 +1039,12 @@ export type Database = {
           message_privacy?: string
           onboarding_completed_at?: string | null
           plan_type?: string
-          primary_discipline?: string | null
-          pronouns?: string | null
           preview_survey_completed_at?: string | null
           preview_survey_goal?: string | null
           preview_survey_role?: string | null
           preview_survey_school?: string | null
+          primary_discipline?: string | null
+          pronouns?: string | null
           representation?: string | null
           role?: string | null
           secondary_disciplines?: string[]
@@ -1083,12 +1086,12 @@ export type Database = {
           message_privacy?: string
           onboarding_completed_at?: string | null
           plan_type?: string
-          primary_discipline?: string | null
-          pronouns?: string | null
           preview_survey_completed_at?: string | null
           preview_survey_goal?: string | null
           preview_survey_role?: string | null
           preview_survey_school?: string | null
+          primary_discipline?: string | null
+          pronouns?: string | null
           representation?: string | null
           role?: string | null
           secondary_disciplines?: string[]
