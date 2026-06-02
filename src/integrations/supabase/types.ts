@@ -992,6 +992,10 @@ export type Database = {
           message_privacy: string
           onboarding_completed_at: string | null
           plan_type: string
+          preview_survey_completed_at: string | null
+          preview_survey_goal: string | null
+          preview_survey_role: string | null
+          preview_survey_school: string | null
           primary_discipline: string | null
           pronouns: string | null
           representation: string | null
@@ -1035,6 +1039,10 @@ export type Database = {
           message_privacy?: string
           onboarding_completed_at?: string | null
           plan_type?: string
+          preview_survey_completed_at?: string | null
+          preview_survey_goal?: string | null
+          preview_survey_role?: string | null
+          preview_survey_school?: string | null
           primary_discipline?: string | null
           pronouns?: string | null
           representation?: string | null
@@ -1078,6 +1086,10 @@ export type Database = {
           message_privacy?: string
           onboarding_completed_at?: string | null
           plan_type?: string
+          preview_survey_completed_at?: string | null
+          preview_survey_goal?: string | null
+          preview_survey_role?: string | null
+          preview_survey_school?: string | null
           primary_discipline?: string | null
           pronouns?: string | null
           representation?: string | null
