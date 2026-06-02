@@ -658,6 +658,7 @@ export type Database = {
           run_end: string | null
           run_start: string | null
           rush_policy: string | null
+          saves_count: number | null
           show_times: string | null
           show_type: string
           submitted_by: string | null
@@ -682,6 +683,7 @@ export type Database = {
           run_end?: string | null
           run_start?: string | null
           rush_policy?: string | null
+          saves_count?: number | null
           show_times?: string | null
           show_type?: string
           submitted_by?: string | null
@@ -706,6 +708,7 @@ export type Database = {
           run_end?: string | null
           run_start?: string | null
           rush_policy?: string | null
+          saves_count?: number | null
           show_times?: string | null
           show_type?: string
           submitted_by?: string | null
