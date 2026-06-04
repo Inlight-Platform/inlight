@@ -14,6 +14,9 @@ import PersonCard from '@/components/people/PersonCard';
 import CompanyCard from '@/components/people/CompanyCard';
 import { useCompanyFollows } from '@/hooks/useCompanyFollows';
 import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { InviteSomeoneDialog } from '@/components/invites/InviteSomeoneDialog';
+import { Send } from 'lucide-react';
 
 interface Studio {
   id: string;
@@ -263,19 +266,29 @@ const PeoplePage: React.FC = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-3">
-            {section && (
-              <button
-                onClick={() => setSection(null)}
-                className="p-1.5 rounded-full hover:bg-accent transition-colors"
-                aria-label="Back"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            )}
-            <h1 className="text-2xl font-display font-bold capitalize">
-              {section ?? 'People'}
-            </h1>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {section && (
+                <button
+                  onClick={() => setSection(null)}
+                  className="p-1.5 rounded-full hover:bg-accent transition-colors"
+                  aria-label="Back"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+              )}
+              <h1 className="text-2xl font-display font-bold capitalize">
+                {section ?? 'People'}
+              </h1>
+            </div>
+            <InviteSomeoneDialog
+              trigger={
+                <Button size="sm" variant="outline" className="gap-1.5">
+                  <Send className="w-4 h-4" />
+                  <span className="hidden sm:inline">Invite Someone</span>
+                </Button>
+              }
+            />
           </div>
         </div>
       </header>
