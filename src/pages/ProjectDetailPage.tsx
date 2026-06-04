@@ -1071,6 +1071,30 @@ const ProjectDetailPage: React.FC = () => {
         isPending={deleteProjectMutation.isPending}
       />
 
+      {/* Credit Invite Accept/Decline Dialog */}
+      <Dialog open={creditDialogOpen} onOpenChange={(o) => { if (!o) handleDeclineCredit(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>You've been invited to claim a credit</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <p className="text-sm text-muted-foreground">
+              You've been invited to <strong>{project?.title || creditInviteMeta?.project_title}</strong>{' '}
+              as <strong>{creditInviteMeta?.role_name}</strong>. Accepting will add you to the project
+              team, the team group chat, and credit your profile with this role.
+            </p>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" onClick={handleDeclineCredit} disabled={acceptingCredit}>
+                Decline
+              </Button>
+              <Button onClick={handleAcceptCredit} disabled={acceptingCredit}>
+                {acceptingCredit ? 'Accepting…' : 'Accept credit'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Floating chat icon for project members */}
       {/* Floating chat icon for project members - or minimized bubble */}
       {isMember && projectId && (
