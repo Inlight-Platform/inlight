@@ -6,16 +6,12 @@
 export const SIDEBAR_ROUTES = [
   '/feed',
   '/people',
-  '/mutuals',
-  '/insights',
-  '/events',
   '/opportunities',
   '/messages',
   '/notifications',
-  '/network',
+  '/pie-chart',
   '/resources',
   '/stage-whisper',
-  '/saves',
   '/settings',
   '/admin',
 ] as const;
