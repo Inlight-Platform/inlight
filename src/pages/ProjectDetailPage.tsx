@@ -45,6 +45,8 @@ import { ProjectStatusDropdown } from '@/components/projects/ProjectStatusDropdo
 import FloatingChatButton from '@/components/messages/FloatingChatButton';
 import { useMinimizedChat } from '@/hooks/useMinimizedChat';
 import { useLocation } from 'react-router-dom';
+import { InviteCreditDialog } from '@/components/invites/InviteCreditDialog';
+import { Mail } from 'lucide-react';
 
 interface ProjectMember {
   id: string;
