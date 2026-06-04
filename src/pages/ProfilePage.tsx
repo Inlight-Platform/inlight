@@ -1207,6 +1207,14 @@ const ProfilePage: React.FC = () => {
                       {dbProfile.headline}
                     </p>
                   )}
+                  {referrerInfo && (
+                    <button
+                      onClick={() => navigate(`/profile/${referrerInfo.user_id}`)}
+                      className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs hover:bg-primary/20 transition-colors"
+                    >
+                      Referred by {capitalizeName(referrerInfo.stage_name || referrerInfo.display_name || 'a member')}
+                    </button>
+                  )}
                 </div>
               )}
           </div>
