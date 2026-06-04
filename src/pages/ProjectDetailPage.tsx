@@ -705,7 +705,18 @@ const ProjectDetailPage: React.FC = () => {
               Team Members ({members.filter(m => m.user_id !== project.creator_id).length + 1})
             </CardTitle>
             {isCreator && (
-              <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
+              <div className="flex items-center gap-2">
+                <InviteCreditDialog
+                  projectId={projectId!}
+                  projectTitle={project.title}
+                  trigger={
+                    <Button size="sm" variant="outline">
+                      <Mail className="w-4 h-4 mr-2" />
+                      Invite for Credit
+                    </Button>
+                  }
+                />
+                <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline">
                     <UserPlus className="w-4 h-4 mr-2" />
@@ -736,7 +747,8 @@ const ProjectDetailPage: React.FC = () => {
                     </Button>
                   </div>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+              </div>
             )}
           </CardHeader>
           <CardContent>
