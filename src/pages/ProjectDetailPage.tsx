@@ -126,11 +126,11 @@ const ProjectDetailPage: React.FC = () => {
         setSearchParams((p) => { p.delete('credit_invite'); return p; }, { replace: true });
         return;
       }
-      setCreditInviteMeta({ role_name: data.role_name, project_title: project?.title || 'this project' });
+      setCreditInviteMeta({ role_name: data.role_name, project_title: 'this project' });
       setCreditDialogOpen(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creditInviteToken, user?.id, project?.title]);
+  }, [creditInviteToken, user?.id]);
 
   const handleAcceptCredit = async () => {
     if (!creditInviteToken) return;
