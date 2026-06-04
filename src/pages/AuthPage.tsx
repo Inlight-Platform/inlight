@@ -107,6 +107,8 @@ const AuthPage: React.FC = () => {
 
   const inviteToken = searchParams.get('invite');
   const creditInviteToken = searchParams.get('credit_invite');
+  const returnTo = searchParams.get('returnTo');
+  const postAuthRedirect = returnTo || '/feed';
 
   const claimInvites = React.useCallback(async () => {
     if (!inviteToken && !creditInviteToken) return;
@@ -130,9 +132,9 @@ const AuthPage: React.FC = () => {
   useEffect(() => {
     // Don't redirect if in password recovery mode
     if (!loading && user && view !== 'reset' && !isPasswordRecovery) {
-      navigate('/feed');
+      navigate(postAuthRedirect);
     }
-  }, [user, loading, navigate, view, isPasswordRecovery]);
+  }, [user, loading, navigate, view, isPasswordRecovery, postAuthRedirect]);
 
   useEffect(() => {
     if (mode === 'reset') {
@@ -162,7 +164,7 @@ const AuthPage: React.FC = () => {
     } else {
       await claimInvites();
       toast.success('Welcome back!');
-      navigate('/feed');
+      navigate(postAuthRedirect);
     }
 
     setIsLoading(false);
@@ -193,7 +195,7 @@ const AuthPage: React.FC = () => {
     } else {
       await claimInvites();
       toast.success('Account created! Welcome to Inlight.');
-      navigate('/feed');
+      navigate(postAuthRedirect);
     }
 
     setIsLoading(false);
