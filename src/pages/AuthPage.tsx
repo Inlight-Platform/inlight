@@ -160,6 +160,7 @@ const AuthPage: React.FC = () => {
     if (error) {
       toast.error('Login failed. If you had an account before the migration, reset your password once to continue.');
     } else {
+      await claimInvites();
       toast.success('Welcome back!');
       navigate('/feed');
     }
@@ -190,6 +191,7 @@ const AuthPage: React.FC = () => {
       toast.success('Account created. Check your .edu inbox and confirm your email before signing in.');
       setView('login');
     } else {
+      await claimInvites();
       toast.success('Account created! Welcome to Inlight.');
       navigate('/feed');
     }
