@@ -25,7 +25,11 @@ Deno.serve(async (req) => {
     const inviter = esc(inviter_name || "Someone");
     let subject = "";
     let html = "";
-    const acceptUrl = `${SITE_URL}/auth?mode=signup&${type === "credit" ? "credit_invite" : "invite"}=${token}`;
+    // Credit invites deep-link to the project page (with token), platform invites go to signup
+    const acceptUrl =
+      type === "credit" && body.project_id
+        ? `${SITE_URL}/projects/${body.project_id}?credit_invite=${token}`
+        : `${SITE_URL}/auth?mode=signup&${type === "credit" ? "credit_invite" : "invite"}=${token}`;
 
     if (type === "credit") {
       subject = `You've been invited to ${project_title || "a project"} on Inlight`;
@@ -35,7 +39,7 @@ Deno.serve(async (req) => {
           <p>${inviter} has invited you to claim your credit as <strong>${esc(role_name || "Collaborator")}</strong>.</p>
           <p>
             <a href="${acceptUrl}" style="display:inline-block;padding:12px 20px;background:#3B82F6;color:#fff;border-radius:8px;text-decoration:none;">
-              Click here to join Inlight and claim your credit
+              Click here to review and claim your credit
             </a>
           </p>
           <p style="color:#666;font-size:13px;">Or paste this link in your browser: ${acceptUrl}</p>
