@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -104,6 +105,21 @@ const AuthPage: React.FC = () => {
   const { user, loading, signIn, signUp, resetPassword, updatePassword, isPasswordRecovery, recoveryError } = useAuth();
   const navigate = useNavigate();
 
+  const inviteToken = searchParams.get('invite');
+  const creditInviteToken = searchParams.get('credit_invite');
+
+  const claimInvites = React.useCallback(async () => {
+    if (!inviteToken && !creditInviteToken) return;
+    try {
+      await supabase.rpc('claim_invites_on_signup', {
+        _platform_token: inviteToken || null,
+        _credit_token: creditInviteToken || null,
+      });
+    } catch (err) {
+      console.warn('Failed to claim invite:', err);
+    }
+  }, [inviteToken, creditInviteToken]);
+
   // Handle password recovery mode - detect when user arrives via reset link
   useEffect(() => {
     if (isPasswordRecovery) {
@@ -144,6 +160,7 @@ const AuthPage: React.FC = () => {
     if (error) {
       toast.error('Login failed. If you had an account before the migration, reset your password once to continue.');
     } else {
+      await claimInvites();
       toast.success('Welcome back!');
       navigate('/feed');
     }
@@ -174,6 +191,7 @@ const AuthPage: React.FC = () => {
       toast.success('Account created. Check your .edu inbox and confirm your email before signing in.');
       setView('login');
     } else {
+      await claimInvites();
       toast.success('Account created! Welcome to Inlight.');
       navigate('/feed');
     }

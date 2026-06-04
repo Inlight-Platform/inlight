@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { ReferralCountCard } from '@/components/invites/ReferralCountCard';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -422,6 +423,8 @@ const ProfileSettingsPage: React.FC = () => {
           </Button>
           <h1 className="text-2xl font-bold">Profile Settings</h1>
         </div>
+
+        <ReferralCountCard userId={user?.id} />
 
         {/* Profile Preview with Avatar Upload */}
         <Card>
