@@ -423,6 +423,8 @@ const ProfileSettingsPage: React.FC = () => {
           <h1 className="text-2xl font-bold">Profile Settings</h1>
         </div>
 
+        <ReferralCountCard userId={user?.id} />
+
         {/* Profile Preview with Avatar Upload */}
         <Card>
           <CardHeader>
