@@ -104,6 +104,21 @@ const AuthPage: React.FC = () => {
   const { user, loading, signIn, signUp, resetPassword, updatePassword, isPasswordRecovery, recoveryError } = useAuth();
   const navigate = useNavigate();
 
+  const inviteToken = searchParams.get('invite');
+  const creditInviteToken = searchParams.get('credit_invite');
+
+  const claimInvites = React.useCallback(async () => {
+    if (!inviteToken && !creditInviteToken) return;
+    try {
+      await supabase.rpc('claim_invites_on_signup', {
+        _platform_token: inviteToken || null,
+        _credit_token: creditInviteToken || null,
+      });
+    } catch (err) {
+      console.warn('Failed to claim invite:', err);
+    }
+  }, [inviteToken, creditInviteToken]);
+
   // Handle password recovery mode - detect when user arrives via reset link
   useEffect(() => {
     if (isPasswordRecovery) {
