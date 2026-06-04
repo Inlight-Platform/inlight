@@ -93,6 +93,68 @@ const ProjectDetailPage: React.FC = () => {
   
   const { uploadPhoto, uploading, progress } = useProjectPhotoUpload();
 
+  // Credit invite acceptance flow (deep link from email: ?credit_invite=TOKEN)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const creditInviteToken = searchParams.get('credit_invite');
+  const [creditDialogOpen, setCreditDialogOpen] = useState(false);
+  const [creditInviteMeta, setCreditInviteMeta] = useState<{ role_name: string; project_title: string } | null>(null);
+  const [acceptingCredit, setAcceptingCredit] = useState(false);
+
+  useEffect(() => {
+    if (!creditInviteToken) return;
+    // If not logged in yet, route through auth and bring them back here after signup/login
+    if (!user) {
+      navigate(
+        `/auth?mode=signup&credit_invite=${creditInviteToken}&returnTo=${encodeURIComponent(location.pathname + location.search)}`
+      );
+      return;
+    }
+    // Look up invite metadata for the dialog
+    (async () => {
+      const { data, error } = await supabase
+        .from('project_credit_invites')
+        .select('role_name, project_id, status')
+        .eq('token', creditInviteToken)
+        .maybeSingle();
+      if (error || !data) {
+        toast.error('Invitation not found or already used');
+        setSearchParams((p) => { p.delete('credit_invite'); return p; }, { replace: true });
+        return;
+      }
+      if (data.status !== 'pending') {
+        toast.info('This invitation has already been responded to');
+        setSearchParams((p) => { p.delete('credit_invite'); return p; }, { replace: true });
+        return;
+      }
+      setCreditInviteMeta({ role_name: data.role_name, project_title: project?.title || 'this project' });
+      setCreditDialogOpen(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [creditInviteToken, user?.id, project?.title]);
+
+  const handleAcceptCredit = async () => {
+    if (!creditInviteToken) return;
+    setAcceptingCredit(true);
+    try {
+      const { error } = await supabase.rpc('accept_project_credit_invite', { _token: creditInviteToken });
+      if (error) throw error;
+      toast.success('Credit accepted! You\u2019ve been added to the project.');
+      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
+      setCreditDialogOpen(false);
+      setSearchParams((p) => { p.delete('credit_invite'); return p; }, { replace: true });
+    } catch (err) {
+      toast.error((err as Error).message || 'Could not accept invitation');
+    } finally {
+      setAcceptingCredit(false);
+    }
+  };
+
+  const handleDeclineCredit = () => {
+    setCreditDialogOpen(false);
+    setSearchParams((p) => { p.delete('credit_invite'); return p; }, { replace: true });
+    toast('Invitation declined');
+  };
+
   // Clear minimized chat state if we're not the origin page
   useEffect(() => {
     if (chatMinimized && chatOriginRoute !== location.pathname) {
