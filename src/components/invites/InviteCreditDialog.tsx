@@ -46,6 +46,21 @@ export const InviteCreditDialog: React.FC<Props> = ({ projectId, projectTitle, t
             inviter_name: payload.inviter_name,
             project_title: payload.project_title || projectTitle,
             role_name: role.trim(),
+            project_id: projectId,
+          },
+        });
+        if (fnErr) console.warn('Email send failed:', fnErr);
+      } else {
+        // Existing user: also send the email with the deep link so they can accept from inbox
+        const { error: fnErr } = await supabase.functions.invoke('send-invite-email', {
+          body: {
+            type: 'credit',
+            email: email.trim(),
+            token: payload.token,
+            inviter_name: payload.inviter_name,
+            project_title: payload.project_title || projectTitle,
+            role_name: role.trim(),
+            project_id: projectId,
           },
         });
         if (fnErr) console.warn('Email send failed:', fnErr);
