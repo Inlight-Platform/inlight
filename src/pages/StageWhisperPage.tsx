@@ -522,7 +522,7 @@ const StageWhisperPage: React.FC = () => {
               <p className="text-sm">
                 <span className="font-medium">What's playing? 🍿</span>{' '}
                 <span className="text-muted-foreground">
-                  {filmViewTab === 'theatres' ? `${theatreFilms.length} films currently in theatres.` : `${streamingContent.length} top streaming titles to watch.`}
+                  {theatreFilms.length} films currently in theatres.
                 </span>
               </p>
             </div>
