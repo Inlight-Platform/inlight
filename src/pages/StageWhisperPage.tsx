@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music, ExternalLink, Archive, Trash2 } from 'lucide-react';
+import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Music, ExternalLink, Archive, Trash2 } from 'lucide-react';
 import { isPast } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,7 +19,6 @@ import { AddShowDialog } from '@/components/stage-whisper/AddShowDialog';
 import { AddFilmDialog } from '@/components/stage-whisper/AddFilmDialog';
 import { AddMusicShowDialog } from '@/components/stage-whisper/AddMusicShowDialog';
 import { FilmDetailSheet } from '@/components/stage-whisper/FilmDetailSheet';
-import { StreamingDetailSheet } from '@/components/stage-whisper/StreamingDetailSheet';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
