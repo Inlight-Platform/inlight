@@ -776,7 +776,7 @@ const StageWhisperPage: React.FC = () => {
       {/* Show Detail Sheet */}
       <ShowDetailSheet show={selectedShow} isOpen={!!selectedShow} onClose={() => setSelectedShow(null)} isSaved={selectedShow ? isSaved(selectedShow.id) : false} onSave={saveShow} onUnsave={unsaveShow} />
       <FilmDetailSheet film={selectedFilm} isOpen={!!selectedFilm} onClose={() => setSelectedFilm(null)} isSaved={selectedFilm ? isFilmSaved(selectedFilm.id) : false} onSave={saveFilm} onUnsave={unsaveFilm} />
-      <StreamingDetailSheet content={selectedStreaming} isOpen={!!selectedStreaming} onClose={() => setSelectedStreaming(null)} />
+      
       
       <DeleteConfirmDialog
         open={!!deleteTarget}
