@@ -259,10 +259,12 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
 
     setUploading(true);
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('Not authenticated');
       const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
       const timestamp = Date.now();
       const randomId = Math.random().toString(36).substring(2, 9);
-      const fileName = `film-posters/${timestamp}-${randomId}.${fileExt}`;
+      const fileName = `${userData.user.id}/film-posters/${timestamp}-${randomId}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
