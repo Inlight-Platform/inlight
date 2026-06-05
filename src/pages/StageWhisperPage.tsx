@@ -85,11 +85,10 @@ const StageWhisperPage: React.FC = () => {
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [activeTab, setActiveTab] = useState('school');
   const [viewTab, setViewTab] = useState<'discover' | 'my-list'>('discover');
-  const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'streaming' | 'student' | 'festivals'>('theatres');
+  const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'student' | 'festivals'>('theatres');
   const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
   const [archiveMode, setArchiveMode] = useState(false);
   const [selectedFilm, setSelectedFilm] = useState<FilmMetric | null>(null);
-  const [selectedStreaming, setSelectedStreaming] = useState<StreamingContent | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; table: string; label: string } | null>(null);
 
   const adminDeleteMutation = useMutation({
