@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Tv, Music, ExternalLink, Archive, Trash2 } from 'lucide-react';
+import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Music, ExternalLink, Archive, Trash2 } from 'lucide-react';
 import { isPast } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,7 +19,6 @@ import { AddShowDialog } from '@/components/stage-whisper/AddShowDialog';
 import { AddFilmDialog } from '@/components/stage-whisper/AddFilmDialog';
 import { AddMusicShowDialog } from '@/components/stage-whisper/AddMusicShowDialog';
 import { FilmDetailSheet } from '@/components/stage-whisper/FilmDetailSheet';
-import { StreamingDetailSheet } from '@/components/stage-whisper/StreamingDetailSheet';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,18 +42,6 @@ interface FilmMetric {
   poster_url?: string;
   ticket_url?: string;
   date: string;
-}
-interface StreamingContent {
-  id: string;
-  title: string;
-  content_type: 'movie' | 'tv';
-  platform: string;
-  description?: string;
-  poster_url?: string;
-  genre?: string;
-  release_year?: number;
-  rating: number;
-  watch_url?: string;
 }
 interface UserFilm {
   id: string;
@@ -98,11 +85,10 @@ const StageWhisperPage: React.FC = () => {
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [activeTab, setActiveTab] = useState('school');
   const [viewTab, setViewTab] = useState<'discover' | 'my-list'>('discover');
-  const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'streaming' | 'student' | 'festivals'>('theatres');
+  const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'student' | 'festivals'>('theatres');
   const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
   const [archiveMode, setArchiveMode] = useState(false);
   const [selectedFilm, setSelectedFilm] = useState<FilmMetric | null>(null);
-  const [selectedStreaming, setSelectedStreaming] = useState<StreamingContent | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; table: string; label: string } | null>(null);
 
   const adminDeleteMutation = useMutation({
@@ -113,7 +99,7 @@ const StageWhisperPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nyc-shows'] });
       queryClient.invalidateQueries({ queryKey: ['film-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['streaming-content'] });
+      
       queryClient.invalidateQueries({ queryKey: ['user-films'] });
       queryClient.invalidateQueries({ queryKey: ['user-music-shows'] });
       toast.success('Item deleted successfully');
@@ -161,24 +147,6 @@ const StageWhisperPage: React.FC = () => {
     enabled: industryTab === 'film'
   });
 
-  // Fetch streaming content
-  const {
-    data: streamingContent = [],
-    isLoading: loadingStreaming
-  } = useQuery({
-    queryKey: ['streaming-content'],
-    queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.from('streaming_content').select('*').eq('is_active', true).order('rating', {
-        ascending: false
-      });
-      if (error) throw error;
-      return data as StreamingContent[];
-    },
-    enabled: industryTab === 'film'
-  });
 
   // Fetch user-submitted films
   const {
@@ -294,12 +262,11 @@ const StageWhisperPage: React.FC = () => {
       setSelectedShow(randomShow);
       toast.success(`🎲 How about "${randomShow.title}"?`);
     } else {
-      const items = filmViewTab === 'theatres' ? theatreFilms : streamingContent;
-      if (items.length === 0) {
-        toast.error('No content available');
+      if (theatreFilms.length === 0) {
+        toast.error('No films available');
         return;
       }
-      const randomItem = items[Math.floor(Math.random() * items.length)];
+      const randomItem = theatreFilms[Math.floor(Math.random() * theatreFilms.length)];
       toast.success(`🎲 How about "${randomItem.title}"?`);
     }
   };
@@ -447,10 +414,6 @@ const StageWhisperPage: React.FC = () => {
               <Film className="w-4 h-4" />
               In Theatres
             </Button>
-            <Button variant={filmViewTab === 'streaming' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setFilmViewTab, 'streaming')} className="gap-2">
-              <Tv className="w-4 h-4" />
-              Streaming
-            </Button>
             <Button variant={filmViewTab === 'student' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setFilmViewTab, 'student')} className="gap-2">
               <Sparkles className="w-4 h-4" />
               Community
@@ -559,7 +522,7 @@ const StageWhisperPage: React.FC = () => {
               <p className="text-sm">
                 <span className="font-medium">What's playing? 🍿</span>{' '}
                 <span className="text-muted-foreground">
-                  {filmViewTab === 'theatres' ? `${theatreFilms.length} films currently in theatres.` : `${streamingContent.length} top streaming titles to watch.`}
+                  {theatreFilms.length} films currently in theatres.
                 </span>
               </p>
             </div>
@@ -616,71 +579,6 @@ const StageWhisperPage: React.FC = () => {
                 })()}
               </>}
 
-            {/* Streaming Content */}
-            {filmViewTab === 'streaming' && <>
-                <ArchiveToggle archiveCount={0} />
-                {archiveMode ? <div className="text-center py-12">
-                    <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No archived streaming content.</p>
-                  </div> : <>
-                {loadingStreaming ? <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                  </div> : streamingContent.length === 0 ? <div className="text-center py-12">
-                    <Tv className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No streaming content available right now.</p>
-                  </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                     {streamingContent.map(content => <Card
-                         key={content.id}
-                         className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer"
-                         onClick={() => setSelectedStreaming(content)}
-                       >
-                         <div className="aspect-[2/3] relative bg-muted">
-                          {content.poster_url ? <img src={content.poster_url} alt={content.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
-                              {content.content_type === 'tv' ? <Tv className="w-12 h-12 text-muted-foreground" /> : <Film className="w-12 h-12 text-muted-foreground" />}
-                            </div>}
-                          {content.watch_url && (
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Button
-                                size="sm"
-                                className="gap-1.5 shadow-lg"
-                                onClick={(e) => { e.stopPropagation(); window.open(content.watch_url!, '_blank', 'noopener,noreferrer'); }}
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                Watch on {content.platform}
-                              </Button>
-                            </div>
-                          )}
-                          <div className="absolute top-2 left-2">
-                            <Badge variant={content.content_type === 'tv' ? 'secondary' : 'outline'} className="text-xs">
-                              {content.content_type === 'tv' ? 'TV' : 'Movie'}
-                            </Badge>
-                          </div>
-                          <div className="absolute top-2 right-2">
-                            <Badge className="bg-background/90 text-foreground">
-                              ⭐ {Number(content.rating).toFixed(1)}
-                            </Badge>
-                          </div>
-                          {isAdmin && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: content.id, table: 'streaming_content', label: 'streaming content' }); }}
-                              className="absolute bottom-2 right-2 p-2 rounded-full bg-destructive/80 text-destructive-foreground backdrop-blur-sm hover:bg-destructive transition-all duration-200 opacity-0 group-hover:opacity-100"
-                              title="Delete content"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                        <CardContent className="p-3">
-                          <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
-                            {content.title}
-                          </h3>
-                          <p className="text-xs text-muted-foreground">{content.platform}</p>
-                          {content.genre && <Badge variant="outline" className="mt-2 text-xs">{content.genre}</Badge>}
-                        </CardContent>
-                      </Card>)}
-                  </div>}
-                </>}
-              </>}
 
             {/* Community / Student Films */}
             {filmViewTab === 'student' && <>
@@ -878,7 +776,7 @@ const StageWhisperPage: React.FC = () => {
       {/* Show Detail Sheet */}
       <ShowDetailSheet show={selectedShow} isOpen={!!selectedShow} onClose={() => setSelectedShow(null)} isSaved={selectedShow ? isSaved(selectedShow.id) : false} onSave={saveShow} onUnsave={unsaveShow} />
       <FilmDetailSheet film={selectedFilm} isOpen={!!selectedFilm} onClose={() => setSelectedFilm(null)} isSaved={selectedFilm ? isFilmSaved(selectedFilm.id) : false} onSave={saveFilm} onUnsave={unsaveFilm} />
-      <StreamingDetailSheet content={selectedStreaming} isOpen={!!selectedStreaming} onClose={() => setSelectedStreaming(null)} />
+      
       
       <DeleteConfirmDialog
         open={!!deleteTarget}
