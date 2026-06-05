@@ -43,18 +43,6 @@ interface FilmMetric {
   ticket_url?: string;
   date: string;
 }
-interface StreamingContent {
-  id: string;
-  title: string;
-  content_type: 'movie' | 'tv';
-  platform: string;
-  description?: string;
-  poster_url?: string;
-  genre?: string;
-  release_year?: number;
-  rating: number;
-  watch_url?: string;
-}
 interface UserFilm {
   id: string;
   title: string;
