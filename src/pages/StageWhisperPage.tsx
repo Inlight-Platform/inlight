@@ -147,24 +147,6 @@ const StageWhisperPage: React.FC = () => {
     enabled: industryTab === 'film'
   });
 
-  // Fetch streaming content
-  const {
-    data: streamingContent = [],
-    isLoading: loadingStreaming
-  } = useQuery({
-    queryKey: ['streaming-content'],
-    queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.from('streaming_content').select('*').eq('is_active', true).order('rating', {
-        ascending: false
-      });
-      if (error) throw error;
-      return data as StreamingContent[];
-    },
-    enabled: industryTab === 'film'
-  });
 
   // Fetch user-submitted films
   const {
