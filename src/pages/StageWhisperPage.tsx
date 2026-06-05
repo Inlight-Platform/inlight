@@ -262,8 +262,7 @@ const StageWhisperPage: React.FC = () => {
       setSelectedShow(randomShow);
       toast.success(`🎲 How about "${randomShow.title}"?`);
     } else {
-      const items = filmViewTab === 'theatres' ? theatreFilms : streamingContent;
-      if (items.length === 0) {
+      if (theatreFilms.length === 0) {
         toast.error('No content available');
         return;
       }
