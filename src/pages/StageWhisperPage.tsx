@@ -99,7 +99,7 @@ const StageWhisperPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nyc-shows'] });
       queryClient.invalidateQueries({ queryKey: ['film-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['streaming-content'] });
+      
       queryClient.invalidateQueries({ queryKey: ['user-films'] });
       queryClient.invalidateQueries({ queryKey: ['user-music-shows'] });
       toast.success('Item deleted successfully');
