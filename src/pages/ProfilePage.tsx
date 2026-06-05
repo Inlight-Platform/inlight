@@ -87,6 +87,7 @@ import inlightLogo from '@/assets/inlight-logo.jpeg';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type MediaVisibility = 'public' | 'connections' | 'private';
+type ProfileSectionKey = 'materials' | 'credits' | 'attended' | 'projects' | 'posts';
 
 interface MediaItem {
   id: string;
@@ -268,12 +269,21 @@ const ProfilePage: React.FC = () => {
   const [defaultPostType, setDefaultPostType] = useState<PostType>('update');
   const [showProjectCreator, setShowProjectCreator] = useState(false);
   
-  // Collapsible section states (all open by default)
+  // Collapsible section states are initialized from each section's content.
   // Removed detailsOpen - Details section moved to settings
-  const [creditsOpen, setCreditsOpen] = useState(true);
-  const [projectsOpen, setProjectsOpen] = useState(true);
-  const [materialsOpen, setMaterialsOpen] = useState(true);
-  const [postsOpen, setPostsOpen] = useState(true);
+  const [creditsOpen, setCreditsOpen] = useState(false);
+  const [projectsOpen, setProjectsOpen] = useState(false);
+  const [materialsOpen, setMaterialsOpen] = useState(false);
+  const [postsOpen, setPostsOpen] = useState(false);
+  const [attendedOpen, setAttendedOpen] = useState(false);
+  const sectionDefaultsProfileRef = useRef<string | null>(null);
+  const manuallyChangedSectionsRef = useRef<Record<ProfileSectionKey, boolean>>({
+    materials: false,
+    credits: false,
+    attended: false,
+    projects: false,
+    posts: false,
+  });
   
   // Editing states
   const [isEditingName, setIsEditingName] = useState(false);
@@ -422,6 +432,134 @@ const ProfilePage: React.FC = () => {
   const displayGraduationYear = dbProfile?.graduation_year || null;
   const displayCredits = (dbCredits || []).filter((credit): credit is Credit => Boolean(credit?.id));
 
+  const { data: sectionContent } = useQuery({
+    queryKey: ['profile-section-content', resolvedUserId, isOwnProfile, connectionStatus],
+    queryFn: async () => {
+      if (!resolvedUserId) {
+        return {
+          materials: false,
+          whyStarted: false,
+          credits: false,
+          attended: false,
+          projects: false,
+          posts: false,
+        };
+      }
+
+      const [
+        mediaRes,
+        whyAnswersRes,
+        creditsRes,
+        ownedProjectsRes,
+        memberProjectsRes,
+        savedProjectsRes,
+        postsRes,
+        eventsRes,
+        rsvpsRes,
+        ticketsRes,
+      ] = await Promise.all([
+        (() => {
+          let query = supabase
+            .from('user_media')
+            .select('id')
+            .eq('user_id', resolvedUserId)
+            .limit(1);
+
+          if (!isOwnProfile) {
+            query = connectionStatus === 'accepted'
+              ? query.in('visibility', ['public', 'connections'])
+              : query.eq('visibility', 'public');
+          }
+
+          return query;
+        })(),
+        supabase
+          .from('profiles_public')
+          .select('favorite_movie, favorite_artist, favorite_song, why_artist')
+          .eq('user_id', resolvedUserId)
+          .maybeSingle(),
+        supabase
+          .from('credits')
+          .select('id')
+          .eq('user_id', resolvedUserId)
+          .limit(1),
+        supabase
+          .from('projects')
+          .select('id')
+          .eq('creator_id', resolvedUserId)
+          .limit(100),
+        supabase
+          .from('project_members')
+          .select('project_id')
+          .eq('user_id', resolvedUserId)
+          .limit(1),
+        isOwnProfile
+          ? supabase
+              .from('saved_projects')
+              .select('project_id')
+              .eq('user_id', resolvedUserId)
+              .limit(1)
+          : Promise.resolve({ data: [] as Array<{ project_id: string | null }> }),
+        supabase
+          .from('posts')
+          .select('id')
+          .eq('user_id', resolvedUserId)
+          .limit(1),
+        supabase
+          .from('events')
+          .select('id')
+          .eq('user_id', resolvedUserId)
+          .limit(1),
+        supabase
+          .from('event_rsvps')
+          .select('event_id')
+          .eq('user_id', resolvedUserId)
+          .eq('attended', true)
+          .limit(1),
+        supabase
+          .from('tickets')
+          .select('event_id')
+          .eq('user_id', resolvedUserId)
+          .not('checked_in_at', 'is', null)
+          .limit(1),
+      ]);
+
+      const ownedProjectIds = (ownedProjectsRes.data || [])
+        .map((project) => project.id)
+        .filter(Boolean);
+      const openRolesRes = ownedProjectIds.length > 0
+        ? await supabase
+            .from('project_roles')
+            .select('id')
+            .in('project_id', ownedProjectIds)
+            .is('assigned_user_id', null)
+            .limit(1)
+        : { data: [] as Array<{ id: string }> };
+
+      const whyAnswers = whyAnswersRes.data
+        ? Object.values(whyAnswersRes.data).some((answer) => typeof answer === 'string' && answer.trim())
+        : false;
+
+      return {
+        materials: Boolean((mediaRes.data || []).length || whyAnswers),
+        whyStarted: whyAnswers,
+        credits: Boolean((creditsRes.data || []).length),
+        attended: Boolean((rsvpsRes.data || []).length || (ticketsRes.data || []).length),
+        projects: Boolean(
+          ownedProjectIds.length ||
+          (memberProjectsRes.data || []).length ||
+          (savedProjectsRes.data || []).length
+        ),
+        posts: Boolean(
+          (postsRes.data || []).length ||
+          (eventsRes.data || []).length ||
+          (openRolesRes.data || []).length
+        ),
+      };
+    },
+    enabled: !!resolvedUserId,
+  });
+
   useEffect(() => {
     if (isOwnProfile || !resolvedUserId) return;
 
@@ -500,6 +638,42 @@ const ProfilePage: React.FC = () => {
       closeChat();
     }
   }, [chatMinimized, chatOriginRoute, location.pathname, closeChat]);
+
+  useEffect(() => {
+    sectionDefaultsProfileRef.current = null;
+    manuallyChangedSectionsRef.current = {
+      materials: false,
+      credits: false,
+      attended: false,
+      projects: false,
+      posts: false,
+    };
+    setMaterialsOpen(false);
+    setCreditsOpen(false);
+    setAttendedOpen(false);
+    setProjectsOpen(false);
+    setPostsOpen(false);
+  }, [resolvedUserId]);
+
+  useEffect(() => {
+    if (!resolvedUserId || !sectionContent || sectionDefaultsProfileRef.current === resolvedUserId) return;
+
+    sectionDefaultsProfileRef.current = resolvedUserId;
+
+    if (!manuallyChangedSectionsRef.current.materials) setMaterialsOpen(sectionContent.materials);
+    if (!manuallyChangedSectionsRef.current.credits) setCreditsOpen(sectionContent.credits);
+    if (!manuallyChangedSectionsRef.current.attended) setAttendedOpen(sectionContent.attended);
+    if (!manuallyChangedSectionsRef.current.projects) setProjectsOpen(sectionContent.projects);
+    if (!manuallyChangedSectionsRef.current.posts) setPostsOpen(sectionContent.posts);
+  }, [resolvedUserId, sectionContent]);
+
+  const handleSectionOpenChange = (
+    section: ProfileSectionKey,
+    setOpen: React.Dispatch<React.SetStateAction<boolean>>
+  ) => (open: boolean) => {
+    manuallyChangedSectionsRef.current[section] = true;
+    setOpen(open);
+  };
 
   useEffect(() => {
     setAnnounced(false);
@@ -1080,7 +1254,13 @@ const ProfilePage: React.FC = () => {
       case 'private': return <EyeOff className="w-4 h-4" />;
     }
   };
-  
+
+  const showProfessionalDetails = Boolean(
+    (dbProfile?.show_union_status && displayUnionStatus) ||
+    (dbProfile?.show_representation && displayRepresentation) ||
+    (dbProfile?.show_gear_list && displayGearList && displayGearList.length > 0)
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar — back button only */}
@@ -1096,7 +1276,7 @@ const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Centered content rectangle — matches Profile Completion Bar width */}
+      {/* Centered profile frame */}
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pb-10">
 
       {/* Profile Completion Bar - only visible to profile owner */}
@@ -1120,11 +1300,16 @@ const ProfilePage: React.FC = () => {
         </div>
       )}
 
-      <div className="mt-4 rounded-2xl border border-border bg-card/30 overflow-hidden text-center">
+      {/* Unified profile content frame */}
+      <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card/60 shadow-sm">
       {/* Two-column header: info bubbles on the LEFT, avatar rectangle on the RIGHT */}
-      <section className="px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-6 sm:gap-8 items-start justify-items-center">
-        {/* LEFT column — name, bubbles, skills */}
-        <div className="flex w-full min-w-0 flex-col items-center gap-4 order-2 sm:order-1">
+      <section
+        id="profile-overview"
+        className="scroll-mt-24 border-b border-border bg-card/80 px-4 py-6 text-center sm:px-6 lg:px-8"
+      >
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-8 items-stretch justify-items-center">
+          {/* LEFT column — name, bubbles, skills */}
+          <div className="flex w-full min-w-0 flex-col items-center justify-center gap-4 order-2 sm:order-1">
           {/* Name area */}
           <div className="w-full">
               {/* Editable Name */}
@@ -1520,15 +1705,37 @@ const ProfilePage: React.FC = () => {
             )}
           </div>
 
-          {/* Network Counts */}
-          <div className="flex items-center justify-center gap-4">
-                <button
-                  onClick={() => navigate(isOwnProfile ? '/network' : `/mutuals/${resolvedUserId}`)}
-                  className="text-sm text-muted-foreground hover:text-primary hover:underline transition-colors"
-                >
-                  <span className="font-semibold text-foreground">{networkCounts?.networkCount || 0}</span>
-                  {' '}connection{networkCounts?.networkCount !== 1 ? 's' : ''}
-                </button>
+          {/* Network/share footer */}
+          <div className="w-full max-w-md border-t border-border/70 pt-4">
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => navigate(isOwnProfile ? '/network' : `/mutuals/${resolvedUserId}`)}
+                className="text-sm text-muted-foreground transition-colors hover:text-primary hover:underline"
+              >
+                <span className="font-semibold text-foreground">{networkCounts?.networkCount || 0}</span>
+                {' '}connection{networkCounts?.networkCount !== 1 ? 's' : ''}
+              </button>
+              {isOwnProfile && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 rounded-full border-border bg-background/70 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      aria-label="Share profile"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" className="bg-popover border-border">
+                    <DropdownMenuItem>
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Share Profile
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1673,33 +1880,22 @@ const ProfilePage: React.FC = () => {
                 </DropdownMenu>
               )}
               
-              {/* Share for own profile */}
-              {isOwnProfile && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-full self-center">
-                      <MoreHorizontal className="w-5 h-5" />
-                      <span className="sr-only">More options</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-popover border-border">
-                    <DropdownMenuItem>
-                      <Share2 className="w-4 h-4 mr-2" />
-                      Share Profile
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
           </div>
+        </div>
         </div>
       </section>
 
-      <div className="border-t border-border text-center">
+      <div className="divide-y divide-border">
 
       {/* Conditional Details Display - shown at the bottom if user opted in */}
       {/* Materials - Collapsible (own profile) */}
       {isOwnProfile && authUser?.id && (
-        <Collapsible open={materialsOpen} onOpenChange={setMaterialsOpen} className="border-b border-border">
+        <Collapsible
+          id="profile-materials"
+          open={materialsOpen}
+          onOpenChange={handleSectionOpenChange('materials', setMaterialsOpen)}
+          className="scroll-mt-24"
+        >
           <section className="px-4 sm:px-6 lg:px-8 py-4">
             <CollapsibleTrigger className="flex items-center justify-between w-full group">
               <h2 className="text-lg font-display font-semibold">Materials</h2>
@@ -1773,16 +1969,16 @@ const ProfilePage: React.FC = () => {
       {/* Public Media Gallery (for other users' profiles) */}
       {!isOwnProfile && resolvedUserId && (
         <ProfileSectionErrorBoundary title="Media">
-          <PublicMediaGallery 
-            userId={resolvedUserId} 
+          <PublicMediaGallery
+            userId={resolvedUserId}
             isConnected={connectionStatus === 'accepted'}
           />
         </ProfileSectionErrorBoundary>
       )}
       
       {/* Why I Started (for other users' profiles) */}
-      {!isOwnProfile && resolvedUserId && (
-        <section className="px-4 sm:px-6 lg:px-8 py-6 border-b border-border">
+      {!isOwnProfile && resolvedUserId && sectionContent?.whyStarted && (
+        <section id="profile-story" className="scroll-mt-24 px-4 py-6 sm:px-6 lg:px-8">
           <ProfileSectionErrorBoundary title="Why I Started">
             <WhyIStarted userId={resolvedUserId} isOwnProfile={false} />
           </ProfileSectionErrorBoundary>
@@ -1790,7 +1986,12 @@ const ProfilePage: React.FC = () => {
       )}
       
       {/* Credits - Collapsible */}
-      <Collapsible open={creditsOpen} onOpenChange={setCreditsOpen} className="border-b border-border">
+      <Collapsible
+        id="profile-credits"
+        open={creditsOpen}
+        onOpenChange={handleSectionOpenChange('credits', setCreditsOpen)}
+        className="scroll-mt-24"
+      >
         <section className="px-4 sm:px-6 lg:px-8 py-4" data-tour="profile-credits">
           <CollapsibleTrigger className="flex items-center justify-between w-full group">
             <div className="flex items-center gap-2">
@@ -1887,13 +2088,18 @@ const ProfilePage: React.FC = () => {
 
       {/* Attended - Collapsible */}
       {resolvedUserId && (
-        <Collapsible defaultOpen className="border-b border-border">
+        <Collapsible
+          id="profile-attended"
+          open={attendedOpen}
+          onOpenChange={handleSectionOpenChange('attended', setAttendedOpen)}
+          className="scroll-mt-24"
+        >
           <section className="px-4 sm:px-6 lg:px-8 py-4">
             <CollapsibleTrigger className="flex items-center justify-between w-full group">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-display font-semibold">Attended</h2>
               </div>
-              <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${attendedOpen ? 'rotate-180' : ''}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-4">
               <ProfileSectionErrorBoundary title="Attended">
@@ -1905,7 +2111,12 @@ const ProfilePage: React.FC = () => {
       )}
 
       {/* Projects - Collapsible */}
-      <Collapsible open={projectsOpen} onOpenChange={setProjectsOpen} className="border-b border-border">
+      <Collapsible
+        id="profile-projects"
+        open={projectsOpen}
+        onOpenChange={handleSectionOpenChange('projects', setProjectsOpen)}
+        className="scroll-mt-24"
+      >
         <section className="px-4 sm:px-6 lg:px-8 py-4">
           <CollapsibleTrigger className="flex items-center justify-between w-full group">
             <h2 className="text-lg font-display font-semibold">Projects</h2>
@@ -1922,7 +2133,12 @@ const ProfilePage: React.FC = () => {
       </Collapsible>
 
       {/* User Posts Section - Collapsible */}
-      <Collapsible open={postsOpen} onOpenChange={setPostsOpen}>
+      <Collapsible
+        id="profile-posts"
+        open={postsOpen}
+        onOpenChange={handleSectionOpenChange('posts', setPostsOpen)}
+        className="scroll-mt-24"
+      >
         <section className="px-4 sm:px-6 lg:px-8 py-4">
           <CollapsibleTrigger className="flex items-center justify-between w-full group">
             <h2 className="text-lg font-display font-semibold">Posts</h2>
@@ -1939,10 +2155,8 @@ const ProfilePage: React.FC = () => {
       </Collapsible>
 
       {/* Conditional Professional Details - shown at bottom if user opted in */}
-      {((dbProfile?.show_union_status && displayUnionStatus) || 
-        (dbProfile?.show_representation && displayRepresentation) || 
-        (dbProfile?.show_gear_list && displayGearList && displayGearList.length > 0)) && (
-        <section className="px-4 sm:px-6 lg:px-8 py-4 border-t border-border">
+      {showProfessionalDetails && (
+        <section id="profile-details" className="scroll-mt-24 px-4 py-4 sm:px-6 lg:px-8">
           <h2 className="text-lg font-display font-semibold mb-4">Professional Details</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {dbProfile?.show_union_status && displayUnionStatus && (
@@ -1973,10 +2187,11 @@ const ProfilePage: React.FC = () => {
         </section>
       )}
       </div>
-      {/* /Boxed rectangle */}
+      {/* /Section stack */}
       </div>
-      {/* /Centered content rectangle */}
+      {/* /Unified profile content frame */}
       </div>
+      {/* /Centered profile frame */}
 
       {/* Lightbox */}
 

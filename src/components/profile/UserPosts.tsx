@@ -1,7 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
 
@@ -10,8 +8,6 @@ interface UserPostsProps {
 }
 
 export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
-  const navigate = useNavigate();
-
   // Fetch all posts by this user
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['user-posts', userId],
@@ -148,9 +144,14 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
           <p className="text-muted-foreground">No posts yet</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {posts.map((post) => (
-            <FeedItem key={post.id} item={post} networkDegree={null} />
+            <FeedItem
+              key={post.id}
+              item={post}
+              networkDegree={null}
+              compactSquare
+            />
           ))}
         </div>
       )}

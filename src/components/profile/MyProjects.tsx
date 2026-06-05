@@ -98,21 +98,21 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
 
   const ProjectCard = ({ project, showRole = false }: { project: Project; showRole?: boolean }) => (
     <Card 
-      className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border"
+      className="flex aspect-square cursor-pointer flex-col overflow-hidden bg-card border-border transition-shadow hover:shadow-lg"
       onClick={() => navigate(`/projects/${project.id}`)}
     >
       {project.header_image_url || project.main_image_url ? (
         <img
           src={project.header_image_url || project.main_image_url || undefined}
           alt={project.title}
-          className="w-full h-32 object-cover"
+          className="w-full min-h-0 flex-1 object-cover"
         />
       ) : (
-        <div className="w-full h-32 bg-muted flex items-center justify-center">
+        <div className="flex min-h-0 flex-1 items-center justify-center bg-muted">
           <Folder className="w-8 h-8 text-muted-foreground" />
         </div>
       )}
-      <CardContent className="p-3">
+      <CardContent className="shrink-0 p-3">
         <h3 className="font-medium text-foreground text-sm mb-1 line-clamp-1">
           {project.title}
         </h3>
@@ -158,33 +158,33 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
 
   return (
     <div>
-      {isOwnProfile && (
-        <div className="flex justify-end mb-4">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => navigate('/projects')}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Project
-          </Button>
-        </div>
-      )}
-
       {isOwnProfile ? (
         <Tabs defaultValue="my-projects" className="w-full">
-          <TabsList className="grid w-full max-w-xs grid-cols-2 mb-4">
-            <TabsTrigger value="my-projects" className="flex items-center gap-1">
-              <Folder className="w-4 h-4" />
-              My Projects ({projects.length})
-            </TabsTrigger>
-            <TabsTrigger value="saved" className="flex items-center gap-1">
-              <Bookmark className="w-4 h-4" />
-              Saved ({savedProjects.length})
-            </TabsTrigger>
-          </TabsList>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+              <TabsList className="inline-flex w-auto min-w-full max-w-xl sm:min-w-0">
+                <TabsTrigger value="my-projects" className="flex-shrink-0 whitespace-nowrap gap-1">
+                  <Folder className="w-4 h-4" />
+                  My Projects ({projects.length})
+                </TabsTrigger>
+                <TabsTrigger value="saved" className="flex-shrink-0 whitespace-nowrap gap-1">
+                  <Bookmark className="w-4 h-4" />
+                  Saved ({savedProjects.length})
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 self-start sm:self-auto"
+              onClick={() => navigate('/projects')}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Project
+            </Button>
+          </div>
 
-          <TabsContent value="my-projects">
+          <TabsContent value="my-projects" className="mt-0">
             <ProjectGrid 
               items={projects} 
               emptyMessage="You haven't joined any projects yet"
@@ -192,7 +192,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
             />
           </TabsContent>
 
-          <TabsContent value="saved">
+          <TabsContent value="saved" className="mt-0">
             <ProjectGrid 
               items={savedProjects} 
               emptyMessage="No saved projects yet"

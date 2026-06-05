@@ -83,7 +83,10 @@ export const PublicMediaGallery: React.FC<PublicMediaGalleryProps> = ({
 
   if (loading) {
     return (
-      <section className="px-4 sm:px-6 lg:px-8 py-6">
+      <section
+        id="profile-materials"
+        className="scroll-mt-24 px-4 py-6 sm:px-6 lg:px-8"
+      >
         <h2 className="text-xl font-display font-semibold mb-4">Media</h2>
         <div className="grid grid-cols-3 gap-2 sm:gap-4">
           {[1, 2, 3].map((i) => (
@@ -99,7 +102,10 @@ export const PublicMediaGallery: React.FC<PublicMediaGalleryProps> = ({
   }
 
   return (
-    <section className="px-4 sm:px-6 lg:px-8 py-6 border-t border-border">
+    <section
+      id="profile-materials"
+      className="scroll-mt-24 px-4 py-6 sm:px-6 lg:px-8"
+    >
       <h2 className="text-xl font-display font-semibold mb-4">Media</h2>
 
       <Tabs defaultValue="photos" className="w-full">

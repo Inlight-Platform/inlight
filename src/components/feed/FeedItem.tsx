@@ -72,9 +72,22 @@ export interface FeedItemData {
 interface FeedItemProps {
   item: FeedItemData;
   networkDegree: NetworkDegree | null;
+  className?: string;
+  contentClassName?: string;
+  imageContainerClassName?: string;
+  imageClassName?: string;
+  compactSquare?: boolean;
 }
 
-export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
+export const FeedItem: React.FC<FeedItemProps> = ({
+  item,
+  networkDegree,
+  className,
+  contentClassName,
+  imageContainerClassName,
+  imageClassName,
+  compactSquare = false,
+}) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
@@ -87,6 +100,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const [rsvpSubmitted, setRsvpSubmitted] = useState(false);
   const [showAttendees, setShowAttendees] = useState(false);
   const [buyingTicket, setBuyingTicket] = useState(false);
+  const [compactTextExpanded, setCompactTextExpanded] = useState(false);
 
   const isEventItem = item.type === 'event';
   const isPaidEvent = isEventItem && !!item.is_paid;
@@ -248,13 +262,32 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
   const showAnonymous = item.type === 'show' && item.is_anonymous;
   const displayName = showAnonymous ? 'Anonymous' : capitalizeName(item.creator_profile?.display_name || 'Unknown');
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
+  const bodyText = item.content || item.description;
+  const compactCollapsed = compactSquare && !compactTextExpanded;
+  const compactBodyLineCount = bodyText?.split('\n').filter((line) => line.trim()).length || 0;
+  const showCompactTextToggle = compactSquare && Boolean(bodyText && (bodyText.length > 90 || compactBodyLineCount > 2));
 
   return (
     <Card 
-      className={`bg-card border-border ${isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${item.type === 'job' || item.type === 'open_role' ? 'border-l-4 border-l-green-500' : ''} ${item.type === 'show' ? 'border-l-4 border-l-pink-500' : ''}`}
+      className={cn(
+        'bg-card border-border',
+        isClickable && 'cursor-pointer hover:shadow-md transition-shadow',
+        (item.type === 'job' || item.type === 'open_role') && 'border-l-4 border-l-green-500',
+        item.type === 'show' && 'border-l-4 border-l-pink-500',
+        compactCollapsed && 'aspect-square overflow-hidden',
+        compactSquare && compactTextExpanded && 'overflow-hidden',
+        className
+      )}
       onClick={isClickable ? handleClick : undefined}
     >
-      <CardContent className="p-4">
+      <CardContent
+        className={cn(
+          'p-4',
+          compactCollapsed && 'flex h-full min-h-0 flex-col p-3',
+          compactSquare && compactTextExpanded && 'p-3',
+          contentClassName
+        )}
+      >
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
           <Avatar 
@@ -335,19 +368,50 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, networkDegree }) => {
         )}
 
         {/* Content */}
-        {(item.content || item.description) && (
-          <p className="text-sm text-foreground mb-3 whitespace-pre-wrap">
-            {item.content || item.description}
-          </p>
+        {bodyText && (
+          <div className={cn(compactSquare ? 'mb-2' : 'mb-3')}>
+            <p
+              className={cn(
+                'text-sm text-foreground whitespace-pre-wrap',
+                compactSquare && 'text-xs leading-relaxed',
+                compactCollapsed && 'line-clamp-2'
+              )}
+            >
+              {bodyText}
+            </p>
+            {showCompactTextToggle && (
+              <button
+                type="button"
+                className="mt-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCompactTextExpanded((expanded) => !expanded);
+                }}
+              >
+                {compactTextExpanded ? 'Less' : 'More'}
+              </button>
+            )}
+          </div>
         )}
 
         {/* Image - skip for open roles */}
         {item.image_url && item.type !== 'open_role' && (
-          <div className="rounded-lg overflow-hidden mb-3 bg-muted flex items-center justify-center">
+          <div
+            className={cn(
+              'rounded-lg overflow-hidden mb-3 bg-muted flex items-center justify-center',
+              compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1',
+              compactSquare && compactTextExpanded && 'aspect-square mb-0',
+              imageContainerClassName
+            )}
+          >
             <img
               src={item.image_url}
               alt={item.title || 'Post image'}
-              className="w-full max-h-[32rem] object-contain"
+              className={cn(
+                'w-full max-h-[32rem] object-contain',
+                compactSquare && 'h-full max-h-none object-cover',
+                imageClassName
+              )}
             />
           </div>
         )}
