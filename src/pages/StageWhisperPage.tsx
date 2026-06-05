@@ -124,7 +124,7 @@ const StageWhisperPage: React.FC = () => {
     },
   });
 
-  // Fetch all shows sorted by most liked first
+  // Fetch all shows
   const {
     data: shows = [],
     isLoading: loadingShows
@@ -134,7 +134,7 @@ const StageWhisperPage: React.FC = () => {
       const {
         data,
         error
-      } = await supabase.from('nyc_shows').select('*').eq('is_active', true).order('saves_count', {
+      } = await supabase.from('nyc_shows').select('*').eq('is_active', true).order('created_at', {
         ascending: false
       });
       if (error) throw error;

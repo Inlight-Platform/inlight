@@ -397,27 +397,6 @@ const ProfilePage: React.FC = () => {
     },
     enabled: !!resolvedUserId,
   });
-
-  // Fetch referrer (who invited this user) — beta referral badge
-  const { data: referrerInfo } = useQuery({
-    queryKey: ['profile-referrer', resolvedUserId],
-    queryFn: async () => {
-      if (!resolvedUserId) return null;
-      const { data: me } = await supabase
-        .from('profiles')
-        .select('referred_by')
-        .eq('user_id', resolvedUserId)
-        .maybeSingle();
-      if (!me?.referred_by) return null;
-      const { data: ref } = await supabase
-        .from('profiles_public')
-        .select('display_name, stage_name, user_id')
-        .eq('user_id', me.referred_by)
-        .maybeSingle();
-      return ref;
-    },
-    enabled: !!resolvedUserId,
-  });
   
   // Use database values - fall back to store only as last resort for legacy data
   const user = getUser(resolvedUserId || '');
@@ -1206,14 +1185,6 @@ const ProfilePage: React.FC = () => {
                     <p className="text-muted-foreground text-sm mt-1">
                       {dbProfile.headline}
                     </p>
-                  )}
-                  {referrerInfo && (
-                    <button
-                      onClick={() => navigate(`/profile/${referrerInfo.user_id}`)}
-                      className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs hover:bg-primary/20 transition-colors"
-                    >
-                      Referred by {capitalizeName(referrerInfo.stage_name || referrerInfo.display_name || 'a member')}
-                    </button>
                   )}
                 </div>
               )}

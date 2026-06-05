@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSearchParams } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -46,8 +45,6 @@ import { ProjectStatusDropdown } from '@/components/projects/ProjectStatusDropdo
 import FloatingChatButton from '@/components/messages/FloatingChatButton';
 import { useMinimizedChat } from '@/hooks/useMinimizedChat';
 import { useLocation } from 'react-router-dom';
-import { InviteCreditDialog } from '@/components/invites/InviteCreditDialog';
-import { Mail } from 'lucide-react';
 
 interface ProjectMember {
   id: string;
@@ -92,68 +89,6 @@ const ProjectDetailPage: React.FC = () => {
   const [isEditingDrive, setIsEditingDrive] = useState(false);
   
   const { uploadPhoto, uploading, progress } = useProjectPhotoUpload();
-
-  // Credit invite acceptance flow (deep link from email: ?credit_invite=TOKEN)
-  const [searchParams, setSearchParams] = useSearchParams();
-  const creditInviteToken = searchParams.get('credit_invite');
-  const [creditDialogOpen, setCreditDialogOpen] = useState(false);
-  const [creditInviteMeta, setCreditInviteMeta] = useState<{ role_name: string; project_title: string } | null>(null);
-  const [acceptingCredit, setAcceptingCredit] = useState(false);
-
-  useEffect(() => {
-    if (!creditInviteToken) return;
-    // If not logged in yet, route through auth and bring them back here after signup/login
-    if (!user) {
-      navigate(
-        `/auth?mode=signup&credit_invite=${creditInviteToken}&returnTo=${encodeURIComponent(location.pathname + location.search)}`
-      );
-      return;
-    }
-    // Look up invite metadata for the dialog
-    (async () => {
-      const { data, error } = await supabase
-        .from('project_credit_invites')
-        .select('role_name, project_id, status')
-        .eq('token', creditInviteToken)
-        .maybeSingle();
-      if (error || !data) {
-        toast.error('Invitation not found or already used');
-        setSearchParams((p) => { p.delete('credit_invite'); return p; }, { replace: true });
-        return;
-      }
-      if (data.status !== 'pending') {
-        toast.info('This invitation has already been responded to');
-        setSearchParams((p) => { p.delete('credit_invite'); return p; }, { replace: true });
-        return;
-      }
-      setCreditInviteMeta({ role_name: data.role_name, project_title: 'this project' });
-      setCreditDialogOpen(true);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creditInviteToken, user?.id]);
-
-  const handleAcceptCredit = async () => {
-    if (!creditInviteToken) return;
-    setAcceptingCredit(true);
-    try {
-      const { error } = await supabase.rpc('accept_project_credit_invite', { _token: creditInviteToken });
-      if (error) throw error;
-      toast.success('Credit accepted! You\u2019ve been added to the project.');
-      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
-      setCreditDialogOpen(false);
-      setSearchParams((p) => { p.delete('credit_invite'); return p; }, { replace: true });
-    } catch (err) {
-      toast.error((err as Error).message || 'Could not accept invitation');
-    } finally {
-      setAcceptingCredit(false);
-    }
-  };
-
-  const handleDeclineCredit = () => {
-    setCreditDialogOpen(false);
-    setSearchParams((p) => { p.delete('credit_invite'); return p; }, { replace: true });
-    toast('Invitation declined');
-  };
 
   // Clear minimized chat state if we're not the origin page
   useEffect(() => {
@@ -768,18 +703,7 @@ const ProjectDetailPage: React.FC = () => {
               Team Members ({members.filter(m => m.user_id !== project.creator_id).length + 1})
             </CardTitle>
             {isCreator && (
-              <div className="flex items-center gap-2">
-                <InviteCreditDialog
-                  projectId={projectId!}
-                  projectTitle={project.title}
-                  trigger={
-                    <Button size="sm" variant="outline">
-                      <Mail className="w-4 h-4 mr-2" />
-                      Invite for Credit
-                    </Button>
-                  }
-                />
-                <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
+              <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline">
                     <UserPlus className="w-4 h-4 mr-2" />
@@ -810,8 +734,7 @@ const ProjectDetailPage: React.FC = () => {
                     </Button>
                   </div>
                 </DialogContent>
-                </Dialog>
-              </div>
+              </Dialog>
             )}
           </CardHeader>
           <CardContent>
@@ -1070,30 +993,6 @@ const ProjectDetailPage: React.FC = () => {
         description="This will permanently delete this project, including all photos and team members. This action cannot be undone."
         isPending={deleteProjectMutation.isPending}
       />
-
-      {/* Credit Invite Accept/Decline Dialog */}
-      <Dialog open={creditDialogOpen} onOpenChange={(o) => { if (!o) handleDeclineCredit(); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>You've been invited to claim a credit</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 pt-2">
-            <p className="text-sm text-muted-foreground">
-              You've been invited to <strong>{project?.title || creditInviteMeta?.project_title}</strong>{' '}
-              as <strong>{creditInviteMeta?.role_name}</strong>. Accepting will add you to the project
-              team, the team group chat, and credit your profile with this role.
-            </p>
-            <div className="flex gap-2 justify-end pt-2">
-              <Button variant="outline" onClick={handleDeclineCredit} disabled={acceptingCredit}>
-                Decline
-              </Button>
-              <Button onClick={handleAcceptCredit} disabled={acceptingCredit}>
-                {acceptingCredit ? 'Accepting…' : 'Accept credit'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Floating chat icon for project members */}
       {/* Floating chat icon for project members - or minimized bubble */}
