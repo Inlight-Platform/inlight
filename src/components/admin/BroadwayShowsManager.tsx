@@ -256,10 +256,12 @@ const BroadwayShowsManager: React.FC<ShowsManagerProps> = ({ category }) => {
 
     setUploading(true);
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('Not authenticated');
       const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
       const timestamp = Date.now();
       const randomId = Math.random().toString(36).substring(2, 9);
-      const fileName = `broadway-posters/${timestamp}-${randomId}.${fileExt}`;
+      const fileName = `${userData.user.id}/broadway-posters/${timestamp}-${randomId}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
