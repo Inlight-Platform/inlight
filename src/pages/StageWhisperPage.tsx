@@ -414,10 +414,6 @@ const StageWhisperPage: React.FC = () => {
               <Film className="w-4 h-4" />
               In Theatres
             </Button>
-            <Button variant={filmViewTab === 'streaming' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setFilmViewTab, 'streaming')} className="gap-2">
-              <Tv className="w-4 h-4" />
-              Streaming
-            </Button>
             <Button variant={filmViewTab === 'student' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setFilmViewTab, 'student')} className="gap-2">
               <Sparkles className="w-4 h-4" />
               Community
