@@ -263,10 +263,10 @@ const StageWhisperPage: React.FC = () => {
       toast.success(`🎲 How about "${randomShow.title}"?`);
     } else {
       if (theatreFilms.length === 0) {
-        toast.error('No content available');
+        toast.error('No films available');
         return;
       }
-      const randomItem = items[Math.floor(Math.random() * items.length)];
+      const randomItem = theatreFilms[Math.floor(Math.random() * theatreFilms.length)];
       toast.success(`🎲 How about "${randomItem.title}"?`);
     }
   };
