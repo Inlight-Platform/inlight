@@ -658,6 +658,7 @@ export type Database = {
           run_end: string | null
           run_start: string | null
           rush_policy: string | null
+          saves_count: number | null
           show_times: string | null
           show_type: string
           submitted_by: string | null
@@ -682,6 +683,7 @@ export type Database = {
           run_end?: string | null
           run_start?: string | null
           rush_policy?: string | null
+          saves_count?: number | null
           show_times?: string | null
           show_type?: string
           submitted_by?: string | null
@@ -706,6 +708,7 @@ export type Database = {
           run_end?: string | null
           run_start?: string | null
           rush_policy?: string | null
+          saves_count?: number | null
           show_times?: string | null
           show_type?: string
           submitted_by?: string | null
@@ -835,6 +838,39 @@ export type Database = {
           resume_url?: string | null
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          id: string
+          inviter_id: string
+          personal_note: string | null
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          inviter_id: string
+          personal_note?: string | null
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          inviter_id?: string
+          personal_note?: string | null
+          token?: string
         }
         Relationships: []
       }
@@ -989,12 +1025,13 @@ export type Database = {
           message_privacy: string
           onboarding_completed_at: string | null
           plan_type: string
-          primary_discipline: string | null
-          pronouns: string | null
           preview_survey_completed_at: string | null
           preview_survey_goal: string | null
           preview_survey_role: string | null
           preview_survey_school: string | null
+          primary_discipline: string | null
+          pronouns: string | null
+          referred_by: string | null
           representation: string | null
           role: string | null
           secondary_disciplines: string[]
@@ -1036,12 +1073,13 @@ export type Database = {
           message_privacy?: string
           onboarding_completed_at?: string | null
           plan_type?: string
-          primary_discipline?: string | null
-          pronouns?: string | null
           preview_survey_completed_at?: string | null
           preview_survey_goal?: string | null
           preview_survey_role?: string | null
           preview_survey_school?: string | null
+          primary_discipline?: string | null
+          pronouns?: string | null
+          referred_by?: string | null
           representation?: string | null
           role?: string | null
           secondary_disciplines?: string[]
@@ -1083,12 +1121,13 @@ export type Database = {
           message_privacy?: string
           onboarding_completed_at?: string | null
           plan_type?: string
-          primary_discipline?: string | null
-          pronouns?: string | null
           preview_survey_completed_at?: string | null
           preview_survey_goal?: string | null
           preview_survey_role?: string | null
           preview_survey_school?: string | null
+          primary_discipline?: string | null
+          pronouns?: string | null
+          referred_by?: string | null
           representation?: string | null
           role?: string | null
           secondary_disciplines?: string[]
@@ -1104,6 +1143,48 @@ export type Database = {
           vouch_count?: number
           website_url?: string | null
           why_artist?: string | null
+        }
+        Relationships: []
+      }
+      project_credit_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          id: string
+          inviter_id: string
+          project_id: string
+          role_name: string
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          inviter_id: string
+          project_id: string
+          role_name: string
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          inviter_id?: string
+          project_id?: string
+          role_name?: string
+          status?: string
+          token?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2330,6 +2411,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_project_credit_invite: { Args: { _token: string }; Returns: Json }
       add_project_member_by_email: {
         Args: {
           target_email: string
@@ -2346,7 +2428,19 @@ export type Database = {
         Args: { post_row: Database["public"]["Tables"]["posts"]["Row"] }
         Returns: boolean
       }
+      claim_invites_on_signup: {
+        Args: { _credit_token?: string; _platform_token?: string }
+        Returns: Json
+      }
       consume_job_credit: { Args: { _user_id: string }; Returns: boolean }
+      create_platform_invite: {
+        Args: { _email: string; _note?: string }
+        Returns: Json
+      }
+      create_project_credit_invite: {
+        Args: { _email: string; _project_id: string; _role_name: string }
+        Returns: Json
+      }
       generate_ticket_code: { Args: never; Returns: string }
       get_2nd_degree_connections: {
         Args: { target_user_id: string }
