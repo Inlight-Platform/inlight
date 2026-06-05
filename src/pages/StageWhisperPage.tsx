@@ -299,7 +299,7 @@ const StageWhisperPage: React.FC = () => {
         className="gap-1.5"
       >
         <Archive className="w-3.5 h-3.5" />
-        Archive
+        History
         {archiveCount > 0 && <span className="text-xs opacity-70">({archiveCount})</span>}
       </Button>
     </div>

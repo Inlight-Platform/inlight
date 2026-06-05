@@ -93,8 +93,10 @@ const MusicShowsManager: React.FC = () => {
     if (!posterFile) return null;
     setUploading(true);
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('Not authenticated');
       const fileExt = posterFile.name.split('.').pop() || 'jpg';
-      const fileName = `music-shows/${showId}/poster-${Date.now()}.${fileExt}`;
+      const fileName = `${userData.user.id}/music-shows/${showId}/poster-${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
         .upload(fileName, posterFile, { upsert: true, contentType: posterFile.type });
