@@ -12,6 +12,7 @@ import { FeedBentoCard, getBentoSize } from '@/components/feed/FeedBentoCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { WelcomeMessage } from '@/components/feed/WelcomeMessage';
 import { YouTab } from '@/components/feed/YouTab';
+import { FeedSurvey, FeedSurveyAnswers } from '@/components/feed/FeedSurvey';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -27,6 +28,16 @@ type ProjectSubTab = 'feed' | 'my-network' | 'saved' | 'archive';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 type ViewMode = 'bento' | 'scroll';
 
+type FeedOpenRoleProject = {
+  id: string;
+  title: string;
+  status: string | null;
+  is_public: boolean | null;
+  creator_id: string;
+  main_image_url: string | null;
+  header_image_url: string | null;
+};
+
 const PROJECT_CATEGORIES = [
   { value: 'film', label: 'Film' },
   { value: 'theater', label: 'Theatre' },
@@ -37,6 +48,14 @@ const PROJECT_CATEGORIES = [
 ] as const;
 
 type ProjectCategory = typeof PROJECT_CATEGORIES[number]['value'];
+
+const getOpenRoleProject = (project: unknown): FeedOpenRoleProject | null => {
+  if (Array.isArray(project)) {
+    return (project[0] as FeedOpenRoleProject | undefined) ?? null;
+  }
+
+  return project as FeedOpenRoleProject | null;
+};
 
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
@@ -85,13 +104,13 @@ const FeedPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('bento');
 
   // Fetch current user's profile
-  const { data: userProfile } = useQuery({
+  const { data: userProfile, isLoading: userProfileLoading } = useQuery({
     queryKey: ['my-profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       const { data: profileByUserId, error: profileByUserIdError } = await supabase
-        .from('profiles_public')
-        .select('display_name, avatar_url')
+        .from('profiles')
+        .select('display_name, avatar_url, preview_survey_role, preview_survey_school, preview_survey_goal, preview_survey_completed_at')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -106,6 +125,40 @@ const FeedPage: React.FC = () => {
       return null;
     },
     enabled: !!user?.id
+  });
+
+  const hasCompletedFeedSurvey = !!(
+    userProfile?.preview_survey_completed_at &&
+    userProfile.preview_survey_role &&
+    userProfile.preview_survey_school &&
+    userProfile.preview_survey_goal
+  );
+
+  const saveFeedSurveyMutation = useMutation({
+    mutationFn: async (answers: FeedSurveyAnswers) => {
+      if (!user?.id) throw new Error('Must be logged in');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          preview_survey_role: answers.role,
+          preview_survey_school: answers.school,
+          preview_survey_goal: answers.goal,
+          preview_survey_completed_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-profile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['you-tab-survey', user?.id] });
+      setContentFilter('you');
+      toast.success('Your feed survey was saved.');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to save your survey.');
+    },
   });
 
   // Fetch posts
@@ -200,7 +253,7 @@ const FeedPage: React.FC = () => {
         price: event.price,
         currency: event.currency,
         stripe_price_id: event.stripe_price_id,
-        payment_link_url: (event as any).payment_link_url,
+        payment_link_url: event.payment_link_url,
         creator_profile: profileMap.get(event.user_id)
       }));
     }
@@ -233,7 +286,9 @@ const FeedPage: React.FC = () => {
 
       if (error) throw error;
 
-      const userIds = [...new Set(data.map((r) => (r.projects as any).creator_id))] as string[];
+      const userIds = [
+        ...new Set(data.map((role) => getOpenRoleProject(role.projects)?.creator_id).filter(Boolean)),
+      ] as string[];
       const { data: profiles } = await supabase
         .from('profiles_public')
         .select('user_id, display_name, avatar_url')
@@ -242,19 +297,20 @@ const FeedPage: React.FC = () => {
       const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
 
       return data
-        .filter((role) => (role.projects as any).is_public)
-        .map((role) => ({
+        .map((role) => ({ role, project: getOpenRoleProject(role.projects) }))
+        .filter(({ project }) => project?.is_public)
+        .map(({ role, project }) => ({
           id: role.id,
           type: 'open_role' as const,
-          user_id: (role.projects as any).creator_id,
+          user_id: project!.creator_id,
           title: role.role_name,
           role_id: role.id,
           project_id: role.project_id,
-          project_title: (role.projects as any).title,
-          project_status: (role.projects as any).status,
-          image_url: (role.projects as any).header_image_url || (role.projects as any).main_image_url,
+          project_title: project!.title,
+          project_status: project!.status,
+          image_url: project!.header_image_url || project!.main_image_url,
           created_at: role.created_at,
-          creator_profile: profileMap.get((role.projects as any).creator_id)
+          creator_profile: profileMap.get(project!.creator_id)
         }));
     }
   });
@@ -374,7 +430,7 @@ const FeedPage: React.FC = () => {
   const archivedProjects = allProjects.filter(p => normalizeStatus(p.status) === 'archived');
 
   const applyProjectFilters = (list: typeof allProjects) => {
-    let filtered = selectedCategory === 'all' ? list : list.filter(p => p.category === selectedCategory);
+    const filtered = selectedCategory === 'all' ? list : list.filter(p => p.category === selectedCategory);
     return sortProjectList(filterBySearch(filtered));
   };
 
@@ -395,8 +451,8 @@ const FeedPage: React.FC = () => {
       created_at: project.created_at,
       category: project.category,
       project_status: project.status,
-      link_url: (project as any).link_url,
-      link_title: (project as any).link_title,
+      link_url: project.link_url,
+      link_title: project.link_title,
       creator_profile: project.creator_profile,
     }));
 
@@ -436,7 +492,7 @@ const FeedPage: React.FC = () => {
 
   // Combine and filter feed items (for non-project tabs)
   const feedItems = useMemo(() => {
-    let allItems: FeedItemData[] = [...posts, ...projectFeedItems, ...events];
+    let allItems: FeedItemData[] = [...posts, ...projectFeedItems, ...events, ...openRoles];
 
     if (contentFilter !== 'all') {
       allItems = allItems.filter((item) => {
@@ -735,6 +791,13 @@ const FeedPage: React.FC = () => {
               );
               return count <= 2 ? <WelcomeMessage /> : null;
             })()}
+
+            {user && !userProfileLoading && !hasCompletedFeedSurvey && (
+              <FeedSurvey
+                isSaving={saveFeedSurveyMutation.isPending}
+                onComplete={(answers) => saveFeedSurveyMutation.mutate(answers)}
+              />
+            )}
 
             {/* Content Type Filters */}
             <div className="mb-4">

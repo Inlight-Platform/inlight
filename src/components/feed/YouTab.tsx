@@ -12,7 +12,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { capitalizeName } from '@/lib/utils';
-import { COMPLEMENTARY } from '@/data/disciplines';
 
 // A small curated set of resources used for the daily "specific resource" pick.
 // Keeping this inline avoids reaching into the full ResourcesPage list.
@@ -36,16 +35,72 @@ interface SuggestedUser {
   bio: string | null;
   location: string | null;
   badges: string[] | null;
-  primary_discipline?: string | null;
-  secondary_disciplines?: string[] | null;
-  goals?: string[] | null;
 }
+
+interface Opportunity {
+  id: string;
+  title: string;
+  description: string | null;
+  company: string | null;
+  location: string | null;
+  type: string | null;
+  compensation: string | null;
+  is_remote: boolean | null;
+  tags: string[] | null;
+}
+
+const SURVEY_ROLE_TO_DISCIPLINE: Record<string, string> = {
+  Director: 'Filmmaker',
+  Songwriter: 'Recording Artist',
+  Dancer: 'Actor',
+  Composer: 'Musician',
+  Writer: 'Filmmaker',
+};
+
+const SURVEY_GOAL_TO_PROFILE_GOAL: Record<string, string> = {
+  'Finding Crew': 'Finding collaborators',
+  'Professional Networking': 'Building my community',
+  'Funding Projects': 'Finding resources & tools',
+  'Booking Auditions': 'Finding resources & tools',
+  'Releasing Music': 'Learning about the industry',
+};
+
+const ROLE_KEYWORDS: Record<string, string[]> = {
+  Actor: ['actor', 'acting', 'audition', 'casting', 'performer', 'performance', 'theatre', 'theater'],
+  Director: ['director', 'directing', 'filmmaker', 'film', 'screen', 'cinema', 'producer'],
+  Songwriter: ['songwriter', 'songwriting', 'lyricist', 'music', 'recording', 'artist', 'composer'],
+  Producer: ['producer', 'production', 'funding', 'pitch', 'film', 'music', 'project'],
+  Dancer: ['dancer', 'dance', 'movement', 'choreography', 'performer'],
+  Composer: ['composer', 'composition', 'score', 'music', 'sound', 'orchestration'],
+  Writer: ['writer', 'writing', 'screenwriter', 'script', 'playwright', 'story'],
+  Designer: ['designer', 'design', 'visual', 'costume', 'set', 'graphic', 'art'],
+};
+
+const GOAL_KEYWORDS: Record<string, string[]> = {
+  'Finding Crew': ['crew', 'collaborator', 'collaboration', 'cinematographer', 'editor', 'producer', 'designer', 'team'],
+  'Professional Networking': ['network', 'community', 'alumni', 'industry', 'mentor', 'producer', 'founder', 'creative'],
+  'Funding Projects': ['funding', 'grant', 'lab', 'pitch', 'producer', 'budget', 'investment'],
+  'Booking Auditions': ['audition', 'casting', 'actor', 'performer', 'theatre', 'theater', 'role'],
+  'Releasing Music': ['music', 'song', 'recording', 'composer', 'artist', 'producer', 'sync', 'release'],
+};
 
 // Deterministic daily seed (changes once per day)
 const getDailySeed = () => {
   const d = new Date();
   return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 };
+
+const hashString = (value: string) => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const getUserDailySeed = (userId: string | undefined, dailySeed: number, namespace: string) =>
+  hashString(`${dailySeed}:${namespace}:${userId || 'anonymous'}`);
 
 const seededShuffle = <T,>(arr: T[], seed: number): T[] => {
   const a = [...arr];
@@ -58,6 +113,19 @@ const seededShuffle = <T,>(arr: T[], seed: number): T[] => {
   return a;
 };
 
+const normalizeSearchText = (value: string) => value.toLowerCase();
+
+const countKeywordMatches = (text: string, keywords: string[]) =>
+  keywords.reduce((count, keyword) => (text.includes(keyword.toLowerCase()) ? count + 1 : count), 0);
+
+const getSchoolKeywords = (school?: string | null) => {
+  if (!school || school === 'Other') return [];
+  return school
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 2);
+};
+
 export const YouTab: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -66,17 +134,25 @@ export const YouTab: React.FC = () => {
   const { isSaved, getSavedItem, toggleSave } = useSavedItems();
 
   const dailySeed = getDailySeed();
+  const peopleSeed = getUserDailySeed(user?.id, dailySeed, 'people');
+  const matchSeed = getUserDailySeed(user?.id, dailySeed, 'match');
+  const opportunitySeed = getUserDailySeed(user?.id, dailySeed, 'opportunities');
+  const resourceSeed = getUserDailySeed(user?.id, dailySeed, 'resources');
 
   // Current user's survey
   const { data: mySurvey } = useQuery({
     queryKey: ['you-tab-survey', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('primary_discipline, secondary_disciplines, goals, display_name')
+        .select('display_name, preview_survey_role, preview_survey_goal, preview_survey_school')
         .eq('user_id', user.id)
         .maybeSingle();
+      if (error) {
+        console.error('YouTab: failed loading preview survey', error);
+        return null;
+      }
       return data;
     },
     enabled: !!user?.id,
@@ -100,12 +176,12 @@ export const YouTab: React.FC = () => {
   });
 
   // Fetch opportunities
-  const { data: opportunities = [] } = useQuery({
+  const { data: opportunities = [] } = useQuery<Opportunity[]>({
     queryKey: ['you-tab-opportunities'],
     queryFn: async () => {
       const { data } = await supabase
         .from('opportunities')
-        .select('id, title, company, location, type, compensation, is_remote, tags')
+        .select('id, title, description, company, location, type, compensation, is_remote, tags')
         .eq('status', 'open')
         .order('created_at', { ascending: false })
         .limit(30);
@@ -118,47 +194,53 @@ export const YouTab: React.FC = () => {
     [candidates, following]
   );
 
+  const myPrimaryDiscipline = useMemo(() => {
+    const surveyRole = mySurvey?.preview_survey_role || null;
+    return surveyRole ? SURVEY_ROLE_TO_DISCIPLINE[surveyRole] || surveyRole : null;
+  }, [mySurvey]);
+
+  const myProfileGoals = useMemo(() => {
+    const surveyGoal = mySurvey?.preview_survey_goal || null;
+    return surveyGoal ? [SURVEY_GOAL_TO_PROFILE_GOAL[surveyGoal] || surveyGoal] : [];
+  }, [mySurvey]);
+
   // Score candidates against the current user's survey
   const scored = useMemo(() => {
-    const myPrimary = mySurvey?.primary_discipline || null;
-    const mySecondary = (mySurvey?.secondary_disciplines as string[]) || [];
-    const myGoals = (mySurvey?.goals as string[]) || [];
-    const wantsCollab =
-      myGoals.includes('Finding collaborators') ||
-      myGoals.includes('Starting a new project');
-    const complements = myPrimary ? COMPLEMENTARY[myPrimary] || [] : [];
+    const surveyRole = mySurvey?.preview_survey_role || '';
+    const surveyGoal = mySurvey?.preview_survey_goal || '';
+    const roleKeywords = ROLE_KEYWORDS[surveyRole] || [];
+    const goalKeywords = GOAL_KEYWORDS[surveyGoal] || [];
+    const schoolKeywords = getSchoolKeywords(mySurvey?.preview_survey_school);
 
     return notConnected
       .map((c) => {
+        const searchableText = normalizeSearchText([
+          c.display_name,
+          c.headline,
+          c.bio,
+          c.location,
+          ...(c.badges || []),
+        ].filter(Boolean).join(' '));
+
         let score = 0;
-        const cPrimary = c.primary_discipline || null;
-        const cSecondary = (c.secondary_disciplines as string[]) || [];
-        const cGoals = (c.goals as string[]) || [];
+        score += countKeywordMatches(searchableText, roleKeywords) * 4;
+        score += countKeywordMatches(searchableText, goalKeywords) * 3;
+        score += countKeywordMatches(searchableText, schoolKeywords) * 2;
+        if (c.avatar_url) score += 0.5;
+        if (c.headline) score += 0.5;
+        if (c.bio) score += 0.5;
 
-        // Complementary primary discipline (for collaboration goals)
-        if (wantsCollab && cPrimary && complements.includes(cPrimary)) score += 5;
-        // Shared secondary disciplines
-        const sharedSecondary = mySecondary.filter((d) => cSecondary.includes(d)).length;
-        score += sharedSecondary * 2;
-        // Shared goals
-        const sharedGoals = myGoals.filter((g) => cGoals.includes(g)).length;
-        score += sharedGoals * 2;
-        // Has set up survey
-        if (cPrimary) score += 1;
-        // Has avatar / headline (quality boost)
-        if (c.avatar_url) score += 1;
-        if (c.headline) score += 1;
-
-        return { c, score };
+        const tieBreaker = hashString(`${peopleSeed}:${c.user_id}`) / 1_000_000_000_000;
+        return { c, score, tieBreaker };
       })
-      .sort((a, b) => b.score - a.score);
-  }, [notConnected, mySurvey]);
+      .sort((a, b) => (b.score + b.tieBreaker) - (a.score + a.tieBreaker));
+  }, [notConnected, mySurvey, peopleSeed]);
 
   // Take the top-scoring pool, then deterministically shuffle for daily rotation
   const dailySuggestions = useMemo(() => {
     const pool = scored.slice(0, 20).map((s) => s.c);
-    return seededShuffle(pool, dailySeed).slice(0, 3);
-  }, [scored, dailySeed]);
+    return seededShuffle(pool, peopleSeed).slice(0, 3);
+  }, [scored, peopleSeed]);
 
   const dailyMatch = useMemo(() => {
     // Highest scoring candidate not already in the suggestions
@@ -167,18 +249,45 @@ export const YouTab: React.FC = () => {
       .filter((s) => !usedIds.has(s.c.user_id))
       .slice(0, 5)
       .map((s) => s.c);
-    return seededShuffle(topPool, dailySeed + 7)[0] || null;
-  }, [scored, dailySeed, dailySuggestions]);
+    return seededShuffle(topPool, matchSeed)[0] || null;
+  }, [scored, matchSeed, dailySuggestions]);
+
+  const scoredOpportunities = useMemo(() => {
+    const surveyRole = mySurvey?.preview_survey_role || '';
+    const surveyGoal = mySurvey?.preview_survey_goal || '';
+    const roleKeywords = ROLE_KEYWORDS[surveyRole] || [];
+    const goalKeywords = GOAL_KEYWORDS[surveyGoal] || [];
+
+    return opportunities
+      .map((opportunity) => {
+        const searchableText = normalizeSearchText([
+          opportunity.title,
+          opportunity.description,
+          opportunity.company,
+          opportunity.location,
+          opportunity.type,
+          opportunity.compensation,
+          ...(opportunity.tags || []),
+        ].filter(Boolean).join(' '));
+        const score =
+          countKeywordMatches(searchableText, roleKeywords) * 4 +
+          countKeywordMatches(searchableText, goalKeywords) * 3;
+        const tieBreaker = hashString(`${opportunitySeed}:${opportunity.id}`) / 1_000_000_000_000;
+        return { opportunity, score, tieBreaker };
+      })
+      .sort((a, b) => (b.score + b.tieBreaker) - (a.score + a.tieBreaker))
+      .map(({ opportunity }) => opportunity);
+  }, [opportunities, mySurvey, opportunitySeed]);
 
   const dailyOpportunities = useMemo(
-    () => seededShuffle(opportunities, dailySeed + 13).slice(0, 3),
-    [opportunities, dailySeed]
+    () => seededShuffle(scoredOpportunities.slice(0, 20), opportunitySeed).slice(0, 3),
+    [scoredOpportunities, opportunitySeed]
   );
 
   // Pick a specific resource for the day (used in Daily Actions and Explorations)
   const dailyResource = useMemo(
-    () => seededShuffle(CURATED_RESOURCES, dailySeed + 31)[0],
-    [dailySeed]
+    () => seededShuffle(CURATED_RESOURCES, resourceSeed)[0],
+    [resourceSeed]
   );
 
   // Explorations — merged "daily actions" + platform features the user might
@@ -186,7 +295,7 @@ export const YouTab: React.FC = () => {
   // resource pick always included. Internal actions route to the dedicated
   // create template (project → /projects/new; event/service → compose dialog).
   const explorations = useMemo(() => {
-    const myGoals = (mySurvey?.goals as string[]) || [];
+    const myGoals = myProfileGoals;
     const items: {
       key: string;
       title: string;
@@ -250,7 +359,7 @@ export const YouTab: React.FC = () => {
     const resourceItem = items.find((i) => i.key === 'explore-resource')!;
     const others = ranked.map((r) => r.a).filter((i) => i.key !== 'explore-resource');
     return [resourceItem, ...others].slice(0, 3);
-  }, [mySurvey, dailyResource]);
+  }, [myProfileGoals, dailyResource]);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -317,9 +426,9 @@ export const YouTab: React.FC = () => {
           Your daily picks
         </h2>
         <p className="text-sm text-muted-foreground mt-2">
-          {mySurvey?.primary_discipline
-            ? `Curated for a ${mySurvey.primary_discipline.toLowerCase()} — refreshed every day.`
-            : 'A fresh selection of people, opportunities, and one perfect match — refreshed every day.'}
+          {myPrimaryDiscipline
+            ? `Fresh picks for your ${myPrimaryDiscipline.toLowerCase()} path, updated daily.`
+            : 'Fresh people, opportunities, and one match picked for you each day.'}
         </p>
       </div>
 
@@ -397,7 +506,7 @@ export const YouTab: React.FC = () => {
           </Button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {dailyOpportunities.map((o: any) => (
+          {dailyOpportunities.map((o) => (
             <Card
               key={o.id}
               className="relative cursor-pointer hover:shadow-xl transition-shadow"
