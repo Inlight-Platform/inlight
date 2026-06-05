@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          event_name: string
+          id: string
+          path: string
+          referrer: string | null
+          site_slug: string | null
+          user_agent: string | null
+          user_id: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          event_name: string
+          id?: string
+          path: string
+          referrer?: string | null
+          site_slug?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          event_name?: string
+          id?: string
+          path?: string
+          referrer?: string | null
+          site_slug?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: []
+      }
       broadway_metrics: {
         Row: {
           attendance: number
