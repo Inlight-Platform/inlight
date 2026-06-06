@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles, UserPlus, Clock, Check, MapPin, Briefcase, ArrowRight, Heart, Compass, BookOpen, Calendar, FolderPlus, Users, Bookmark, BookmarkCheck } from 'lucide-react';
@@ -12,6 +12,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { capitalizeName } from '@/lib/utils';
+import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
+import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
+import type { OpportunityView } from '@/hooks/useOpportunities';
 
 // A small curated set of resources used for the daily "specific resource" pick.
 // Keeping this inline avoids reaching into the full ResourcesPage list.
@@ -47,6 +50,20 @@ interface Opportunity {
   compensation: string | null;
   is_remote: boolean | null;
   tags: string[] | null;
+  deadline: string | null;
+  status: string | null;
+  experience_level: string | null;
+  roles: string[] | null;
+  requirements: string[] | null;
+  start_date: string | null;
+  duration: string | null;
+  is_featured: boolean | null;
+  action_type: string | null;
+  image_url: string | null;
+  link_url: string | null;
+  link_title: string | null;
+  posted_by: string;
+  created_at: string;
 }
 
 const SURVEY_ROLE_TO_DISCIPLINE: Record<string, string> = {
@@ -132,6 +149,35 @@ export const YouTab: React.FC = () => {
   const { following, isMutual } = useNetworkConnections();
   const { sendRequest, hasSentRequestTo } = useConnectionRequests();
   const { isSaved, getSavedItem, toggleSave } = useSavedItems();
+  const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityView | null>(null);
+  const [showApply, setShowApply] = useState(false);
+
+  const toOpportunityView = (o: Opportunity): OpportunityView => ({
+    id: o.id,
+    title: o.title,
+    description: o.description || '',
+    type: o.type || 'job',
+    status: o.status || 'open',
+    postedBy: o.posted_by,
+    company: o.company || undefined,
+    location: o.location || 'Remote',
+    isRemote: !!o.is_remote,
+    compensation: o.compensation || undefined,
+    experienceLevel: o.experience_level || 'any',
+    roles: o.roles || [],
+    requirements: o.requirements || [],
+    deadline: o.deadline || undefined,
+    startDate: o.start_date || undefined,
+    duration: o.duration || undefined,
+    tags: o.tags || [],
+    createdAt: o.created_at,
+    isFeatured: !!o.is_featured,
+    actionType: o.action_type || 'apply',
+    imageUrl: o.image_url || undefined,
+    linkUrl: o.link_url || undefined,
+    linkTitle: o.link_title || undefined,
+    applicants: [],
+  });
 
   const dailySeed = getDailySeed();
   const peopleSeed = getUserDailySeed(user?.id, dailySeed, 'people');
@@ -181,11 +227,17 @@ export const YouTab: React.FC = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from('opportunities')
-        .select('id, title, description, company, location, type, compensation, is_remote, tags')
+        .select('*')
         .eq('status', 'open')
         .order('created_at', { ascending: false })
         .limit(30);
-      return data || [];
+      const now = Date.now();
+      // Filter out expired opportunities (deadline already past)
+      return ((data as any[]) || []).filter((o) => {
+        if (!o.deadline) return true;
+        const d = new Date(o.deadline).getTime();
+        return isNaN(d) || d >= now;
+      }) as Opportunity[];
     },
   });
 
@@ -510,7 +562,7 @@ export const YouTab: React.FC = () => {
             <Card
               key={o.id}
               className="relative cursor-pointer hover:shadow-xl transition-shadow"
-              onClick={() => navigate('/opportunities')}
+              onClick={() => setSelectedOpportunity(toOpportunityView(o))}
             >
               <SaveIcon
                 data={{
@@ -661,19 +713,39 @@ export const YouTab: React.FC = () => {
                 <p className="text-sm text-muted-foreground line-clamp-3">{dailyMatch.bio}</p>
               </CardContent>
             )}
-            <CardContent className="px-5 pb-5 pt-0 grid grid-cols-2 gap-2">
+            <CardContent className="px-5 pb-5 pt-0 grid grid-cols-2 gap-2 items-center">
               <Button
                 variant="outline"
+                size="sm"
+                className="w-full"
                 onClick={(e) => { e.stopPropagation(); navigate(`/profile/${dailyMatch.user_id}`); }}
               >
                 View profile
               </Button>
-              <div onClick={(e) => e.stopPropagation()}>
+              <div className="w-full flex justify-center [&>button]:w-full" onClick={(e) => e.stopPropagation()}>
                 {renderConnectButton(dailyMatch.user_id)}
               </div>
             </CardContent>
           </Card>
         </section>
+      )}
+
+      <OpportunityDetailSheet
+        opportunity={selectedOpportunity}
+        open={!!selectedOpportunity}
+        onOpenChange={(open) => { if (!open) setSelectedOpportunity(null); }}
+        posterProfile={null}
+        hasApplied={false}
+        onApply={() => { setShowApply(true); setSelectedOpportunity(null); }}
+      />
+      {selectedOpportunity && (
+        <ApplicationDialog
+          open={showApply}
+          onOpenChange={setShowApply}
+          opportunityId={selectedOpportunity.id}
+          opportunityTitle={selectedOpportunity.title}
+          onApplicationSubmitted={() => setShowApply(false)}
+        />
       )}
     </div>
   );

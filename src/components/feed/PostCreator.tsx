@@ -272,7 +272,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="update" className="flex items-center gap-1.5">
                     <MessageSquare className="h-4 w-4" />
-                    <span className="hidden sm:inline">Update</span>
+                    <span className="hidden sm:inline">Service</span>
                   </TabsTrigger>
                   <TabsTrigger value="event" className="flex items-center gap-1.5">
                     <Calendar className="h-4 w-4" />
@@ -309,7 +309,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   {/* Content textarea */}
                   <Textarea
                     placeholder={
-                      postType === 'update' ? "Share something with your network..." :
+                      postType === 'update' ? "Share a skill or service you offer..." :
                       postType === 'event' ? "Describe your event..." :
                       "Describe the opportunity..."
                     }
