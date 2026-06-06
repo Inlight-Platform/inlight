@@ -562,7 +562,7 @@ export const YouTab: React.FC = () => {
             <Card
               key={o.id}
               className="relative cursor-pointer hover:shadow-xl transition-shadow"
-              onClick={() => navigate('/opportunities')}
+              onClick={() => setSelectedOpportunity(toOpportunityView(o))}
             >
               <SaveIcon
                 data={{
@@ -713,19 +713,38 @@ export const YouTab: React.FC = () => {
                 <p className="text-sm text-muted-foreground line-clamp-3">{dailyMatch.bio}</p>
               </CardContent>
             )}
-            <CardContent className="px-5 pb-5 pt-0 grid grid-cols-2 gap-2">
+            <CardContent className="px-5 pb-5 pt-0 grid grid-cols-2 gap-2 items-center">
               <Button
                 variant="outline"
+                size="sm"
+                className="w-full"
                 onClick={(e) => { e.stopPropagation(); navigate(`/profile/${dailyMatch.user_id}`); }}
               >
                 View profile
               </Button>
-              <div onClick={(e) => e.stopPropagation()}>
+              <div className="w-full flex justify-center [&>button]:w-full" onClick={(e) => e.stopPropagation()}>
                 {renderConnectButton(dailyMatch.user_id)}
               </div>
             </CardContent>
           </Card>
         </section>
+      )}
+
+      <OpportunityDetailSheet
+        opportunity={selectedOpportunity}
+        open={!!selectedOpportunity}
+        onOpenChange={(open) => { if (!open) setSelectedOpportunity(null); }}
+        posterProfile={null}
+        hasApplied={false}
+        onApply={() => { setShowApply(true); setSelectedOpportunity(null); }}
+      />
+      {selectedOpportunity && (
+        <ApplicationDialog
+          open={showApply}
+          onOpenChange={setShowApply}
+          opportunityId={selectedOpportunity.id}
+          opportunityTitle={selectedOpportunity.title}
+        />
       )}
     </div>
   );
