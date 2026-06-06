@@ -195,11 +195,17 @@ export const YouTab: React.FC = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from('opportunities')
-        .select('id, title, description, company, location, type, compensation, is_remote, tags')
+        .select('*')
         .eq('status', 'open')
         .order('created_at', { ascending: false })
         .limit(30);
-      return data || [];
+      const now = Date.now();
+      // Filter out expired opportunities (deadline already past)
+      return ((data as any[]) || []).filter((o) => {
+        if (!o.deadline) return true;
+        const d = new Date(o.deadline).getTime();
+        return isNaN(d) || d >= now;
+      }) as Opportunity[];
     },
   });
 
