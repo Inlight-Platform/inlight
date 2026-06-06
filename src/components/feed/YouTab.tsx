@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles, UserPlus, Clock, Check, MapPin, Briefcase, ArrowRight, Heart, Compass, BookOpen, Calendar, FolderPlus, Users, Bookmark, BookmarkCheck } from 'lucide-react';
@@ -47,6 +47,20 @@ interface Opportunity {
   compensation: string | null;
   is_remote: boolean | null;
   tags: string[] | null;
+  deadline: string | null;
+  status: string | null;
+  experience_level: string | null;
+  roles: string[] | null;
+  requirements: string[] | null;
+  start_date: string | null;
+  duration: string | null;
+  is_featured: boolean | null;
+  action_type: string | null;
+  image_url: string | null;
+  link_url: string | null;
+  link_title: string | null;
+  posted_by: string;
+  created_at: string;
 }
 
 const SURVEY_ROLE_TO_DISCIPLINE: Record<string, string> = {
