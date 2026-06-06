@@ -174,6 +174,15 @@ const ProjectsPage: React.FC = () => {
   const activeProjects = projects.filter(p => normalizeStatus(p.status) !== 'archived');
   const archivedProjects = projects.filter(p => normalizeStatus(p.status) === 'archived');
 
+  // Only show category filters that have at least one project
+  const availableCategories = useMemo(() => {
+    const counts = new Set<string>();
+    projects.forEach((p) => {
+      if (p.category) counts.add(p.category);
+    });
+    return PROJECT_CATEGORIES.filter((c) => counts.has(c.value));
+  }, [projects]);
+
   const filteredProjects = sortProjects(filterBySearch(
     selectedCategory === 'all' 
       ? activeProjects 
@@ -375,7 +384,7 @@ const ProjectsPage: React.FC = () => {
             >
               All
             </Button>
-            {PROJECT_CATEGORIES.map((cat) => (
+            {availableCategories.map((cat) => (
               <Button
                 key={cat.value}
                 variant={selectedCategory === cat.value ? 'default' : 'outline'}
