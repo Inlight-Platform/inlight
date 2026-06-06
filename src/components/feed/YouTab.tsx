@@ -12,6 +12,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { capitalizeName } from '@/lib/utils';
+import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
+import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
+import type { OpportunityView } from '@/hooks/useOpportunities';
 
 // A small curated set of resources used for the daily "specific resource" pick.
 // Keeping this inline avoids reaching into the full ResourcesPage list.
@@ -146,6 +149,35 @@ export const YouTab: React.FC = () => {
   const { following, isMutual } = useNetworkConnections();
   const { sendRequest, hasSentRequestTo } = useConnectionRequests();
   const { isSaved, getSavedItem, toggleSave } = useSavedItems();
+  const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityView | null>(null);
+  const [showApply, setShowApply] = useState(false);
+
+  const toOpportunityView = (o: Opportunity): OpportunityView => ({
+    id: o.id,
+    title: o.title,
+    description: o.description || '',
+    type: o.type || 'job',
+    status: o.status || 'open',
+    postedBy: o.posted_by,
+    company: o.company || undefined,
+    location: o.location || 'Remote',
+    isRemote: !!o.is_remote,
+    compensation: o.compensation || undefined,
+    experienceLevel: o.experience_level || 'any',
+    roles: o.roles || [],
+    requirements: o.requirements || [],
+    deadline: o.deadline || undefined,
+    startDate: o.start_date || undefined,
+    duration: o.duration || undefined,
+    tags: o.tags || [],
+    createdAt: o.created_at,
+    isFeatured: !!o.is_featured,
+    actionType: o.action_type || 'apply',
+    imageUrl: o.image_url || undefined,
+    linkUrl: o.link_url || undefined,
+    linkTitle: o.link_title || undefined,
+    applicants: [],
+  });
 
   const dailySeed = getDailySeed();
   const peopleSeed = getUserDailySeed(user?.id, dailySeed, 'people');
