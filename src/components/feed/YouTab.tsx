@@ -744,6 +744,7 @@ export const YouTab: React.FC = () => {
           onOpenChange={setShowApply}
           opportunityId={selectedOpportunity.id}
           opportunityTitle={selectedOpportunity.title}
+          onApplicationSubmitted={() => setShowApply(false)}
         />
       )}
     </div>
