@@ -231,13 +231,10 @@ export const YouTab: React.FC = () => {
         .eq('status', 'open')
         .order('created_at', { ascending: false })
         .limit(30);
-      const now = Date.now();
-      // Filter out expired opportunities (deadline already past)
-      return ((data as any[]) || []).filter((o) => {
-        if (!o.deadline) return true;
-        const d = new Date(o.deadline).getTime();
-        return isNaN(d) || d >= now;
-      }) as Opportunity[];
+      // "Active" = status is open. The poster controls when to close it,
+      // so we don't auto-hide based on deadline (deadlines often pass
+      // while the role remains open for late applicants).
+      return ((data as any[]) || []) as Opportunity[];
     },
   });
 
