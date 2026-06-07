@@ -548,7 +548,7 @@ export const YouTab: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Briefcase className="w-4 h-4 text-primary" />
-            Opportunities for you
+            Opportunities
           </h3>
           <Button variant="ghost" size="sm" onClick={() => navigate('/opportunities')} className="gap-1 text-xs">
             See all <ArrowRight className="w-3 h-3" />
