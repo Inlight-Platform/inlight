@@ -282,7 +282,7 @@ const PeoplePage: React.FC = () => {
 
       <div className="px-4 sm:px-6 lg:px-8 py-6">
         {section === null && (
-          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-4">
+          <div className="max-w-xl mx-auto flex flex-col gap-4 mt-4">
             {[
               { key: 'people', label: 'People', icon: UserRound, desc: 'Discover and connect with creators' },
               { key: 'groups', label: 'Groups', icon: GraduationCap, desc: 'Explore by program or affiliation' },
@@ -291,13 +291,15 @@ const PeoplePage: React.FC = () => {
               <button
                 key={key}
                 onClick={() => setSection(key as 'people' | 'groups' | 'companies')}
-                className="group aspect-square rounded-2xl border border-border bg-card hover:bg-accent/40 hover:border-primary/50 transition-all p-6 flex flex-col items-center justify-center text-center gap-3"
+                className="group rounded-2xl border border-border bg-card hover:bg-accent/40 hover:border-primary/50 transition-all p-5 sm:p-6 flex items-center gap-3 sm:gap-4 text-left"
               >
-                <div className="w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Icon className="w-7 h-7 text-primary" />
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-primary/15 flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                  <Icon className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
                 </div>
-                <h2 className="text-xl font-display font-semibold">{label}</h2>
-                <p className="text-xs text-muted-foreground">{desc}</p>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-display font-semibold">{label}</h2>
+                  <p className="text-xl sm:text-2xl text-muted-foreground mt-0.5">{desc}</p>
+                </div>
               </button>
             ))}
           </div>
