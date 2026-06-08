@@ -147,7 +147,7 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger, category 
     setUploadingPoster(true);
     try {
       const fileExt = posterFile.name.split('.').pop();
-      const fileName = `${user.id}/shows/${showId}/poster.${fileExt}`;
+      const fileName = `shows/${showId}/poster.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
@@ -177,6 +177,7 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger, category 
       if (!user) throw new Error('You must be logged in to submit a show');
       if (!title.trim()) throw new Error('Title is required');
       if (!venue.trim()) throw new Error('Venue is required');
+      if (!posterFile) throw new Error('A show poster image is required');
 
       // First insert the show to get its ID
       const { data: showData, error: insertError } = await supabase
@@ -206,14 +207,11 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger, category 
       // Upload poster if provided
       if (posterFile && showData?.id) {
         const posterUrl = await uploadPoster(showData.id);
-        
-        if (posterUrl) {
-          // Update the show with the poster URL
-          await supabase
-            .from('nyc_shows')
-            .update({ poster_url: posterUrl })
-            .eq('id', showData.id);
-        }
+        if (!posterUrl) throw new Error('Failed to upload poster image');
+        await supabase
+          .from('nyc_shows')
+          .update({ poster_url: posterUrl })
+          .eq('id', showData.id);
       }
 
       // Add teammates if any
