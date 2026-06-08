@@ -25,9 +25,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 
 interface AddMusicShowDialogProps {
   trigger?: React.ReactNode;
+  showType?: 'concert' | 'cabaret';
 }
 
-export const AddMusicShowDialog: React.FC<AddMusicShowDialogProps> = ({ trigger }) => {
+export const AddMusicShowDialog: React.FC<AddMusicShowDialogProps> = ({ trigger, showType = 'concert' }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -90,6 +91,7 @@ export const AddMusicShowDialog: React.FC<AddMusicShowDialogProps> = ({ trigger 
           is_free: isFree,
           submitted_by: user.id,
           is_anonymous: isAnonymous,
+          show_type: showType,
         })
         .select('id')
         .single();
