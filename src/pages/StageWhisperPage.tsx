@@ -84,7 +84,7 @@ const StageWhisperPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
-  const [activeTab, setActiveTab] = useState('school');
+  const [activeTab, setActiveTab] = useState('off-off-broadway');
   const [viewTab, setViewTab] = useState<'discover' | 'my-list'>('discover');
   const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'student' | 'festivals'>('theatres');
   const [musicTab, setMusicTab] = useState<'concerts' | 'cabarets'>('concerts');
@@ -391,13 +391,13 @@ const StageWhisperPage: React.FC = () => {
         {industryTab === 'theatre' && viewTab === 'discover' && <div className="overflow-x-auto scrollbar-thin px-4 sm:px-6 lg:px-8 sm:flex sm:justify-center">
             <Tabs value={activeTab} onValueChange={v => handleTabSwitch(setActiveTab, v)}>
               <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mx-auto">
-                <TabsTrigger value="school" className="flex-shrink-0 whitespace-nowrap">
-                  🎓 School
-                  <span className="ml-1 text-xs opacity-70">({showCounts['school']})</span>
-                </TabsTrigger>
                 <TabsTrigger value="off-off-broadway" className="flex-shrink-0 whitespace-nowrap">
                   ✨ Off-Off
                   <span className="ml-1 text-xs opacity-70">({showCounts['off-off-broadway']})</span>
+                </TabsTrigger>
+                <TabsTrigger value="school" className="flex-shrink-0 whitespace-nowrap">
+                  🎓 School
+                  <span className="ml-1 text-xs opacity-70">({showCounts['school']})</span>
                 </TabsTrigger>
                 <TabsTrigger value="off-broadway" className="flex-shrink-0 whitespace-nowrap">
                   🌟 Off-Broadway
