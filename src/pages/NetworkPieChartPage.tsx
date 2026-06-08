@@ -429,8 +429,6 @@ const NetworkPieChartPage: React.FC = () => {
               </div>
             </div>
           )}
-
-}
         </>
       )}
 
