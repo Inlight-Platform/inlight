@@ -60,11 +60,11 @@ const CompanyRequestsManager: React.FC = () => {
 
   const approveMut = useMutation({
     mutationFn: async ({ id, adminNotes }: { id: string; adminNotes: string }) => {
-      const { data, error } = await supabase.rpc('approve_company_account_request', {
-        _request_id: id,
-        _admin_notes: adminNotes || null,
+      const { data, error } = await supabase.functions.invoke('approve-company-account', {
+        body: { request_id: id, admin_notes: adminNotes || null },
       });
       if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
       return data;
     },
     onSuccess: () => {
@@ -76,15 +76,15 @@ const CompanyRequestsManager: React.FC = () => {
   });
 
   const denyMut = useMutation({
-    mutationFn: async ({ id, adminNotes }: { id: string; adminNotes: string }) => {
+    mutationFn: async ({ id }: { id: string; adminNotes: string }) => {
       const { error } = await supabase.rpc('deny_company_account_request', {
         _request_id: id,
-        _admin_notes: adminNotes || null,
+        _admin_notes: null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Request denied');
+      toast.success('Request removed');
       qc.invalidateQueries({ queryKey: ['admin-company-requests'] });
       reset();
     },
