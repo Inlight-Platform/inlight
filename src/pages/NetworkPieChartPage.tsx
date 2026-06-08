@@ -111,25 +111,6 @@ const NetworkPieChartPage: React.FC = () => {
 
   const isLoading = loadingConnections || loadingProfiles;
 
-  // Fetch 3 suggested profiles for the Daily Match card section
-  const { data: suggestedPeople = [] } = useQuery({
-    queryKey: ['network-suggested-people', user?.id, connections],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      const excludeIds = [user.id, ...connections];
-      const { data, error } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, role, avatar_url, bio, badges, location')
-        .not('user_id', 'in', `(${excludeIds.join(',')})`)
-        .not('display_name', 'is', null)
-        .limit(20);
-      if (error) throw error;
-      const shuffled = [...(data || [])].sort(() => Math.random() - 0.5);
-      return shuffled.slice(0, 3);
-    },
-    enabled: !!user?.id,
-  });
-
   // Build suggestions for missing affiliations
   const suggestions = React.useMemo(() => {
     if (!studios.length || !connectionProfiles.length) return [];
