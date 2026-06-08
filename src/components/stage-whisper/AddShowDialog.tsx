@@ -147,7 +147,7 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger, category 
     setUploadingPoster(true);
     try {
       const fileExt = posterFile.name.split('.').pop();
-      const fileName = `shows/${showId}/poster.${fileExt}`;
+      const fileName = `${user.id}/shows/${showId}/poster.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
@@ -165,6 +165,7 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger, category 
       return urlData.publicUrl;
     } catch (error: any) {
       console.error('Poster upload failed:', error);
+      toast.error('Poster upload failed: ' + (error?.message || 'Unknown error'));
       return null;
     } finally {
       setUploadingPoster(false);
