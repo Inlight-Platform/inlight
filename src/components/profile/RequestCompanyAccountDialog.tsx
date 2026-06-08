@@ -84,19 +84,33 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
         company_email: companyEmail,
         company_password: companyPassword,
       });
-      const { error } = await supabase.from('company_account_requests').insert({
-        requester_id: user.id,
+      const payload = {
         company_name: parsed.company_name,
         description: parsed.description || null,
         website_url: parsed.website_url || null,
         justification: parsed.justification,
         company_email: parsed.company_email.toLowerCase(),
         company_password: parsed.company_password,
-      });
-      if (error) throw error;
+      };
+      if (existing && existing.status === 'pending') {
+        const { error } = await supabase
+          .from('company_account_requests')
+          .update(payload)
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('company_account_requests')
+          .insert({ requester_id: user.id, ...payload });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
-      toast.success('Request submitted — admins will review it shortly');
+      toast.success(
+        existing?.status === 'pending'
+          ? 'Request updated'
+          : 'Request submitted — admins will review it shortly'
+      );
       setCompanyName('');
       setDescription('');
       setWebsiteUrl('');
@@ -115,7 +129,18 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
   });
 
   const showForm =
-    !existing || existing.status === 'denied';
+    !existing || existing.status === 'denied' || existing.status === 'pending';
+
+  // Prefill from existing pending request so user can add missing credentials
+  React.useEffect(() => {
+    if (existing && existing.status === 'pending') {
+      setCompanyName((v) => v || existing.company_name || '');
+      setDescription((v) => v || existing.description || '');
+      setWebsiteUrl((v) => v || existing.website_url || '');
+      setJustification((v) => v || existing.justification || '');
+      setCompanyEmail((v) => v || (existing as any).company_email || '');
+    }
+  }, [existing]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -144,15 +169,11 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : existing && existing.status === 'pending' ? (
-          <div className="rounded-lg border border-border bg-card/60 p-4 space-y-2">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-1">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Clock className="h-4 w-4 text-amber-500" />
-              Pending review
+              Pending review — you can update your details below
             </div>
-            <p className="text-sm text-muted-foreground">
-              Your request for <span className="font-medium text-foreground">{existing.company_name}</span>{' '}
-              is being reviewed. We'll notify you once a decision is made.
-            </p>
           </div>
         ) : existing && existing.status === 'approved' ? (
           <div className="rounded-lg border border-border bg-card/60 p-4 space-y-3">
