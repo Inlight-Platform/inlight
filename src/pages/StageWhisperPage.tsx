@@ -573,9 +573,6 @@ const StageWhisperPage: React.FC = () => {
                             {film.title}
                           </h3>
                           <p className="text-xs text-muted-foreground line-clamp-1">{film.studio}</p>
-                          <div className="flex items-center justify-between mt-2 text-xs">
-                            <span className="text-primary font-medium">{formatCurrency(film.weekend_gross)}</span>
-                          </div>
                         </CardContent>
                       </Card>)}
                   </div>;
