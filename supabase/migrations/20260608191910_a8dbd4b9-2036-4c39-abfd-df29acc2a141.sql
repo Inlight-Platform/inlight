@@ -1,0 +1,1 @@
+ALTER TABLE public.user_music_shows ADD COLUMN IF NOT EXISTS show_type text NOT NULL DEFAULT 'concert' CHECK (show_type IN ('concert', 'cabaret'));

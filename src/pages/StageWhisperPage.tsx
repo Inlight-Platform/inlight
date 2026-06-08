@@ -65,6 +65,7 @@ interface UserMusicShow {
   submitted_by: string;
   is_anonymous?: boolean;
   created_at: string;
+  show_type?: 'concert' | 'cabaret';
 }
 const StageWhisperPage: React.FC = () => {
   const {
@@ -86,7 +87,7 @@ const StageWhisperPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('school');
   const [viewTab, setViewTab] = useState<'discover' | 'my-list'>('discover');
   const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'student' | 'festivals'>('theatres');
-  const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
+  const [musicTab, setMusicTab] = useState<'concerts' | 'cabarets'>('concerts');
   const [archiveMode, setArchiveMode] = useState(false);
   const [selectedFilm, setSelectedFilm] = useState<FilmMetric | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; table: string; label: string } | null>(null);
@@ -234,12 +235,12 @@ const StageWhisperPage: React.FC = () => {
   
   // Split music shows into active/archived by show_date
   const activeMusicShows = useMemo(() => 
-    userMusicShows.filter(s => !s.show_date || !isPast(new Date(s.show_date))),
-    [userMusicShows]
+    userMusicShows.filter(s => (s.show_type ?? 'concert') === musicTab.slice(0, -1) && (!s.show_date || !isPast(new Date(s.show_date)))),
+    [userMusicShows, musicTab]
   );
   const archivedMusicShows = useMemo(() => 
-    userMusicShows.filter(s => s.show_date && isPast(new Date(s.show_date))),
-    [userMusicShows]
+    userMusicShows.filter(s => (s.show_type ?? 'concert') === musicTab.slice(0, -1) && s.show_date && isPast(new Date(s.show_date))),
+    [userMusicShows, musicTab]
   );
 
   // Count shows by category
@@ -659,17 +660,21 @@ const StageWhisperPage: React.FC = () => {
         {industryTab === 'music' && <>
             {/* Music Category Tabs */}
             <div className="flex gap-2 mb-6">
-              <Button variant={musicTab === 'local-shows' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setMusicTab, 'local-shows')} className="gap-2">
+              <Button variant={musicTab === 'concerts' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setMusicTab, 'concerts')} className="gap-2">
                 <Music className="w-4 h-4" />
-                Local Shows
+                Concerts
+              </Button>
+              <Button variant={musicTab === 'cabarets' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setMusicTab, 'cabarets')} className="gap-2">
+                <Music className="w-4 h-4" />
+                Cabarets
               </Button>
             </div>
 
-            {/* Local Shows Section */}
-            {musicTab === 'local-shows' && <div className="space-y-6">
+            {/* Concerts / Cabarets Section */}
+            {(musicTab === 'concerts' || musicTab === 'cabarets') && <div className="space-y-6">
                 <div className="p-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl border border-primary/20">
-                  <h2 className="text-xl font-display font-semibold mb-2">🎵 Local Shows by Students & Alumni</h2>
-                  <p className="text-sm text-muted-foreground">Discover music performances and concerts by the community.</p>
+                  <h2 className="text-xl font-display font-semibold mb-2">🎵 {musicTab === 'concerts' ? 'Concerts' : 'Cabarets'} by Students & Alumni</h2>
+                  <p className="text-sm text-muted-foreground">Discover {musicTab === 'concerts' ? 'concerts and music performances' : 'cabaret performances'} by the community.</p>
                 </div>
 
                 <ArchiveToggle archiveCount={archivedMusicShows.length} />
@@ -684,7 +689,7 @@ const StageWhisperPage: React.FC = () => {
                         Let your community know!
                       </p>
                     </div>
-                    <AddMusicShowDialog trigger={
+                    <AddMusicShowDialog showType={musicTab === 'cabarets' ? 'cabaret' : 'concert'} trigger={
                       <Button size="sm" className="gap-1.5 shrink-0">
                         <Plus className="w-4 h-4" />
                         Add Show

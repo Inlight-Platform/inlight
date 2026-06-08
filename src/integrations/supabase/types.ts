@@ -2312,6 +2312,7 @@ export type Database = {
           is_free: boolean | null
           poster_url: string | null
           show_date: string | null
+          show_type: string
           submitted_by: string
           ticket_url: string | null
           title: string
@@ -2327,6 +2328,7 @@ export type Database = {
           is_free?: boolean | null
           poster_url?: string | null
           show_date?: string | null
+          show_type?: string
           submitted_by: string
           ticket_url?: string | null
           title: string
@@ -2342,6 +2344,7 @@ export type Database = {
           is_free?: boolean | null
           poster_url?: string | null
           show_date?: string | null
+          show_type?: string
           submitted_by?: string
           ticket_url?: string | null
           title?: string
