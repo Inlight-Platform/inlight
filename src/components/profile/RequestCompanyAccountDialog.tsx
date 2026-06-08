@@ -34,6 +34,11 @@ const requestSchema = z.object({
     .trim()
     .min(20, 'Tell us a bit more (20+ chars)')
     .max(1000, 'Max 1000 characters'),
+  company_email: z.string().trim().email('Valid email required').max(255),
+  company_password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(72, 'Password too long'),
 });
 
 interface Props {
@@ -49,6 +54,8 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
   const [description, setDescription] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [justification, setJustification] = useState('');
+  const [companyEmail, setCompanyEmail] = useState('');
+  const [companyPassword, setCompanyPassword] = useState('');
 
   const { data: existing, isLoading } = useQuery({
     queryKey: ['company-account-request', user?.id],
@@ -74,6 +81,8 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
         description,
         website_url: websiteUrl,
         justification,
+        company_email: companyEmail,
+        company_password: companyPassword,
       });
       const { error } = await supabase.from('company_account_requests').insert({
         requester_id: user.id,
@@ -81,6 +90,8 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
         description: parsed.description || null,
         website_url: parsed.website_url || null,
         justification: parsed.justification,
+        company_email: parsed.company_email.toLowerCase(),
+        company_password: parsed.company_password,
       });
       if (error) throw error;
     },
@@ -90,6 +101,8 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
       setDescription('');
       setWebsiteUrl('');
       setJustification('');
+      setCompanyEmail('');
+      setCompanyPassword('');
       queryClient.invalidateQueries({ queryKey: ['company-account-request', user?.id] });
     },
     onError: (err: any) => {
@@ -196,6 +209,36 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
                 placeholder="A Lab Theater"
                 required
               />
+            </div>
+
+            <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                These credentials will become the login for your company account on Inlight once approved.
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="company_email">Company login email *</Label>
+                <Input
+                  id="company_email"
+                  type="email"
+                  value={companyEmail}
+                  onChange={(e) => setCompanyEmail(e.target.value)}
+                  maxLength={255}
+                  placeholder="hello@yourcompany.com"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="company_password">Company login password *</Label>
+                <Input
+                  id="company_password"
+                  type="password"
+                  value={companyPassword}
+                  onChange={(e) => setCompanyPassword(e.target.value)}
+                  maxLength={72}
+                  placeholder="At least 8 characters"
+                  required
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
