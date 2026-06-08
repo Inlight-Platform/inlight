@@ -128,6 +128,54 @@ export type Database = {
         }
         Relationships: []
       }
+      company_account_requests: {
+        Row: {
+          admin_notes: string | null
+          company_name: string
+          created_at: string
+          created_company_id: string | null
+          description: string | null
+          id: string
+          justification: string
+          requester_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          company_name: string
+          created_at?: string
+          created_company_id?: string | null
+          description?: string | null
+          id?: string
+          justification: string
+          requester_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          company_name?: string
+          created_at?: string
+          created_company_id?: string | null
+          description?: string | null
+          id?: string
+          justification?: string
+          requester_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       company_follows: {
         Row: {
           company_id: string
@@ -2459,6 +2507,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      approve_company_account_request: {
+        Args: { _admin_notes?: string; _request_id: string }
+        Returns: string
+      }
       bump_activity_score: {
         Args: { _delta: number; _user_id: string }
         Returns: undefined
@@ -2479,6 +2531,10 @@ export type Database = {
       create_project_credit_invite: {
         Args: { _email: string; _project_id: string; _role_name: string }
         Returns: Json
+      }
+      deny_company_account_request: {
+        Args: { _admin_notes?: string; _request_id: string }
+        Returns: undefined
       }
       generate_ticket_code: { Args: never; Returns: string }
       get_2nd_degree_connections: {

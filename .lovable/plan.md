@@ -1,55 +1,74 @@
-## 1. MainNav — relocate theme toggle, add Messages item
+## Goal
+Let any user request a company account from their own profile. Admin reviews requests and either approves (which auto-creates the company and assigns the requester as owner) or denies.
 
-`src/components/layout/MainNav.tsx`
-- Remove the Sun/Moon button from the top logo row (both expanded + collapsed paths).
-- Add a "Theme" entry in the bottom user section, sitting immediately above the existing **Settings** row, using the same `Link`-style markup but rendered as a `<button onClick={toggleTheme}>`. Icon is `Sun`/`Moon` based on `isDark`, label "Light mode" / "Dark mode". Mirror the same row in the `collapsed` branch (icon-only with Tooltip). It naturally inherits the collapse behavior.
-- Add a new top-level nav item **Messages** (`MessageSquare` icon, path `/messages`) inserted into `navItems` between "Home" and "People".
-- Rename `'Pie Chart'` nav item → `'Your Network'` (path unchanged: `/pie-chart`).
-- Update the Notifications badge: keep `combinedUnread` for the bell, but also surface `totalUnread` on the new Messages item so the inbox shows its own count.
+## 1. Database — new migration
 
-## 2. Notifications page — drop Messages tab
+Create `public.company_account_requests`:
+- `id`, `requester_id` (uuid, not null), `created_at`, `updated_at`
+- `company_name` (text, not null), `description` (text), `website_url` (text), `justification` (text — "why do you need a company account?")
+- `status` (text, default `'pending'`, allowed: `pending` | `approved` | `denied`)
+- `reviewed_by` (uuid, nullable), `reviewed_at` (timestamptz, nullable), `admin_notes` (text, nullable)
+- `created_company_id` (uuid, nullable — set when approved)
 
-`src/pages/NotificationsPage.tsx`
-- Remove the `Tabs` wrapper and the `messages` tab entirely; render only the notifications list.
-- Drop unused imports (`Mail`, `MessageSquare`, message hooks/components, conversation panel, NewMessageDialog wiring).
-- Remove the `?tab=messages` URL handling and any code paths that switch to the messages view (notification clicks that previously routed to a thread should `navigate('/messages/direct/<id>')` instead).
+GRANTs: `authenticated` (SELECT/INSERT/UPDATE), `service_role` (ALL). No anon.
 
-## 3. Bento event click → blank page
+RLS policies:
+- INSERT: `auth.uid() = requester_id`
+- SELECT: requester sees own rows; admins see all (`has_role(auth.uid(), 'admin')`)
+- UPDATE: admins only (for approve/deny)
 
-`src/pages/FeedPage.tsx` (bento `onClick`): events currently navigate to `'/events'`, which renders blank because `EventsPage` expects context/query state from the home shell. Fix by opening the existing detail panel instead — call `setSelectedItem(item)` for `type === 'event'` (matches show/update behaviour), so it opens the same Sheet used by FeedItem.
+Trigger: `update_updated_at` standard trigger.
 
-## 4. Industry Now — reorder + remove promo banner
+Trigger: on INSERT, create a `notifications` row for every admin (type `company_request_new`) so admin gets notified.
 
-`src/pages/StageWhisperPage.tsx`
-- Delete the `<a href="mailto:info@inlight.social">Build a website…</a>` block (lines ~343–349).
-- Reorder the Theatre `TabsList` to: School → Off-Off → Off-Broadway → Broadway. Update the parent `Tabs` `defaultValue` to `"school"`.
-- Add **Festivals** as a 4th film subtab: extend the `filmViewTab` union to include `'festivals'`, add the `Button` toggle next to Theatres/Streaming/Student, and add a `{filmViewTab === 'festivals' && …}` block rendering a placeholder grid ("No festivals listed yet") wired through the existing card styling. No DB changes — empty state for now.
+Trigger: on UPDATE when `status` changes to `approved` or `denied`, create a notification for the requester (type `company_request_approved` or `company_request_denied`).
 
-## 5. "Your Network" page — replace donut with spiderweb
+## 2. Approval logic
 
-`src/pages/NetworkPieChartPage.tsx`
-- Rename heading to **Your Network**.
-- Replace the Recharts `PieChart` block with an inline SVG **constellation/spiderweb** modeled on the Stop 3 schools graphic in `src/components/scrollytelling.tsx`: center node = the current user; outer nodes = each affiliation bucket from `chartData`, positioned around a circle with `cos/sin` math; thin lines connect the center to each node; node radius scales with `value`; same color palette. Keep the breakdown list + suggestions sections below unchanged.
-- Keep the existing data queries; only the visualization changes.
+Use a `SECURITY DEFINER` function `public.approve_company_account_request(_request_id uuid, _admin_notes text)`:
+- Verifies caller is admin via `has_role`
+- Inserts new row into `public.companies` with `name`, `description`, `website_url` from the request and `owner_user_id = requester_id`
+- Updates the request: `status='approved'`, `reviewed_by=auth.uid()`, `reviewed_at=now()`, `created_company_id=<new id>`, `admin_notes`
+- Returns new company id
 
-## 6. Hide welcome banner for returning users
+And a simpler `deny_company_account_request(_request_id uuid, _admin_notes text)` that just updates status to `denied`.
 
-- Add a small login counter in `src/hooks/useAuth.ts` (or wherever sign-in completes): on successful auth, increment `localStorage['inlight-login-count']`.
-- `src/pages/FeedPage.tsx`: only render `<WelcomeMessage />` when `Number(localStorage.getItem('inlight-login-count') ?? 0) <= 2`.
+## 3. User-facing UI
 
-## 7. Bento is default — verify only
+New component `src/components/profile/RequestCompanyAccountDialog.tsx`:
+- Triggered by a "Request Company Account" button
+- Form fields: Company name (required, max 100), Website (optional), Description (optional, max 500), Why do you need it? (required, max 1000)
+- Zod validation, character counters
+- On submit: insert into `company_account_requests`; show toast on success
+- If user already has a `pending` request, replace the form with a "Your request is being reviewed" status card
+- If user has an `approved` request, show "Approved — view your company" link to `/company/<id>`
 
-`viewMode` already defaults to `'bento'` in `FeedPage.tsx:57`. No change needed; just confirm during QA.
+In `src/pages/ProfilePage.tsx`, on own profile only (`userId === authUser?.id || !userId`), add a small "Request Company Account" button. Placement: in the profile header action row alongside existing edit/settings controls (Building2 icon, ghost variant). Opens the dialog.
 
-## 8. Page-title font matches Landing/Preview
+## 4. Admin UI
 
-The landing/preview hero font is `.font-editorial` (Playfair Display) defined in `src/index.css`.
-- Add a new Tailwind alias by extending `fontFamily.display` in `tailwind.config.ts` to `['Playfair Display', 'Lora', 'ui-serif', 'Georgia', 'serif']` so every existing `font-display` (already used on most page `<h1>` titles like Insights, Industry Now, Feed) immediately picks up the editorial serif without touching individual pages.
-- Spot-check page headers that use a different class (e.g. NetworkPieChartPage `<h1 className="text-2xl font-bold">`) and add `font-display` so they match.
+New component `src/components/admin/CompanyRequestsManager.tsx`:
+- Lists all requests grouped by status (Pending first, then Approved, then Denied)
+- Each row: requester name/avatar (joined from `profiles`), company name, why, website, submitted date
+- Pending rows have "Approve" + "Deny" buttons; both open a small confirm dialog where admin can add notes
+- Calls the `approve_company_account_request` / `deny_company_account_request` RPCs
+- React Query invalidation refreshes the list
 
-## Technical notes
+Add a new tab in `src/pages/AdminPage.tsx` ("Company Requests", Building2 icon) using the existing tab pattern. Place it next to "Verification".
 
-- Login-count gating is intentionally client-side; no schema change required.
-- Festivals tab ships empty; adding real data is a follow-up.
-- Pie-chart → spiderweb is purely a presentational swap; the page route `/pie-chart` stays so existing links keep working.
-- Changing `font-display` globally shifts the typography of every page header that already uses `font-display` (intentional, matches Landing). Body text, buttons, badges remain on Inter.
+## 5. Notifications
+
+The existing `notifications` table is used (no schema change). Use `type` values `company_request_new`, `company_request_approved`, `company_request_denied`. Title/body composed in the trigger functions. Link payload (`data` jsonb) carries `request_id` (and `company_id` when approved) so the existing notifications UI can deep-link.
+
+## Technical Notes
+- Admin user_id is `802c2c17-c03f-4f0a-9829-96edbecdcd54` (info@inlight.social); detection uses existing `has_role(uid,'admin')` function, not a hardcoded id.
+- Companies table currently has no INSERT policy — that's intentional: only the security-definer RPC writes to it, so no broad INSERT policy is added.
+- No edge functions or external APIs needed.
+- No new dependencies.
+
+## Files Changed
+- New migration (table, grants, RLS, triggers, RPCs)
+- New: `src/components/profile/RequestCompanyAccountDialog.tsx`
+- New: `src/components/admin/CompanyRequestsManager.tsx`
+- Edit: `src/pages/ProfilePage.tsx` (add button on own profile)
+- Edit: `src/pages/AdminPage.tsx` (add tab)
