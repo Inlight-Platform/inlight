@@ -131,7 +131,9 @@ export type Database = {
       company_account_requests: {
         Row: {
           admin_notes: string | null
+          company_email: string | null
           company_name: string
+          company_password: string | null
           created_at: string
           created_company_id: string | null
           description: string | null
@@ -146,7 +148,9 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          company_email?: string | null
           company_name: string
+          company_password?: string | null
           created_at?: string
           created_company_id?: string | null
           description?: string | null
@@ -161,7 +165,9 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          company_email?: string | null
           company_name?: string
+          company_password?: string | null
           created_at?: string
           created_company_id?: string | null
           description?: string | null
@@ -2535,6 +2541,14 @@ export type Database = {
       deny_company_account_request: {
         Args: { _admin_notes?: string; _request_id: string }
         Returns: undefined
+      }
+      finalize_company_account_approval: {
+        Args: {
+          _admin_notes?: string
+          _new_owner_id: string
+          _request_id: string
+        }
+        Returns: string
       }
       generate_ticket_code: { Args: never; Returns: string }
       get_2nd_degree_connections: {
