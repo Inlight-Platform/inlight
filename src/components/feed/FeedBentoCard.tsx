@@ -72,10 +72,12 @@ const labelPillClass =
   'rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] shadow-sm';
 
 const sizeClasses: Record<BentoSize, string> = {
-  hero: 'sm:col-span-8 sm:row-span-2 min-h-[360px] sm:min-h-[420px]',
-  tall: 'sm:col-span-4 sm:row-span-2 min-h-[360px] sm:min-h-[420px]',
-  compact: 'sm:col-span-4 sm:row-span-1 min-h-[220px]',
-  wide: 'sm:col-span-4 sm:row-span-1 min-h-[220px]',
+  // On mobile, every card is a uniform rectangle (full width, same height).
+  // Bento variation only kicks in at sm+ breakpoints.
+  hero: 'h-[260px] sm:h-auto sm:col-span-8 sm:row-span-2 sm:min-h-[420px]',
+  tall: 'h-[260px] sm:h-auto sm:col-span-4 sm:row-span-2 sm:min-h-[420px]',
+  compact: 'h-[260px] sm:h-auto sm:col-span-4 sm:row-span-1 sm:min-h-[220px]',
+  wide: 'h-[260px] sm:h-auto sm:col-span-4 sm:row-span-1 sm:min-h-[220px]',
 };
 
 export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClick }) => {
