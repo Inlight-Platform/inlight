@@ -132,16 +132,16 @@ const AdminPage: React.FC = () => {
           <CreditVerificationManager />
         </TabsContent>
 
-        <TabsContent value="company-requests">
-          <CompanyRequestsManager />
-        </TabsContent>
-
         <TabsContent value="events">
           <EventsManager />
         </TabsContent>
 
         <TabsContent value="sites">
           <SitesManager />
+        </TabsContent>
+
+        <TabsContent value="company-requests">
+          <CompanyRequestsManager />
         </TabsContent>
 
         <TabsContent value="insights">
