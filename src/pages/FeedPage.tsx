@@ -500,7 +500,7 @@ const FeedPage: React.FC = () => {
 
   const renderProjectBento = (list: typeof allProjects) => (
     <div
-      className="grid grid-cols-12 gap-4 sm:gap-5 auto-rows-[260px] sm:auto-rows-[220px]"
+      className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-5 sm:auto-rows-[220px]"
       style={{ gridAutoFlow: 'dense' }}
     >
       {projectsToFeedItems(list).map((item, idx) => (
@@ -722,7 +722,7 @@ const FeedPage: React.FC = () => {
 
         {/* Sub-tabs */}
         <Tabs value={projectSubTab} onValueChange={(v) => setProjectSubTab(v as ProjectSubTab)} className="w-full">
-          <div className="overflow-x-auto scrollbar-thin -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex sm:justify-center">
+          <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex sm:justify-center">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mb-4">
               <TabsTrigger value="feed" className="flex-shrink-0 whitespace-nowrap">All</TabsTrigger>
               <TabsTrigger value="saved" className="flex-shrink-0 whitespace-nowrap">Saved</TabsTrigger>
@@ -824,7 +824,7 @@ const FeedPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="px-3 sm:px-6 lg:px-8 py-6 w-full overflow-x-hidden">
+      <div className="p-4 sm:p-6 lg:p-8 w-full overflow-x-hidden">
         <div className="max-w-5xl mx-auto w-full">
           <div className="w-full">
             {(() => {
@@ -843,7 +843,7 @@ const FeedPage: React.FC = () => {
 
             {/* Content Type Filters */}
             <div className="mb-4">
-              <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2">
+              <div className="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-2">
                 {contentFilters.map((filter) => (
                   <Button
                     key={filter.value}
@@ -923,7 +923,7 @@ const FeedPage: React.FC = () => {
                   </div>
                 ) : (
                   <div
-                    className="grid grid-cols-12 gap-4 sm:gap-5 auto-rows-[260px] sm:auto-rows-[220px]"
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-5 sm:auto-rows-[220px]"
                     style={{ gridAutoFlow: 'dense' }}
                   >
                     {feedItems.map((item, idx) => (

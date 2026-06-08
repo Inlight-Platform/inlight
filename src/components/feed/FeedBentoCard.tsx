@@ -72,12 +72,12 @@ const labelPillClass =
   'rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] shadow-sm';
 
 const sizeClasses: Record<BentoSize, string> = {
-  // On mobile, every card is a uniform rectangle (full width, same height).
-  // Bento variation only kicks in at sm+ breakpoints.
-  hero: 'h-[260px] sm:h-auto sm:col-span-8 sm:row-span-2 sm:min-h-[420px]',
-  tall: 'h-[260px] sm:h-auto sm:col-span-4 sm:row-span-2 sm:min-h-[420px]',
-  compact: 'h-[260px] sm:h-auto sm:col-span-4 sm:row-span-1 sm:min-h-[220px]',
-  wide: 'h-[260px] sm:h-auto sm:col-span-4 sm:row-span-1 sm:min-h-[220px]',
+  // Mobile stacks cards in one column while preserving each bento shape.
+  // Dense row packing only kicks in at sm+ breakpoints.
+  hero: 'min-h-[420px] sm:col-span-8 sm:row-span-2',
+  tall: 'min-h-[420px] sm:col-span-4 sm:row-span-2',
+  compact: 'min-h-[260px] sm:col-span-4 sm:row-span-1 sm:min-h-[220px]',
+  wide: 'min-h-[220px] sm:col-span-4 sm:row-span-1',
 };
 
 export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClick }) => {
@@ -94,7 +94,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
   const objectPosition = `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%`;
 
   const baseShell =
-    'group relative overflow-hidden rounded-3xl cursor-pointer transition-all duration-500 col-span-12';
+    'group relative col-span-1 overflow-hidden rounded-3xl cursor-pointer transition-all duration-500 sm:col-span-12';
 
   /* ---------- HERO: big editorial image card ---------- */
   if (size === 'hero') {
