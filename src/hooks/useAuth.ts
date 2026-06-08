@@ -160,19 +160,21 @@ export function useAuth() {
   }, []);
 
   const signUp = async (email: string, password: string, displayName?: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+
     // Validate nyu.edu email (admin/whitelisted emails bypass this check)
     const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com', 'clelyfdes@gmail.com'];
-    if (!email.toLowerCase().endsWith('@nyu.edu') && !allowedEmails.includes(email.toLowerCase())) {
+    if (!normalizedEmail.endsWith('@nyu.edu') && !allowedEmails.includes(normalizedEmail)) {
       return { error: { message: 'Only nyu.edu email addresses are allowed to sign up.' } };
     }
 
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         emailRedirectTo: window.location.origin,
         data: {
-          display_name: displayName || email.split('@')[0],
+          display_name: displayName || normalizedEmail.split('@')[0],
         },
       },
     });
@@ -182,7 +184,7 @@ export function useAuth() {
 
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim().toLowerCase(),
       password,
     });
 
@@ -197,7 +199,7 @@ export function useAuth() {
   const resetPassword = async (email: string) => {
     const { data, error } = await supabase.functions.invoke('send-password-reset', {
       body: {
-        email,
+        email: email.trim().toLowerCase(),
       },
     });
     return { data, error };

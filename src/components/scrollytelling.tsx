@@ -428,7 +428,7 @@ export function CTAStop() {
 
     const { error } = await signIn(email, password);
     if (error) {
-      toast.error("Login failed. If you had an account before the migration, reset your password once to continue.");
+      toast.error(`${error.message} If you had an account before the migration, reset your password once to continue.`);
     } else {
       toast.success("Welcome back!");
       navigate("/feed");
