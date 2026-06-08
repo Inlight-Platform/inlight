@@ -4,10 +4,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { capitalizeName } from '@/lib/utils';
-import PeoplePage from './PeoplePage';
+import { useNetworkConnections } from '@/hooks/useNetworkConnections';
+import PersonCard from '@/components/people/PersonCard';
 
 const COLORS = [
   'hsl(0, 70%, 55%)',    // red
@@ -37,6 +38,21 @@ const NetworkPieChartPage: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const { firstDegree } = useNetworkConnections();
+
+  const { data: communityProfiles = [] } = useQuery({
+    queryKey: ['network-community-profiles', firstDegree],
+    queryFn: async () => {
+      if (firstDegree.length === 0) return [];
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('*')
+        .in('user_id', firstDegree);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: firstDegree.length > 0,
+  });
 
   // Fetch current user's profile (for role + school context)
   const { data: myProfile } = useQuery({
@@ -432,9 +448,24 @@ const NetworkPieChartPage: React.FC = () => {
         </>
       )}
 
-      {/* Community discovery (moved from /people) */}
-      <div className="-mx-4 pt-4 border-t border-border">
-        <PeoplePage />
+      {/* Community: 1st-degree connections */}
+      <div className="pt-6 border-t border-border space-y-4">
+        <div className="flex items-center gap-2">
+          <Users className="w-5 h-5 text-primary" />
+          <h2 className="text-xl font-display font-semibold">Your Community</h2>
+          <span className="text-sm text-muted-foreground">({communityProfiles.length})</span>
+        </div>
+        {communityProfiles.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {communityProfiles.map((u) => (
+              <PersonCard key={u.id} user={u} connectionStatus="connected" />
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-muted-foreground py-8">
+            No mutual connections yet. Start connecting with others!
+          </p>
+        )}
       </div>
     </div>
   );
