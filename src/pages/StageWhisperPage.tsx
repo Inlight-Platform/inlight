@@ -84,7 +84,7 @@ const StageWhisperPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
-  const [activeTab, setActiveTab] = useState('school');
+  const [activeTab, setActiveTab] = useState('off-off-broadway');
   const [viewTab, setViewTab] = useState<'discover' | 'my-list'>('discover');
   const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'student' | 'festivals'>('theatres');
   const [musicTab, setMusicTab] = useState<'concerts' | 'cabarets'>('concerts');
