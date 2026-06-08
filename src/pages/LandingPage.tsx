@@ -72,7 +72,7 @@ export default function LandingPage() {
         </a>
         <a
           href="#cta"
-          className="text-xs tracking-[0.25em] uppercase px-4 py-2 rounded-full border border-border hover:border-glow hover:text-glow transition"
+          className="min-h-11 inline-flex items-center justify-center rounded-full border border-white/80 bg-white px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-background shadow-soft transition hover:border-accent-blue hover:bg-accent-blue hover:text-night focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           Sign in
         </a>
