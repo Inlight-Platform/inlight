@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv, ShieldCheck, Calendar, Globe, BookOpen, Music, BarChart3 } from 'lucide-react';
+import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv, ShieldCheck, Calendar, Globe, BookOpen, Music, BarChart3, Building2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import BroadwayShowsManager from '@/components/admin/BroadwayShowsManager';
 import FilmContentManager from '@/components/admin/FilmContentManager';
@@ -23,6 +23,7 @@ import SitesManager from '@/components/admin/SitesManager';
 import ResourcesManager from '@/components/admin/ResourcesManager';
 import MusicShowsManager from '@/components/admin/MusicShowsManager';
 import ProductInsightsManager from '@/components/admin/ProductInsightsManager';
+import CompanyRequestsManager from '@/components/admin/CompanyRequestsManager';
 
 const AdminPage: React.FC = () => {
   const navigate = useNavigate();
@@ -67,6 +68,10 @@ const AdminPage: React.FC = () => {
             <TabsTrigger value="verification" className="gap-2 whitespace-nowrap">
               <ShieldCheck className="w-4 h-4" />
               <span className="hidden sm:inline">Verification</span>
+            </TabsTrigger>
+            <TabsTrigger value="company-requests" className="gap-2 whitespace-nowrap">
+              <Building2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Companies</span>
             </TabsTrigger>
             <TabsTrigger value="events" className="gap-2 whitespace-nowrap">
               <Calendar className="w-4 h-4" />
@@ -125,6 +130,10 @@ const AdminPage: React.FC = () => {
 
         <TabsContent value="verification">
           <CreditVerificationManager />
+        </TabsContent>
+
+        <TabsContent value="company-requests">
+          <CompanyRequestsManager />
         </TabsContent>
 
         <TabsContent value="events">
