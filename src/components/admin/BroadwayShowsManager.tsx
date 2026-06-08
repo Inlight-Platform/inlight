@@ -367,6 +367,53 @@ const BroadwayShowsManager: React.FC<ShowsManagerProps> = ({ category }) => {
               
               <form onSubmit={handleSubmit}>
                 <TabsContent value="details" className="space-y-4 mt-4">
+                  {/* Cover Photo - prominent at top */}
+                  <div className="space-y-2">
+                    <Label>Cover Photo</Label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    {formData.poster_url ? (
+                      <div className="relative rounded-lg overflow-hidden border max-w-xs">
+                        <img
+                          src={formData.poster_url}
+                          alt="Cover preview"
+                          className="w-full h-48 object-cover"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 h-8 w-8"
+                          onClick={handleRemoveImage}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-accent/50 transition-colors max-w-xs"
+                      >
+                        {uploading ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            <span className="text-muted-foreground">Uploading...</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-2">
+                            <Upload className="h-8 w-8 text-muted-foreground" />
+                            <span className="text-muted-foreground">Click to upload cover photo</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Title</Label>
