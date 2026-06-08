@@ -689,7 +689,7 @@ const StageWhisperPage: React.FC = () => {
                         Let your community know!
                       </p>
                     </div>
-                    <AddMusicShowDialog trigger={
+                    <AddMusicShowDialog showType={musicTab === 'cabarets' ? 'cabaret' : 'concert'} trigger={
                       <Button size="sm" className="gap-1.5 shrink-0">
                         <Plus className="w-4 h-4" />
                         Add Show
