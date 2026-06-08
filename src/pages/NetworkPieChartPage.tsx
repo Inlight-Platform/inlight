@@ -4,10 +4,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { capitalizeName } from '@/lib/utils';
-import PeoplePage from './PeoplePage';
+import { useNetworkConnections } from '@/hooks/useNetworkConnections';
+import PersonCard from '@/components/people/PersonCard';
 
 const COLORS = [
   'hsl(0, 70%, 55%)',    // red
