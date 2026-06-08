@@ -500,7 +500,7 @@ const FeedPage: React.FC = () => {
 
   const renderProjectBento = (list: typeof allProjects) => (
     <div
-      className="grid grid-cols-12 gap-4 sm:gap-5 auto-rows-[220px]"
+      className="grid grid-cols-12 gap-4 sm:gap-5 auto-rows-[260px] sm:auto-rows-[220px]"
       style={{ gridAutoFlow: 'dense' }}
     >
       {projectsToFeedItems(list).map((item, idx) => (
@@ -923,7 +923,7 @@ const FeedPage: React.FC = () => {
                   </div>
                 ) : (
                   <div
-                    className="grid grid-cols-12 gap-4 sm:gap-5 auto-rows-[220px]"
+                    className="grid grid-cols-12 gap-4 sm:gap-5 auto-rows-[260px] sm:auto-rows-[220px]"
                     style={{ gridAutoFlow: 'dense' }}
                   >
                     {feedItems.map((item, idx) => (
