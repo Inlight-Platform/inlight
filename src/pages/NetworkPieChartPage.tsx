@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { capitalizeName } from '@/lib/utils';
+import PeoplePage from './PeoplePage';
 
 const COLORS = [
   'hsl(0, 70%, 55%)',    // red
@@ -558,6 +559,11 @@ const NetworkPieChartPage: React.FC = () => {
           )}
         </>
       )}
+
+      {/* Community discovery (moved from /people) */}
+      <div className="-mx-4 pt-4 border-t border-border">
+        <PeoplePage />
+      </div>
     </div>
   );
 };
