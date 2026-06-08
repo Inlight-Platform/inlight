@@ -30,7 +30,7 @@ const GroupsSection: React.FC<{
   studiosLoading: boolean;
   onStudioClick: (tag: string | null) => void;
 }> = ({ studios, studiosLoading, onStudioClick }) => {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const hasMore = studios.length > PREVIEW_COUNT;
   const visibleStudios = expanded ? studios : studios.slice(0, PREVIEW_COUNT);
 
