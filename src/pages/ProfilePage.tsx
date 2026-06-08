@@ -78,6 +78,7 @@ import { VerifyCreditsDialog } from '@/components/profile/VerifyCreditsDialog';
 import { CreditRow } from '@/components/profile/CreditRow';
 import { VouchDialog } from '@/components/profile/VouchDialog';
 import { SkillsCombobox } from '@/components/ui/skills-combobox';
+import { RequestCompanyAccountDialog } from '@/components/profile/RequestCompanyAccountDialog';
 import { LocationCombobox } from '@/components/ui/location-combobox';
 import ProfileCompletionBar from '@/components/profile/ProfileCompletionBar';
 import FloatingChatButton from '@/components/messages/FloatingChatButton';
@@ -1736,6 +1737,11 @@ const ProfilePage: React.FC = () => {
                 </DropdownMenu>
               )}
             </div>
+            {isOwnProfile && (
+              <div className="mt-3 flex justify-center">
+                <RequestCompanyAccountDialog />
+              </div>
+            )}
           </div>
         </div>
 
