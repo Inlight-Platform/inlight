@@ -65,6 +65,7 @@ interface UserMusicShow {
   submitted_by: string;
   is_anonymous?: boolean;
   created_at: string;
+  show_type?: 'concert' | 'cabaret';
 }
 const StageWhisperPage: React.FC = () => {
   const {
@@ -86,7 +87,7 @@ const StageWhisperPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('school');
   const [viewTab, setViewTab] = useState<'discover' | 'my-list'>('discover');
   const [filmViewTab, setFilmViewTab] = useState<'theatres' | 'student' | 'festivals'>('theatres');
-  const [musicTab, setMusicTab] = useState<'local-shows'>('local-shows');
+  const [musicTab, setMusicTab] = useState<'concerts' | 'cabarets'>('concerts');
   const [archiveMode, setArchiveMode] = useState(false);
   const [selectedFilm, setSelectedFilm] = useState<FilmMetric | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; table: string; label: string } | null>(null);
@@ -234,12 +235,12 @@ const StageWhisperPage: React.FC = () => {
   
   // Split music shows into active/archived by show_date
   const activeMusicShows = useMemo(() => 
-    userMusicShows.filter(s => !s.show_date || !isPast(new Date(s.show_date))),
-    [userMusicShows]
+    userMusicShows.filter(s => (s.show_type ?? 'concert') === musicTab.slice(0, -1) && (!s.show_date || !isPast(new Date(s.show_date)))),
+    [userMusicShows, musicTab]
   );
   const archivedMusicShows = useMemo(() => 
-    userMusicShows.filter(s => s.show_date && isPast(new Date(s.show_date))),
-    [userMusicShows]
+    userMusicShows.filter(s => (s.show_type ?? 'concert') === musicTab.slice(0, -1) && s.show_date && isPast(new Date(s.show_date))),
+    [userMusicShows, musicTab]
   );
 
   // Count shows by category
