@@ -69,10 +69,6 @@ const AdminPage: React.FC = () => {
               <ShieldCheck className="w-4 h-4" />
               <span className="hidden sm:inline">Verification</span>
             </TabsTrigger>
-            <TabsTrigger value="company-requests" className="gap-2 whitespace-nowrap">
-              <Building2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Companies</span>
-            </TabsTrigger>
             <TabsTrigger value="events" className="gap-2 whitespace-nowrap">
               <Calendar className="w-4 h-4" />
               <span className="hidden sm:inline">Events</span>
@@ -80,6 +76,10 @@ const AdminPage: React.FC = () => {
             <TabsTrigger value="sites" className="gap-2 whitespace-nowrap">
               <Globe className="w-4 h-4" />
               <span className="hidden sm:inline">Sites</span>
+            </TabsTrigger>
+            <TabsTrigger value="company-requests" className="gap-2 whitespace-nowrap">
+              <Building2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Companies</span>
             </TabsTrigger>
             <TabsTrigger value="insights" className="gap-2 whitespace-nowrap">
               <BarChart3 className="w-4 h-4" />
