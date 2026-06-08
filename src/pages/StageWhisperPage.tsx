@@ -139,9 +139,11 @@ const StageWhisperPage: React.FC = () => {
       const {
         data,
         error
-      } = await supabase.from('film_metrics').select('*').order('weekend_gross', {
+      } = await supabase.from('film_metrics').select('*').order('date', {
         ascending: false
-      }).limit(20);
+      }).order('weekend_gross', {
+        ascending: false
+      }).limit(100);
       if (error) throw error;
       return data as FilmMetric[];
     },
