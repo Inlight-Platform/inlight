@@ -280,7 +280,7 @@ const NetworkPieChartPage: React.FC = () => {
       .join('') || '?';
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-8">
+    <div className="max-w-5xl mx-auto px-4 py-6 space-y-8 sm:px-6 lg:px-8">
       <div className="space-y-3">
         <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
           Your ecosystem
