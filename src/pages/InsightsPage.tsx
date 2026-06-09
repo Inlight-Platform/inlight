@@ -32,7 +32,7 @@ const InsightsPage: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
           <button
             onClick={() => navigate('/')}
             className="p-2 rounded-full hover:bg-accent transition-colors"
@@ -46,7 +46,7 @@ const InsightsPage: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="industry" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-2 mx-auto">
             <TabsTrigger value="industry" className="flex items-center gap-2">

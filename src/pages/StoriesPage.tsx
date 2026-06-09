@@ -94,7 +94,7 @@ const StoriesPage: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
           <button
             onClick={() => navigate('/')}
             className="p-2 rounded-full hover:bg-accent transition-colors"
@@ -108,7 +108,7 @@ const StoriesPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
         {/* Story rings row */}
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
           {/* Create story button / Your story */}

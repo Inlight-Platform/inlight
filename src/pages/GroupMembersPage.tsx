@@ -127,7 +127,7 @@ const GroupMembersPage: React.FC = () => {
     <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/people')}
@@ -162,7 +162,7 @@ const GroupMembersPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Tabs for All / Students / Alumni */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-6 mx-auto flex justify-center">

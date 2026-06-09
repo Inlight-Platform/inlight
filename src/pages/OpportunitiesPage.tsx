@@ -12,23 +12,26 @@ import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const STRIPE_POST_JOB_URL = 'https://buy.stripe.com/dRmaEWa8gaA3eVL3ufco002';
+const canBypassJobCredits = import.meta.env.DEV;
 
 /** Compact card matching the Open Roles style — title, company, deadline */
 const OpportunityCompactCard: React.FC<{ opportunity: OpportunityView }> = ({ opportunity }) => {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
+  const { canManageJobs } = useFeatureAccess();
   const { deleteOpportunity } = useOpportunities();
   const [showDetail, setShowDetail] = useState(false);
   const [showApply, setShowApply] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
 
-  const canDelete = !!user && (user.id === opportunity.postedBy || isAdmin);
+  const canDelete = opportunity.source !== 'post' && canManageJobs && !!user && (user.id === opportunity.postedBy || isAdmin);
 
   const deadlineDate = opportunity.deadline ? new Date(opportunity.deadline) : null;
   const applyBy = deadlineDate && !isNaN(deadlineDate.getTime())
@@ -104,6 +107,7 @@ type ExperienceLevel = 'entry' | 'intermediate' | 'senior' | 'any';
 const OpportunitiesPage: React.FC = () => {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
+  const { canManageJobs, showRestrictedToast } = useFeatureAccess();
   const { opportunities: allOpportunities, isLoading } = useOpportunities();
   
   const [showCreator, setShowCreator] = useState(false);
@@ -154,7 +158,12 @@ const OpportunitiesPage: React.FC = () => {
   }, [user?.id]);
 
   const handlePostJobClick = () => {
-    if (isAdmin || credits > 0) {
+    if (!canManageJobs) {
+      showRestrictedToast('jobs');
+      return;
+    }
+
+    if (isAdmin || credits > 0 || canBypassJobCredits) {
       setShowCreator(true);
     } else if (user) {
       // Pass the user id to Stripe via client_reference_id so the webhook
@@ -234,7 +243,7 @@ const OpportunitiesPage: React.FC = () => {
     <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div>
               <h1 className="text-2xl font-display font-bold">Jobs</h1>
@@ -244,18 +253,20 @@ const OpportunitiesPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              onClick={handlePostJobClick}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Post A Job
-            </Button>
+            {canManageJobs && (
+              <Button
+                onClick={handlePostJobClick}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Post A Job
+              </Button>
+            )}
           </div>
         </div>
       </header>
 
-      <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex sm:justify-center">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-card border border-border">
@@ -303,9 +314,11 @@ const OpportunitiesPage: React.FC = () => {
                 <p className="text-muted-foreground mb-4">
                   Try adjusting your filters or check back later
                 </p>
-                 <Button onClick={handlePostJobClick}>
-                   Post A Job
-                 </Button>
+                 {canManageJobs && (
+                   <Button onClick={handlePostJobClick}>
+                     Post A Job
+                   </Button>
+                 )}
               </div>
             )}
           </TabsContent>

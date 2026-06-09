@@ -810,7 +810,7 @@ const FeedPage: React.FC = () => {
     <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-display font-bold">Home</h1>
           </div>
@@ -824,8 +824,8 @@ const FeedPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="p-4 sm:p-6 lg:p-8 w-full overflow-x-hidden">
-        <div className="max-w-5xl mx-auto w-full">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full overflow-x-hidden">
+        <div className="w-full">
           <div className="w-full">
             {(() => {
               const count = Number(

@@ -88,12 +88,12 @@ const NotificationsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <h1 className="text-2xl font-display font-bold">Inbox</h1>
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <Tabs defaultValue="notifications" className="w-full">
           <TabsList className="grid grid-cols-2 w-full mb-4">
             <TabsTrigger value="notifications" className="gap-2">

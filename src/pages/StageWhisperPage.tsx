@@ -311,7 +311,7 @@ const StageWhisperPage: React.FC = () => {
   return <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div>
@@ -375,7 +375,7 @@ const StageWhisperPage: React.FC = () => {
         </div>
 
         {/* Theatre View Toggle */}
-        {industryTab === 'theatre' && <div className="px-4 sm:px-6 lg:px-8 pb-2 flex gap-2">
+        {industryTab === 'theatre' && <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-2 flex gap-2">
             <Button variant={viewTab === 'discover' ? 'default' : 'ghost'} size="sm" onClick={() => setViewTab('discover')} className="gap-2">
               <Sparkles className="w-4 h-4" />
               Discover
@@ -388,7 +388,7 @@ const StageWhisperPage: React.FC = () => {
           </div>}
 
         {/* Theatre Category Tabs */}
-        {industryTab === 'theatre' && viewTab === 'discover' && <div className="overflow-x-auto scrollbar-thin px-4 sm:px-6 lg:px-8 sm:flex sm:justify-center">
+        {industryTab === 'theatre' && viewTab === 'discover' && <div className="max-w-5xl mx-auto overflow-x-auto scrollbar-thin px-4 sm:px-6 lg:px-8 sm:flex sm:justify-center">
             <Tabs value={activeTab} onValueChange={v => handleTabSwitch(setActiveTab, v)}>
               <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mx-auto">
                 <TabsTrigger value="off-off-broadway" className="flex-shrink-0 whitespace-nowrap">
@@ -412,7 +412,7 @@ const StageWhisperPage: React.FC = () => {
           </div>}
 
         {/* Film View Toggle */}
-        {industryTab === 'film' && <div className="px-4 sm:px-6 lg:px-8 pb-2 flex gap-2">
+        {industryTab === 'film' && <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-2 flex gap-2">
             <Button variant={filmViewTab === 'theatres' ? 'default' : 'ghost'} size="sm" onClick={() => handleTabSwitch(setFilmViewTab, 'theatres')} className="gap-2">
               <Film className="w-4 h-4" />
               In Theatres
@@ -429,7 +429,7 @@ const StageWhisperPage: React.FC = () => {
       </header>
 
       {/* Content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* THEATRE CONTENT */}
         {industryTab === 'theatre' && <>
             {/* Creator Note - Only show on off-off-broadway and school tabs */}

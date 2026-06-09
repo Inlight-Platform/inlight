@@ -171,7 +171,7 @@ const MutualsPage: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/')}
@@ -185,7 +185,7 @@ const MutualsPage: React.FC = () => {
         </div>
       </header>
       
-      <main className="px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex sm:justify-center">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mb-6">

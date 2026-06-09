@@ -244,7 +244,7 @@ const MySavesPage: React.FC = () => {
     <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <button onClick={() => safeBack(navigate, '/feed')} className="p-1 rounded-full hover:bg-accent">
               <ChevronLeft className="w-5 h-5" />
@@ -260,7 +260,7 @@ const MySavesPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />

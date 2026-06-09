@@ -55,7 +55,7 @@ const DirectoryPage: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4 mb-4">
             <button
               onClick={() => safeBack(navigate, '/people')}
@@ -109,7 +109,7 @@ const DirectoryPage: React.FC = () => {
       </header>
       
       {/* Masonry Grid */}
-      <main className="px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
           {filteredUsers.map((user) => {
             const connectionStatus = getConnectionStatus(user.id);

@@ -216,7 +216,7 @@ const NetworkPage: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-4">
               <button
@@ -303,7 +303,7 @@ const NetworkPage: React.FC = () => {
         </div>
       </header>
       
-      <main className="px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Connections Tab */}
         {activeTab === 'connections' && (
           <>

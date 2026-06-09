@@ -5,6 +5,7 @@ import { FolderKanban, Plus, Bookmark, BookmarkCheck, Filter, Search, X, ArrowUp
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,6 +43,7 @@ interface SavedProject {
 const ProjectsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { canManageProjects, showRestrictedToast } = useFeatureAccess();
   const queryClient = useQueryClient();
   const { firstDegree, secondDegree } = useNetworkConnections();
   const [showCreator, setShowCreator] = useState(false);
@@ -261,6 +263,14 @@ const ProjectsPage: React.FC = () => {
     }
   };
 
+  const openProjectCreator = () => {
+    if (!canManageProjects) {
+      showRestrictedToast('projects');
+      return;
+    }
+    setShowCreator(true);
+  };
+
   const getCategoryLabel = (category: string | null) => {
     return PROJECT_CATEGORIES.find(c => c.value === category)?.label || 'Other';
   };
@@ -344,7 +354,7 @@ const ProjectsPage: React.FC = () => {
   return (
     <div className="w-full">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-display font-bold">Projects</h1>
           </div>
@@ -352,7 +362,7 @@ const ProjectsPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Search Bar */}
         <div className="relative mb-4 max-w-xl mx-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -447,8 +457,8 @@ const ProjectsPage: React.FC = () => {
                       ? 'No projects yet' 
                       : `No ${getCategoryLabel(selectedCategory)} projects yet`}
                 </p>
-                {user && selectedCategory === 'all' && (
-                  <Button onClick={() => setShowCreator(true)} className="mt-4">
+                {user && selectedCategory === 'all' && canManageProjects && (
+                  <Button onClick={openProjectCreator} className="mt-4">
                     Create the first project
                   </Button>
                 )}

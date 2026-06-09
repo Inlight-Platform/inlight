@@ -357,7 +357,7 @@ const CompanyProfilePage: React.FC = () => {
     return (
       <div className="min-h-screen bg-background">
         <div className="h-[200px] sm:h-[280px] bg-muted animate-pulse" />
-        <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-96" />
         </div>
@@ -396,7 +396,7 @@ const CompanyProfilePage: React.FC = () => {
         </div>
 
         {/* Company info - matches personal profile avatar offset */}
-        <div className="relative px-4 sm:px-6 lg:px-8 pb-6">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
           {/* Logo/Avatar */}
           <div className="absolute -top-16 sm:-top-20 left-4 sm:left-6 lg:left-8">
             <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-[120px] lg:h-[120px] rounded-full border-4 border-background bg-card flex items-center justify-center shadow-card overflow-hidden">
@@ -444,14 +444,14 @@ const CompanyProfilePage: React.FC = () => {
 
       {/* Description */}
       {company.description && (
-        <section className="px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
           <p className="text-foreground">{company.description}</p>
         </section>
       )}
 
       {/* Website */}
       {company.website_url && (
-        <section className="px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-muted-foreground" />
             <a href={company.website_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm">
@@ -463,7 +463,7 @@ const CompanyProfilePage: React.FC = () => {
 
       {/* Staff Section - only visible to owner */}
       {isOwner && ownerProfile && (
-        <section className="px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
           <h2 className="text-lg font-display font-semibold mb-3">Staff</h2>
           <div
             className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
@@ -487,7 +487,7 @@ const CompanyProfilePage: React.FC = () => {
 
       {/* Current Projects - Collapsible */}
       <Collapsible open={currentProjectsOpen} onOpenChange={setCurrentProjectsOpen} className="border-b border-border">
-        <section className="px-4 sm:px-6 lg:px-8 py-4">
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <CollapsibleTrigger className="flex items-center justify-between w-full group">
             <div className="flex items-center gap-2">
               <FolderKanban className="w-5 h-5 text-muted-foreground" />
@@ -537,7 +537,7 @@ const CompanyProfilePage: React.FC = () => {
 
       {/* Past Projects - Collapsible */}
       <Collapsible open={pastProjectsOpen} onOpenChange={setPastProjectsOpen} className="border-b border-border">
-        <section className="px-4 sm:px-6 lg:px-8 py-4">
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <CollapsibleTrigger className="flex items-center justify-between w-full group">
             <div className="flex items-center gap-2">
               <Archive className="w-5 h-5 text-muted-foreground" />
@@ -587,7 +587,7 @@ const CompanyProfilePage: React.FC = () => {
 
       {/* Photos - Collapsible */}
       <Collapsible open={photosOpen} onOpenChange={setPhotosOpen}>
-        <section className="px-4 sm:px-6 lg:px-8 py-4">
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <CollapsibleTrigger className="flex items-center justify-between w-full group">
             <div className="flex items-center gap-2">
               <Image className="w-5 h-5 text-muted-foreground" />
@@ -635,7 +635,7 @@ const CompanyProfilePage: React.FC = () => {
 
       {/* Owner Controls */}
       {isOwner && (
-        <section className="px-4 sm:px-6 lg:px-8 py-4 border-t border-border">
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-t border-border">
           <h2 className="text-lg font-display font-semibold mb-3">Manage Company</h2>
           <div className="flex flex-wrap gap-3">
             <EditCompanyDialog company={company} onSaved={() => queryClient.invalidateQueries({ queryKey: ['company', companyId] })} />

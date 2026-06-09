@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { useProjectPhotoUpload } from '@/hooks/useProjectPhotoUpload';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,6 +71,7 @@ const ProjectDetailPage: React.FC = () => {
   const location = useLocation();
   const { isMinimized: chatMinimized, originRoute: chatOriginRoute, chatRoute, close: closeChat, expand: expandChat } = useMinimizedChat();
   const { user } = useAuth();
+  const { canManageProjects } = useFeatureAccess();
   const queryClient = useQueryClient();
   const [addPhotoOpen, setAddPhotoOpen] = useState(false);
   const [photoCaption, setPhotoCaption] = useState('');
@@ -186,6 +188,8 @@ const ProjectDetailPage: React.FC = () => {
 
   const isCreator = project?.creator_id === user?.id;
   const isMember = members.some(m => m.user_id === user?.id) || isCreator;
+  const canEditProject = canManageProjects && isCreator;
+  const canManageProjectContent = canManageProjects && isMember;
 
   // Handle file upload
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -221,6 +225,7 @@ const ProjectDetailPage: React.FC = () => {
   // Delete photo mutation
   const deletePhotoMutation = useMutation({
     mutationFn: async (photoId: string) => {
+      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
       const { error } = await supabase
         .from('project_photos')
         .delete()
@@ -238,6 +243,7 @@ const ProjectDetailPage: React.FC = () => {
   const addMemberMutation = useMutation({
     mutationFn: async () => {
       if (!projectId || !memberEmail.trim()) throw new Error('Invalid data');
+      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
       
       const { error } = await supabase.rpc('add_project_member_by_email', {
         target_project_id: projectId,
@@ -286,6 +292,7 @@ const ProjectDetailPage: React.FC = () => {
   const deleteProjectMutation = useMutation({
     mutationFn: async () => {
       if (!projectId) throw new Error('No project ID');
+      if (!canManageProjects) throw new Error('This beta group cannot delete projects.');
       const { error } = await supabase
         .from('projects')
         .delete()
@@ -305,6 +312,7 @@ const ProjectDetailPage: React.FC = () => {
   const updateDescriptionMutation = useMutation({
     mutationFn: async (newDescription: string) => {
       if (!projectId) throw new Error('No project ID');
+      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
       const { error } = await supabase
         .from('projects')
         .update({ description: newDescription })
@@ -323,6 +331,7 @@ const ProjectDetailPage: React.FC = () => {
   const addRoleMutation = useMutation({
     mutationFn: async (roleName: string) => {
       if (!projectId) throw new Error('No project ID');
+      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
       const { error } = await supabase
         .from('project_roles')
         .insert({ project_id: projectId, role_name: roleName });
@@ -340,6 +349,7 @@ const ProjectDetailPage: React.FC = () => {
   // Delete role mutation
   const deleteRoleMutation = useMutation({
     mutationFn: async (roleId: string) => {
+      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
       const { error } = await supabase
         .from('project_roles')
         .delete()
@@ -356,6 +366,7 @@ const ProjectDetailPage: React.FC = () => {
   // Remove member mutation
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
+      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
       const { error } = await supabase
         .from('project_members')
         .delete()
@@ -372,6 +383,7 @@ const ProjectDetailPage: React.FC = () => {
   const updateDriveUrlMutation = useMutation({
     mutationFn: async (url: string) => {
       if (!projectId) throw new Error('No project ID');
+      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
       const { error } = await supabase
         .from('projects')
         .update({ google_drive_url: url || null })
@@ -389,6 +401,10 @@ const ProjectDetailPage: React.FC = () => {
   const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !projectId || !user?.id) return;
+    if (!canManageProjects) {
+      toast.info('This beta group can browse projects, but cannot edit them yet.');
+      return;
+    }
 
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
@@ -457,7 +473,7 @@ const ProjectDetailPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => safeBack(navigate, '/feed')}
@@ -481,7 +497,7 @@ const ProjectDetailPage: React.FC = () => {
                   <Bookmark className="w-5 h-5" />
                 )}
               </Button>
-              {isCreator && (
+              {canEditProject && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -496,14 +512,14 @@ const ProjectDetailPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-10 py-6 space-y-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
 
         {/* Project Timeline */}
         {project.status && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Project Status</CardTitle>
-              {isCreator && (
+              {canEditProject && (
                 <ProjectStatusDropdown 
                   projectId={projectId!} 
                   currentStatus={project.status} 
@@ -541,7 +557,7 @@ const ProjectDetailPage: React.FC = () => {
                 alt={project.title}
                 className="w-full max-h-96 object-cover"
               />
-              {isCreator && (
+              {canEditProject && (
                 <>
                   <input
                     ref={coverInputRef}
@@ -604,10 +620,10 @@ const ProjectDetailPage: React.FC = () => {
               <div className="group relative">
                 {project.description ? (
                   <p className="text-muted-foreground">{project.description}</p>
-                ) : isCreator ? (
+                ) : canEditProject ? (
                   <p className="text-muted-foreground italic">Click to add a description...</p>
                 ) : null}
-                {isCreator && (
+                {canEditProject && (
                   <Button
                     size="sm"
                     variant="ghost"
@@ -652,7 +668,7 @@ const ProjectDetailPage: React.FC = () => {
                     )}
                   </button>
                 </CollapsibleTrigger>
-                {isCreator && (
+                {canEditProject && (
                   <Dialog open={addRoleOpen} onOpenChange={setAddRoleOpen}>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline">
@@ -687,7 +703,7 @@ const ProjectDetailPage: React.FC = () => {
                   <OpenRolesDisplay 
                     projectId={projectId!} 
                     creatorId={project.creator_id}
-                    onDeleteRole={isCreator ? (roleId) => deleteRoleMutation.mutate(roleId) : undefined}
+                    onDeleteRole={canEditProject ? (roleId) => deleteRoleMutation.mutate(roleId) : undefined}
                   />
                 </CardContent>
               </CollapsibleContent>
@@ -702,7 +718,7 @@ const ProjectDetailPage: React.FC = () => {
               <Users className="w-5 h-5" />
               Team Members ({members.filter(m => m.user_id !== project.creator_id).length + 1})
             </CardTitle>
-            {isCreator && (
+            {canEditProject && (
               <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline">
@@ -781,7 +797,7 @@ const ProjectDetailPage: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    {isCreator && (
+                    {canEditProject && (
                       <Button
                         size="icon"
                         variant="ghost"
@@ -807,7 +823,7 @@ const ProjectDetailPage: React.FC = () => {
               <Camera className="w-5 h-5" />
               Project Photos ({photos.length})
             </CardTitle>
-            {isMember && (
+            {canManageProjectContent && (
               <Dialog open={addPhotoOpen} onOpenChange={setAddPhotoOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline">
@@ -881,7 +897,7 @@ const ProjectDetailPage: React.FC = () => {
                         {photo.caption}
                       </p>
                     )}
-                    {(isCreator || photo.user_id === user?.id) && (
+                    {canManageProjects && (isCreator || photo.user_id === user?.id) && (
                       <button
                         onClick={() => deletePhotoMutation.mutate(photo.id)}
                         className="absolute top-2 right-2 p-1.5 bg-destructive/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -948,7 +964,7 @@ const ProjectDetailPage: React.FC = () => {
                     <ExternalLink className="w-4 h-4 flex-shrink-0" />
                     <span className="truncate">{project.google_drive_url}</span>
                   </a>
-                  {isCreator && (
+                  {canEditProject && (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -961,7 +977,7 @@ const ProjectDetailPage: React.FC = () => {
                     </Button>
                   )}
                 </div>
-              ) : isCreator ? (
+              ) : canEditProject ? (
                 <Button
                   variant="outline"
                   size="sm"

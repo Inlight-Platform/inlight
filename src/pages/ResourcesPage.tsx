@@ -323,14 +323,14 @@ const ResourcesPage: React.FC = () => {
     <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-6 sm:px-8 lg:px-10 py-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-display font-bold">Resources</h1>
           </div>
         </div>
       </header>
       
-      <div className="px-6 sm:px-8 lg:px-10 py-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Industry Tabs */}
         <Tabs
           value={activeTab}

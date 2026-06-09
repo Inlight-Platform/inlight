@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,6 +35,7 @@ type ProjectStatus = typeof PROJECT_STATUSES[number]['value'];
 const ProjectNewPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { canManageProjects, showRestrictedToast } = useFeatureAccess();
   const queryClient = useQueryClient();
 
   const [title, setTitle] = useState('');
@@ -60,6 +62,7 @@ const ProjectNewPage: React.FC = () => {
   const createProjectMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id || !title.trim()) throw new Error('Invalid data');
+      if (!canManageProjects) throw new Error('This beta group cannot create projects.');
 
       // 1. Create the project
       const { data: project, error: projectError } = await supabase
@@ -162,6 +165,10 @@ const ProjectNewPage: React.FC = () => {
       toast.error('Please add an image for your project');
       return;
     }
+    if (!canManageProjects) {
+      showRestrictedToast('projects');
+      return;
+    }
     createProjectMutation.mutate();
   };
 
@@ -176,10 +183,24 @@ const ProjectNewPage: React.FC = () => {
     );
   }
 
+  if (!canManageProjects) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-sm px-6">
+          <p className="text-foreground font-medium mb-2">Project creation is unavailable for this beta group.</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            You can still browse projects and open roles.
+          </p>
+          <Button onClick={() => safeBack(navigate, '/projects')}>Back to Projects</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
           <button
             onClick={() => safeBack(navigate, '/feed')}
             className="p-2 rounded-full hover:bg-accent transition-colors"
@@ -190,7 +211,8 @@ const ProjectNewPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="px-4 sm:px-6 lg:px-8 py-6 max-w-2xl mx-auto">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-2xl mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
           <div className="space-y-4">
@@ -438,6 +460,7 @@ const ProjectNewPage: React.FC = () => {
             </Button>
           </div>
         </form>
+        </div>
       </main>
     </div>
   );
