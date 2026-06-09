@@ -31,7 +31,7 @@ const OpportunityCompactCard: React.FC<{ opportunity: OpportunityView }> = ({ op
   const [showDelete, setShowDelete] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
 
-  const canDelete = opportunity.source !== 'post' && canManageJobs && !!user && (user.id === opportunity.postedBy || isAdmin);
+  const canDelete = canManageJobs && !!user && (user.id === opportunity.postedBy || isAdmin);
 
   const deadlineDate = opportunity.deadline ? new Date(opportunity.deadline) : null;
   const applyBy = deadlineDate && !isNaN(deadlineDate.getTime())
