@@ -63,38 +63,39 @@ export const AddFilmDialog: React.FC<AddFilmDialogProps> = ({ trigger }) => {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (!user) throw new Error('You must be logged in');
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const authUser = authData.user;
+      if (authError || !authUser) throw new Error('You must be logged in');
       if (!title.trim()) throw new Error('Title is required');
       if (!linkUrl.trim()) throw new Error('A link is required');
       if (!posterFile) throw new Error('An image is required');
 
-      // Insert film
-      const { data: filmData, error: insertError } = await supabase
+      const filmId = crypto.randomUUID();
+      const fileExt = posterFile.name.split('.').pop() || 'jpg';
+      const fileName = `${authUser.id}/films/${filmId}/poster-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('profile-media')
+        .upload(fileName, posterFile, { upsert: true, contentType: posterFile.type });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('profile-media').getPublicUrl(fileName);
+
+      const { error: insertError } = await supabase
         .from('user_films')
         .insert({
+          id: filmId,
           title: title.trim(),
           description: description.trim() || null,
           link_url: linkUrl.trim(),
-          submitted_by: user.id,
+          poster_url: urlData.publicUrl,
+          submitted_by: authUser.id,
           is_anonymous: isAnonymous,
+          is_active: true,
         })
         .select('id')
         .single();
 
       if (insertError) throw insertError;
-
-      // Upload poster
-      if (filmData?.id) {
-        const fileExt = posterFile.name.split('.').pop();
-        const fileName = `films/${filmData.id}/poster.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from('profile-media')
-          .upload(fileName, posterFile, { upsert: true, contentType: posterFile.type });
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage.from('profile-media').getPublicUrl(fileName);
-        await supabase.from('user_films').update({ poster_url: urlData.publicUrl }).eq('id', filmData.id);
-      }
     },
     onSuccess: () => {
       toast.success('Your film has been added! 🎬');
