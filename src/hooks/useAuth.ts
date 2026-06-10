@@ -163,7 +163,7 @@ export function useAuth() {
     const normalizedEmail = email.trim().toLowerCase();
 
     // Validate nyu.edu email (admin/whitelisted emails bypass this check)
-    const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com', 'clelyfdes@gmail.com'];
+    const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com', 'clelyfdes@gmail.com', 'baileymadison941@gmail.com'];
     if (!normalizedEmail.endsWith('@nyu.edu') && !allowedEmails.includes(normalizedEmail)) {
       return { error: { message: 'Only nyu.edu email addresses are allowed to sign up.' } };
     }
