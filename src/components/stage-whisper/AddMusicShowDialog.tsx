@@ -75,40 +75,43 @@ export const AddMusicShowDialog: React.FC<AddMusicShowDialogProps> = ({ trigger,
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (!user) throw new Error('You must be logged in');
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const authUser = authData.user;
+      if (authError || !authUser) throw new Error('You must be logged in');
       if (!title.trim()) throw new Error('Title is required');
       if (!posterFile) throw new Error('An image is required');
       if (!isFree && !ticketUrl.trim()) throw new Error('Please provide a ticket link or mark as free');
 
-      const { data: showData, error: insertError } = await supabase
+      const musicShowId = crypto.randomUUID();
+      const fileExt = posterFile.name.split('.').pop() || 'jpg';
+      const fileName = `${authUser.id}/music-shows/${musicShowId}/poster-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('profile-media')
+        .upload(fileName, posterFile, { upsert: true, contentType: posterFile.type });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('profile-media').getPublicUrl(fileName);
+
+      const { error: insertError } = await supabase
         .from('user_music_shows')
         .insert({
+          id: musicShowId,
           title: title.trim(),
           description: description.trim() || null,
           venue: venue.trim() || null,
           show_date: showDate ? showDate.toISOString() : null,
           ticket_url: isFree ? null : ticketUrl.trim(),
           is_free: isFree,
-          submitted_by: user.id,
+          poster_url: urlData.publicUrl,
+          submitted_by: authUser.id,
           is_anonymous: isAnonymous,
+          is_active: true,
           show_type: showType,
         })
         .select('id')
         .single();
 
       if (insertError) throw insertError;
-
-      if (showData?.id) {
-        const fileExt = posterFile.name.split('.').pop();
-        const fileName = `music-shows/${showData.id}/poster.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from('profile-media')
-          .upload(fileName, posterFile, { upsert: true, contentType: posterFile.type });
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage.from('profile-media').getPublicUrl(fileName);
-        await supabase.from('user_music_shows').update({ poster_url: urlData.publicUrl }).eq('id', showData.id);
-      }
     },
     onSuccess: () => {
       toast.success('Your show has been added! 🎵');
