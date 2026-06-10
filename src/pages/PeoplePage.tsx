@@ -280,28 +280,30 @@ const PeoplePage: React.FC = () => {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         {section === null && (
-          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
-            {[
-              { key: 'people', label: 'People', icon: UserRound, desc: 'Discover and connect with creators' },
-              { key: 'groups', label: 'Groups', icon: GraduationCap, desc: 'Explore by program or affiliation' },
-              { key: 'companies', label: 'Companies', icon: Building2, desc: 'Browse company portfolios and profiles' },
-            ].map(({ key, label, icon: Icon, desc }) => (
-              <button
-                key={key}
-                onClick={() => setSection(key as 'people' | 'groups' | 'companies')}
-                className="group rounded-2xl border border-border bg-card hover:bg-accent/40 hover:border-primary/50 transition-all p-6 flex flex-col items-center justify-center gap-4 text-center aspect-square"
-              >
-                <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Icon className="w-8 h-8 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-display font-semibold">{label}</h2>
-                  <p className="text-sm text-muted-foreground mt-1">{desc}</p>
-                </div>
-              </button>
-            ))}
+          <div className="flex min-h-[calc(100svh-9rem)] items-center justify-center sm:block sm:min-h-0">
+            <div className="mx-auto grid w-full max-w-40 grid-cols-1 gap-3 sm:mt-[calc(25vh-5.5rem)] sm:max-w-2xl sm:grid-cols-3 sm:gap-4 lg:max-w-4xl">
+              {[
+                { key: 'people', label: 'People', icon: UserRound, desc: 'Discover and connect with creators' },
+                { key: 'groups', label: 'Groups', icon: GraduationCap, desc: 'Explore by program or affiliation' },
+                { key: 'companies', label: 'Companies', icon: Building2, desc: 'Browse company portfolios and profiles' },
+              ].map(({ key, label, icon: Icon, desc }) => (
+                <button
+                  key={key}
+                  onClick={() => setSection(key as 'people' | 'groups' | 'companies')}
+                  className="group flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-2.5 text-center transition-all hover:border-primary/50 hover:bg-accent/40 sm:gap-3 sm:rounded-2xl sm:p-4 md:p-5"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 transition-transform group-hover:scale-110 sm:h-14 sm:w-14 sm:rounded-2xl md:h-16 md:w-16">
+                    <Icon className="h-5 w-5 text-primary sm:h-7 sm:w-7 md:h-8 md:w-8" />
+                  </div>
+                  <div>
+                    <h2 className="font-display text-sm font-semibold sm:text-base md:text-lg">{label}</h2>
+                    <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-muted-foreground sm:text-xs md:text-sm">{desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
