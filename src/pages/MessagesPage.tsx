@@ -171,7 +171,7 @@ const MessagesPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-          <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
             <button
               onClick={() => navigate(-1)}
               className="p-2 rounded-full hover:bg-accent transition-colors"
@@ -181,7 +181,7 @@ const MessagesPage: React.FC = () => {
             <h1 className="text-2xl font-display font-bold">Messages</h1>
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8">
           {loadingConversations || loadingGroupChats ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -193,7 +193,7 @@ const MessagesPage: React.FC = () => {
               <p className="text-sm">Open a chat from a profile or project page</p>
             </div>
           ) : (
-            <div className="max-w-2xl mx-auto py-2">
+            <div className="max-w-5xl mx-auto py-2">
               {groupChats.map((gc) => (
                 <button
                   key={`g-${gc.id}`}
@@ -401,7 +401,7 @@ const MessagesPage: React.FC = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
           <button
             onClick={() => originRoute ? navigate(originRoute) : navigate(-1)}
             className="p-2 rounded-full hover:bg-accent transition-colors"
