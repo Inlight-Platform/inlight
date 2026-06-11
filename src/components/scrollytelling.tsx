@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { formatSignInErrorMessage, isAllowedSignupEmail, signupEmailPolicyMessage } from "@/lib/authPolicy";
 import { toast } from "sonner";
 import logo from "@/assets/inlight-logo.jpeg";
 import audience1 from "@/assets/audience-1.jpg";
@@ -417,18 +418,13 @@ export function CTAStop() {
   const scale = useSpring(useTransform(scrollYProgress, [0, 1], [0.7, 1]), { stiffness: 80, damping: 20 });
   const opacity = useTransform(scrollYProgress, [0, 0.4, 1], [0, 1, 1]);
 
-  const validateEduEmail = (value: string): boolean => {
-    const allowedEmails = ["info@inlight.social", "alabfestival@gmail.com", "clelyfdes@gmail.com"];
-    return value.toLowerCase().endsWith(".edu") || allowedEmails.includes(value.toLowerCase());
-  };
-
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
 
     const { error } = await signIn(email, password);
     if (error) {
-      toast.error(`${error.message} If you had an account before the migration, reset your password once to continue.`);
+      toast.error(formatSignInErrorMessage(error.message));
     } else {
       toast.success("Welcome back!");
       navigate("/feed");
@@ -440,8 +436,8 @@ export function CTAStop() {
   const handleSignup = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!validateEduEmail(email)) {
-      toast.error("Only university email addresses are allowed to sign up.");
+    if (!isAllowedSignupEmail(email)) {
+      toast.error(signupEmailPolicyMessage);
       return;
     }
 

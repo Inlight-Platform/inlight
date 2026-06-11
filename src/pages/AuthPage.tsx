@@ -12,6 +12,7 @@ import { Sparkle } from '@/components/Sparkle';
 import { Starfield } from '@/components/Starfield';
 import { useForceTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
+import { formatSignInErrorMessage, isAllowedSignupEmail, signupEmailPolicyMessage } from '@/lib/authPolicy';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset';
 
@@ -124,11 +125,6 @@ const AuthPage: React.FC = () => {
     }
   }, [mode]);
 
-  const validateEduEmail = (email: string): boolean => {
-    const allowedEmails = ['info@inlight.social', 'alabfestival@gmail.com', 'clelyfdes@gmail.com'];
-    return email.toLowerCase().endsWith('.edu') || allowedEmails.includes(email.toLowerCase());
-  };
-
   const openForgotPassword = () => {
     setView('forgot');
     setPassword('');
@@ -142,7 +138,7 @@ const AuthPage: React.FC = () => {
     const { error } = await signIn(email, password);
 
     if (error) {
-      toast.error(`${error.message} If you had an account before the migration, reset your password once to continue.`);
+      toast.error(formatSignInErrorMessage(error.message));
     } else {
       toast.success('Welcome back!');
       navigate('/feed');
@@ -154,8 +150,8 @@ const AuthPage: React.FC = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateEduEmail(email)) {
-      toast.error('Only university email addresses are allowed to sign up.');
+    if (!isAllowedSignupEmail(email)) {
+      toast.error(signupEmailPolicyMessage);
       return;
     }
 
