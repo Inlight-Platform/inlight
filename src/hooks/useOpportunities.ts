@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { toast } from 'sonner';
 
 export interface DBOpportunity {
@@ -16,6 +17,7 @@ export interface DBOpportunity {
   compensation: string | null;
   experience_level: string;
   roles: string[];
+  skills: string[];
   requirements: string[];
   deadline: string | null;
   start_date: string | null;
@@ -28,6 +30,16 @@ export interface DBOpportunity {
   link_title: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface DBJobPost {
+  id: string;
+  user_id: string;
+  content: string;
+  image_url: string | null;
+  link_url: string | null;
+  link_title: string | null;
+  created_at: string;
 }
 
 // Adapter to match existing component expectations
@@ -44,6 +56,7 @@ export interface OpportunityView {
   compensation?: string;
   experienceLevel: string;
   roles: string[];
+  skills: string[];
   requirements: string[];
   deadline?: string;
   startDate?: string;
@@ -55,6 +68,7 @@ export interface OpportunityView {
   imageUrl?: string;
   linkUrl?: string;
   linkTitle?: string;
+  source?: 'opportunity' | 'post';
   applicants: { userId: string; appliedAt: string; status: string }[];
 }
 
@@ -72,6 +86,7 @@ function toView(row: DBOpportunity): OpportunityView {
     compensation: row.compensation || undefined,
     experienceLevel: row.experience_level,
     roles: row.roles || [],
+    skills: row.skills || [],
     requirements: row.requirements || [],
     deadline: row.deadline || undefined,
     startDate: row.start_date || undefined,
@@ -83,24 +98,82 @@ function toView(row: DBOpportunity): OpportunityView {
     imageUrl: row.image_url || undefined,
     linkUrl: row.link_url || undefined,
     linkTitle: row.link_title || undefined,
+    source: 'opportunity',
     applicants: [],
   };
 }
 
+function postToView(row: DBJobPost): OpportunityView {
+  const titleMatch = row.content.match(/^🎯\s+\*\*(.+?)\*\*/);
+  const title = titleMatch?.[1]?.trim() || 'Job Opportunity';
+  const descriptionWithTitle = row.content.replace(/^🎯\s+\*\*.+?\*\*\s*/s, '').trim();
+  const locationMatch = descriptionWithTitle.match(/\n\n📍\s*(.+)\s*$/);
+  const description = locationMatch
+    ? descriptionWithTitle.replace(/\n\n📍\s*.+\s*$/s, '').trim()
+    : descriptionWithTitle;
+
+  return {
+    id: row.id,
+    title,
+    description: description || row.content,
+    type: 'job',
+    status: 'open',
+    postedBy: row.user_id,
+    location: locationMatch?.[1]?.trim() || 'Remote',
+    isRemote: !locationMatch,
+    experienceLevel: 'any',
+    roles: [],
+    skills: [],
+    requirements: [],
+    tags: ['feed'],
+    createdAt: row.created_at,
+    isFeatured: false,
+    actionType: 'external',
+    imageUrl: row.image_url || undefined,
+    linkUrl: row.link_url || undefined,
+    linkTitle: row.link_title || undefined,
+    source: 'post',
+    applicants: [],
+  };
+}
+
+function normalizeOpportunityTitle(title: string) {
+  return title.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 export function useOpportunities() {
   const { user } = useAuth();
+  const { canManageJobs } = useFeatureAccess();
   const queryClient = useQueryClient();
 
   const { data: opportunities = [], isLoading } = useQuery({
     queryKey: ['opportunities'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: opportunityRows, error: opportunitiesError } = await supabase
         .from('opportunities')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return (data as DBOpportunity[]).map(toView);
+      if (opportunitiesError) throw opportunitiesError;
+
+      const { data: jobPostRows, error: jobPostsError } = await supabase
+        .from('posts')
+        .select('id, user_id, content, image_url, link_url, link_title, created_at')
+        .like('content', '🎯%')
+        .order('created_at', { ascending: false });
+
+      if (jobPostsError) throw jobPostsError;
+
+      const canonicalOpportunities = (opportunityRows as DBOpportunity[]).map(toView);
+      const canonicalTitles = new Set(canonicalOpportunities.map((row) => normalizeOpportunityTitle(row.title)));
+      const feedOnlyJobs = ((jobPostRows || []) as DBJobPost[])
+        .map(postToView)
+        .filter((row) => !canonicalTitles.has(normalizeOpportunityTitle(row.title)));
+
+      return [
+        ...canonicalOpportunities,
+        ...feedOnlyJobs,
+      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     },
   });
 
@@ -116,6 +189,7 @@ export function useOpportunities() {
       compensation?: string;
       experience_level: string;
       roles: string[];
+      skills: string[];
       requirements: string[];
       deadline?: string;
       start_date?: string;
@@ -128,6 +202,9 @@ export function useOpportunities() {
       link_title?: string;
     }) => {
       if (!user) throw new Error('Not authenticated');
+      if (!canManageJobs) {
+        throw new Error('This beta group cannot create jobs.');
+      }
 
       const { error } = await supabase.from('opportunities').insert({
         title: input.title,
@@ -141,6 +218,7 @@ export function useOpportunities() {
         compensation: input.compensation || null,
         experience_level: input.experience_level,
         roles: input.roles,
+        skills: input.skills,
         requirements: input.requirements,
         deadline: input.deadline || null,
         start_date: input.start_date || null,
@@ -159,8 +237,9 @@ export function useOpportunities() {
       queryClient.invalidateQueries({ queryKey: ['opportunities'] });
       toast.success('Opportunity posted successfully!');
     },
-    onError: () => {
-      toast.error('Failed to post opportunity. Please try again.');
+    onError: (error: Error) => {
+      console.error('Failed to post opportunity:', error);
+      toast.error(error.message || 'Failed to post opportunity. Please try again.');
     },
   });
 
@@ -177,6 +256,7 @@ export function useOpportunities() {
       compensation?: string;
       experience_level: string;
       roles: string[];
+      skills: string[];
       deadline?: string;
       start_date?: string;
       duration?: string;
@@ -186,6 +266,9 @@ export function useOpportunities() {
       link_title?: string | null;
     }) => {
       if (!user) throw new Error('Not authenticated');
+      if (!canManageJobs) {
+        throw new Error('This beta group cannot edit jobs.');
+      }
 
       const { error } = await supabase
         .from('opportunities')
@@ -200,6 +283,7 @@ export function useOpportunities() {
           compensation: input.compensation || null,
           experience_level: input.experience_level,
           roles: input.roles,
+          skills: input.skills,
           deadline: input.deadline || null,
           start_date: input.start_date || null,
           duration: input.duration || null,
@@ -224,6 +308,9 @@ export function useOpportunities() {
   const deleteOpportunity = useMutation({
     mutationFn: async (id: string) => {
       if (!user) throw new Error('Not authenticated');
+      if (!canManageJobs) {
+        throw new Error('This beta group cannot delete jobs.');
+      }
 
       const { error } = await supabase
         .from('opportunities')

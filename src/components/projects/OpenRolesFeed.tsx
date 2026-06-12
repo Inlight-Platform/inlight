@@ -34,6 +34,7 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const hasPrependedItems = React.Children.count(prependItems) > 0;
 
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<OpenRole | null>(null);
@@ -191,7 +192,7 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !hasPrependedItems) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -199,7 +200,7 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
     );
   }
 
-  if (roles.length === 0) {
+  if (roles.length === 0 && !hasPrependedItems) {
     return (
       <div className="text-center py-12">
         <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
@@ -214,6 +215,11 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {prependItems}
+          {isLoading && (
+            <div className="flex items-center justify-center p-4 rounded-lg border border-border bg-card">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
           {roles.map(role => {
             const deadlineDate = role.projectDeadline ? new Date(role.projectDeadline) : null;
             const applyBy = deadlineDate && !isNaN(deadlineDate.getTime())

@@ -41,6 +41,10 @@ export const useTrackPageView = ({
 }: TrackPageViewOptions) => {
   useEffect(() => {
     if (!enabled) return;
+    if (import.meta.env.DEV && ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)) {
+      return;
+    }
+
     const startedAt = Date.now();
     const trackedPath = path || window.location.pathname;
 
