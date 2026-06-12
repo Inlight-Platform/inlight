@@ -24,6 +24,14 @@ const getVisitorId = () => {
   return visitorId;
 };
 
+const logAnalyticsError = (error: unknown) => {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return;
+  }
+
+  console.error('Error tracking analytics event:', error);
+};
+
 export const useTrackPageView = ({
   eventName,
   siteSlug,
@@ -59,6 +67,8 @@ export const useTrackPageView = ({
 
           await fetch(`${SUPABASE_URL}/functions/v1/track-analytics-event`, {
             method: 'POST',
+            mode: 'cors',
+            credentials: 'omit',
             headers: { 'Content-Type': 'application/json' },
             body,
             keepalive: useBeacon,
@@ -77,11 +87,13 @@ export const useTrackPageView = ({
 
         await fetch(`${SUPABASE_URL}/functions/v1/track-analytics-event`, {
           method: 'POST',
+          mode: 'cors',
+          credentials: 'omit',
           headers,
           body: JSON.stringify(buildPayload()),
         });
       } catch (error) {
-        console.error('Error tracking analytics event:', error);
+        logAnalyticsError(error);
       }
     };
 
