@@ -3,6 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { isAllowedSignupEmail, signupEmailPolicyMessage } from '@/lib/authPolicy';
 
+export const accountAlreadyExistsMessage =
+  'Your account already exists. Try signing in or resetting your password.';
+
+const isExistingSignupResponse = (data: Awaited<ReturnType<typeof supabase.auth.signUp>>['data']) => {
+  return Boolean(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
+};
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -188,7 +195,28 @@ export function useAuth() {
       },
     });
 
-    return { data, error };
+    if (error) {
+      const normalizedMessage = error.message.toLowerCase();
+      if (normalizedMessage.includes('already registered') || normalizedMessage.includes('already exists')) {
+        return { data, error: { message: accountAlreadyExistsMessage } };
+      }
+
+      return { data, error };
+    }
+
+    if (isExistingSignupResponse(data)) {
+      return { data, error: { message: accountAlreadyExistsMessage } };
+    }
+
+    return { data, error: null };
+  };
+
+  const checkEmailExists = async (email: string) => {
+    const { data, error } = await supabase.rpc('check_email_exists_for_signup', {
+      search_email: email.trim().toLowerCase(),
+    });
+
+    return { exists: Boolean(data), error };
   };
 
   const signIn = async (email: string, password: string) => {
@@ -232,5 +260,6 @@ export function useAuth() {
     signOut,
     resetPassword,
     updatePassword,
+    checkEmailExists,
   };
 }

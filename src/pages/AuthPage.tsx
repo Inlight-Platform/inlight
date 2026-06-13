@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { accountAlreadyExistsMessage, useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { ArrowLeft, GraduationCap, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Circle, GraduationCap, Loader2 } from 'lucide-react';
 import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { Sparkle } from '@/components/Sparkle';
 import { Starfield } from '@/components/Starfield';
@@ -31,6 +31,43 @@ const primaryButtonClass =
 
 const secondaryButtonClass =
   '!h-12 !rounded-xl !border-border !bg-none !bg-secondary/30 !text-muted-foreground hover:!bg-none hover:!bg-secondary/50 hover:!text-white';
+
+const getPasswordChecks = (value: string) => [
+  { label: 'At least 6 characters', isMet: value.length >= 6 },
+  { label: 'One capital letter', isMet: /[A-Z]/.test(value) },
+  { label: 'One small letter', isMet: /[a-z]/.test(value) },
+  { label: 'One number', isMet: /\d/.test(value) },
+  { label: 'One special character', isMet: /[!@#$%^&*()_+\-=[\]{};':"\\|<>?,./`~]/.test(value) },
+];
+
+const isPasswordPolicyError = (message: string) => {
+  const normalizedMessage = message.toLowerCase();
+  return normalizedMessage.includes('password should contain') || normalizedMessage.includes('weak password');
+};
+
+const PasswordChecklist: React.FC<{ password: string }> = ({ password }) => (
+  <div className="rounded-2xl border border-border bg-secondary/25 p-3">
+    <p className="mb-2 text-xs text-muted-foreground">Use a password with:</p>
+    <div className="grid gap-2 text-xs sm:grid-cols-2">
+      {getPasswordChecks(password).map((check) => {
+        const Icon = check.isMet ? CheckCircle2 : Circle;
+
+        return (
+          <div
+            key={check.label}
+            className={cn(
+              'flex items-center gap-2 transition-colors',
+              check.isMet ? 'text-glow' : 'text-muted-foreground'
+            )}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            <span>{check.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
 
 const AuthFrame: React.FC<{
   children: React.ReactNode;
@@ -101,8 +138,19 @@ const AuthPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState(routeState.displayName || '');
   const [isLoading, setIsLoading] = useState(false);
+  const [showSignupPasswordChecklist, setShowSignupPasswordChecklist] = useState(false);
   
-  const { user, loading, signIn, signUp, resetPassword, updatePassword, isPasswordRecovery, recoveryError } = useAuth();
+  const {
+    user,
+    loading,
+    signIn,
+    signUp,
+    resetPassword,
+    updatePassword,
+    checkEmailExists,
+    isPasswordRecovery,
+    recoveryError,
+  } = useAuth();
   const navigate = useNavigate();
 
   // Handle password recovery mode - detect when user arrives via reset link
@@ -155,17 +203,45 @@ const AuthPage: React.FC = () => {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters.');
+    setIsLoading(true);
+
+    const { exists: emailExists, error: emailCheckError } = await checkEmailExists(email);
+
+    if (emailCheckError) {
+      console.error('Signup email availability check failed:', emailCheckError);
+      toast.error('We could not check that email yet. Please try again.');
+      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
+    if (!emailCheckError && emailExists) {
+      toast.error(accountAlreadyExistsMessage);
+      setView('login');
+      setPassword('');
+      setConfirmPassword('');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!getPasswordChecks(password).every((check) => check.isMet)) {
+      setShowSignupPasswordChecklist(true);
+      setIsLoading(false);
+      return;
+    }
 
     const { data, error } = await signUp(email, password, displayName);
 
     if (error) {
-      toast.error(error.message);
+      if (isPasswordPolicyError(error.message)) {
+        setShowSignupPasswordChecklist(true);
+      } else if (error.message === accountAlreadyExistsMessage) {
+        toast.error(accountAlreadyExistsMessage);
+        setView('login');
+        setPassword('');
+        setConfirmPassword('');
+      } else {
+        toast.error(error.message);
+      }
     } else if (!data?.session) {
       toast.success('Account created. Check your .edu inbox and confirm your email before signing in.');
       setView('login');
@@ -526,17 +602,25 @@ const AuthPage: React.FC = () => {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
+              aria-required="true"
               className={fieldClass}
             />
-            <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
+            {showSignupPasswordChecklist ? (
+              <PasswordChecklist password={password} />
+            ) : (
+              <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
+            )}
           </div>
           <Button type="submit" className={cn('w-full', primaryButtonClass)} disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating account...
+              </>
+            ) : showSignupPasswordChecklist && getPasswordChecks(password).every((check) => check.isMet) ? (
+              <>
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Create my account
               </>
             ) : (
               'Create my account'
