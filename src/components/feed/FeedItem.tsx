@@ -6,6 +6,7 @@ import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Tras
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +64,7 @@ export interface FeedItemData {
   project_title?: string;
   project_status?: string;
   visibility?: string;
+  source?: 'post' | 'opportunity';
   creator_profile?: {
     display_name: string | null;
     avatar_url: string | null;
@@ -91,6 +93,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
+  const { canManageEvents, canManageJobs, canManageProjects } = useFeatureAccess();
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -107,13 +110,21 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const { goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
 
   const isOwner = user?.id === item.user_id;
-  const canDelete = isOwner || isAdmin;
-  const canEdit = isOwner && item.type !== 'show'; // Shows have their own edit flow
+  const canManageFeedItem =
+    (item.type !== 'event' || canManageEvents) &&
+    (item.type !== 'job' || canManageJobs) &&
+    (item.type !== 'project' || canManageProjects);
+  const canDelete = (isOwner || isAdmin) && canManageFeedItem;
+  const supportsInlineEdit = item.type !== 'show' && item.type !== 'open_role' && item.source !== 'opportunity';
+  const canEdit = (isOwner || isAdmin) && supportsInlineEdit && canManageFeedItem; // Shows have their own edit flow
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async () => {
       let error;
+      if (!canManageFeedItem) {
+        throw new Error(`This beta group cannot delete ${item.type}s.`);
+      }
       if (item.type === 'post' || item.type === 'job') {
         ({ error } = await supabase.from('posts').delete().eq('id', item.id));
       } else if (item.type === 'event') {

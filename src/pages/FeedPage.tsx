@@ -344,6 +344,7 @@ const FeedPage: React.FC = () => {
       return active.map((o: any): FeedItemData => ({
         id: o.id,
         type: 'job' as const,
+        source: 'opportunity' as const,
         user_id: o.posted_by,
         title: o.title,
         description: o.description,
