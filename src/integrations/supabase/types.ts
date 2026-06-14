@@ -831,6 +831,7 @@ export type Database = {
           posted_by: string
           requirements: string[]
           roles: string[]
+          skills: string[]
           start_date: string | null
           status: string
           tags: string[]
@@ -857,6 +858,7 @@ export type Database = {
           posted_by: string
           requirements?: string[]
           roles?: string[]
+          skills?: string[]
           start_date?: string | null
           status?: string
           tags?: string[]
@@ -883,6 +885,7 @@ export type Database = {
           posted_by?: string
           requirements?: string[]
           roles?: string[]
+          skills?: string[]
           start_date?: string | null
           status?: string
           tags?: string[]
@@ -1102,6 +1105,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           email: string
+          email_notification_frequency: string | null
           email_notifications: boolean | null
           favorite_artist: string | null
           favorite_movie: string | null
@@ -1114,6 +1118,7 @@ export type Database = {
           headline: string | null
           id: string
           instagram_url: string | null
+          job_match_email_last_sent_at: string | null
           location: string | null
           message_privacy: string
           onboarding_completed_at: string | null
@@ -1150,6 +1155,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email: string
+          email_notification_frequency?: string | null
           email_notifications?: boolean | null
           favorite_artist?: string | null
           favorite_movie?: string | null
@@ -1162,6 +1168,7 @@ export type Database = {
           headline?: string | null
           id?: string
           instagram_url?: string | null
+          job_match_email_last_sent_at?: string | null
           location?: string | null
           message_privacy?: string
           onboarding_completed_at?: string | null
@@ -1198,6 +1205,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string
+          email_notification_frequency?: string | null
           email_notifications?: boolean | null
           favorite_artist?: string | null
           favorite_movie?: string | null
@@ -1210,6 +1218,7 @@ export type Database = {
           headline?: string | null
           id?: string
           instagram_url?: string | null
+          job_match_email_last_sent_at?: string | null
           location?: string | null
           message_privacy?: string
           onboarding_completed_at?: string | null
@@ -2528,6 +2537,10 @@ export type Database = {
         Args: { post_row: Database["public"]["Tables"]["posts"]["Row"] }
         Returns: boolean
       }
+      check_email_exists_for_signup: {
+        Args: { search_email: string }
+        Returns: boolean
+      }
       claim_invites_on_signup: {
         Args: { _credit_token?: string; _platform_token?: string }
         Returns: Json
@@ -2587,6 +2600,11 @@ export type Database = {
         Returns: boolean
       }
       is_admin_email: { Args: { _email: string }; Returns: boolean }
+      is_platform_inviter: { Args: { _user_id: string }; Returns: boolean }
+      is_signup_email_allowed: {
+        Args: { _email: string; _platform_token?: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

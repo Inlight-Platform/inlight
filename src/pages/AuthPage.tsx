@@ -12,7 +12,7 @@ import { Sparkle } from '@/components/Sparkle';
 import { Starfield } from '@/components/Starfield';
 import { useForceTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
-import { formatSignInErrorMessage, isAllowedSignupEmail, signupEmailPolicyMessage } from '@/lib/authPolicy';
+import { formatSignInErrorMessage } from '@/lib/authPolicy';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset';
 
@@ -124,6 +124,8 @@ const AuthPage: React.FC = () => {
   const location = useLocation();
   const routeState = (location.state || {}) as AuthRouteState;
   const mode = searchParams.get('mode');
+  const inviteToken = searchParams.get('invite')?.trim() || null;
+  const isInviteSignup = Boolean(inviteToken);
   
   const getInitialView = (): AuthView => {
     if (routeState.mode) return routeState.mode;
@@ -170,6 +172,8 @@ const AuthPage: React.FC = () => {
   useEffect(() => {
     if (mode === 'reset') {
       setView('reset');
+    } else if (mode === 'signup') {
+      setView('signup');
     }
   }, [mode]);
 
@@ -197,11 +201,6 @@ const AuthPage: React.FC = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!isAllowedSignupEmail(email)) {
-      toast.error(signupEmailPolicyMessage);
-      return;
-    }
 
     setIsLoading(true);
 
@@ -229,7 +228,7 @@ const AuthPage: React.FC = () => {
       return;
     }
 
-    const { data, error } = await signUp(email, password, displayName);
+    const { data, error } = await signUp(email, password, displayName, inviteToken);
 
     if (error) {
       if (isPasswordPolicyError(error.message)) {
@@ -243,7 +242,11 @@ const AuthPage: React.FC = () => {
         toast.error(error.message);
       }
     } else if (!data?.session) {
-      toast.success('Account created. Check your .edu inbox and confirm your email before signing in.');
+      toast.success(
+        isInviteSignup
+          ? 'Account created. Check your email and confirm your account before signing in.'
+          : 'Account created. Check your .edu inbox and confirm your email before signing in.'
+      );
       setView('login');
     } else {
       toast.success('Account created! Welcome to Inlight.');
@@ -429,7 +432,7 @@ const AuthPage: React.FC = () => {
             <Input
               id="reset-email"
               type="email"
-              placeholder="you@university.edu"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -581,16 +584,18 @@ const AuthPage: React.FC = () => {
             <Input
               id="signup-email"
               type="email"
-              placeholder="you@university.edu"
+              placeholder={isInviteSignup ? 'you@example.com' : 'you@university.edu'}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               className={fieldClass}
             />
-            <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              <GraduationCap className="h-3 w-3" />
-              Only university emails are allowed
-            </p>
+            {!isInviteSignup && (
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <GraduationCap className="h-3 w-3" />
+                University emails are allowed automatically. Other emails need an invite.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="signup-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">

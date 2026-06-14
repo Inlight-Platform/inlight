@@ -12,7 +12,7 @@ export const isAllowedSignupEmail = (email: string) => {
 };
 
 export const signupEmailPolicyMessage =
-  'Only university .edu email addresses are allowed to sign up.';
+  'Only university .edu email addresses or invited emails are allowed to sign up.';
 
 export const formatSignInErrorMessage = (message: string) => {
   if (message.toLowerCase().includes('invalid login credentials')) {

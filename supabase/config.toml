@@ -21,8 +21,15 @@ verify_jwt = true
 [functions.send-password-reset]
 verify_jwt = false
 
+[functions.send-platform-invite]
+verify_jwt = true
+
 [functions.check-email-exists]
 verify_jwt = false
 
 [functions.track-analytics-event]
 verify_jwt = false
+
+[auth.email.template.confirmation]
+subject = "Confirm your Inlight account"
+content_path = "./supabase/templates/confirmation.html"

@@ -45,6 +45,31 @@ export function useAuth() {
     }
   };
 
+  const maybeClaimPlatformInvite = async (activeSession: Session | null) => {
+    if (!activeSession?.user) return;
+
+    try {
+      const platformToken = localStorage.getItem('inlight_platform_invite_token');
+
+      if (!platformToken) {
+        return;
+      }
+
+      const { error } = await supabase.rpc('claim_invites_on_signup', {
+        _platform_token: platformToken,
+      });
+
+      if (error) {
+        console.error('Platform invite claim failed:', error);
+        return;
+      }
+
+      localStorage.removeItem('inlight_platform_invite_token');
+    } catch (error) {
+      console.error('Platform invite claim failed:', error);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -53,6 +78,7 @@ export function useAuth() {
         const url = new URL(window.location.href);
         const code = url.searchParams.get('code');
         const type = url.searchParams.get('type');
+        const inviteToken = url.searchParams.get('invite');
         const isRecoveryFlow = type === 'recovery' || url.searchParams.get('mode') === 'reset';
         const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
         const hashAccessToken = hashParams.get('access_token');
@@ -67,6 +93,10 @@ export function useAuth() {
             isRecovery ? '/auth?mode=reset' : url.pathname || '/'
           );
         };
+
+        if (inviteToken) {
+          localStorage.setItem('inlight_platform_invite_token', inviteToken);
+        }
 
         if (hashAccessToken && hashRefreshToken) {
           const { data, error } = await supabase.auth.setSession({
@@ -92,6 +122,7 @@ export function useAuth() {
           }
           setSession(data.session);
           setUser(data.user);
+          void maybeClaimPlatformInvite(data.session);
           replaceAuthUrl(isHashRecoveryFlow);
         }
 
@@ -116,6 +147,7 @@ export function useAuth() {
           }
           setSession(data.session);
           setUser(data.user);
+          void maybeClaimPlatformInvite(data.session);
           replaceAuthUrl(isRecoveryFlow);
         }
 
@@ -127,6 +159,7 @@ export function useAuth() {
 
         setSession(session);
         setUser(session?.user ?? null);
+        void maybeClaimPlatformInvite(session);
         setLoading(false);
       } catch (error) {
         console.error('Auth initialization failed:', error);
@@ -155,6 +188,7 @@ export function useAuth() {
 
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           void maybeSendShowcaseWelcome(session);
+          void maybeClaimPlatformInvite(session);
         }
 
         if (event === 'SIGNED_IN' && session?.user) {
@@ -177,11 +211,19 @@ export function useAuth() {
     };
   }, []);
 
-  const signUp = async (email: string, password: string, displayName?: string) => {
+  const signUp = async (email: string, password: string, displayName?: string, platformInviteToken?: string | null) => {
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedInviteToken = platformInviteToken?.trim() || null;
 
     if (!isAllowedSignupEmail(normalizedEmail)) {
-      return { error: { message: signupEmailPolicyMessage } };
+      const { data: isSignupAllowed, error: policyError } = await supabase.rpc('is_signup_email_allowed', {
+        _email: normalizedEmail,
+        _platform_token: normalizedInviteToken,
+      });
+
+      if (policyError || !isSignupAllowed) {
+        return { data: null, error: { message: signupEmailPolicyMessage } };
+      }
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -191,6 +233,7 @@ export function useAuth() {
         emailRedirectTo: window.location.origin,
         data: {
           display_name: displayName || normalizedEmail.split('@')[0],
+          ...(normalizedInviteToken ? { platform_invite_token: normalizedInviteToken } : {}),
         },
       },
     });
