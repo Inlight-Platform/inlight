@@ -111,9 +111,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
 
   const isOwner = user?.id === item.user_id;
   const canManageFeedItem =
-    (item.type !== 'event' || canManageEvents) &&
-    (item.type !== 'job' || canManageJobs) &&
-    (item.type !== 'project' || canManageProjects);
+    isAdmin ||
+    ((item.type !== 'event' || canManageEvents) &&
+      (item.type !== 'job' || canManageJobs) &&
+      (item.type !== 'project' || canManageProjects));
   const canDelete = (isOwner || isAdmin) && canManageFeedItem;
   const supportsInlineEdit = item.type !== 'show' && item.type !== 'open_role' && item.source !== 'opportunity';
   const canEdit = (isOwner || isAdmin) && supportsInlineEdit && canManageFeedItem; // Shows have their own edit flow

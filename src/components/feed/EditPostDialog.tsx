@@ -3,6 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Move, X, ImagePlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
+import { useAdmin } from '@/hooks/useAdmin';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +33,8 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   item,
 }) => {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
+  const { canManageEvents, canManageJobs, canManageProjects } = useFeatureAccess();
   const queryClient = useQueryClient();
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
@@ -79,6 +83,11 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const updateMutation = useMutation({
     mutationFn: async () => {
       let error;
+      if (!isAdmin) {
+        if (item.type === 'event' && !canManageEvents) throw new Error('This beta group cannot edit events.');
+        if (item.type === 'job' && !canManageJobs) throw new Error('This beta group cannot edit jobs.');
+        if (item.type === 'project' && !canManageProjects) throw new Error('This beta group cannot edit projects.');
+      }
       
       if (item.type === 'post' || item.type === 'job') {
         ({ error } = await supabase
