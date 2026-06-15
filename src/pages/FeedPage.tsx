@@ -168,6 +168,7 @@ const FeedPage: React.FC = () => {
       const { data, error } = await supabase
         .from('posts')
         .select('*')
+        .not('content', 'like', '🎯%')
         .order('created_at', { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -180,15 +181,12 @@ const FeedPage: React.FC = () => {
 
       const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
 
-      return data.map((post) => {
-        const isJob = post.content.startsWith('🎯');
-        return {
-          ...post,
-          type: isJob ? 'job' as const : 'post' as const,
-          visibility: post.visibility,
-          creator_profile: profileMap.get(post.user_id)
-        };
-      });
+      return data.map((post) => ({
+        ...post,
+        type: 'post' as const,
+        visibility: post.visibility,
+        creator_profile: profileMap.get(post.user_id)
+      }));
     }
   });
 
@@ -313,49 +311,6 @@ const FeedPage: React.FC = () => {
           creator_profile: profileMap.get(project!.creator_id)
         }));
     }
-  });
-
-  // Fetch active opportunities (status='open' and deadline not past)
-  const { data: opportunityItems = [], isLoading: opportunitiesLoading } = useQuery({
-    queryKey: ['feed-opportunities'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('opportunities')
-        .select('*')
-        .eq('status', 'open')
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (error) throw error;
-
-      const now = Date.now();
-      const active = (data || []).filter((o: any) => {
-        if (!o.deadline) return true;
-        const d = new Date(o.deadline).getTime();
-        return isNaN(d) || d >= now;
-      });
-
-      const userIds = [...new Set(active.map((o: any) => o.posted_by))];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
-      const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
-
-      return active.map((o: any): FeedItemData => ({
-        id: o.id,
-        type: 'job' as const,
-        source: 'opportunity' as const,
-        user_id: o.posted_by,
-        title: o.title,
-        description: o.description,
-        image_url: o.image_url,
-        link_url: o.link_url,
-        link_title: o.link_title,
-        created_at: o.created_at,
-        location: o.location,
-        creator_profile: profileMap.get(o.posted_by),
-      }));
-    },
   });
 
   // Fetch saved projects
@@ -535,7 +490,7 @@ const FeedPage: React.FC = () => {
 
   // Combine and filter feed items (for non-project tabs)
   const feedItems = useMemo(() => {
-    let allItems: FeedItemData[] = [...posts, ...projectFeedItems, ...events, ...openRoles, ...opportunityItems];
+    let allItems: FeedItemData[] = [...posts, ...projectFeedItems, ...events, ...openRoles];
 
     if (contentFilter !== 'all') {
       allItems = allItems.filter((item) => {
@@ -570,9 +525,9 @@ const FeedPage: React.FC = () => {
     }
 
     return allItems;
-  }, [posts, projectFeedItems, events, openRoles, opportunityItems, networkFilter, contentFilter, feedSearchQuery, user?.id, getConnectionDegree]);
+  }, [posts, projectFeedItems, events, openRoles, networkFilter, contentFilter, feedSearchQuery, user?.id, getConnectionDegree]);
 
-  const isLoading = postsLoading || projectsLoading || eventsLoading || openRolesLoading || opportunitiesLoading || connectionsLoading;
+  const isLoading = postsLoading || projectsLoading || eventsLoading || openRolesLoading || connectionsLoading;
 
   const networkFilters: { value: NetworkFilter; label: string; count?: number }[] = [
     { value: 'all', label: 'All' },
