@@ -28,16 +28,6 @@ type ProjectSubTab = 'feed' | 'my-network' | 'saved' | 'archive';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 type ViewMode = 'bento' | 'scroll';
 
-type FeedOpenRoleProject = {
-  id: string;
-  title: string;
-  status: string | null;
-  is_public: boolean | null;
-  creator_id: string;
-  main_image_url: string | null;
-  header_image_url: string | null;
-};
-
 const PROJECT_CATEGORIES = [
   { value: 'film', label: 'Film' },
   { value: 'theater', label: 'Theatre' },
@@ -48,14 +38,6 @@ const PROJECT_CATEGORIES = [
 ] as const;
 
 type ProjectCategory = typeof PROJECT_CATEGORIES[number]['value'];
-
-const getOpenRoleProject = (project: unknown): FeedOpenRoleProject | null => {
-  if (Array.isArray(project)) {
-    return (project[0] as FeedOpenRoleProject | undefined) ?? null;
-  }
-
-  return project as FeedOpenRoleProject | null;
-};
 
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
@@ -257,62 +239,6 @@ const FeedPage: React.FC = () => {
     }
   });
 
-  // Fetch open roles from projects
-  const { data: openRoles = [], isLoading: openRolesLoading } = useQuery({
-    queryKey: ['feed-open-roles'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('project_roles')
-        .select(`
-          id,
-          role_name,
-          created_at,
-          project_id,
-          projects!inner (
-            id,
-            title,
-            status,
-            is_public,
-            creator_id,
-            main_image_url,
-            header_image_url
-          )
-        `)
-        .is('assigned_user_id', null)
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (error) throw error;
-
-      const userIds = [
-        ...new Set(data.map((role) => getOpenRoleProject(role.projects)?.creator_id).filter(Boolean)),
-      ] as string[];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
-
-      const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
-
-      return data
-        .map((role) => ({ role, project: getOpenRoleProject(role.projects) }))
-        .filter(({ project }) => project?.is_public)
-        .map(({ role, project }) => ({
-          id: role.id,
-          type: 'open_role' as const,
-          user_id: project!.creator_id,
-          title: role.role_name,
-          role_id: role.id,
-          project_id: role.project_id,
-          project_title: project!.title,
-          project_status: project!.status,
-          image_url: project!.header_image_url || project!.main_image_url,
-          created_at: role.created_at,
-          creator_profile: profileMap.get(project!.creator_id)
-        }));
-    }
-  });
-
   // Fetch saved projects
   const { data: savedProjects = [] } = useQuery({
     queryKey: ['saved-projects', user?.id],
@@ -490,7 +416,7 @@ const FeedPage: React.FC = () => {
 
   // Combine and filter feed items (for non-project tabs)
   const feedItems = useMemo(() => {
-    let allItems: FeedItemData[] = [...posts, ...projectFeedItems, ...events, ...openRoles];
+    let allItems: FeedItemData[] = [...posts, ...projectFeedItems, ...events];
 
     if (contentFilter !== 'all') {
       allItems = allItems.filter((item) => {
@@ -525,9 +451,9 @@ const FeedPage: React.FC = () => {
     }
 
     return allItems;
-  }, [posts, projectFeedItems, events, openRoles, networkFilter, contentFilter, feedSearchQuery, user?.id, getConnectionDegree]);
+  }, [posts, projectFeedItems, events, networkFilter, contentFilter, feedSearchQuery, user?.id, getConnectionDegree]);
 
-  const isLoading = postsLoading || projectsLoading || eventsLoading || openRolesLoading || connectionsLoading;
+  const isLoading = postsLoading || projectsLoading || eventsLoading || connectionsLoading;
 
   const networkFilters: { value: NetworkFilter; label: string; count?: number }[] = [
     { value: 'all', label: 'All' },
