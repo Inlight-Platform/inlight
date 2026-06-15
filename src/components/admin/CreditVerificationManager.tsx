@@ -11,6 +11,12 @@ import { useAdminVerificationRequests } from '@/hooks/useCreditVerification';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
+interface ProfileData {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
 interface CreditData {
   id: string;
   project: string;
@@ -34,6 +40,21 @@ interface VerificationRequest {
   credits: CreditData;
 }
 
+interface ProjectCreditInvite {
+  id: string;
+  project_id: string;
+  inviter_id: string;
+  email: string;
+  role_name: string;
+  status: string;
+  accepted_at: string | null;
+  accepted_by: string | null;
+  created_at: string;
+  project_title: string;
+  inviter_profile?: ProfileData;
+  accepted_profile?: ProfileData;
+}
+
 const CreditVerificationManager: React.FC = () => {
   const { pendingRequests, isLoading, approveRequest, denyRequest, isApproving, isDenying } = useAdminVerificationRequests();
   const [selectedRequest, setSelectedRequest] = useState<VerificationRequest | null>(null);
@@ -50,9 +71,58 @@ const CreditVerificationManager: React.FC = () => {
         .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', userIds);
-      return (data || []).reduce((acc, p) => ({ ...acc, [p.user_id!]: p }), {} as Record<string, any>);
+      return (data || []).reduce<Record<string, ProfileData>>((acc, p) => {
+        if (p.user_id) acc[p.user_id] = p;
+        return acc;
+      }, {});
     },
     enabled: userIds.length > 0,
+  });
+
+  const { data: projectCreditInvites = [], isLoading: projectInvitesLoading } = useQuery({
+    queryKey: ['admin-project-credit-invites'],
+    queryFn: async () => {
+      const { data: invites, error } = await supabase
+        .from('project_credit_invites')
+        .select('id, project_id, inviter_id, email, role_name, status, accepted_at, accepted_by, created_at')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      const projectIds = [...new Set((invites || []).map(invite => invite.project_id))];
+      const profileIds = [
+        ...new Set(
+          (invites || [])
+            .flatMap(invite => [invite.inviter_id, invite.accepted_by])
+            .filter((id): id is string => Boolean(id))
+        ),
+      ];
+
+      const { data: projects = [] } = projectIds.length > 0
+        ? await supabase
+            .from('projects')
+            .select('id, title')
+            .in('id', projectIds)
+        : { data: [] };
+
+      const { data: inviteProfiles = [] } = profileIds.length > 0
+        ? await supabase
+            .from('profiles_public')
+            .select('user_id, display_name, avatar_url')
+            .in('user_id', profileIds)
+        : { data: [] };
+
+      const projectMap = new Map((projects || []).map(project => [project.id, project.title]));
+      const profileMap = new Map((inviteProfiles || []).map(profile => [profile.user_id, profile as ProfileData]));
+
+      return (invites || []).map<ProjectCreditInvite>(invite => ({
+        ...invite,
+        project_title: projectMap.get(invite.project_id) || 'Unknown project',
+        inviter_profile: profileMap.get(invite.inviter_id),
+        accepted_profile: invite.accepted_by ? profileMap.get(invite.accepted_by) : undefined,
+      }));
+    },
   });
 
   const handleApprove = (requestId: string) => {
@@ -91,6 +161,7 @@ const CreditVerificationManager: React.FC = () => {
   const pendingCount = (pendingRequests as VerificationRequest[]).filter(r => r.status === 'pending').length;
 
   return (
+    <div className="space-y-6">
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -306,6 +377,73 @@ const CreditVerificationManager: React.FC = () => {
         </Dialog>
       </CardContent>
     </Card>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ShieldCheck className="w-5 h-5" />
+          Project Credit Invites
+          {projectCreditInvites.length > 0 && (
+            <Badge variant="secondary" className="ml-2">{projectCreditInvites.length}</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {projectInvitesLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : projectCreditInvites.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">No project credit invites yet.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Project</TableHead>
+                <TableHead>Invited Credit</TableHead>
+                <TableHead>Invited By</TableHead>
+                <TableHead>Invitee</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {projectCreditInvites.map((invite) => (
+                <TableRow key={invite.id}>
+                  <TableCell className="font-medium">{invite.project_title}</TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{invite.role_name}</p>
+                      <p className="text-sm text-muted-foreground">{invite.email}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>{invite.inviter_profile?.display_name || 'Unknown'}</TableCell>
+                  <TableCell>
+                    {invite.accepted_profile?.display_name || (invite.accepted_at ? invite.email : '-')}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {format(new Date(invite.created_at), 'MMM d, yyyy')}
+                  </TableCell>
+                  <TableCell>
+                    {invite.status === 'accepted' ? (
+                      <Badge className="bg-blue-600 gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Auto-verified
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="gap-1">
+                        <Clock className="w-3 h-3" />
+                        Pending invite
+                      </Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+    </div>
   );
 };
 
