@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-
-const FALLBACK_SUPABASE_URL = 'https://piofmmawwnermvaysonw.supabase.co';
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL;
+import { SUPABASE_URL } from '@/integrations/supabase/config';
 const VISITOR_ID_KEY = 'inlight_analytics_visitor_id';
 
 type AnalyticsEventName = 'page_view' | 'showcase_site_view' | 'showcase_profile_view';

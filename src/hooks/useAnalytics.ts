@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { SUPABASE_URL } from '@/integrations/supabase/config';
+import type { Database } from '@/integrations/supabase/types';
 
-const FALLBACK_SUPABASE_URL = 'https://piofmmawwnermvaysonw.supabase.co';
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL;
+type EngagementField = 'profile_views' | 'messages_sent' | 'messages_received' | 'connections_made' | 'story_views';
+type UserEngagementInsert = Database['public']['Tables']['user_engagement']['Insert'];
+type UserEngagementUpdate = Database['public']['Tables']['user_engagement']['Update'];
 
 export const useTrackProfileView = (profileId: string) => {
   useEffect(() => {
@@ -39,9 +42,7 @@ export const useTrackProfileView = (profileId: string) => {
 };
 
 export const useUpdateEngagement = () => {
-  const updateEngagement = async (
-    field: 'profile_views' | 'messages_sent' | 'messages_received' | 'connections_made' | 'story_views'
-  ) => {
+  const updateEngagement = async (field: EngagementField) => {
     try {
       // Get authenticated user session - do NOT trust client-provided user_id
       const { data: { session } } = await supabase.auth.getSession();
@@ -63,19 +64,21 @@ export const useUpdateEngagement = () => {
 
       if (existing) {
         // Update existing record
+        const updatePayload: UserEngagementUpdate = { [field]: (existing[field] || 0) + 1 };
         await supabase
           .from('user_engagement')
-          .update({ [field]: (existing[field] || 0) + 1 } as any)
+          .update(updatePayload)
           .eq('id', existing.id);
       } else {
         // Insert new record
+        const insertPayload: UserEngagementInsert = {
+          user_id: userId,
+          date: today,
+          [field]: 1,
+        };
         await supabase
           .from('user_engagement')
-          .insert({
-            user_id: userId,
-            date: today,
-            [field]: 1,
-          } as any);
+          .insert(insertPayload);
       }
     } catch (error) {
       console.error('Error updating engagement:', error);
