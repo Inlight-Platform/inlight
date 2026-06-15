@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles, UserPlus, Clock, Check, MapPin, Briefcase, ArrowRight, Heart, Compass, BookOpen, Calendar, FolderPlus, Users, Bookmark, BookmarkCheck } from 'lucide-react';
@@ -10,11 +10,7 @@ import { useSavedItems, SaveItemInput } from '@/hooks/useSavedItems';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { capitalizeName } from '@/lib/utils';
-import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
-import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
-import type { OpportunityView } from '@/hooks/useOpportunities';
 
 // A small curated set of resources used for the daily "specific resource" pick.
 // Keeping this inline avoids reaching into the full ResourcesPage list.
@@ -38,32 +34,6 @@ interface SuggestedUser {
   bio: string | null;
   location: string | null;
   badges: string[] | null;
-}
-
-interface Opportunity {
-  id: string;
-  title: string;
-  description: string | null;
-  company: string | null;
-  location: string | null;
-  type: string | null;
-  compensation: string | null;
-  is_remote: boolean | null;
-  tags: string[] | null;
-  deadline: string | null;
-  status: string | null;
-  experience_level: string | null;
-  roles: string[] | null;
-  requirements: string[] | null;
-  start_date: string | null;
-  duration: string | null;
-  is_featured: boolean | null;
-  action_type: string | null;
-  image_url: string | null;
-  link_url: string | null;
-  link_title: string | null;
-  posted_by: string;
-  created_at: string;
 }
 
 const SURVEY_ROLE_TO_DISCIPLINE: Record<string, string> = {
@@ -149,41 +119,10 @@ export const YouTab: React.FC = () => {
   const { following, isMutual } = useNetworkConnections();
   const { sendRequest, hasSentRequestTo } = useConnectionRequests();
   const { isSaved, getSavedItem, toggleSave } = useSavedItems();
-  const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityView | null>(null);
-  const [showApply, setShowApply] = useState(false);
-
-  const toOpportunityView = (o: Opportunity): OpportunityView => ({
-    id: o.id,
-    title: o.title,
-    description: o.description || '',
-    type: o.type || 'job',
-    status: o.status || 'open',
-    postedBy: o.posted_by,
-    company: o.company || undefined,
-    location: o.location || 'Remote',
-    isRemote: !!o.is_remote,
-    compensation: o.compensation || undefined,
-    experienceLevel: o.experience_level || 'any',
-    roles: o.roles || [],
-    skills: [],
-    requirements: o.requirements || [],
-    deadline: o.deadline || undefined,
-    startDate: o.start_date || undefined,
-    duration: o.duration || undefined,
-    tags: o.tags || [],
-    createdAt: o.created_at,
-    isFeatured: !!o.is_featured,
-    actionType: o.action_type || 'apply',
-    imageUrl: o.image_url || undefined,
-    linkUrl: o.link_url || undefined,
-    linkTitle: o.link_title || undefined,
-    applicants: [],
-  });
 
   const dailySeed = getDailySeed();
   const peopleSeed = getUserDailySeed(user?.id, dailySeed, 'people');
   const matchSeed = getUserDailySeed(user?.id, dailySeed, 'match');
-  const opportunitySeed = getUserDailySeed(user?.id, dailySeed, 'opportunities');
   const resourceSeed = getUserDailySeed(user?.id, dailySeed, 'resources');
 
   // Current user's survey
@@ -220,23 +159,6 @@ export const YouTab: React.FC = () => {
     },
     enabled: !!user?.id,
     staleTime: 60 * 60 * 1000,
-  });
-
-  // Fetch opportunities
-  const { data: opportunities = [] } = useQuery<Opportunity[]>({
-    queryKey: ['you-tab-opportunities'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('opportunities')
-        .select('*')
-        .eq('status', 'open')
-        .order('created_at', { ascending: false })
-        .limit(30);
-      // "Active" = status is open. The poster controls when to close it,
-      // so we don't auto-hide based on deadline (deadlines often pass
-      // while the role remains open for late applicants).
-      return ((data as any[]) || []) as Opportunity[];
-    },
   });
 
   const notConnected = useMemo(
@@ -302,38 +224,6 @@ export const YouTab: React.FC = () => {
     return seededShuffle(topPool, matchSeed)[0] || null;
   }, [scored, matchSeed, dailySuggestions]);
 
-  const scoredOpportunities = useMemo(() => {
-    const surveyRole = mySurvey?.preview_survey_role || '';
-    const surveyGoal = mySurvey?.preview_survey_goal || '';
-    const roleKeywords = ROLE_KEYWORDS[surveyRole] || [];
-    const goalKeywords = GOAL_KEYWORDS[surveyGoal] || [];
-
-    return opportunities
-      .map((opportunity) => {
-        const searchableText = normalizeSearchText([
-          opportunity.title,
-          opportunity.description,
-          opportunity.company,
-          opportunity.location,
-          opportunity.type,
-          opportunity.compensation,
-          ...(opportunity.tags || []),
-        ].filter(Boolean).join(' '));
-        const score =
-          countKeywordMatches(searchableText, roleKeywords) * 4 +
-          countKeywordMatches(searchableText, goalKeywords) * 3;
-        const tieBreaker = hashString(`${opportunitySeed}:${opportunity.id}`) / 1_000_000_000_000;
-        return { opportunity, score, tieBreaker };
-      })
-      .sort((a, b) => (b.score + b.tieBreaker) - (a.score + a.tieBreaker))
-      .map(({ opportunity }) => opportunity);
-  }, [opportunities, mySurvey, opportunitySeed]);
-
-  const dailyOpportunities = useMemo(
-    () => seededShuffle(scoredOpportunities.slice(0, 20), opportunitySeed).slice(0, 3),
-    [scoredOpportunities, opportunitySeed]
-  );
-
   // Pick a specific resource for the day (used in Daily Actions and Explorations)
   const dailyResource = useMemo(
     () => seededShuffle(CURATED_RESOURCES, resourceSeed)[0],
@@ -382,7 +272,7 @@ export const YouTab: React.FC = () => {
         title: 'Offer a service',
         description: 'Share what you do — coaching, editing, sessions.',
         icon: <Briefcase className="w-4 h-4" />,
-        path: '/feed?compose=job',
+        path: '/feed?compose=update',
         goals: ['Building my community', 'Finding collaborators'],
       },
       {
@@ -478,7 +368,7 @@ export const YouTab: React.FC = () => {
         <p className="text-sm text-muted-foreground mt-2">
           {myPrimaryDiscipline
             ? `Fresh picks for your ${myPrimaryDiscipline.toLowerCase()} path, updated daily.`
-            : 'Fresh people, opportunities, and one match picked for you each day.'}
+            : 'Fresh people, resources, and one match picked for you each day.'}
         </p>
       </div>
 
@@ -539,67 +429,6 @@ export const YouTab: React.FC = () => {
           {dailySuggestions.length === 0 && (
             <p className="col-span-full text-center text-sm text-muted-foreground py-6">
               No new suggestions today. Check back tomorrow.
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* Opportunities */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Briefcase className="w-4 h-4 text-primary" />
-            Opportunities
-          </h3>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/opportunities')} className="gap-1 text-xs">
-            See all <ArrowRight className="w-3 h-3" />
-          </Button>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {dailyOpportunities.map((o) => (
-            <Card
-              key={o.id}
-              className="relative cursor-pointer hover:shadow-xl transition-shadow"
-              onClick={() => setSelectedOpportunity(toOpportunityView(o))}
-            >
-              <SaveIcon
-                data={{
-                  item_type: 'job',
-                  item_id: o.id,
-                  item_title: o.title,
-                  item_url: `/opportunities`,
-                  item_metadata: {
-                    company: o.company,
-                    location: o.location,
-                    type: o.type,
-                    is_remote: o.is_remote,
-                    compensation: o.compensation,
-                  },
-                }}
-              />
-              <CardContent className="p-5 space-y-3">
-                <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
-                  {o.type || 'Opportunity'}
-                </Badge>
-                <h4 className="font-semibold leading-tight line-clamp-2">{o.title}</h4>
-                {o.company && (
-                  <p className="text-xs text-muted-foreground">{o.company}</p>
-                )}
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="w-3 h-3" />
-                  <span className="truncate">
-                    {o.is_remote ? 'Remote' : o.location || 'Location TBA'}
-                  </span>
-                </div>
-                {o.compensation && (
-                  <p className="text-xs font-medium text-foreground">{o.compensation}</p>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-          {dailyOpportunities.length === 0 && (
-            <p className="col-span-full text-center text-sm text-muted-foreground py-6">
-              No open opportunities right now.
             </p>
           )}
         </div>
@@ -728,23 +557,6 @@ export const YouTab: React.FC = () => {
         </section>
       )}
 
-      <OpportunityDetailSheet
-        opportunity={selectedOpportunity}
-        open={!!selectedOpportunity}
-        onOpenChange={(open) => { if (!open) setSelectedOpportunity(null); }}
-        posterProfile={null}
-        hasApplied={false}
-        onApply={() => { setShowApply(true); setSelectedOpportunity(null); }}
-      />
-      {selectedOpportunity && (
-        <ApplicationDialog
-          open={showApply}
-          onOpenChange={setShowApply}
-          opportunityId={selectedOpportunity.id}
-          opportunityTitle={selectedOpportunity.title}
-          onApplicationSubmitted={() => setShowApply(false)}
-        />
-      )}
     </div>
   );
 };
