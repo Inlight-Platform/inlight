@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv, ShieldCheck, Calendar, Globe, BookOpen, Music, BarChart3, Building2, MailPlus, Copy } from 'lucide-react';
+import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv, ShieldCheck, Calendar, Globe, BookOpen, Music, Mic2, BarChart3, Building2, MailPlus, Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import BroadwayShowsManager from '@/components/admin/BroadwayShowsManager';
 import FilmContentManager from '@/components/admin/FilmContentManager';
@@ -117,6 +117,10 @@ const AdminPage: React.FC = () => {
                   <Music className="w-4 h-4" />
                   <span className="hidden sm:inline">🎵</span> Music
                 </TabsTrigger>
+                <TabsTrigger value="cabaret" className="gap-2 whitespace-nowrap">
+                  <Mic2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">🎙️</span> Cabaret
+                </TabsTrigger>
                 <TabsTrigger value="highlights" className="gap-2 whitespace-nowrap">
                   <Newspaper className="w-4 h-4" />
                   <span className="hidden sm:inline">Highlights</span>
@@ -181,7 +185,11 @@ const AdminPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="music">
-          <MusicShowsManager />
+          <MusicShowsManager showType="concert" />
+        </TabsContent>
+
+        <TabsContent value="cabaret">
+          <MusicShowsManager showType="cabaret" />
         </TabsContent>
 
         <TabsContent value="highlights">

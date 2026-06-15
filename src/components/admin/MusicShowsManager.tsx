@@ -21,6 +21,7 @@ interface MusicShow {
   show_date: string | null;
   ticket_url: string | null;
   poster_url: string | null;
+  show_type: 'concert' | 'cabaret';
   is_free: boolean | null;
   is_active: boolean | null;
   is_anonymous: boolean | null;
@@ -39,8 +40,42 @@ const emptyForm = {
   is_active: true,
 };
 
-const MusicShowsManager: React.FC = () => {
+interface MusicShowsManagerProps {
+  showType?: 'concert' | 'cabaret';
+}
+
+const copyByType = {
+  concert: {
+    title: 'Music Shows',
+    add: 'Add Music Show',
+    editTitle: 'Edit Music Show',
+    addTitle: 'Add Music Show',
+    loading: 'Loading music shows...',
+    empty: 'No music shows yet. Add the first one!',
+    created: 'Music show created',
+    updated: 'Music show updated',
+    deleted: 'Music show deleted',
+    deleteTitle: 'Delete this music show?',
+    deleteDescription: 'This will permanently remove it from the Music tab for everyone.',
+  },
+  cabaret: {
+    title: 'Cabaret Shows',
+    add: 'Add Cabaret Show',
+    editTitle: 'Edit Cabaret Show',
+    addTitle: 'Add Cabaret Show',
+    loading: 'Loading cabaret shows...',
+    empty: 'No cabaret shows yet. Add the first one!',
+    created: 'Cabaret show created',
+    updated: 'Cabaret show updated',
+    deleted: 'Cabaret show deleted',
+    deleteTitle: 'Delete this cabaret show?',
+    deleteDescription: 'This will permanently remove it from the Cabarets tab for everyone.',
+  },
+} as const;
+
+const MusicShowsManager: React.FC<MusicShowsManagerProps> = ({ showType = 'concert' }) => {
   const queryClient = useQueryClient();
+  const copy = copyByType[showType];
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MusicShow | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -51,11 +86,12 @@ const MusicShowsManager: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: shows, isLoading } = useQuery({
-    queryKey: ['admin-music-shows'],
+    queryKey: ['admin-music-shows', showType],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_music_shows')
         .select('*')
+        .eq('show_type', showType)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as MusicShow[];
@@ -121,6 +157,7 @@ const MusicShowsManager: React.FC = () => {
         poster_url: formData.poster_url.trim() || null,
         is_free: formData.is_free,
         is_active: formData.is_active,
+        show_type: showType,
         submitted_by: userData.user.id,
       }).select('id').single();
       if (error) throw error;
@@ -135,7 +172,7 @@ const MusicShowsManager: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-music-shows'] });
       queryClient.invalidateQueries({ queryKey: ['user-music-shows'] });
-      toast.success('Music show created');
+      toast.success(copy.created);
       resetForm();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -160,6 +197,7 @@ const MusicShowsManager: React.FC = () => {
           poster_url: posterUrl,
           is_free: formData.is_free,
           is_active: formData.is_active,
+          show_type: showType,
         })
         .eq('id', editing.id);
       if (error) throw error;
@@ -167,7 +205,7 @@ const MusicShowsManager: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-music-shows'] });
       queryClient.invalidateQueries({ queryKey: ['user-music-shows'] });
-      toast.success('Music show updated');
+      toast.success(copy.updated);
       resetForm();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -181,7 +219,7 @@ const MusicShowsManager: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-music-shows'] });
       queryClient.invalidateQueries({ queryKey: ['user-music-shows'] });
-      toast.success('Music show deleted');
+      toast.success(copy.deleted);
       setDeleteId(null);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -214,17 +252,17 @@ const MusicShowsManager: React.FC = () => {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Music Shows</CardTitle>
+        <CardTitle>{copy.title}</CardTitle>
         <Dialog open={isDialogOpen} onOpenChange={(o) => { if (!o) resetForm(); else setIsDialogOpen(true); }}>
           <DialogTrigger asChild>
             <Button onClick={() => { setEditing(null); setFormData(emptyForm); setIsDialogOpen(true); }}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Music Show
+              {copy.add}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editing ? 'Edit Music Show' : 'Add Music Show'}</DialogTitle>
+              <DialogTitle>{editing ? copy.editTitle : copy.addTitle}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -292,9 +330,9 @@ const MusicShowsManager: React.FC = () => {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p className="text-muted-foreground">Loading music shows...</p>
+          <p className="text-muted-foreground">{copy.loading}</p>
         ) : !shows || shows.length === 0 ? (
-          <p className="text-muted-foreground">No music shows yet. Add the first one!</p>
+          <p className="text-muted-foreground">{copy.empty}</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -349,8 +387,8 @@ const MusicShowsManager: React.FC = () => {
           open={!!deleteId}
           onOpenChange={(o) => { if (!o) setDeleteId(null); }}
           onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
-          title="Delete this music show?"
-          description="This will permanently remove it from the Music tab for everyone."
+          title={copy.deleteTitle}
+          description={copy.deleteDescription}
           isPending={deleteMutation.isPending}
         />
       </CardContent>
