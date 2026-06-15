@@ -13,6 +13,7 @@ export function useFeatureAccess() {
   return {
     canManageJobs: true,
     canManageProjects: true,
+    canManageEvents: true,
     showRestrictedToast,
   };
 }

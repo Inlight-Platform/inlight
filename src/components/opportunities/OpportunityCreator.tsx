@@ -103,6 +103,7 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
       compensation: compensation.trim() || undefined,
       experience_level: experienceLevel,
       roles: selectedRoles,
+      skills: [],
       requirements: [],
       deadline: isCalendar ? (endIso || startIso || endOfDayIso) : (deadlineDate || undefined),
       start_date: isCalendar ? startIso : undefined,

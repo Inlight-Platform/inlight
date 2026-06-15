@@ -598,7 +598,7 @@ const OpportunitiesPage: React.FC = () => {
       return applicationRows.map((application) => {
         const profile = profileMap.get(application.applicant_id);
         const additionalMaterials = Array.isArray(application.additional_materials)
-          ? application.additional_materials
+          ? (application.additional_materials as PostedJobApplication['additionalMaterials'])
           : [];
 
         return {
