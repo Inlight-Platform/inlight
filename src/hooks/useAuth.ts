@@ -308,14 +308,7 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-
-    if (error && 'status' in error && error.status === 403) {
-      console.warn('Global sign out was rejected; clearing the local session instead.', error);
-      return supabase.auth.signOut({ scope: 'local' });
-    }
-
-    return { error };
+    return supabase.auth.signOut({ scope: 'local' });
   };
 
   const resetPassword = async (email: string) => {
