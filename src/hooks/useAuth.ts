@@ -10,6 +10,26 @@ const isExistingSignupResponse = (data: Awaited<ReturnType<typeof supabase.auth.
   return Boolean(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
 };
 
+type SignupRpcResult<T> = {
+  data: T | null;
+  error: { message: string } | null;
+};
+
+type SignupRpc = {
+  (
+    fn: 'is_signup_email_allowed',
+    args: { _email: string; _platform_token?: string | null; _credit_token?: string | null }
+  ): Promise<SignupRpcResult<boolean>>;
+  (
+    fn: 'check_email_exists_for_signup',
+    args: { search_email: string }
+  ): Promise<SignupRpcResult<boolean>>;
+};
+
+const signupRpc: SignupRpc = ((fn: string, args: Record<string, unknown>) => {
+  return supabase.rpc(fn as never, args as never);
+}) as SignupRpc;
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -45,28 +65,31 @@ export function useAuth() {
     }
   };
 
-  const maybeClaimPlatformInvite = async (activeSession: Session | null) => {
+  const maybeClaimInvites = async (activeSession: Session | null) => {
     if (!activeSession?.user) return;
 
     try {
       const platformToken = localStorage.getItem('inlight_platform_invite_token');
+      const creditToken = localStorage.getItem('inlight_project_credit_invite_token');
 
-      if (!platformToken) {
+      if (!platformToken && !creditToken) {
         return;
       }
 
       const { error } = await supabase.rpc('claim_invites_on_signup', {
-        _platform_token: platformToken,
+        _platform_token: platformToken || undefined,
+        _credit_token: creditToken || undefined,
       });
 
       if (error) {
-        console.error('Platform invite claim failed:', error);
+        console.error('Invite claim failed:', error);
         return;
       }
 
       localStorage.removeItem('inlight_platform_invite_token');
+      localStorage.removeItem('inlight_project_credit_invite_token');
     } catch (error) {
-      console.error('Platform invite claim failed:', error);
+      console.error('Invite claim failed:', error);
     }
   };
 
@@ -79,6 +102,7 @@ export function useAuth() {
         const code = url.searchParams.get('code');
         const type = url.searchParams.get('type');
         const inviteToken = url.searchParams.get('invite');
+        const creditInviteToken = url.searchParams.get('credit_invite');
         const isRecoveryFlow = type === 'recovery' || url.searchParams.get('mode') === 'reset';
         const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
         const hashAccessToken = hashParams.get('access_token');
@@ -96,6 +120,9 @@ export function useAuth() {
 
         if (inviteToken) {
           localStorage.setItem('inlight_platform_invite_token', inviteToken);
+        }
+        if (creditInviteToken) {
+          localStorage.setItem('inlight_project_credit_invite_token', creditInviteToken);
         }
 
         if (hashAccessToken && hashRefreshToken) {
@@ -122,7 +149,7 @@ export function useAuth() {
           }
           setSession(data.session);
           setUser(data.user);
-          void maybeClaimPlatformInvite(data.session);
+          void maybeClaimInvites(data.session);
           replaceAuthUrl(isHashRecoveryFlow);
         }
 
@@ -147,7 +174,7 @@ export function useAuth() {
           }
           setSession(data.session);
           setUser(data.user);
-          void maybeClaimPlatformInvite(data.session);
+          void maybeClaimInvites(data.session);
           replaceAuthUrl(isRecoveryFlow);
         }
 
@@ -159,7 +186,7 @@ export function useAuth() {
 
         setSession(session);
         setUser(session?.user ?? null);
-        void maybeClaimPlatformInvite(session);
+        void maybeClaimInvites(session);
         setLoading(false);
       } catch (error) {
         console.error('Auth initialization failed:', error);
@@ -188,7 +215,7 @@ export function useAuth() {
 
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           void maybeSendShowcaseWelcome(session);
-          void maybeClaimPlatformInvite(session);
+          void maybeClaimInvites(session);
         }
 
         if (event === 'SIGNED_IN' && session?.user) {
@@ -211,14 +238,22 @@ export function useAuth() {
     };
   }, []);
 
-  const signUp = async (email: string, password: string, displayName?: string, platformInviteToken?: string | null) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    displayName?: string,
+    platformInviteToken?: string | null,
+    projectCreditInviteToken?: string | null
+  ) => {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedInviteToken = platformInviteToken?.trim() || null;
+    const normalizedCreditInviteToken = projectCreditInviteToken?.trim() || null;
 
     if (!isAllowedSignupEmail(normalizedEmail)) {
-      const { data: isSignupAllowed, error: policyError } = await (supabase.rpc as any)('is_signup_email_allowed', {
+      const { data: isSignupAllowed, error: policyError } = await signupRpc('is_signup_email_allowed', {
         _email: normalizedEmail,
         _platform_token: normalizedInviteToken,
+        _credit_token: normalizedCreditInviteToken,
       });
 
       if (policyError || !isSignupAllowed) {
@@ -234,6 +269,7 @@ export function useAuth() {
         data: {
           display_name: displayName || normalizedEmail.split('@')[0],
           ...(normalizedInviteToken ? { platform_invite_token: normalizedInviteToken } : {}),
+          ...(normalizedCreditInviteToken ? { project_credit_invite_token: normalizedCreditInviteToken } : {}),
         },
       },
     });
@@ -255,7 +291,7 @@ export function useAuth() {
   };
 
   const checkEmailExists = async (email: string) => {
-    const { data, error } = await (supabase.rpc as any)('check_email_exists_for_signup', {
+    const { data, error } = await signupRpc('check_email_exists_for_signup', {
       search_email: email.trim().toLowerCase(),
     });
 

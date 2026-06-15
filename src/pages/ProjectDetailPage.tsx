@@ -46,6 +46,7 @@ import { ProjectStatusDropdown } from '@/components/projects/ProjectStatusDropdo
 import FloatingChatButton from '@/components/messages/FloatingChatButton';
 import { useMinimizedChat } from '@/hooks/useMinimizedChat';
 import { useLocation } from 'react-router-dom';
+import { InviteFriendDialog } from '@/components/invitations/InviteFriendDialog';
 
 interface ProjectMember {
   id: string;
@@ -719,38 +720,46 @@ const ProjectDetailPage: React.FC = () => {
               Team Members ({members.filter(m => m.user_id !== project.creator_id).length + 1})
             </CardTitle>
             {canEditProject && (
-              <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
-                <DialogTrigger asChild>
+              <div className="flex flex-wrap justify-end gap-2">
+                <InviteFriendDialog projectId={projectId} projectTitle={project.title}>
                   <Button size="sm" variant="outline">
                     <UserPlus className="w-4 h-4 mr-2" />
-                    Add Member
+                    Invite for Credit
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Team Member</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 pt-4">
-                    <Input
-                      placeholder="Member email"
-                      value={memberEmail}
-                      onChange={(e) => setMemberEmail(e.target.value)}
-                    />
-                    <Input
-                      placeholder="Role (optional)"
-                      value={memberRole}
-                      onChange={(e) => setMemberRole(e.target.value)}
-                    />
-                    <Button 
-                      onClick={() => addMemberMutation.mutate()}
-                      disabled={addMemberMutation.isPending}
-                      className="w-full"
-                    >
+                </InviteFriendDialog>
+                <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline">
+                      <UserPlus className="w-4 h-4 mr-2" />
                       Add Member
                     </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Team Member</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <Input
+                        placeholder="Member email"
+                        value={memberEmail}
+                        onChange={(e) => setMemberEmail(e.target.value)}
+                      />
+                      <Input
+                        placeholder="Role (optional)"
+                        value={memberRole}
+                        onChange={(e) => setMemberRole(e.target.value)}
+                      />
+                      <Button
+                        onClick={() => addMemberMutation.mutate()}
+                        disabled={addMemberMutation.isPending}
+                        className="w-full"
+                      >
+                        Add Member
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             )}
           </CardHeader>
           <CardContent>

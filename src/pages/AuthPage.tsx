@@ -125,7 +125,8 @@ const AuthPage: React.FC = () => {
   const routeState = (location.state || {}) as AuthRouteState;
   const mode = searchParams.get('mode');
   const inviteToken = searchParams.get('invite')?.trim() || null;
-  const isInviteSignup = Boolean(inviteToken);
+  const creditInviteToken = searchParams.get('credit_invite')?.trim() || null;
+  const isInviteSignup = Boolean(inviteToken || creditInviteToken);
   
   const getInitialView = (): AuthView => {
     if (routeState.mode) return routeState.mode;
@@ -204,56 +205,58 @@ const AuthPage: React.FC = () => {
 
     setIsLoading(true);
 
-    const { exists: emailExists, error: emailCheckError } = await checkEmailExists(email);
+    try {
+      const { exists: emailExists, error: emailCheckError } = await checkEmailExists(email);
 
-    if (emailCheckError) {
-      console.error('Signup email availability check failed:', emailCheckError);
-      toast.error('We could not check that email yet. Please try again.');
-      setIsLoading(false);
-      return;
-    }
+      if (emailCheckError) {
+        console.error('Signup email availability check failed:', emailCheckError);
+        toast.error('We could not check that email yet. Please try again.');
+        return;
+      }
 
-    if (!emailCheckError && emailExists) {
-      toast.error(accountAlreadyExistsMessage);
-      setView('login');
-      setPassword('');
-      setConfirmPassword('');
-      setIsLoading(false);
-      return;
-    }
-
-    if (!getPasswordChecks(password).every((check) => check.isMet)) {
-      setShowSignupPasswordChecklist(true);
-      setIsLoading(false);
-      return;
-    }
-
-    const { data, error } = await signUp(email, password, displayName, inviteToken);
-
-    if (error) {
-      if (isPasswordPolicyError(error.message)) {
-        setShowSignupPasswordChecklist(true);
-      } else if (error.message === accountAlreadyExistsMessage) {
+      if (!emailCheckError && emailExists) {
         toast.error(accountAlreadyExistsMessage);
         setView('login');
         setPassword('');
         setConfirmPassword('');
-      } else {
-        toast.error(error.message);
+        return;
       }
-    } else if (!data?.session) {
-      toast.success(
-        isInviteSignup
-          ? 'Account created. Check your email and confirm your account before signing in.'
-          : 'Account created. Check your .edu inbox and confirm your email before signing in.'
-      );
-      setView('login');
-    } else {
-      toast.success('Account created! Welcome to Inlight.');
-      navigate('/feed');
-    }
 
-    setIsLoading(false);
+      if (!getPasswordChecks(password).every((check) => check.isMet)) {
+        setShowSignupPasswordChecklist(true);
+        return;
+      }
+
+      const { data, error } = await signUp(email, password, displayName, inviteToken, creditInviteToken);
+
+      if (error) {
+        if (isPasswordPolicyError(error.message)) {
+          setShowSignupPasswordChecklist(true);
+        } else if (error.message === accountAlreadyExistsMessage) {
+          toast.error(accountAlreadyExistsMessage);
+          setView('login');
+          setPassword('');
+          setConfirmPassword('');
+        } else {
+          toast.error(error.message);
+        }
+      } else if (!data?.session) {
+        toast.success(
+          isInviteSignup
+            ? 'Account created. Check your email and confirm your account before signing in.'
+            : 'Account created. Check your .edu inbox and confirm your email before signing in.'
+        );
+        setView('login');
+      } else {
+        toast.success('Account created! Welcome to Inlight.');
+        navigate('/feed');
+      }
+    } catch (error) {
+      console.error('Signup failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Signup failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {

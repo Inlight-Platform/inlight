@@ -2,10 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Compass, Users, GraduationCap, Clock, Building2, ChevronDown, Inbox, ArrowLeft, UserRound } from 'lucide-react';
+import { Search, Compass, Users, GraduationCap, Clock, Building2, ChevronDown, Inbox, ArrowLeft, UserRound, UserPlus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
@@ -14,6 +15,7 @@ import PersonCard from '@/components/people/PersonCard';
 import CompanyCard from '@/components/people/CompanyCard';
 import { useCompanyFollows } from '@/hooks/useCompanyFollows';
 import { useAuth } from '@/hooks/useAuth';
+import { InviteFriendDialog } from '@/components/invitations/InviteFriendDialog';
 
 interface Studio {
   id: string;
@@ -263,19 +265,28 @@ const PeoplePage: React.FC = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-3">
-            {section && (
-              <button
-                onClick={() => setSection(null)}
-                className="p-1.5 rounded-full hover:bg-accent transition-colors"
-                aria-label="Back"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            )}
-            <h1 className="text-2xl font-display font-bold capitalize">
-              {section ?? 'People'}
-            </h1>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {section && (
+                <button
+                  onClick={() => setSection(null)}
+                  className="p-1.5 rounded-full hover:bg-accent transition-colors"
+                  aria-label="Back"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+              )}
+              <h1 className="text-2xl font-display font-bold capitalize">
+                {section ?? 'People'}
+              </h1>
+            </div>
+            <InviteFriendDialog>
+              <Button size="sm" className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                <span className="hidden sm:inline">Invite a friend</span>
+                <span className="sm:hidden">Invite</span>
+              </Button>
+            </InviteFriendDialog>
           </div>
         </div>
       </header>
