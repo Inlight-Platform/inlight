@@ -216,7 +216,7 @@ export function useAuth() {
     const normalizedInviteToken = platformInviteToken?.trim() || null;
 
     if (!isAllowedSignupEmail(normalizedEmail)) {
-      const { data: isSignupAllowed, error: policyError } = await supabase.rpc('is_signup_email_allowed', {
+      const { data: isSignupAllowed, error: policyError } = await (supabase.rpc as any)('is_signup_email_allowed', {
         _email: normalizedEmail,
         _platform_token: normalizedInviteToken,
       });
@@ -255,7 +255,7 @@ export function useAuth() {
   };
 
   const checkEmailExists = async (email: string) => {
-    const { data, error } = await supabase.rpc('check_email_exists_for_signup', {
+    const { data, error } = await (supabase.rpc as any)('check_email_exists_for_signup', {
       search_email: email.trim().toLowerCase(),
     });
 

@@ -126,6 +126,7 @@ const EditOpportunityDialog: React.FC<EditOpportunityDialogProps> = ({ open, onO
       compensation: compensation.trim() || undefined,
       experience_level: experienceLevel,
       roles: selectedRoles,
+      skills: [],
       deadline: isCalendar ? (endIso || startIso || endOfDayIso) : (deadlineDate || undefined),
       start_date: isCalendar ? startIso : undefined,
       duration: duration.trim() || undefined,

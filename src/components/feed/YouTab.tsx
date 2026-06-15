@@ -165,6 +165,7 @@ export const YouTab: React.FC = () => {
     compensation: o.compensation || undefined,
     experienceLevel: o.experience_level || 'any',
     roles: o.roles || [],
+    skills: [],
     requirements: o.requirements || [],
     deadline: o.deadline || undefined,
     startDate: o.start_date || undefined,
