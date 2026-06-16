@@ -53,9 +53,9 @@ const navItems: NavItem[] = [
 
 const mobileNavItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
+{ label: 'People', icon: UserRound, path: '/people' },
 { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
-{ label: 'Resources', icon: BookOpen, path: '/resources' },
-{ label: 'Network', icon: Network, path: '/pie-chart' }];
+{ label: 'Industry', icon: Theater, path: '/stage-whisper' }];
 
 export const MainNav: React.FC = () => {
   const location = useLocation();
@@ -461,7 +461,7 @@ export const MainNav: React.FC = () => {
                 aria-label="Open account menu"
                 className={cn(
                   'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative',
-                  isActive('/people') || isActive('/stage-whisper') || isActive(`/profile/${user.id}`) || isActive('/notifications') || isActive('/settings')
+                  isActive('/resources') || isActive('/pie-chart') || isActive(`/profile/${user.id}`) || isActive('/notifications') || isActive('/settings')
                     ? 'text-white'
                     : 'text-[hsl(220_15%_60%)]'
                 )}>
@@ -482,15 +482,15 @@ export const MainNav: React.FC = () => {
               sideOffset={10}
               className="mb-1 w-64 border-[hsl(45_95%_58%/0.16)] bg-popover p-2 text-popover-foreground shadow-xl">
               <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
-                <Link to="/people">
-                  <UserRound className="w-4 h-4" />
-                  <span>People</span>
+                <Link to="/resources">
+                  <BookOpen className="w-4 h-4" />
+                  <span>Resources</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
-                <Link to="/stage-whisper">
-                  <Theater className="w-4 h-4" />
-                  <span>Industry Now</span>
+                <Link to="/pie-chart">
+                  <Network className="w-4 h-4" />
+                  <span>Your Network</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
