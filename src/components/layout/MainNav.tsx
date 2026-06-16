@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, Network, Sun, Moon, MessageSquare, UserRound } from 'lucide-react';
+import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, Network, Sun, Moon, MessageSquare, UserRound, MoreHorizontal } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,13 @@ import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/hooks/useNotifications';
 import { SignOutDialog } from '@/components/ui/sign-out-dialog';
 import { useTheme } from '@/hooks/useTheme';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface NavItem {
   label: string;
@@ -44,6 +51,11 @@ const navItems: NavItem[] = [
 { label: 'Resources', icon: BookOpen, path: '/resources' },
 { label: 'Your Network', icon: Network, path: '/pie-chart' }];
 
+const mobileNavItems: NavItem[] = [
+{ label: 'Home', icon: Home, path: '/feed' },
+{ label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
+{ label: 'Resources', icon: BookOpen, path: '/resources' },
+{ label: 'Network', icon: Network, path: '/pie-chart' }];
 
 export const MainNav: React.FC = () => {
   const location = useLocation();
@@ -409,30 +421,8 @@ export const MainNav: React.FC = () => {
         {/* Gold accent line */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(45_95%_58%/0.4)] to-transparent" />
         
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide px-2 py-2">
-          {/* Notifications for mobile */}
-          {user &&
-          <Link
-            to="/notifications"
-            className={cn(
-              'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all relative flex-shrink-0 min-w-[72px]',
-              isActive('/notifications') ?
-              'text-[hsl(45_95%_58%)]' :
-              'text-[hsl(220_15%_60%)]'
-            )}>
-              <div className="relative">
-                <Bell className="w-5 h-5" />
-                {combinedUnread > 0 && (
-                  <span className="absolute -top-2 -right-2 min-w-[16px] h-[16px] flex items-center justify-center text-[9px] font-bold bg-[hsl(45_95%_58%)] text-[hsl(222_35%_8%)] rounded-full px-0.5">
-                    {combinedUnread > 99 ? '99+' : combinedUnread}
-                  </span>
-                )}
-              </div>
-              <span className="text-[10px] leading-none whitespace-nowrap">Notifications</span>
-            </Link>
-          }
-
-          {navItems.map((item) => {
+        <div className="grid grid-cols-5 items-stretch gap-1 px-2 py-2">
+          {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
@@ -440,7 +430,7 @@ export const MainNav: React.FC = () => {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all flex-shrink-0 min-w-[72px] relative',
+                  'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative',
                   active ?
                   'text-white' :
                   item.accent ?
@@ -453,7 +443,7 @@ export const MainNav: React.FC = () => {
                 }
                 <Icon className={cn("w-5 h-5 relative z-10", item.accent && !active && "text-[hsl(45_95%_58%)]")} />
                 <span className={cn(
-                  "text-[10px] leading-none whitespace-nowrap relative z-10",
+                  "max-w-full truncate text-[10px] leading-none relative z-10",
                   active && "font-medium"
                 )}>{item.label}</span>
                 {active &&
@@ -464,35 +454,105 @@ export const MainNav: React.FC = () => {
           })}
 
           {user ?
-          <Link
-            to={`/profile/${user.id}`}
-            className={cn(
-              'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all flex-shrink-0 min-w-[72px]',
-              isActive(`/profile/${user.id}`) ? 'text-white' : 'text-[hsl(220_15%_60%)]'
-            )}>
-
-              <Avatar className={cn(
-              "w-5 h-5 ring-1 transition-all",
-              isActive(`/profile/${user.id}`) ?
-              "ring-[hsl(45_95%_58%)]" :
-              "ring-[hsl(45_95%_58%/0.3)]"
-            )}>
-                <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="text-[8px] bg-gradient-to-br from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white">
-                  {profile?.display_name?.[0] || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-[10px] leading-none whitespace-nowrap">Profile</span>
-            </Link> :
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Open account menu"
+                className={cn(
+                  'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative',
+                  isActive('/people') || isActive('/stage-whisper') || isActive(`/profile/${user.id}`) || isActive('/notifications') || isActive('/settings')
+                    ? 'text-white'
+                    : 'text-[hsl(220_15%_60%)]'
+                )}>
+                <div className="relative">
+                  <MoreHorizontal className="w-5 h-5" />
+                  {combinedUnread > 0 && (
+                    <span className="absolute -top-2 -right-2 min-w-[16px] h-[16px] flex items-center justify-center text-[9px] font-bold bg-[hsl(45_95%_58%)] text-[hsl(222_35%_8%)] rounded-full px-0.5">
+                      {combinedUnread > 99 ? '99+' : combinedUnread}
+                    </span>
+                  )}
+                </div>
+                <span className="max-w-full truncate text-[10px] leading-none">More</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              side="top"
+              sideOffset={10}
+              className="mb-1 w-64 border-[hsl(45_95%_58%/0.16)] bg-popover p-2 text-popover-foreground shadow-xl">
+              <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
+                <Link to="/people">
+                  <UserRound className="w-4 h-4" />
+                  <span>People</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
+                <Link to="/stage-whisper">
+                  <Theater className="w-4 h-4" />
+                  <span>Industry Now</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
+                <Link to={`/profile/${user.id}`}>
+                  <Avatar className="w-6 h-6 ring-1 ring-[hsl(45_95%_58%/0.3)]">
+                    <AvatarImage src={profile?.avatar_url || undefined} />
+                    <AvatarFallback className="text-[10px] bg-gradient-to-br from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white">
+                      {profile?.display_name?.[0] || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="truncate">{profile?.display_name || 'My Profile'}</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
+                <Link to="/notifications">
+                  <Bell className="w-4 h-4" />
+                  <span>Notifications</span>
+                  {combinedUnread > 0 && (
+                    <Badge className="ml-auto text-xs px-1.5 py-0.5 bg-[hsl(45_95%_58%)] text-[hsl(222_35%_8%)] hover:bg-[hsl(45_95%_68%)]">
+                      {combinedUnread > 99 ? '99+' : combinedUnread}
+                    </Badge>
+                  )}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
+                <Link to="/settings">
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={toggleTheme} className="gap-3 rounded-md px-3 py-2.5">
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                <span>{isDark ? 'Light mode' : 'Dark mode'}</span>
+              </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5 text-[hsl(45_95%_58%)]">
+                  <Link to="/admin">
+                    <Shield className="w-4 h-4" />
+                    <span>Admin</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setShowSignOutDialog(true)}
+                className="gap-3 rounded-md px-3 py-2.5 text-[hsl(0_75%_60%)] focus:text-[hsl(0_75%_60%)]">
+                <LogOut className="w-4 h-4" />
+                <span>Sign out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu> :
 
           <Link
             to="/auth"
-            className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg text-[hsl(45_95%_58%)] flex-shrink-0 min-w-[72px]">
+            className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 text-[hsl(45_95%_58%)]">
 
               <LogIn className="w-5 h-5" />
-              <span className="text-[10px] leading-none whitespace-nowrap font-medium">Sign in</span>
+              <span className="max-w-full truncate text-[10px] leading-none font-medium">Sign in</span>
             </Link>
           }
+
         </div>
       </nav>
 
