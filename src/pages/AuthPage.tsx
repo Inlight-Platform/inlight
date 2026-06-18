@@ -33,12 +33,14 @@ const secondaryButtonClass =
   '!h-12 !rounded-xl !border-border !bg-none !bg-secondary/30 !text-muted-foreground hover:!bg-none hover:!bg-secondary/50 hover:!text-white';
 
 const getPasswordChecks = (value: string) => [
-  { label: 'At least 6 characters', isMet: value.length >= 6 },
+  { label: 'At least 8 characters', isMet: value.length >= 8 },
   { label: 'One capital letter', isMet: /[A-Z]/.test(value) },
   { label: 'One small letter', isMet: /[a-z]/.test(value) },
   { label: 'One number', isMet: /\d/.test(value) },
   { label: 'One special character', isMet: /[!@#$%^&*()_+\-=[\]{};':"\\|<>?,./`~]/.test(value) },
 ];
+
+const passwordMeetsPolicy = (value: string) => getPasswordChecks(value).every((check) => check.isMet);
 
 const isPasswordPolicyError = (message: string) => {
   const normalizedMessage = message.toLowerCase();
@@ -206,6 +208,11 @@ const AuthPage: React.FC = () => {
     setIsLoading(true);
 
     try {
+      if (!passwordMeetsPolicy(password)) {
+        setShowSignupPasswordChecklist(true);
+        return;
+      }
+
       const { exists: emailExists, error: emailCheckError } = await checkEmailExists(email);
 
       if (emailCheckError) {
@@ -219,11 +226,6 @@ const AuthPage: React.FC = () => {
         setView('login');
         setPassword('');
         setConfirmPassword('');
-        return;
-      }
-
-      if (!getPasswordChecks(password).every((check) => check.isMet)) {
-        setShowSignupPasswordChecklist(true);
         return;
       }
 
@@ -284,8 +286,8 @@ const AuthPage: React.FC = () => {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters.');
+    if (!passwordMeetsPolicy(password)) {
+      toast.error('Password must be at least 8 characters and include uppercase, lowercase, number, and special characters.');
       return;
     }
 
@@ -378,7 +380,7 @@ const AuthPage: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
               className={fieldClass}
             />
           </div>
@@ -393,7 +395,7 @@ const AuthPage: React.FC = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
               className={fieldClass}
             />
           </div>
@@ -613,10 +615,12 @@ const AuthPage: React.FC = () => {
               aria-required="true"
               className={fieldClass}
             />
-            {showSignupPasswordChecklist ? (
+            {password || showSignupPasswordChecklist ? (
               <PasswordChecklist password={password} />
             ) : (
-              <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
+              <p className="text-xs text-muted-foreground">
+                Minimum 8 characters with uppercase, lowercase, number, and special character
+              </p>
             )}
           </div>
           <Button type="submit" className={cn('w-full', primaryButtonClass)} disabled={isLoading}>
@@ -625,7 +629,7 @@ const AuthPage: React.FC = () => {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating account...
               </>
-            ) : showSignupPasswordChecklist && getPasswordChecks(password).every((check) => check.isMet) ? (
+            ) : (password || showSignupPasswordChecklist) && passwordMeetsPolicy(password) ? (
               <>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
                 Create my account
