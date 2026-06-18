@@ -11,6 +11,13 @@ export interface Company {
   location: string | null;
   owner_user_id: string | null;
   created_at: string;
+  cover_image_url?: string | null;
+  tagline?: string | null;
+  mission?: string | null;
+  brand_primary_color?: string | null;
+  brand_accent_color?: string | null;
+  brand_text_color?: string | null;
+  fun_facts?: string[] | null;
 }
 
 export const useCompanyFollows = () => {

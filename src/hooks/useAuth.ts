@@ -27,7 +27,7 @@ type SignupRpc = {
 };
 
 const signupRpc: SignupRpc = ((fn: string, args: Record<string, unknown>) => {
-  return supabase.rpc(fn as never, args as never);
+  return (supabase.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<SignupRpcResult<boolean>>)(fn, args);
 }) as SignupRpc;
 
 export function useAuth() {
