@@ -615,13 +615,7 @@ const AuthPage: React.FC = () => {
               aria-required="true"
               className={fieldClass}
             />
-            {password || showSignupPasswordChecklist ? (
-              <PasswordChecklist password={password} />
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Minimum 8 characters with uppercase, lowercase, number, and special character
-              </p>
-            )}
+            <PasswordChecklist password={password} />
           </div>
           <Button type="submit" className={cn('w-full', primaryButtonClass)} disabled={isLoading}>
             {isLoading ? (
