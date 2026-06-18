@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanyFollows, Company } from '@/hooks/useCompanyFollows';
-import { Building2, Globe, MapPin, Users, ChevronLeft, Settings, UserPlus, ChevronDown, Plus, Camera, Loader2, Trash2, FolderKanban, Archive, Image } from 'lucide-react';
+import { Building2, Globe, MapPin, Users, ChevronLeft, Settings, UserPlus, ChevronDown, Plus, Camera, Loader2, Trash2, FolderKanban, Archive, Image, Sparkles, Palette, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
