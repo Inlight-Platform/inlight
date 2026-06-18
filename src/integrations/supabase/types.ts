@@ -94,35 +94,56 @@ export type Database = {
       }
       companies: {
         Row: {
+          brand_accent_color: string | null
+          brand_primary_color: string | null
+          brand_text_color: string | null
+          cover_image_url: string | null
           created_at: string
           description: string | null
+          fun_facts: Json
           id: string
           location: string | null
           logo_url: string | null
+          mission: string | null
           name: string
           owner_user_id: string | null
+          tagline: string | null
           updated_at: string
           website_url: string | null
         }
         Insert: {
+          brand_accent_color?: string | null
+          brand_primary_color?: string | null
+          brand_text_color?: string | null
+          cover_image_url?: string | null
           created_at?: string
           description?: string | null
+          fun_facts?: Json
           id?: string
           location?: string | null
           logo_url?: string | null
+          mission?: string | null
           name: string
           owner_user_id?: string | null
+          tagline?: string | null
           updated_at?: string
           website_url?: string | null
         }
         Update: {
+          brand_accent_color?: string | null
+          brand_primary_color?: string | null
+          brand_text_color?: string | null
+          cover_image_url?: string | null
           created_at?: string
           description?: string | null
+          fun_facts?: Json
           id?: string
           location?: string | null
           logo_url?: string | null
+          mission?: string | null
           name?: string
           owner_user_id?: string | null
+          tagline?: string | null
           updated_at?: string
           website_url?: string | null
         }
