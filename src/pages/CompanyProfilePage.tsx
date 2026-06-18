@@ -101,18 +101,93 @@ const TransferOwnershipDialog: React.FC<{ companyId: string; currentOwnerId: str
 };
 
 // ── Edit Company Dialog ────────────────────────────────────────
+const PALETTE_PRESETS: Array<{ name: string; primary: string; accent: string; text: string }> = [
+  { name: 'Sunset Pop',    primary: '#ff6b35', accent: '#ffd23f', text: '#1a1a1a' },
+  { name: 'Electric Mint', primary: '#0ea5e9', accent: '#34d399', text: '#0b132b' },
+  { name: 'Berry Crush',   primary: '#db2777', accent: '#a855f7', text: '#1a1a1a' },
+  { name: 'Studio Noir',   primary: '#111111', accent: '#facc15', text: '#fafafa' },
+  { name: 'Coastal',       primary: '#0c2340', accent: '#5cbdb9', text: '#fafafa' },
+  { name: 'Peach Cream',   primary: '#f97316', accent: '#fb7185', text: '#1a1a1a' },
+];
+
 const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = ({ company, onSaved }) => {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(company.name);
   const [description, setDescription] = useState(company.description || '');
   const [location, setLocation] = useState(company.location || '');
   const [websiteUrl, setWebsiteUrl] = useState(company.website_url || '');
+  const [tagline, setTagline] = useState(company.tagline || '');
+  const [mission, setMission] = useState(company.mission || '');
+  const [primary, setPrimary] = useState(company.brand_primary_color || '#ff6b35');
+  const [accent, setAccent] = useState(company.brand_accent_color || '#ffd23f');
+  const [textColor, setTextColor] = useState(company.brand_text_color || '#1a1a1a');
+  const [funFacts, setFunFacts] = useState<string[]>(
+    Array.isArray(company.fun_facts) ? company.fun_facts : []
+  );
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState(company.logo_url || '');
+  const [coverUrl, setCoverUrl] = useState(company.cover_image_url || '');
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadImage = async (file: File, kind: 'logo' | 'cover') => {
+    const path = `companies/${company.id}/${kind}-${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from('profile-media').upload(path, file, { contentType: file.type, upsert: true });
+    if (error) throw error;
+    const { data } = supabase.storage.from('profile-media').getPublicUrl(path);
+    return data.publicUrl;
+  };
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const url = await uploadImage(file, 'logo');
+      setLogoUrl(url);
+      toast.success('Logo uploaded');
+    } catch (err: any) {
+      toast.error(err.message || 'Logo upload failed');
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverUploading(true);
+    try {
+      const url = await uploadImage(file, 'cover');
+      setCoverUrl(url);
+      toast.success('Cover uploaded');
+    } catch (err: any) {
+      toast.error(err.message || 'Cover upload failed');
+    } finally {
+      setCoverUploading(false);
+    }
+  };
 
   const updateMutation = useMutation({
     mutationFn: async () => {
+      const cleanedFacts = funFacts.map(f => f.trim()).filter(Boolean);
       const { error } = await supabase
         .from('companies')
-        .update({ name, description: description || null, location: location || null, website_url: websiteUrl || null })
+        .update({
+          name,
+          description: description || null,
+          location: location || null,
+          website_url: websiteUrl || null,
+          tagline: tagline || null,
+          mission: mission || null,
+          brand_primary_color: primary || null,
+          brand_accent_color: accent || null,
+          brand_text_color: textColor || null,
+          logo_url: logoUrl || null,
+          cover_image_url: coverUrl || null,
+          fun_facts: cleanedFacts,
+        } as any)
         .eq('id', company.id);
       if (error) throw error;
     },
@@ -121,29 +196,145 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
       onSaved();
       setOpen(false);
     },
-    onError: () => toast.error('Failed to update'),
+    onError: (e: any) => toast.error(e.message || 'Failed to update'),
   });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
-          <Settings className="w-4 h-4" />
-          Edit Company
+          <Sparkles className="w-4 h-4" />
+          Customize Page
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Company</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><Sparkles className="w-5 h-5" /> Customize Your Company Page</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <div><Label>Location</Label><Input value={location} onChange={(e) => setLocation(e.target.value)} /></div>
-          <div><Label>Website URL</Label><Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} /></div>
+
+        <div className="space-y-6">
+          {/* Identity */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Identity</h3>
+            <div><Label>Company name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+            <div>
+              <Label>Tagline <span className="text-xs text-muted-foreground">— short & punchy</span></Label>
+              <Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Where stories meet the stage." />
+            </div>
+            <div><Label>Short description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} /></div>
+            <div><Label>Mission / About</Label><Textarea value={mission} onChange={(e) => setMission(e.target.value)} rows={4} placeholder="Tell the world what you stand for..." /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><Label>Location</Label><Input value={location} onChange={(e) => setLocation(e.target.value)} /></div>
+              <div><Label>Website</Label><Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://..." /></div>
+            </div>
+          </div>
+
+          {/* Imagery */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Imagery</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Logo</Label>
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-full bg-muted overflow-hidden flex items-center justify-center border">
+                    {logoUrl ? <img src={logoUrl} alt="" className="w-full h-full object-cover" /> : <Building2 className="w-6 h-6 text-muted-foreground" />}
+                  </div>
+                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                  <Button type="button" size="sm" variant="outline" onClick={() => logoInputRef.current?.click()} disabled={logoUploading}>
+                    {logoUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4 mr-2" />} Upload
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <Label>Cover banner</Label>
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="w-24 h-16 rounded-md bg-muted overflow-hidden flex items-center justify-center border">
+                    {coverUrl ? <img src={coverUrl} alt="" className="w-full h-full object-cover" /> : <Image className="w-5 h-5 text-muted-foreground" />}
+                  </div>
+                  <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
+                  <Button type="button" size="sm" variant="outline" onClick={() => coverInputRef.current?.click()} disabled={coverUploading}>
+                    {coverUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4 mr-2" />} Upload
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Palette */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+              <Palette className="w-4 h-4" /> Color palette
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {PALETTE_PRESETS.map(p => (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() => { setPrimary(p.primary); setAccent(p.accent); setTextColor(p.text); }}
+                  className="rounded-lg p-3 text-left border border-border hover:scale-[1.02] transition-transform"
+                  style={{ background: `linear-gradient(135deg, ${p.primary}, ${p.accent})`, color: p.text }}
+                >
+                  <div className="text-xs font-semibold">{p.name}</div>
+                  <div className="flex gap-1 mt-2">
+                    <span className="w-4 h-4 rounded-full border border-white/40" style={{ background: p.primary }} />
+                    <span className="w-4 h-4 rounded-full border border-white/40" style={{ background: p.accent }} />
+                    <span className="w-4 h-4 rounded-full border border-white/40" style={{ background: p.text }} />
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs">Primary</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <input type="color" value={primary} onChange={e => setPrimary(e.target.value)} className="w-10 h-10 rounded cursor-pointer border" />
+                  <Input value={primary} onChange={e => setPrimary(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Accent</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <input type="color" value={accent} onChange={e => setAccent(e.target.value)} className="w-10 h-10 rounded cursor-pointer border" />
+                  <Input value={accent} onChange={e => setAccent(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Text on hero</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} className="w-10 h-10 rounded cursor-pointer border" />
+                  <Input value={textColor} onChange={e => setTextColor(e.target.value)} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Fun facts */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Fun facts</h3>
+            <p className="text-xs text-muted-foreground">Quick blurbs that show up as colorful cards on your page.</p>
+            {funFacts.map((fact, i) => (
+              <div key={i} className="flex gap-2">
+                <Input value={fact} onChange={e => {
+                  const next = [...funFacts]; next[i] = e.target.value; setFunFacts(next);
+                }} placeholder={`Fun fact #${i + 1}`} />
+                <Button type="button" size="icon" variant="ghost" onClick={() => setFunFacts(funFacts.filter((_, idx) => idx !== i))}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+            {funFacts.length < 6 && (
+              <Button type="button" variant="outline" size="sm" onClick={() => setFunFacts([...funFacts, ''])}>
+                <Plus className="w-4 h-4 mr-1" /> Add fun fact
+              </Button>
+            )}
+          </div>
         </div>
-        <DialogFooter>
-          <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>Save Changes</Button>
+
+        <DialogFooter className="mt-4">
+          <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            Save Changes
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
