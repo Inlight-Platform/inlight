@@ -498,6 +498,11 @@ const CompanyProfilePage: React.FC = () => {
   const currentProjects = companyProjects.filter(p => normalizeStatus(p.status) !== 'archived');
   const pastProjects = companyProjects.filter(p => normalizeStatus(p.status) === 'archived');
 
+  const brandPrimary = company?.brand_primary_color || '#ff6b35';
+  const brandAccent = company?.brand_accent_color || '#ffd23f';
+  const brandText = company?.brand_text_color || '#1a1a1a';
+  const funFacts: string[] = Array.isArray(company?.fun_facts) ? (company!.fun_facts as string[]) : [];
+
   // Photo upload
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -579,11 +584,18 @@ const CompanyProfilePage: React.FC = () => {
       {/* Cover / Hero - matches personal profile sizing */}
       <header className="relative">
         <div className="relative h-[200px] sm:h-[280px] md:h-[350px] lg:h-[450px] overflow-hidden">
-          <div
-            className="w-full h-full"
-            style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))' }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+          {company.cover_image_url ? (
+            <img src={company.cover_image_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div
+              className="w-full h-full"
+              style={{ background: `linear-gradient(135deg, ${brandPrimary}, ${brandAccent})` }}
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
+          {/* playful decorative blobs */}
+          <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full opacity-40 blur-3xl" style={{ background: brandAccent }} />
+          <div className="absolute bottom-10 left-1/3 w-32 h-32 rounded-full opacity-30 blur-3xl" style={{ background: brandPrimary }} />
         </div>
 
         {/* Company info - matches personal profile avatar offset */}
@@ -602,7 +614,22 @@ const CompanyProfilePage: React.FC = () => {
           {/* Name and meta */}
           <div className="pt-12 sm:pt-16 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl font-display font-bold">{company.name}</h1>
+              <h1
+                className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold tracking-tight"
+                style={{
+                  backgroundImage: `linear-gradient(135deg, ${brandPrimary}, ${brandAccent})`,
+                  WebkitBackgroundClip: 'text',
+                  backgroundClip: 'text',
+                  color: 'transparent',
+                }}
+              >
+                {company.name}
+              </h1>
+              {company.tagline && (
+                <p className="mt-1 text-base sm:text-lg font-medium text-foreground/90 italic">
+                  "{company.tagline}"
+                </p>
+              )}
               <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
                 {company.location && (
                   <span className="flex items-center gap-1">
@@ -637,6 +664,49 @@ const CompanyProfilePage: React.FC = () => {
       {company.description && (
         <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
           <p className="text-foreground">{company.description}</p>
+        </section>
+      )}
+
+      {/* Mission */}
+      {company.mission && (
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 border-b border-border">
+          <div
+            className="rounded-2xl p-6 sm:p-8 relative overflow-hidden"
+            style={{ background: `linear-gradient(135deg, ${brandPrimary}15, ${brandAccent}15)`, border: `1px solid ${brandPrimary}30` }}
+          >
+            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-20 blur-2xl" style={{ background: brandAccent }} />
+            <h2 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: brandPrimary }}>Our Mission</h2>
+            <p className="text-base sm:text-lg leading-relaxed text-foreground whitespace-pre-wrap relative">{company.mission}</p>
+          </div>
+        </section>
+      )}
+
+      {/* Fun Facts */}
+      {funFacts.length > 0 && (
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 border-b border-border">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5" style={{ color: brandPrimary }} />
+            <h2 className="text-lg font-display font-semibold">Fun facts</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {funFacts.map((fact, i) => {
+              const tints = [
+                `linear-gradient(135deg, ${brandPrimary}, ${brandAccent})`,
+                `linear-gradient(135deg, ${brandAccent}, ${brandPrimary})`,
+                `linear-gradient(135deg, ${brandPrimary}cc, ${brandAccent}cc)`,
+              ];
+              return (
+                <div
+                  key={i}
+                  className="rounded-2xl p-5 shadow-card transform hover:-translate-y-1 transition-transform"
+                  style={{ background: tints[i % tints.length], color: brandText }}
+                >
+                  <div className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">#{i + 1}</div>
+                  <p className="font-medium leading-snug">{fact}</p>
+                </div>
+              );
+            })}
+          </div>
         </section>
       )}
 
