@@ -1361,12 +1361,66 @@ const ProfilePage: React.FC = () => {
                       </a>
                     );
                   })()}
-                  {/* Headline - displayed below name */}
-                  {dbProfile?.headline && (
-                    <p className="text-muted-foreground text-sm mt-1">
-                      {dbProfile.headline}
-                    </p>
-                  )}
+                  {/* Generated headline: "Role1, Role2 based in Location" */}
+                  {(() => {
+                    const hasRoles = displayRoles.length > 0;
+                    const hasLocation = !!displayLocation;
+                    if (!hasRoles && !hasLocation && !isOwnProfile) return null;
+                    return (
+                      <p className="text-muted-foreground text-sm mt-1 flex flex-wrap items-center justify-center gap-x-1 gap-y-1">
+                        {hasRoles ? (
+                          displayRoles.map((role, i) => (
+                            <span key={`${role}-${i}`}>
+                              <span
+                                className={isOwnProfile ? 'cursor-pointer hover:text-foreground hover:underline' : ''}
+                                onClick={isOwnProfile ? startEditingRole : undefined}
+                              >
+                                {role}
+                              </span>
+                              {i < displayRoles.length - 1 ? ',' : ''}
+                            </span>
+                          ))
+                        ) : isOwnProfile ? (
+                          <span
+                            className="cursor-pointer italic hover:text-foreground hover:underline"
+                            onClick={startEditingRole}
+                          >
+                            Add roles
+                          </span>
+                        ) : null}
+                        {(hasLocation || isOwnProfile) && (
+                          <>
+                            <span>{hasRoles ? ' based in ' : ''}</span>
+                            {hasLocation ? (
+                              <span
+                                className={isOwnProfile ? 'cursor-pointer hover:text-foreground hover:underline' : ''}
+                                onClick={isOwnProfile ? startEditingLocation : undefined}
+                              >
+                                {displayLocation}
+                              </span>
+                            ) : isOwnProfile ? (
+                              <span
+                                className="cursor-pointer italic hover:text-foreground hover:underline"
+                                onClick={startEditingLocation}
+                              >
+                                add location
+                              </span>
+                            ) : null}
+                          </>
+                        )}
+                        {isOwnProfile && (
+                          <button
+                            type="button"
+                            onClick={startEditingRole}
+                            className="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full border border-border text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                            aria-label="Edit headline"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        )}
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
           </div>
