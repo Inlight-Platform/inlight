@@ -2111,6 +2111,49 @@ const ProfilePage: React.FC = () => {
         </section>
       </Collapsible>
 
+      {/* Skills Section - moved below Posts */}
+      <section id="profile-skills" className="scroll-mt-24 px-4 sm:px-6 lg:px-8 py-4">
+        <h2 className="text-lg font-display font-semibold mb-3">
+          Skills{displaySkills.length > 0 && ` (${displaySkills.length})`}
+        </h2>
+        <div className="p-3 rounded-xl border border-border bg-card/40">
+          <div className="flex flex-wrap items-center gap-2">
+            {displaySkills.map((skill) => (
+              <div key={skill} className="relative group">
+                <Badge variant="secondary" className="px-3 py-1">
+                  {skill}
+                  {isOwnProfile && (
+                    <button
+                      onClick={() => handleRemoveSkill(skill)}
+                      className="ml-1.5 hover:text-destructive transition-colors"
+                      aria-label={`Remove ${skill} skill`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </Badge>
+              </div>
+            ))}
+            {isOwnProfile && (
+              <SkillsCombobox
+                existingSkills={displaySkills}
+                onAddSkill={async (skill) => {
+                  const currentSkills = displaySkills || [];
+                  if (currentSkills.some(s => s.toLowerCase() === skill.toLowerCase())) {
+                    toast.error('Skill already exists');
+                    return;
+                  }
+                  await saveProfileField('skills', [...currentSkills, skill]);
+                }}
+              />
+            )}
+            {displaySkills.length === 0 && !isOwnProfile && (
+              <span className="text-muted-foreground text-sm">No skills added</span>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Conditional Professional Details - shown at bottom if user opted in */}
       {showProfessionalDetails && (
         <section id="profile-details" className="scroll-mt-24 px-4 py-4 sm:px-6 lg:px-8">
