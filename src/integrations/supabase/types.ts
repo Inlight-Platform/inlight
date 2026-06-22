@@ -1144,13 +1144,11 @@ export type Database = {
           preview_survey_role: string | null
           preview_survey_school: string | null
           primary_discipline: string | null
-          pronouns: string | null
           referred_by: string | null
           representation: string | null
           role: string | null
           secondary_disciplines: string[]
           show_gear_list: boolean
-          show_pronouns: boolean
           show_representation: boolean
           show_union_status: boolean
           skills: string[] | null
@@ -1193,13 +1191,11 @@ export type Database = {
           preview_survey_role?: string | null
           preview_survey_school?: string | null
           primary_discipline?: string | null
-          pronouns?: string | null
           referred_by?: string | null
           representation?: string | null
           role?: string | null
           secondary_disciplines?: string[]
           show_gear_list?: boolean
-          show_pronouns?: boolean
           show_representation?: boolean
           show_union_status?: boolean
           skills?: string[] | null
@@ -1242,13 +1238,11 @@ export type Database = {
           preview_survey_role?: string | null
           preview_survey_school?: string | null
           primary_discipline?: string | null
-          pronouns?: string | null
           referred_by?: string | null
           representation?: string | null
           role?: string | null
           secondary_disciplines?: string[]
           show_gear_list?: boolean
-          show_pronouns?: boolean
           show_representation?: boolean
           show_union_status?: boolean
           skills?: string[] | null
@@ -2443,12 +2437,11 @@ export type Database = {
           id: string | null
           instagram_url: string | null
           location: string | null
-          message_privacy: string | null
-          pronouns: string | null
+          primary_discipline: string | null
           representation: string | null
           role: string | null
+          secondary_disciplines: string[] | null
           show_gear_list: boolean | null
-          show_pronouns: boolean | null
           show_representation: boolean | null
           show_union_status: boolean | null
           skills: string[] | null
@@ -2478,12 +2471,11 @@ export type Database = {
           id?: string | null
           instagram_url?: string | null
           location?: string | null
-          message_privacy?: string | null
-          pronouns?: never
+          primary_discipline?: string | null
           representation?: never
           role?: string | null
+          secondary_disciplines?: string[] | null
           show_gear_list?: boolean | null
-          show_pronouns?: boolean | null
           show_representation?: boolean | null
           show_union_status?: boolean | null
           skills?: string[] | null
@@ -2513,12 +2505,11 @@ export type Database = {
           id?: string | null
           instagram_url?: string | null
           location?: string | null
-          message_privacy?: string | null
-          pronouns?: never
+          primary_discipline?: string | null
           representation?: never
           role?: string | null
+          secondary_disciplines?: string[] | null
           show_gear_list?: boolean | null
-          show_pronouns?: boolean | null
           show_representation?: boolean | null
           show_union_status?: boolean | null
           skills?: string[] | null
@@ -2600,6 +2591,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_profile_pronouns_settings: {
+        Args: never
+        Returns: {
+          pronouns: string
+          show_pronouns: boolean
+        }[]
+      }
       get_public_event_rsvps: {
         Args: { target_event_id: string }
         Returns: {
@@ -2641,6 +2639,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin_email: { Args: { _email: string }; Returns: boolean }
+      update_profile_pronouns_settings: {
+        Args: { _pronouns: string; _show_pronouns: boolean }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

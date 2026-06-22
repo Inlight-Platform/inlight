@@ -116,7 +116,6 @@ interface ProfileData {
   avatar_url: string | null;
   cover_url: string | null;
   location: string | null;
-  pronouns: string | null;
   role: string | null;
   badges: string[] | null;
   bio: string | null;
@@ -133,7 +132,6 @@ interface ProfileData {
   show_union_status?: boolean;
   show_representation?: boolean;
   show_gear_list?: boolean;
-  show_pronouns?: boolean;
 }
 
 class ProfileSectionErrorBoundary extends React.Component<
@@ -291,14 +289,12 @@ const ProfilePage: React.FC = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [isEditingRole, setIsEditingRole] = useState(false);
-  const [isEditingPronouns, setIsEditingPronouns] = useState(false);
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [editName, setEditName] = useState('');
   const [editStageName, setEditStageName] = useState('');
   const [isEditingStageName, setIsEditingStageName] = useState(false);
   const [editLocation, setEditLocation] = useState('');
   const [editRole, setEditRole] = useState('');
-  const [editPronouns, setEditPronouns] = useState('');
   const [editBio, setEditBio] = useState('');
   const [isEditingInstagram, setIsEditingInstagram] = useState(false);
   const [isEditingWebsite, setIsEditingWebsite] = useState(false);
@@ -369,7 +365,7 @@ const ProfilePage: React.FC = () => {
         // Own profile - use full profiles table
         const { data, error } = await supabase
           .from('profiles')
-          .select('display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list')
+          .select('display_name, stage_name, avatar_url, cover_url, location, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) {
@@ -381,7 +377,7 @@ const ProfilePage: React.FC = () => {
         // Other users - use public view (excludes email)
         const { data, error } = await supabase
           .from('profiles_public')
-          .select('display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list:gear_list_display, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list')
+          .select('display_name, stage_name, avatar_url, cover_url, location, role, badges, bio, union_status, representation, gear_list:gear_list_display, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) {
@@ -421,10 +417,6 @@ const ProfilePage: React.FC = () => {
   const displayRoles = displayRole 
     ? displayRole.split(',').map(r => r.trim()).filter(Boolean).slice(0, 4) 
     : [];
-  const showPronouns = dbProfile?.show_pronouns !== false; // default true
-  const displayPronouns = (isOwnProfile || showPronouns)
-    ? (dbProfile?.pronouns || user?.pronouns || '')
-    : '';
   const displayBadges = dbProfile?.badges || user?.badges || [];
   const displayBio = dbProfile?.bio || user?.bio || '';
   const displayUnionStatus = dbProfile?.union_status || user?.unionStatus || '';
@@ -908,13 +900,6 @@ const ProfilePage: React.FC = () => {
     await saveProfileField('role', updatedRoles);
   };
 
-  const handleSavePronouns = async () => {
-    const trimmed = editPronouns.trim() || null;
-    if (trimmed && !validateProfileField('pronouns', trimmed)) return;
-    const success = await saveProfileField('pronouns', trimmed);
-    if (success) setIsEditingPronouns(false);
-  };
-
   const handleSaveBio = async () => {
     const trimmed = editBio.trim() || null;
     if (trimmed && !validateProfileField('bio', trimmed)) return;
@@ -1140,11 +1125,6 @@ const ProfilePage: React.FC = () => {
   const startEditingRole = () => {
     setEditRole(displayRole);
     setIsEditingRole(true);
-  };
-
-  const startEditingPronouns = () => {
-    setEditPronouns(displayPronouns);
-    setIsEditingPronouns(true);
   };
 
   const startEditingBio = () => {
@@ -1496,13 +1476,6 @@ const ProfilePage: React.FC = () => {
                       <X className="w-3 h-3" />
                     </Button>
                   </div>
-                )}
-
-                {/* Pronouns - display only (shown when user has opted to show) */}
-                {displayPronouns && (
-                  <Badge variant="outline" className="text-sm font-medium">
-                    {displayPronouns}
-                  </Badge>
                 )}
 
                 {/* Affiliation badges */}
@@ -2175,7 +2148,6 @@ const ProfilePage: React.FC = () => {
               role: dbProfile.role,
               graduation_year: dbProfile.graduation_year,
               location: dbProfile.location,
-              pronouns: dbProfile.pronouns,
               instagram_url: dbProfile.instagram_url,
               website_url: dbProfile.website_url,
               badges: dbProfile.badges,
