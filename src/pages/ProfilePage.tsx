@@ -1575,8 +1575,8 @@ const ProfilePage: React.FC = () => {
                 {/* Affiliation badges */}
                 {displayBadges.map((badge) => (
                   <div key={badge} className="relative group">
-                    <button onClick={() => handleBadgeClick(badge)} className="badge-pill">
-                      #{badge}
+                     <button onClick={() => handleBadgeClick(badge)} className="badge-pill">
+                      {badge}
                     </button>
                     {isOwnProfile && (
                       <button
@@ -1606,7 +1606,7 @@ const ProfilePage: React.FC = () => {
                             onClick={() => handleAddBadgeToDb(option.tag)}
                             className="cursor-pointer"
                           >
-                            <span className="text-primary font-medium">#{option.tag}</span>
+                            <span className="text-primary font-medium">{option.tag}</span>
                             <span className="ml-2 text-muted-foreground text-sm">{option.label}</span>
                           </DropdownMenuItem>
                         ))}
