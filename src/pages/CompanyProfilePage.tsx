@@ -867,27 +867,25 @@ const CompanyProfilePage: React.FC = () => {
       {/* Photos - Collapsible */}
       <Collapsible open={photosOpen} onOpenChange={setPhotosOpen}>
         <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <CollapsibleTrigger className="flex items-center justify-between w-full group">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between w-full gap-2">
+            <CollapsibleTrigger className="flex items-center gap-2 flex-1 group text-left">
               <Image className="w-5 h-5 text-muted-foreground" />
               <h2 className="text-lg font-display font-semibold">Photos</h2>
               {companyPhotos.length > 0 && (
                 <Badge variant="secondary" className="text-xs">{companyPhotos.length}</Badge>
               )}
-            </div>
-            <div className="flex items-center gap-2">
-              {isOwner && photosOpen && (
-                <>
-                  <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-                  <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); photoInputRef.current?.click(); }} disabled={uploadingPhoto}>
-                    {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                    Add
-                  </Button>
-                </>
-              )}
-              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${photosOpen ? 'rotate-180' : ''}`} />
-            </div>
-          </CollapsibleTrigger>
+              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ml-auto ${photosOpen ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            {isOwner && photosOpen && (
+              <>
+                <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                <Button variant="outline" size="sm" onClick={() => photoInputRef.current?.click()} disabled={uploadingPhoto}>
+                  {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                  Add
+                </Button>
+              </>
+            )}
+          </div>
           <CollapsibleContent className="mt-4">
             {companyPhotos.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">No photos yet.</p>
