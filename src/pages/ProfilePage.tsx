@@ -1479,32 +1479,6 @@ const ProfilePage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Graduation Year - show for own profile (editable) or if set on other profiles */}
-                {isOwnProfile ? (
-                  <GradYearDialog
-                    currentStatus={displayGraduationStatus}
-                    currentYear={displayGraduationYear}
-                    onSave={handleSaveGradYear}
-                    onClear={handleClearGradYear}
-                    trigger={
-                      <Badge 
-                        variant="outline" 
-                        className="text-sm font-medium cursor-pointer hover:bg-secondary/80 gap-1"
-                      >
-                        <GraduationCap className="w-3 h-3" />
-                        {displayGraduationStatus && displayGraduationYear 
-                          ? `${displayGraduationStatus === 'student' ? 'Student' : 'Alumni'} '${displayGraduationYear.toString().slice(-2)}`
-                          : 'Grad Year'}
-                      </Badge>
-                    }
-                  />
-                ) : displayGraduationStatus && displayGraduationYear && (
-                  <Badge variant="outline" className="text-sm font-medium gap-1">
-                    <GraduationCap className="w-3 h-3" />
-                    {displayGraduationStatus === 'student' ? 'Student' : 'Alumni'} '{displayGraduationYear.toString().slice(-2)}
-                  </Badge>
-                )}
-
                 {/* Location */}
                 {isOwnProfile && isEditingLocation && (
                   <div className="flex items-center gap-1 min-w-[200px]">
@@ -1524,83 +1498,12 @@ const ProfilePage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Pronouns */}
-                {isOwnProfile && isEditingPronouns ? (
-                  <div className="flex items-center gap-1">
-                    <Input
-                      value={editPronouns}
-                      onChange={(e) => setEditPronouns(e.target.value)}
-                      className="w-24 h-7 text-sm"
-                      placeholder="Pronouns"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSavePronouns()}
-                      autoFocus
-                    />
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSavePronouns}>
-                      <Save className="w-3 h-3" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setIsEditingPronouns(false)}>
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className={`text-sm font-medium ${isOwnProfile ? 'cursor-pointer hover:bg-secondary/80' : ''}`}
-                    onClick={isOwnProfile ? startEditingPronouns : undefined}
-                  >
-                    {displayPronouns || (isOwnProfile ? 'Add pronouns' : '—')}
-                    {isOwnProfile && <Pencil className="w-3 h-3 ml-1 inline" />}
+                {/* Pronouns - display only (shown when user has opted to show) */}
+                {displayPronouns && (
+                  <Badge variant="outline" className="text-sm font-medium">
+                    {displayPronouns}
                   </Badge>
                 )}
-
-                {/* Instagram bubble */}
-                {isOwnProfile && isEditingInstagram ? (
-                  <div className="flex items-center gap-1">
-                    <Instagram className="w-4 h-4 text-muted-foreground" />
-                    <Input
-                      value={editInstagram}
-                      onChange={(e) => setEditInstagram(e.target.value)}
-                      className="w-40 h-7 text-sm"
-                      placeholder="@username"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSaveInstagram()}
-                      autoFocus
-                    />
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSaveInstagram}>
-                      <Save className="w-3 h-3" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setIsEditingInstagram(false)}>
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ) : displayInstagram ? (
-                  <a
-                    href={displayInstagram.startsWith('http') ? displayInstagram : `https://www.instagram.com/${displayInstagram.replace('@', '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer external"
-                    onClick={(e) => {
-                      const url = displayInstagram.startsWith('http')
-                        ? displayInstagram
-                        : `https://www.instagram.com/${displayInstagram.replace('@', '')}`;
-                      e.preventDefault();
-                      try { window.open(url, '_blank', 'noopener,noreferrer'); }
-                      catch { window.location.href = url; }
-                    }}
-                  >
-                    <Badge variant="outline" className="text-sm font-medium gap-1 cursor-pointer hover:bg-secondary/80">
-                      <Instagram className="w-3 h-3" />
-                      {displayInstagram.startsWith('@') ? displayInstagram : `@${displayInstagram.split('/').pop()}`}
-                    </Badge>
-                  </a>
-                ) : isOwnProfile ? (
-                  <Badge
-                    variant="outline"
-                    className="text-sm font-medium cursor-pointer hover:bg-secondary/80 gap-1"
-                    onClick={startEditingInstagram}
-                  >
-                    <Instagram className="w-3 h-3" />
-                    Add Instagram
-                  </Badge>
-                ) : null}
 
                 {/* Affiliation badges */}
                 {displayBadges.map((badge) => (
