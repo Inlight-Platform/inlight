@@ -422,6 +422,20 @@ const ProfilePage: React.FC = () => {
     : [];
   const displayBadges = dbProfile?.badges || user?.badges || [];
   const displayBio = dbProfile?.bio || user?.bio || '';
+
+  useEffect(() => {
+    if (bioExpanded) {
+      setBioCanExpand(true);
+      return;
+    }
+    const el = bioRef.current;
+    if (!el) {
+      setBioCanExpand(false);
+      return;
+    }
+    setBioCanExpand(el.scrollHeight > el.clientHeight + 1);
+  }, [displayBio, bioExpanded]);
+
   const displayUnionStatus = dbProfile?.union_status || user?.unionStatus || '';
   const displayRepresentation = dbProfile?.representation || user?.representation || '';
   const displayGearList = dbProfile?.gear_list || user?.gearList || [];
