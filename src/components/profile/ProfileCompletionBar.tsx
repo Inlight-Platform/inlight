@@ -10,7 +10,6 @@ interface ProfileCompletionBarProps {
     role: string | null;
     graduation_year: number | null;
     location: string | null;
-    pronouns: string | null;
     instagram_url: string | null;
     website_url: string | null;
     badges: string[] | null;
@@ -72,7 +71,6 @@ const ProfileCompletionBar: React.FC<ProfileCompletionBarProps> = ({ userId, pro
     { label: 'Role', complete: !!profile.role },
     { label: 'Grad Year', complete: !!profile.graduation_year },
     { label: 'Location', complete: !!profile.location },
-    { label: 'Pronouns', complete: !!profile.pronouns },
     { label: 'External Links', complete: !!(profile.instagram_url || profile.website_url) },
     { label: 'Affiliation', complete: !!(profile.badges && profile.badges.length > 0) },
     { label: 'Skills', complete: !!(profile.skills && profile.skills.length > 0) },
