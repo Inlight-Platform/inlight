@@ -37,6 +37,9 @@ import PlanSelectionPage from "./pages/PlanSelectionPage";
 import PreviewPage from "./pages/PreviewPage";
 import OnboardingSurveyPage from "./pages/OnboardingSurveyPage";
 import OnboardingGate from "@/components/layout/OnboardingGate";
+import PublicCompanyPage from "./pages/PublicCompanyPage";
+import PublicCompanyProjectPage from "./pages/PublicCompanyProjectPage";
+import PublicCompanyStaffPage from "./pages/PublicCompanyStaffPage";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +80,9 @@ const App = () => (
           <Route path="/showcase/join/:programSlug" element={<ShowcaseJoinPage />} />
           <Route path="/showcase/:programId/:userId" element={<ShowcaseProfilePage />} />
           <Route path="/showcase/:programId" element={<ShowcasePage />} />
+          <Route path="/c/:companyId" element={<PublicCompanyPage />} />
+          <Route path="/c/:companyId/project/:projectId" element={<PublicCompanyProjectPage />} />
+          <Route path="/c/:companyId/staff/:userId" element={<PublicCompanyStaffPage />} />
           <Route path="/plan-selection" element={<RequireAuth><PlanSelectionPage /></RequireAuth>} />
           <Route path="/onboarding" element={<RequireAuth><OnboardingSurveyPage /></RequireAuth>} />
 
