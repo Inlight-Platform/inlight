@@ -1280,27 +1280,6 @@ const ProfilePage: React.FC = () => {
       {/* Centered profile frame */}
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pb-10">
 
-      {/* Profile Completion Bar - only visible to profile owner */}
-      {isOwnProfile && dbProfile && (
-        <div>
-          <ProfileCompletionBar
-            userId={authUser!.id}
-            profile={{
-              role: dbProfile.role,
-              graduation_year: dbProfile.graduation_year,
-              location: dbProfile.location,
-              pronouns: dbProfile.pronouns,
-              instagram_url: dbProfile.instagram_url,
-              website_url: dbProfile.website_url,
-              badges: dbProfile.badges,
-              skills: dbProfile.skills,
-              bio: dbProfile.bio,
-            }}
-            creditsCount={dbCredits.length}
-          />
-        </div>
-      )}
-
       {/* Unified profile content frame */}
       <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card/60 shadow-sm">
       {/* Two-column header: info bubbles on the LEFT, avatar rectangle on the RIGHT */}
