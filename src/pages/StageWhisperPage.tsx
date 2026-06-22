@@ -808,5 +808,28 @@ const StageWhisperPage: React.FC = () => {
         isPending={adminDeleteMutation.isPending}
       />
     </div>;
+
+  if (isPublic) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="border-b border-border bg-background/95 backdrop-blur-sm">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Powered by Inlight</span>
+            {!user && (
+              <Button asChild size="sm" variant="ghost" className="gap-1.5">
+                <Link to="/auth">
+                  <LogIn className="w-4 h-4" />
+                  Sign in
+                </Link>
+              </Button>
+            )}
+          </div>
+        </div>
+        {content}
+      </div>
+    );
+  }
+
+  return content;
 };
 export default StageWhisperPage;
