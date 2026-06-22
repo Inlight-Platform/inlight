@@ -421,7 +421,10 @@ const ProfilePage: React.FC = () => {
   const displayRoles = displayRole 
     ? displayRole.split(',').map(r => r.trim()).filter(Boolean).slice(0, 4) 
     : [];
-  const displayPronouns = dbProfile?.pronouns || user?.pronouns || '';
+  const showPronouns = dbProfile?.show_pronouns !== false; // default true
+  const displayPronouns = (isOwnProfile || showPronouns)
+    ? (dbProfile?.pronouns || user?.pronouns || '')
+    : '';
   const displayBadges = dbProfile?.badges || user?.badges || [];
   const displayBio = dbProfile?.bio || user?.bio || '';
   const displayUnionStatus = dbProfile?.union_status || user?.unionStatus || '';
