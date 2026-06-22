@@ -451,6 +451,29 @@ const ProfileSettingsPage: React.FC = () => {
       }
     }
 
+    // Normalize Instagram if provided
+    const rawIg = instagramUrl.trim();
+    let normalizedIg: string | null = null;
+    if (rawIg) {
+      let handle = rawIg.replace(/^@/, '');
+      const igMatch = handle.match(/instagram\.com\/([^/?#]+)/i);
+      if (igMatch) handle = igMatch[1];
+      handle = handle.replace(/\/$/, '');
+      if (!/^[A-Za-z0-9._]+$/.test(handle)) {
+        toast.error('Please enter a valid Instagram username or URL');
+        return;
+      }
+      normalizedIg = `https://www.instagram.com/${handle}`;
+    }
+
+    // Pronouns
+    let pronounsToSave: string | null = null;
+    if (pronounsChoice === 'other') {
+      pronounsToSave = pronounsOther.trim() || null;
+    } else if (pronounsChoice !== 'none') {
+      pronounsToSave = pronounsChoice;
+    }
+
     updateProfile.mutate({
       display_name: trimmedName,
       stage_name: trimmedStageName,
@@ -458,6 +481,9 @@ const ProfileSettingsPage: React.FC = () => {
       headline: trimmedHeadline,
       message_privacy: messagePrivacy,
       website_url: normalizedWebsite,
+      instagram_url: normalizedIg,
+      pronouns: pronounsToSave,
+      show_pronouns: showPronouns,
     } as Partial<Profile>);
   };
 
