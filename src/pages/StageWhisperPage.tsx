@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Music, ExternalLink, Archive, Trash2 } from 'lucide-react';
+import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Music, ExternalLink, Archive, Trash2, Link2, LogIn } from 'lucide-react';
 import { isPast } from 'date-fns';
+import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -71,6 +72,8 @@ const StageWhisperPage: React.FC = () => {
   const {
     user
   } = useAuth();
+  const location = useLocation();
+  const isPublic = !user || location.pathname === '/industry-now';
   const {
     isSaved,
     saveShow,
@@ -308,7 +311,15 @@ const StageWhisperPage: React.FC = () => {
     </div>
   );
 
-  return <div className="w-full">
+  const copyPublicLink = () => {
+    const url = `${window.location.origin}/industry-now`;
+    navigator.clipboard.writeText(url).then(
+      () => toast.success('Public link copied!'),
+      () => toast.error('Could not copy link')
+    );
+  };
+
+  const content = <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -322,10 +333,16 @@ const StageWhisperPage: React.FC = () => {
               </div>
             </div>
 
-            <Button variant="outline" onClick={handleSurpriseMe} className="gap-2 border-primary/50 hover:bg-primary/10">
-              <Shuffle className="w-4 h-4" />
-              <span className="hidden sm:inline">Surprise Me!</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={copyPublicLink} className="gap-2 hidden sm:inline-flex">
+                <Link2 className="w-4 h-4" />
+                Copy public link
+              </Button>
+              <Button variant="outline" onClick={handleSurpriseMe} className="gap-2 border-primary/50 hover:bg-primary/10">
+                <Shuffle className="w-4 h-4" />
+                <span className="hidden sm:inline">Surprise Me!</span>
+              </Button>
+            </div>
           </div>
 
           {/* Industry Tabs */}
@@ -376,15 +393,15 @@ const StageWhisperPage: React.FC = () => {
 
         {/* Theatre View Toggle */}
         {industryTab === 'theatre' && <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-2 flex gap-2">
-            <Button variant={viewTab === 'discover' ? 'default' : 'ghost'} size="sm" onClick={() => setViewTab('discover')} className="gap-2">
+            {user && <Button variant={viewTab === 'discover' ? 'default' : 'ghost'} size="sm" onClick={() => setViewTab('discover')} className="gap-2">
               <Sparkles className="w-4 h-4" />
               Discover
-            </Button>
-            <Button variant={viewTab === 'my-list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewTab('my-list')} className="gap-2">
+            </Button>}
+            {user && <Button variant={viewTab === 'my-list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewTab('my-list')} className="gap-2">
               <Heart className="w-4 h-4" />
               My List
               {savedShowIds.length > 0 && <span className="ml-1 text-xs opacity-70">({savedShowIds.length})</span>}
-            </Button>
+            </Button>}
           </div>}
 
         {/* Theatre Category Tabs */}
@@ -446,10 +463,10 @@ const StageWhisperPage: React.FC = () => {
                       </>}
                   </p>
                 </div>
-                <AddShowDialog category={activeTab as 'off-off-broadway' | 'school'} trigger={<Button size="sm" className="gap-1.5 shrink-0">
+                {user && <AddShowDialog category={activeTab as 'off-off-broadway' | 'school'} trigger={<Button size="sm" className="gap-1.5 shrink-0">
                       <Plus className="w-4 h-4" />
                       Add Your Show
-                    </Button>} />
+                    </Button>} />}
               </div>}
 
             {viewTab === 'discover' ? <>
@@ -547,12 +564,12 @@ const StageWhisperPage: React.FC = () => {
                               <Film className="w-12 h-12 text-muted-foreground" />
                             </div>}
                           {/* Save Button */}
-                          <button
+                          {user && <button
                             onClick={(e) => { e.stopPropagation(); isFilmSaved(film.id) ? unsaveFilm(film.id) : saveFilm(film.id); }}
                             className={`absolute top-2 left-2 p-2 rounded-full backdrop-blur-sm transition-all duration-200 ${isFilmSaved(film.id) ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-black/50 text-white hover:bg-primary hover:text-primary-foreground'}`}
                           >
                             <Heart className={`w-4 h-4 ${isFilmSaved(film.id) ? 'fill-current' : ''}`} />
-                          </button>
+                          </button>}
                           <div className="absolute top-2 right-2">
                             <Badge className="bg-background/90 text-foreground">
                               ⭐ {film.rating.toFixed(1)}
@@ -597,12 +614,12 @@ const StageWhisperPage: React.FC = () => {
                       Share it with the community!
                     </p>
                   </div>
-                  <AddFilmDialog trigger={
+                  {user && <AddFilmDialog trigger={
                     <Button size="sm" className="gap-1.5 shrink-0">
                       <Plus className="w-4 h-4" />
                       Add Film
                     </Button>
-                  } />
+                  } />}
                 </div>
 
                 {loadingUserFilms ? <div className="flex items-center justify-center py-12">
@@ -688,12 +705,12 @@ const StageWhisperPage: React.FC = () => {
                         Let your community know!
                       </p>
                     </div>
-                    <AddMusicShowDialog showType={musicTab === 'cabarets' ? 'cabaret' : 'concert'} trigger={
+                    {user && <AddMusicShowDialog showType={musicTab === 'cabarets' ? 'cabaret' : 'concert'} trigger={
                       <Button size="sm" className="gap-1.5 shrink-0">
                         <Plus className="w-4 h-4" />
                         Add Show
                       </Button>
-                    } />
+                    } />}
                   </div>
 
                   {loadingMusicShows ? <div className="flex items-center justify-center py-12">
@@ -791,5 +808,28 @@ const StageWhisperPage: React.FC = () => {
         isPending={adminDeleteMutation.isPending}
       />
     </div>;
+
+  if (isPublic) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="border-b border-border bg-background/95 backdrop-blur-sm">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Powered by Inlight</span>
+            {!user && (
+              <Button asChild size="sm" variant="ghost" className="gap-1.5">
+                <Link to="/auth">
+                  <LogIn className="w-4 h-4" />
+                  Sign in
+                </Link>
+              </Button>
+            )}
+          </div>
+        </div>
+        {content}
+      </div>
+    );
+  }
+
+  return content;
 };
 export default StageWhisperPage;

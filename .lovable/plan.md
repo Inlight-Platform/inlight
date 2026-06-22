@@ -1,54 +1,57 @@
-## 1. Fix "Save Changes" on the company page
+## Goal
 
-The companies table already has all the new columns (`tagline`, `mission`, `brand_*`, `cover_image_url`, `fun_facts`, etc.) and they're in the generated types — so the schema is fine. To eliminate any flakiness and the `as any` cast that's masking real errors:
+Allow anyone to browse Industry Now (theatre / film / music shows) and click out to purchase tickets without signing into Inlight.
 
-- Remove the `as any` from the update payload in `EditCompanyDialog` so TypeScript catches mismatches.
-- Verify the companies UPDATE RLS policy allows `owner_user_id = auth.uid()` (and admin). If missing or restrictive, add a migration with a clear "Owners and admins can update companies" policy.
-- Invalidate the `['company', companyId]` query on success (currently it just calls `onSaved`) so the page re-renders with the saved values immediately instead of needing a refresh.
-- Surface the actual Postgres error in the toast (already partially there) so any future "schema cache" type error is visible, not silent.
+## Changes
 
-## 2. Public, login-free company page
+### 1. Public route
 
-Create a dedicated public route that anyone can visit without an Inlight account, and that does NOT expose the rest of the platform.
+In `src/App.tsx`, move `StageWhisperPage` out of the `AppShell`/`RequireAuth` block and register it as a public route:
 
-**Route**
+```
+<Route path="/industry-now" element={<StageWhisperPage />} />
+```
 
-- New public route `/c/:companyId` (e.g. `/c/dca36794-be45-478e-ac2f-f6e8879492fc` for A Lab Theater).
-- Registered OUTSIDE the `AppShell` / `RequireAuth` wrapper in `App.tsx`, alongside the existing public routes (`/showcase/...`, `/preview`, etc.).
-- A friendly slug option later is possible, but for now the company ID URL is enough and matches what already exists.
+Keep the existing in-app entry point working — anywhere that links to `/stage-whisper` will be updated/aliased to `/industry-now` (or we add both routes pointing to the same page). Authenticated users still see it inside the shell via a second route under `AppShell`.
 
-**Page (`PublicCompanyPage.tsx`)**
+### 2. Standalone layout for logged-out visitors
 
-- Standalone layout — no sidebar, no bottom nav, no Inlight logo linking home.
-- Reuses the same hero/branding the owner customized (cover image, logo, palette, tagline, mission, fun facts).
-- Sections rendered read-only:
-  - Active projects
-  - Past / archived projects
-  - Photo gallery
-  - Staff / management team (cards with name, role, headshot)
-- Clicking a project opens a public project view `/c/:companyId/project/:projectId` (read-only project page within the same shell).
-- Clicking a staff member opens a public profile view `/c/:companyId/staff/:userId` showing only the public-safe fields (name, headline, role, bio, avatar) — no DMs, no follow buttons, no link out to the broader platform.
-- Top bar contains only the company name/logo and (optionally) a small "Powered by Inlight" footer link — no nav into Feed, People, Messages, etc.
+`StageWhisperPage` currently relies on `PageLayout` (sidebar + bottom nav) being wrapped around it. For the public version:
 
-**Data access (anonymous reads)**
+- Detect `user` from `useAuth()`. If no user, render a lightweight standalone wrapper (Inlight logo + page title only, no sidebar, no links into the rest of the app, optional "Sign in" button in the corner).
+- If a user is signed in, behavior is unchanged (still works inside the existing shell route).
 
-Anonymous visitors are the `anon` Postgres role. Add a migration that grants minimal SELECT to `anon` and policies scoped only to what's needed:
+### 3. Hide login-only actions for guests
 
-- `companies`: allow `anon` SELECT for any single company (already largely public).
-- `projects`: allow `anon` SELECT WHERE `company_id IS NOT NULL` (only company-linked projects are exposed publicly).
-- `company_photos`: allow `anon` SELECT for rows tied to a company.
-- `profiles_public` view: allow `anon` SELECT of the safe fields for users who appear as company staff/owners or as members of company-linked projects.
-- Project sub-tables (`project_members`, `project_roles`) needed to render team — allow `anon` SELECT only when the parent project is linked to a company.
+Inside the page, conditionally hide controls that require an account:
+- "My List" / saved shows toggle and heart-save buttons
+- "Add show / film / music" buttons (admin/auth only — already gated, just confirm)
+- Admin delete controls (already gated by `isAdmin`)
 
-All other tables (messages, notifications, feed posts, opportunities, etc.) stay locked down — anonymous visitors literally cannot query them.
+Browsing, searching, filtering, "Surprise Me", and the detail sheets remain fully available.
 
-**Sharing**
+### 4. Ticket purchases
 
-In the existing company page (authenticated view), add a small "Copy public link" button next to "Customize Page" so owners can grab `https://inlight.social/c/<companyId>` to share.
+Tickets in Industry Now are external links (`ticket_url` on shows, films, and user-submitted music shows) — clicking opens the third-party box office (TodayTix, venue site, etc.). No Inlight auth is needed for those, so this already works for guests once the route is public. No Stripe/checkout changes required.
 
-## Technical notes
+### 5. Database (RLS) access for `anon`
 
-- Files to add: `src/pages/PublicCompanyPage.tsx`, `src/pages/PublicProjectPage.tsx`, `src/pages/PublicStaffProfilePage.tsx`, and one migration `supabase/migrations/<ts>_public_company_anon_access.sql`.
-- Files to edit: `src/App.tsx` (new public routes), `src/pages/CompanyProfilePage.tsx` (remove `as any`, invalidate query on save, add copy-link button).
-- No changes to `RequireAuth` — we just don't wrap the new routes.
-- No new dependencies.
+The page reads from these tables:
+- `nyc_shows`
+- `film_metrics`
+- `user_films` (active only)
+- `user_music_shows` (active only)
+
+Add a migration granting `SELECT` to the `anon` role and adding SELECT policies scoped to `is_active = true` rows (where applicable) so anonymous visitors can fetch the listings. No write access for `anon`.
+
+### 6. Sharing
+
+Add a small "Copy public link" button in the header for any visitor (copies `https://inlight.social/industry-now`).
+
+## Files
+
+- Edit `src/App.tsx` — add public `/industry-now` route outside `AppShell`.
+- Edit `src/pages/StageWhisperPage.tsx` — guest-aware layout, hide auth-only UI, add copy-link.
+- New migration `supabase/migrations/<ts>_public_industry_now.sql` — `anon` SELECT grants + policies on the four tables above.
+
+No new dependencies. No changes to ticket checkout flows.
