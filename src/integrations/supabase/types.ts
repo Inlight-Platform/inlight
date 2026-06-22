@@ -2600,13 +2600,6 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_profile_pronouns_settings: {
-        Args: never
-        Returns: {
-          pronouns: string
-          show_pronouns: boolean
-        }[]
-      }
       get_public_event_rsvps: {
         Args: { target_event_id: string }
         Returns: {
@@ -2648,10 +2641,6 @@ export type Database = {
         Returns: boolean
       }
       is_admin_email: { Args: { _email: string }; Returns: boolean }
-      update_profile_pronouns_settings: {
-        Args: { _pronouns: string; _show_pronouns: boolean }
-        Returns: undefined
-      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

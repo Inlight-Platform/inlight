@@ -60,6 +60,7 @@ const PROFILE_SETTINGS_FIELDS = `
   website_url,
   instagram_url,
   pronouns,
+  show_pronouns,
   message_privacy,
   union_status,
   representation,
@@ -264,14 +265,6 @@ const ProfileSettingsPage: React.FC = () => {
 
       if (!profileByUserId) return null;
 
-      const { data: pronounSettings, error: pronounSettingsError } = await supabase
-        .rpc('get_profile_pronouns_settings')
-        .maybeSingle();
-
-      if (pronounSettingsError) {
-        console.error('ProfileSettingsPage: failed loading pronoun settings', pronounSettingsError);
-      }
-
       const { data: notificationSettings, error: notificationSettingsError } = await supabase
         .from('profiles')
         .select('email_notifications')
@@ -284,8 +277,6 @@ const ProfileSettingsPage: React.FC = () => {
 
       return {
         ...(profileByUserId as Profile),
-        pronouns: pronounSettings?.pronouns ?? (profileByUserId as Profile).pronouns ?? null,
-        show_pronouns: pronounSettings?.show_pronouns ?? true,
         email_notifications: notificationSettings?.email_notifications ?? true,
       };
     },
@@ -342,22 +333,13 @@ const ProfileSettingsPage: React.FC = () => {
   const updateProfile = useMutation({
     mutationFn: async (updates: Partial<Profile>) => {
       if (!user?.id) throw new Error('Not authenticated');
-      const { pronouns, show_pronouns, ...profileUpdates } = updates;
       
       const { data, error } = await supabase
         .from('profiles')
-        .update(profileUpdates)
+        .update(updates)
         .eq('user_id', user.id);
       
       if (error) throw error;
-
-      const { error: pronounsError } = await supabase.rpc('update_profile_pronouns_settings', {
-        _pronouns: pronouns ?? '',
-        _show_pronouns: show_pronouns ?? true,
-      });
-
-      if (pronounsError) throw pronounsError;
-
       return data;
     },
     onSuccess: () => {
