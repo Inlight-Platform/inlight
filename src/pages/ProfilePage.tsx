@@ -1606,24 +1606,32 @@ const ProfilePage: React.FC = () => {
                 {' '}connection{networkCounts?.networkCount !== 1 ? 's' : ''}
               </button>
               {isOwnProfile && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 rounded-full border-border bg-background/70 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                      aria-label="Share profile"
-                    >
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="center" className="bg-popover border-border">
-                    <DropdownMenuItem>
-                      <Share2 className="w-4 h-4 mr-2" />
-                      Share Profile
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 rounded-full border-border bg-background/70 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  aria-label="Share profile"
+                  onClick={async () => {
+                    const url = `${window.location.origin}/profile/${resolvedUserId}`;
+                    try {
+                      if (navigator.share) {
+                        await navigator.share({ title: displayName || 'Profile', url });
+                      } else {
+                        await navigator.clipboard.writeText(url);
+                        toast.success('Profile link copied to clipboard');
+                      }
+                    } catch (err) {
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast.success('Profile link copied to clipboard');
+                      } catch {
+                        toast.error('Could not share profile');
+                      }
+                    }
+                  }}
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
               )}
             </div>
             {isOwnProfile && (
