@@ -1,57 +1,34 @@
-## Goal
+# Profile page adjustments
 
-Allow anyone to browse Industry Now (theatre / film / music shows) and click out to purchase tickets without signing into Inlight.
+All changes are frontend-only in `src/pages/ProfilePage.tsx` and `src/pages/ProfileSettingsPage.tsx`. No schema changes — `profiles.website_url` already exists.
 
-## Changes
+## 1. Move Skills section below Posts
+- Cut the Skills `<Collapsible>` block (currently in the LEFT column of the profile header, around lines 1623–1665).
+- Re-render it as its own section directly **after** the Posts section (after line ~2160), wrapped in the same rounded card styling used by other sections so it reads as a peer of Posts.
+- Keep all existing add/remove handlers (`handleRemoveSkill`, `SkillsCombobox` + `saveProfileField('skills', ...)`) — only the JSX location changes.
 
-### 1. Public route
+## 2. Website link in Settings + under name
+- **Settings (`ProfileSettingsPage.tsx`)**: add a "Website" text input in the existing links/contact section (next to Instagram if present, otherwise in the main profile form). On save, write to `profiles.website_url` via the page's existing `saveProfileField` / update pattern. Validate by attempting `new URL(value)` (prepend `https://` if the user omits the scheme); show an inline error and skip save if invalid. Empty string clears the field.
+- **Profile (`ProfilePage.tsx`)**: directly below the name block (after the real-name `<div>` around line 1368, before the headline), if `dbProfile?.website_url` is set render:
+  ```
+  <a href={normalizedUrl} target="_blank" rel="noopener noreferrer"
+     className="text-sm italic text-blue-500 hover:underline">
+    {displayUrl}
+  </a>
+  ```
+  Show the host + path (strip protocol) for `displayUrl`. Visible on both own and others' profiles. No edit affordance here — editing happens in Settings.
 
-In `src/App.tsx`, move `StageWhisperPage` out of the `AppShell`/`RequireAuth` block and register it as a public route:
+## 3. Remove hashtags on the profile
+- In the Affiliation badges render (line ~1579), drop the leading `#`: render `{badge}` instead of `#{badge}`.
+- In the Affiliation dropdown menu items (line ~1609), drop the `#` as well: render `{option.tag}` instead of `#{option.tag}`.
+- No other behavior changes — affiliations still add/remove the same way.
 
-```
-<Route path="/industry-now" element={<StageWhisperPage />} />
-```
+## 4. Move Profile Completion bar to bottom
+- Remove the `<ProfileCompletionBar>` block currently at lines 1283–1302 (top of the page, above the profile card).
+- Re-render the same component at the very bottom of the profile content, after the (newly relocated) Skills section, still gated on `isOwnProfile && dbProfile`. Pass the same props.
 
-Keep the existing in-app entry point working — anywhere that links to `/stage-whisper` will be updated/aliased to `/industry-now` (or we add both routes pointing to the same page). Authenticated users still see it inside the shell via a second route under `AppShell`.
+## Files touched
+- `src/pages/ProfilePage.tsx`
+- `src/pages/ProfileSettingsPage.tsx`
 
-### 2. Standalone layout for logged-out visitors
-
-`StageWhisperPage` currently relies on `PageLayout` (sidebar + bottom nav) being wrapped around it. For the public version:
-
-- Detect `user` from `useAuth()`. If no user, render a lightweight standalone wrapper (Inlight logo + page title only, no sidebar, no links into the rest of the app, optional "Sign in" button in the corner).
-- If a user is signed in, behavior is unchanged (still works inside the existing shell route).
-
-### 3. Hide login-only actions for guests
-
-Inside the page, conditionally hide controls that require an account:
-- "My List" / saved shows toggle and heart-save buttons
-- "Add show / film / music" buttons (admin/auth only — already gated, just confirm)
-- Admin delete controls (already gated by `isAdmin`)
-
-Browsing, searching, filtering, "Surprise Me", and the detail sheets remain fully available.
-
-### 4. Ticket purchases
-
-Tickets in Industry Now are external links (`ticket_url` on shows, films, and user-submitted music shows) — clicking opens the third-party box office (TodayTix, venue site, etc.). No Inlight auth is needed for those, so this already works for guests once the route is public. No Stripe/checkout changes required.
-
-### 5. Database (RLS) access for `anon`
-
-The page reads from these tables:
-- `nyc_shows`
-- `film_metrics`
-- `user_films` (active only)
-- `user_music_shows` (active only)
-
-Add a migration granting `SELECT` to the `anon` role and adding SELECT policies scoped to `is_active = true` rows (where applicable) so anonymous visitors can fetch the listings. No write access for `anon`.
-
-### 6. Sharing
-
-Add a small "Copy public link" button in the header for any visitor (copies `https://inlight.social/industry-now`).
-
-## Files
-
-- Edit `src/App.tsx` — add public `/industry-now` route outside `AppShell`.
-- Edit `src/pages/StageWhisperPage.tsx` — guest-aware layout, hide auth-only UI, add copy-link.
-- New migration `supabase/migrations/<ts>_public_industry_now.sql` — `anon` SELECT grants + policies on the four tables above.
-
-No new dependencies. No changes to ticket checkout flows.
+No new dependencies, no DB migration, no changes to business logic.
