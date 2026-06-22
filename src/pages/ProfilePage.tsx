@@ -289,14 +289,12 @@ const ProfilePage: React.FC = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [isEditingRole, setIsEditingRole] = useState(false);
-  const [isEditingPronouns, setIsEditingPronouns] = useState(false);
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [editName, setEditName] = useState('');
   const [editStageName, setEditStageName] = useState('');
   const [isEditingStageName, setIsEditingStageName] = useState(false);
   const [editLocation, setEditLocation] = useState('');
   const [editRole, setEditRole] = useState('');
-  const [editPronouns, setEditPronouns] = useState('');
   const [editBio, setEditBio] = useState('');
   const [isEditingInstagram, setIsEditingInstagram] = useState(false);
   const [isEditingWebsite, setIsEditingWebsite] = useState(false);
