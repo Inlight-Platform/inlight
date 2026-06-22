@@ -441,59 +441,6 @@ const ProfileSettingsPage: React.FC = () => {
           <h1 className="text-2xl font-bold">Profile Settings</h1>
         </div>
 
-        {/* Profile Preview with Avatar Upload */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Preview</CardTitle>
-            <CardDescription>How others will see your profile</CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center gap-4">
-            <div className="relative">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarUrl} alt={displayName} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                  {getInitials(displayName, user?.email || null)}
-                </AvatarFallback>
-              </Avatar>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                onChange={handleAvatarSelect}
-                className="hidden"
-              />
-              <button
-                onClick={() => avatarInputRef.current?.click()}
-                disabled={uploadingAvatar}
-                className="absolute bottom-0 right-0 p-1.5 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-              >
-                {uploadingAvatar ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Camera className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-
-            {/* Avatar Cropper Modal */}
-            <AvatarCropper
-              open={cropperOpen}
-              onClose={() => setCropperOpen(false)}
-              imageSrc={cropperImageSrc}
-              onCropComplete={handleCroppedAvatarUpload}
-            />
-            <div className="space-y-1">
-              <p className="font-semibold text-lg">
-                {displayName || user?.email?.split('@')[0] || 'Anonymous'}
-              </p>
-              {headline && (
-                <p className="text-muted-foreground text-sm">{headline}</p>
-              )}
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Settings Form */}
         <Card>
           <CardHeader>
