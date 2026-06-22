@@ -393,15 +393,15 @@ const StageWhisperPage: React.FC = () => {
 
         {/* Theatre View Toggle */}
         {industryTab === 'theatre' && <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-2 flex gap-2">
-            <Button variant={viewTab === 'discover' ? 'default' : 'ghost'} size="sm" onClick={() => setViewTab('discover')} className="gap-2">
+            {user && <Button variant={viewTab === 'discover' ? 'default' : 'ghost'} size="sm" onClick={() => setViewTab('discover')} className="gap-2">
               <Sparkles className="w-4 h-4" />
               Discover
-            </Button>
-            <Button variant={viewTab === 'my-list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewTab('my-list')} className="gap-2">
+            </Button>}
+            {user && <Button variant={viewTab === 'my-list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewTab('my-list')} className="gap-2">
               <Heart className="w-4 h-4" />
               My List
               {savedShowIds.length > 0 && <span className="ml-1 text-xs opacity-70">({savedShowIds.length})</span>}
-            </Button>
+            </Button>}
           </div>}
 
         {/* Theatre Category Tabs */}
