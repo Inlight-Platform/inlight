@@ -72,6 +72,8 @@ const StageWhisperPage: React.FC = () => {
   const {
     user
   } = useAuth();
+  const location = useLocation();
+  const isPublic = !user || location.pathname === '/industry-now';
   const {
     isSaved,
     saveShow,
@@ -309,7 +311,15 @@ const StageWhisperPage: React.FC = () => {
     </div>
   );
 
-  return <div className="w-full">
+  const copyPublicLink = () => {
+    const url = `${window.location.origin}/industry-now`;
+    navigator.clipboard.writeText(url).then(
+      () => toast.success('Public link copied!'),
+      () => toast.error('Could not copy link')
+    );
+  };
+
+  const content = <div className="w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -323,10 +333,16 @@ const StageWhisperPage: React.FC = () => {
               </div>
             </div>
 
-            <Button variant="outline" onClick={handleSurpriseMe} className="gap-2 border-primary/50 hover:bg-primary/10">
-              <Shuffle className="w-4 h-4" />
-              <span className="hidden sm:inline">Surprise Me!</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={copyPublicLink} className="gap-2 hidden sm:inline-flex">
+                <Link2 className="w-4 h-4" />
+                Copy public link
+              </Button>
+              <Button variant="outline" onClick={handleSurpriseMe} className="gap-2 border-primary/50 hover:bg-primary/10">
+                <Shuffle className="w-4 h-4" />
+                <span className="hidden sm:inline">Surprise Me!</span>
+              </Button>
+            </div>
           </div>
 
           {/* Industry Tabs */}
