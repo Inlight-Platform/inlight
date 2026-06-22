@@ -133,6 +133,7 @@ interface ProfileData {
   show_union_status?: boolean;
   show_representation?: boolean;
   show_gear_list?: boolean;
+  show_pronouns?: boolean;
 }
 
 class ProfileSectionErrorBoundary extends React.Component<
@@ -368,7 +369,7 @@ const ProfilePage: React.FC = () => {
         // Own profile - use full profiles table
         const { data, error } = await supabase
           .from('profiles')
-          .select('display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list')
+          .select('display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list, show_pronouns')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) {
@@ -380,7 +381,7 @@ const ProfilePage: React.FC = () => {
         // Other users - use public view (excludes email)
         const { data, error } = await supabase
           .from('profiles_public')
-          .select('display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list:gear_list_display, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list')
+          .select('display_name, stage_name, avatar_url, cover_url, location, pronouns, role, badges, bio, union_status, representation, gear_list:gear_list_display, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list, show_pronouns')
           .eq('user_id', resolvedUserId)
           .maybeSingle();
         if (error) {
@@ -420,7 +421,10 @@ const ProfilePage: React.FC = () => {
   const displayRoles = displayRole 
     ? displayRole.split(',').map(r => r.trim()).filter(Boolean).slice(0, 4) 
     : [];
-  const displayPronouns = dbProfile?.pronouns || user?.pronouns || '';
+  const showPronouns = dbProfile?.show_pronouns !== false; // default true
+  const displayPronouns = (isOwnProfile || showPronouns)
+    ? (dbProfile?.pronouns || user?.pronouns || '')
+    : '';
   const displayBadges = dbProfile?.badges || user?.badges || [];
   const displayBio = dbProfile?.bio || user?.bio || '';
   const displayUnionStatus = dbProfile?.union_status || user?.unionStatus || '';
@@ -1345,20 +1349,48 @@ const ProfilePage: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  {/* Website link - displayed below name */}
-                  {displayWebsite && (() => {
-                    const href = /^https?:\/\//i.test(displayWebsite) ? displayWebsite : `https://${displayWebsite}`;
-                    let label = displayWebsite;
-                    try { label = new URL(href).host.replace(/^www\./, '') + new URL(href).pathname.replace(/\/$/, ''); } catch {}
+                  {/* Website + Instagram links displayed below name */}
+                  {(displayWebsite || displayInstagram) && (() => {
+                    const websiteEl = displayWebsite ? (() => {
+                      const href = /^https?:\/\//i.test(displayWebsite) ? displayWebsite : `https://${displayWebsite}`;
+                      let label = displayWebsite;
+                      try { label = new URL(href).host.replace(/^www\./, '') + new URL(href).pathname.replace(/\/$/, ''); } catch {}
+                      return (
+                        <a
+                          key="web"
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm italic text-blue-500 hover:underline"
+                        >
+                          {label}
+                        </a>
+                      );
+                    })() : null;
+                    const instagramEl = displayInstagram ? (() => {
+                      const handle = displayInstagram.replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '');
+                      const igHref = /^https?:\/\//i.test(displayInstagram)
+                        ? displayInstagram
+                        : `https://www.instagram.com/${handle}`;
+                      return (
+                        <a
+                          key="ig"
+                          href={igHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm italic text-pink-600 hover:underline"
+                          style={{ color: '#c2185b' }}
+                        >
+                          <Instagram className="w-3.5 h-3.5" style={{ color: '#ec4899' }} />
+                          @{handle}
+                        </a>
+                      );
+                    })() : null;
                     return (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block text-sm italic text-blue-500 hover:underline mt-1"
-                      >
-                        {label}
-                      </a>
+                      <div className="mt-1 flex items-center justify-center gap-3 flex-wrap">
+                        {websiteEl}
+                        {instagramEl}
+                      </div>
                     );
                   })()}
                   {/* Generated headline: "Role1, Role2 based in Location" */}
@@ -1447,32 +1479,6 @@ const ProfilePage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Graduation Year - show for own profile (editable) or if set on other profiles */}
-                {isOwnProfile ? (
-                  <GradYearDialog
-                    currentStatus={displayGraduationStatus}
-                    currentYear={displayGraduationYear}
-                    onSave={handleSaveGradYear}
-                    onClear={handleClearGradYear}
-                    trigger={
-                      <Badge 
-                        variant="outline" 
-                        className="text-sm font-medium cursor-pointer hover:bg-secondary/80 gap-1"
-                      >
-                        <GraduationCap className="w-3 h-3" />
-                        {displayGraduationStatus && displayGraduationYear 
-                          ? `${displayGraduationStatus === 'student' ? 'Student' : 'Alumni'} '${displayGraduationYear.toString().slice(-2)}`
-                          : 'Grad Year'}
-                      </Badge>
-                    }
-                  />
-                ) : displayGraduationStatus && displayGraduationYear && (
-                  <Badge variant="outline" className="text-sm font-medium gap-1">
-                    <GraduationCap className="w-3 h-3" />
-                    {displayGraduationStatus === 'student' ? 'Student' : 'Alumni'} '{displayGraduationYear.toString().slice(-2)}
-                  </Badge>
-                )}
-
                 {/* Location */}
                 {isOwnProfile && isEditingLocation && (
                   <div className="flex items-center gap-1 min-w-[200px]">
@@ -1492,83 +1498,12 @@ const ProfilePage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Pronouns */}
-                {isOwnProfile && isEditingPronouns ? (
-                  <div className="flex items-center gap-1">
-                    <Input
-                      value={editPronouns}
-                      onChange={(e) => setEditPronouns(e.target.value)}
-                      className="w-24 h-7 text-sm"
-                      placeholder="Pronouns"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSavePronouns()}
-                      autoFocus
-                    />
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSavePronouns}>
-                      <Save className="w-3 h-3" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setIsEditingPronouns(false)}>
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className={`text-sm font-medium ${isOwnProfile ? 'cursor-pointer hover:bg-secondary/80' : ''}`}
-                    onClick={isOwnProfile ? startEditingPronouns : undefined}
-                  >
-                    {displayPronouns || (isOwnProfile ? 'Add pronouns' : '—')}
-                    {isOwnProfile && <Pencil className="w-3 h-3 ml-1 inline" />}
+                {/* Pronouns - display only (shown when user has opted to show) */}
+                {displayPronouns && (
+                  <Badge variant="outline" className="text-sm font-medium">
+                    {displayPronouns}
                   </Badge>
                 )}
-
-                {/* Instagram bubble */}
-                {isOwnProfile && isEditingInstagram ? (
-                  <div className="flex items-center gap-1">
-                    <Instagram className="w-4 h-4 text-muted-foreground" />
-                    <Input
-                      value={editInstagram}
-                      onChange={(e) => setEditInstagram(e.target.value)}
-                      className="w-40 h-7 text-sm"
-                      placeholder="@username"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSaveInstagram()}
-                      autoFocus
-                    />
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSaveInstagram}>
-                      <Save className="w-3 h-3" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setIsEditingInstagram(false)}>
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ) : displayInstagram ? (
-                  <a
-                    href={displayInstagram.startsWith('http') ? displayInstagram : `https://www.instagram.com/${displayInstagram.replace('@', '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer external"
-                    onClick={(e) => {
-                      const url = displayInstagram.startsWith('http')
-                        ? displayInstagram
-                        : `https://www.instagram.com/${displayInstagram.replace('@', '')}`;
-                      e.preventDefault();
-                      try { window.open(url, '_blank', 'noopener,noreferrer'); }
-                      catch { window.location.href = url; }
-                    }}
-                  >
-                    <Badge variant="outline" className="text-sm font-medium gap-1 cursor-pointer hover:bg-secondary/80">
-                      <Instagram className="w-3 h-3" />
-                      {displayInstagram.startsWith('@') ? displayInstagram : `@${displayInstagram.split('/').pop()}`}
-                    </Badge>
-                  </a>
-                ) : isOwnProfile ? (
-                  <Badge
-                    variant="outline"
-                    className="text-sm font-medium cursor-pointer hover:bg-secondary/80 gap-1"
-                    onClick={startEditingInstagram}
-                  >
-                    <Instagram className="w-3 h-3" />
-                    Add Instagram
-                  </Badge>
-                ) : null}
 
                 {/* Affiliation badges */}
                 {displayBadges.map((badge) => (
@@ -1671,24 +1606,32 @@ const ProfilePage: React.FC = () => {
                 {' '}connection{networkCounts?.networkCount !== 1 ? 's' : ''}
               </button>
               {isOwnProfile && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 rounded-full border-border bg-background/70 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                      aria-label="Share profile"
-                    >
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="center" className="bg-popover border-border">
-                    <DropdownMenuItem>
-                      <Share2 className="w-4 h-4 mr-2" />
-                      Share Profile
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 rounded-full border-border bg-background/70 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  aria-label="Share profile"
+                  onClick={async () => {
+                    const url = `${window.location.origin}/profile/${resolvedUserId}`;
+                    try {
+                      if (navigator.share) {
+                        await navigator.share({ title: displayName || 'Profile', url });
+                      } else {
+                        await navigator.clipboard.writeText(url);
+                        toast.success('Profile link copied to clipboard');
+                      }
+                    } catch (err) {
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast.success('Profile link copied to clipboard');
+                      } catch {
+                        toast.error('Could not share profile');
+                      }
+                    }
+                  }}
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
               )}
             </div>
             {isOwnProfile && (
@@ -1742,6 +1685,35 @@ const ProfilePage: React.FC = () => {
                 />
               </>
             )}
+            {/* Graduation badge - bottom-left of avatar */}
+            {isOwnProfile ? (
+              <div className="absolute bottom-2 left-2">
+                <GradYearDialog
+                  currentStatus={displayGraduationStatus}
+                  currentYear={displayGraduationYear}
+                  onSave={handleSaveGradYear}
+                  onClear={handleClearGradYear}
+                  trigger={
+                    <Badge
+                      variant="outline"
+                      className="text-xs font-medium cursor-pointer bg-background/80 backdrop-blur hover:bg-secondary/80 gap-1"
+                    >
+                      <GraduationCap className="w-3 h-3" />
+                      {displayGraduationStatus && displayGraduationYear
+                        ? `${displayGraduationStatus === 'student' ? 'Student' : 'Alumni'} '${displayGraduationYear.toString().slice(-2)}`
+                        : 'Grad Year'}
+                    </Badge>
+                  }
+                />
+              </div>
+            ) : displayGraduationStatus && displayGraduationYear ? (
+              <div className="absolute bottom-2 left-2">
+                <Badge variant="outline" className="text-xs font-medium bg-background/80 backdrop-blur gap-1">
+                  <GraduationCap className="w-3 h-3" />
+                  {displayGraduationStatus === 'student' ? 'Student' : 'Alumni'} '{displayGraduationYear.toString().slice(-2)}
+                </Badge>
+              </div>
+            ) : null}
           </div>
 
           {/* Action bubbles below avatar */}

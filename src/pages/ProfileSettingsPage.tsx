@@ -23,6 +23,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useTour } from '@/hooks/useTour';
 import { useTheme } from '@/hooks/useTheme';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Profile {
   id: string;
@@ -33,6 +34,9 @@ interface Profile {
   avatar_url: string | null;
   headline: string | null;
   website_url: string | null;
+  instagram_url: string | null;
+  pronouns: string | null;
+  show_pronouns: boolean;
   message_privacy: string;
   email_notifications: boolean;
   union_status: string | null;
@@ -54,6 +58,9 @@ const PROFILE_SETTINGS_FIELDS = `
   avatar_url,
   headline,
   website_url,
+  instagram_url,
+  pronouns,
+  show_pronouns,
   message_privacy,
   union_status,
   representation,
@@ -218,6 +225,11 @@ const ProfileSettingsPage: React.FC = () => {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [headline, setHeadline] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const PRONOUN_PRESETS = ['she/her', 'he/him', 'they/them'];
+  const [pronounsChoice, setPronounsChoice] = useState<string>('none'); // 'none' | preset | 'other'
+  const [pronounsOther, setPronounsOther] = useState('');
+  const [showPronouns, setShowPronouns] = useState(true);
   const [messagePrivacy, setMessagePrivacy] = useState('mutuals_only');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -292,6 +304,19 @@ const ProfileSettingsPage: React.FC = () => {
       setAvatarUrl(profile.avatar_url || '');
       setHeadline(profile.headline || '');
       setWebsiteUrl(((profile as unknown as { website_url?: string | null }).website_url) || '');
+      setInstagramUrl(((profile as unknown as { instagram_url?: string | null }).instagram_url) || '');
+      const pronounsValue = ((profile as unknown as { pronouns?: string | null }).pronouns) || '';
+      if (!pronounsValue) {
+        setPronounsChoice('none');
+        setPronounsOther('');
+      } else if (PRONOUN_PRESETS.includes(pronounsValue.toLowerCase())) {
+        setPronounsChoice(pronounsValue.toLowerCase());
+        setPronounsOther('');
+      } else {
+        setPronounsChoice('other');
+        setPronounsOther(pronounsValue);
+      }
+      setShowPronouns(((profile as unknown as { show_pronouns?: boolean }).show_pronouns) ?? true);
       setMessagePrivacy(profile.message_privacy || 'mutuals_only');
       setEmailNotifications(profile.email_notifications ?? true);
       // Professional details
@@ -426,6 +451,29 @@ const ProfileSettingsPage: React.FC = () => {
       }
     }
 
+    // Normalize Instagram if provided
+    const rawIg = instagramUrl.trim();
+    let normalizedIg: string | null = null;
+    if (rawIg) {
+      let handle = rawIg.replace(/^@/, '');
+      const igMatch = handle.match(/instagram\.com\/([^/?#]+)/i);
+      if (igMatch) handle = igMatch[1];
+      handle = handle.replace(/\/$/, '');
+      if (!/^[A-Za-z0-9._]+$/.test(handle)) {
+        toast.error('Please enter a valid Instagram username or URL');
+        return;
+      }
+      normalizedIg = `https://www.instagram.com/${handle}`;
+    }
+
+    // Pronouns
+    let pronounsToSave: string | null = null;
+    if (pronounsChoice === 'other') {
+      pronounsToSave = pronounsOther.trim() || null;
+    } else if (pronounsChoice !== 'none') {
+      pronounsToSave = pronounsChoice;
+    }
+
     updateProfile.mutate({
       display_name: trimmedName,
       stage_name: trimmedStageName,
@@ -433,6 +481,9 @@ const ProfileSettingsPage: React.FC = () => {
       headline: trimmedHeadline,
       message_privacy: messagePrivacy,
       website_url: normalizedWebsite,
+      instagram_url: normalizedIg,
+      pronouns: pronounsToSave,
+      show_pronouns: showPronouns,
     } as Partial<Profile>);
   };
 
@@ -527,6 +578,61 @@ const ProfileSettingsPage: React.FC = () => {
                 />
                 <p className="text-xs text-muted-foreground">
                   A short bio or tagline ({headline.length}/200)
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="pronouns">Pronouns</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="showPronouns" className="text-sm text-muted-foreground">
+                      Display on profile
+                    </Label>
+                    <Switch
+                      id="showPronouns"
+                      checked={showPronouns}
+                      onCheckedChange={setShowPronouns}
+                    />
+                  </div>
+                </div>
+                <Select
+                  value={pronounsChoice}
+                  onValueChange={(v) => setPronounsChoice(v)}
+                >
+                  <SelectTrigger id="pronouns">
+                    <SelectValue placeholder="Select pronouns" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Prefer not to say</SelectItem>
+                    <SelectItem value="she/her">she/her</SelectItem>
+                    <SelectItem value="he/him">he/him</SelectItem>
+                    <SelectItem value="they/them">they/them</SelectItem>
+                    <SelectItem value="other">Other (type your own)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {pronounsChoice === 'other' && (
+                  <Input
+                    type="text"
+                    placeholder="Type your pronouns"
+                    value={pronounsOther}
+                    onChange={(e) => setPronounsOther(e.target.value)}
+                    maxLength={50}
+                  />
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="instagramUrl">Instagram</Label>
+                <Input
+                  id="instagramUrl"
+                  type="text"
+                  placeholder="@yourhandle or https://instagram.com/yourhandle"
+                  value={instagramUrl}
+                  onChange={(e) => setInstagramUrl(e.target.value)}
+                  maxLength={200}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown next to your website link below your name.
                 </p>
               </div>
 

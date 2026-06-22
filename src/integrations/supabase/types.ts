@@ -1150,6 +1150,7 @@ export type Database = {
           role: string | null
           secondary_disciplines: string[]
           show_gear_list: boolean
+          show_pronouns: boolean
           show_representation: boolean
           show_union_status: boolean
           skills: string[] | null
@@ -1198,6 +1199,7 @@ export type Database = {
           role?: string | null
           secondary_disciplines?: string[]
           show_gear_list?: boolean
+          show_pronouns?: boolean
           show_representation?: boolean
           show_union_status?: boolean
           skills?: string[] | null
@@ -1246,6 +1248,7 @@ export type Database = {
           role?: string | null
           secondary_disciplines?: string[]
           show_gear_list?: boolean
+          show_pronouns?: boolean
           show_representation?: boolean
           show_union_status?: boolean
           skills?: string[] | null
@@ -2445,6 +2448,7 @@ export type Database = {
           representation: string | null
           role: string | null
           show_gear_list: boolean | null
+          show_pronouns: boolean | null
           show_representation: boolean | null
           show_union_status: boolean | null
           skills: string[] | null
@@ -2475,10 +2479,11 @@ export type Database = {
           instagram_url?: string | null
           location?: string | null
           message_privacy?: string | null
-          pronouns?: string | null
+          pronouns?: never
           representation?: never
           role?: string | null
           show_gear_list?: boolean | null
+          show_pronouns?: boolean | null
           show_representation?: boolean | null
           show_union_status?: boolean | null
           skills?: string[] | null
@@ -2509,10 +2514,11 @@ export type Database = {
           instagram_url?: string | null
           location?: string | null
           message_privacy?: string | null
-          pronouns?: string | null
+          pronouns?: never
           representation?: never
           role?: string | null
           show_gear_list?: boolean | null
+          show_pronouns?: boolean | null
           show_representation?: boolean | null
           show_union_status?: boolean | null
           skills?: string[] | null
