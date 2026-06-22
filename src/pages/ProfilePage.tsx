@@ -1345,6 +1345,22 @@ const ProfilePage: React.FC = () => {
                       </div>
                     )}
                   </div>
+                  {/* Website link - displayed below name */}
+                  {displayWebsite && (() => {
+                    const href = /^https?:\/\//i.test(displayWebsite) ? displayWebsite : `https://${displayWebsite}`;
+                    let label = displayWebsite;
+                    try { label = new URL(href).host.replace(/^www\./, '') + new URL(href).pathname.replace(/\/$/, ''); } catch {}
+                    return (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-sm italic text-blue-500 hover:underline mt-1"
+                      >
+                        {label}
+                      </a>
+                    );
+                  })()}
                   {/* Headline - displayed below name */}
                   {dbProfile?.headline && (
                     <p className="text-muted-foreground text-sm mt-1">
