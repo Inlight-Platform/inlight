@@ -2190,6 +2190,27 @@ const ProfilePage: React.FC = () => {
       {/* /Section stack */}
       </div>
       {/* /Unified profile content frame */}
+
+      {/* Profile Completion Bar - moved to bottom, only visible to profile owner */}
+      {isOwnProfile && dbProfile && (
+        <div className="mt-4">
+          <ProfileCompletionBar
+            userId={authUser!.id}
+            profile={{
+              role: dbProfile.role,
+              graduation_year: dbProfile.graduation_year,
+              location: dbProfile.location,
+              pronouns: dbProfile.pronouns,
+              instagram_url: dbProfile.instagram_url,
+              website_url: dbProfile.website_url,
+              badges: dbProfile.badges,
+              skills: dbProfile.skills,
+              bio: dbProfile.bio,
+            }}
+            creditsCount={dbCredits.length}
+          />
+        </div>
+      )}
       </div>
       {/* /Centered profile frame */}
 
