@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles } from 'lucide-react';
@@ -349,9 +349,15 @@ const FeedPage: React.FC = () => {
     return ids;
   }, [firstDegree, secondDegree, user?.id]);
 
+  const hasVisibleCreator = useCallback((item: { user_id?: string | null; creator_id?: string | null; creator_profile?: unknown }) => {
+    const ownerId = item.user_id || item.creator_id;
+    return ownerId === user?.id || Boolean(item.creator_profile);
+  }, [user?.id]);
+
   // Filtered project lists for sub-tabs
-  const activeProjects = allProjects.filter(p => normalizeStatus(p.status) !== 'archived');
-  const archivedProjects = allProjects.filter(p => normalizeStatus(p.status) === 'archived');
+  const visibleProjects = allProjects.filter(hasVisibleCreator);
+  const activeProjects = visibleProjects.filter(p => normalizeStatus(p.status) !== 'archived');
+  const archivedProjects = visibleProjects.filter(p => normalizeStatus(p.status) === 'archived');
 
   const applyProjectFilters = (list: typeof allProjects) => {
     const filtered = selectedCategory === 'all' ? list : list.filter(p => p.category === selectedCategory);
@@ -360,7 +366,7 @@ const FeedPage: React.FC = () => {
 
   const feedProjects = applyProjectFilters(activeProjects);
   const networkProjects = applyProjectFilters(activeProjects.filter(p => networkUserIds.has(p.creator_id)));
-  const savedProjectsList = applyProjectFilters(allProjects.filter(p => savedProjectIds.has(p.id)));
+  const savedProjectsList = applyProjectFilters(visibleProjects.filter(p => savedProjectIds.has(p.id)));
   const archivedProjectsList = applyProjectFilters(archivedProjects);
 
   // Helper to convert project rows to FeedItemData for bento rendering
@@ -432,7 +438,7 @@ const FeedPage: React.FC = () => {
 
   // Combine and filter feed items (for non-project tabs)
   const feedItems = useMemo(() => {
-    let allItems: FeedItemData[] = [...posts, ...projectFeedItems, ...events];
+    let allItems: FeedItemData[] = [...posts, ...projectFeedItems, ...events].filter(hasVisibleCreator);
 
     if (contentFilter !== 'all') {
       allItems = allItems.filter((item) => {
@@ -467,7 +473,7 @@ const FeedPage: React.FC = () => {
     }
 
     return allItems;
-  }, [posts, projectFeedItems, events, networkFilter, contentFilter, feedSearchQuery, user?.id, getConnectionDegree]);
+  }, [posts, projectFeedItems, events, networkFilter, contentFilter, feedSearchQuery, user?.id, getConnectionDegree, hasVisibleCreator]);
 
   const isLoading = postsLoading || projectsLoading || eventsLoading || connectionsLoading;
 
@@ -485,10 +491,10 @@ const FeedPage: React.FC = () => {
   ];
 
   const itemCounts = useMemo(() => ({
-    events: events.length,
+    events: events.filter(hasVisibleCreator).length,
     projects: activeProjects.length,
-    updates: posts.filter((p) => p.type === 'post').length,
-  }), [events, posts, activeProjects]);
+    updates: posts.filter(hasVisibleCreator).filter((p) => p.type === 'post').length,
+  }), [events, posts, activeProjects, hasVisibleCreator]);
 
   // Project card component for sub-tabs
   const ProjectCard = ({ project }: { project: typeof allProjects[0] }) => {
