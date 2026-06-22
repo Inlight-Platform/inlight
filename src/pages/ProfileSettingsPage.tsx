@@ -225,6 +225,11 @@ const ProfileSettingsPage: React.FC = () => {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [headline, setHeadline] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const PRONOUN_PRESETS = ['she/her', 'he/him', 'they/them'];
+  const [pronounsChoice, setPronounsChoice] = useState<string>('none'); // 'none' | preset | 'other'
+  const [pronounsOther, setPronounsOther] = useState('');
+  const [showPronouns, setShowPronouns] = useState(true);
   const [messagePrivacy, setMessagePrivacy] = useState('mutuals_only');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -299,6 +304,19 @@ const ProfileSettingsPage: React.FC = () => {
       setAvatarUrl(profile.avatar_url || '');
       setHeadline(profile.headline || '');
       setWebsiteUrl(((profile as unknown as { website_url?: string | null }).website_url) || '');
+      setInstagramUrl(((profile as unknown as { instagram_url?: string | null }).instagram_url) || '');
+      const pronounsValue = ((profile as unknown as { pronouns?: string | null }).pronouns) || '';
+      if (!pronounsValue) {
+        setPronounsChoice('none');
+        setPronounsOther('');
+      } else if (PRONOUN_PRESETS.includes(pronounsValue.toLowerCase())) {
+        setPronounsChoice(pronounsValue.toLowerCase());
+        setPronounsOther('');
+      } else {
+        setPronounsChoice('other');
+        setPronounsOther(pronounsValue);
+      }
+      setShowPronouns(((profile as unknown as { show_pronouns?: boolean }).show_pronouns) ?? true);
       setMessagePrivacy(profile.message_privacy || 'mutuals_only');
       setEmailNotifications(profile.email_notifications ?? true);
       // Professional details
