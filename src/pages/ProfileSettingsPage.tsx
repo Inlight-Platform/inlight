@@ -55,7 +55,6 @@ const PROFILE_SETTINGS_FIELDS = `
   headline,
   website_url,
   message_privacy,
-  email_notifications,
   union_status,
   representation,
   gear_list,
@@ -298,9 +297,7 @@ const ProfileSettingsPage: React.FC = () => {
       const { data, error } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('user_id', user.id)
-        .select(PROFILE_SETTINGS_FIELDS)
-        .single();
+        .eq('user_id', user.id);
       
       if (error) throw error;
       return data;
