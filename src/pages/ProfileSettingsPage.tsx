@@ -23,6 +23,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useTour } from '@/hooks/useTour';
 import { useTheme } from '@/hooks/useTheme';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Profile {
   id: string;
@@ -33,6 +34,9 @@ interface Profile {
   avatar_url: string | null;
   headline: string | null;
   website_url: string | null;
+  instagram_url: string | null;
+  pronouns: string | null;
+  show_pronouns: boolean;
   message_privacy: string;
   email_notifications: boolean;
   union_status: string | null;
@@ -54,6 +58,9 @@ const PROFILE_SETTINGS_FIELDS = `
   avatar_url,
   headline,
   website_url,
+  instagram_url,
+  pronouns,
+  show_pronouns,
   message_privacy,
   union_status,
   representation,
