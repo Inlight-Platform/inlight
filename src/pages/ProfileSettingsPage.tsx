@@ -251,7 +251,22 @@ const ProfileSettingsPage: React.FC = () => {
         console.error('ProfileSettingsPage: failed loading profile by user id', profileByUserIdError);
       }
 
-      return (profileByUserId as Profile | null) ?? null;
+      if (!profileByUserId) return null;
+
+      const { data: notificationSettings, error: notificationSettingsError } = await supabase
+        .from('profiles')
+        .select('email_notifications')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (notificationSettingsError) {
+        console.error('ProfileSettingsPage: failed loading notification settings', notificationSettingsError);
+      }
+
+      return {
+        ...(profileByUserId as Profile),
+        email_notifications: notificationSettings?.email_notifications ?? true,
+      };
     },
     enabled: !!user?.id,
   });
