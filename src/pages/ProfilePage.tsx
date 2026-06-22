@@ -1677,6 +1677,35 @@ const ProfilePage: React.FC = () => {
                 />
               </>
             )}
+            {/* Graduation badge - bottom-left of avatar */}
+            {isOwnProfile ? (
+              <div className="absolute bottom-2 left-2">
+                <GradYearDialog
+                  currentStatus={displayGraduationStatus}
+                  currentYear={displayGraduationYear}
+                  onSave={handleSaveGradYear}
+                  onClear={handleClearGradYear}
+                  trigger={
+                    <Badge
+                      variant="outline"
+                      className="text-xs font-medium cursor-pointer bg-background/80 backdrop-blur hover:bg-secondary/80 gap-1"
+                    >
+                      <GraduationCap className="w-3 h-3" />
+                      {displayGraduationStatus && displayGraduationYear
+                        ? `${displayGraduationStatus === 'student' ? 'Student' : 'Alumni'} '${displayGraduationYear.toString().slice(-2)}`
+                        : 'Grad Year'}
+                    </Badge>
+                  }
+                />
+              </div>
+            ) : displayGraduationStatus && displayGraduationYear ? (
+              <div className="absolute bottom-2 left-2">
+                <Badge variant="outline" className="text-xs font-medium bg-background/80 backdrop-blur gap-1">
+                  <GraduationCap className="w-3 h-3" />
+                  {displayGraduationStatus === 'student' ? 'Student' : 'Alumni'} '{displayGraduationYear.toString().slice(-2)}
+                </Badge>
+              </div>
+            ) : null}
           </div>
 
           {/* Action bubbles below avatar */}
