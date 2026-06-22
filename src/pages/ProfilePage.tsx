@@ -1570,8 +1570,12 @@ const ProfilePage: React.FC = () => {
             ) : (
               <div className="space-y-1">
                 <div
-                  className={`${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-3 -m-3 rounded-lg transition-colors group' : ''}`}
-                  onClick={isOwnProfile ? startEditingBio : undefined}
+                  className={cn(
+                    'inline-block max-w-full',
+                    isOwnProfile && 'hover:bg-muted/50 p-3 -m-3 rounded-lg transition-colors group',
+                    bioCanExpand && 'cursor-pointer'
+                  )}
+                  onClick={bioCanExpand ? () => setBioExpanded((prev) => !prev) : undefined}
                 >
                   <p
                     ref={bioRef}
@@ -1583,32 +1587,33 @@ const ProfilePage: React.FC = () => {
                     {displayBio || ''}
                   </p>
                   {isOwnProfile && !displayBio && (
-                    <p className="text-muted-foreground text-sm italic">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground italic"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEditingBio();
+                      }}
+                    >
                       Add a bio to let others know who you are
-                    </p>
+                    </Button>
                   )}
-                  {isOwnProfile && displayBio && <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-50 transition-opacity" />}
+                  {isOwnProfile && displayBio && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 ml-1 align-middle opacity-0 group-hover:opacity-50 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEditingBio();
+                      }}
+                      aria-label="Edit bio"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
-                {bioCanExpand && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setBioExpanded((prev) => !prev);
-                    }}
-                    aria-label={bioExpanded ? 'Show less' : 'Show more'}
-                  >
-                    {bioExpanded ? 'Show less' : 'Show more'}
-                    <ChevronDown
-                      className={cn(
-                        'w-4 h-4 ml-1 transition-transform duration-200',
-                        bioExpanded && 'rotate-180'
-                      )}
-                    />
-                  </Button>
-                )}
               </div>
             )}
           </div>
