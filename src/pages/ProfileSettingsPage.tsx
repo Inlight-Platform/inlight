@@ -581,6 +581,61 @@ const ProfileSettingsPage: React.FC = () => {
                 </p>
               </div>
 
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="pronouns">Pronouns</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="showPronouns" className="text-sm text-muted-foreground">
+                      Display on profile
+                    </Label>
+                    <Switch
+                      id="showPronouns"
+                      checked={showPronouns}
+                      onCheckedChange={setShowPronouns}
+                    />
+                  </div>
+                </div>
+                <Select
+                  value={pronounsChoice}
+                  onValueChange={(v) => setPronounsChoice(v)}
+                >
+                  <SelectTrigger id="pronouns">
+                    <SelectValue placeholder="Select pronouns" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Prefer not to say</SelectItem>
+                    <SelectItem value="she/her">she/her</SelectItem>
+                    <SelectItem value="he/him">he/him</SelectItem>
+                    <SelectItem value="they/them">they/them</SelectItem>
+                    <SelectItem value="other">Other (type your own)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {pronounsChoice === 'other' && (
+                  <Input
+                    type="text"
+                    placeholder="Type your pronouns"
+                    value={pronounsOther}
+                    onChange={(e) => setPronounsOther(e.target.value)}
+                    maxLength={50}
+                  />
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="instagramUrl">Instagram</Label>
+                <Input
+                  id="instagramUrl"
+                  type="text"
+                  placeholder="@yourhandle or https://instagram.com/yourhandle"
+                  value={instagramUrl}
+                  onChange={(e) => setInstagramUrl(e.target.value)}
+                  maxLength={200}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown next to your website link below your name.
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="websiteUrl">Website</Label>
                 <Input
