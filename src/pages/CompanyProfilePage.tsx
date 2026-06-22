@@ -113,6 +113,7 @@ const PALETTE_PRESETS: Array<{ name: string; primary: string; accent: string; te
 const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = ({ company, onSaved }) => {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [name, setName] = useState(company.name);
   const [description, setDescription] = useState(company.description || '');
   const [location, setLocation] = useState(company.location || '');
@@ -133,7 +134,8 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
   const coverInputRef = useRef<HTMLInputElement>(null);
 
   const uploadImage = async (file: File, kind: 'logo' | 'cover') => {
-    const path = `companies/${company.id}/${kind}-${Date.now()}-${file.name}`;
+    if (!user?.id) throw new Error('You need to be signed in to upload images.');
+    const path = `${user.id}/companies/${company.id}/${kind}-${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from('profile-media').upload(path, file, { contentType: file.type, upsert: true });
     if (error) throw error;
     const { data } = supabase.storage.from('profile-media').getPublicUrl(path);
@@ -513,7 +515,7 @@ const CompanyProfilePage: React.FC = () => {
     if (!file || !user?.id || !companyId) return;
     setUploadingPhoto(true);
     try {
-      const fileName = `companies/${companyId}/${Date.now()}-${file.name}`;
+      const fileName = `${user.id}/companies/${companyId}/${Date.now()}-${file.name}`;
       const { error: uploadError } = await supabase.storage.from('profile-media').upload(fileName, file, { contentType: file.type });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from('profile-media').getPublicUrl(fileName);
