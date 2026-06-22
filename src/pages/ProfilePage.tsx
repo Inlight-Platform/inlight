@@ -1349,20 +1349,48 @@ const ProfilePage: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  {/* Website link - displayed below name */}
-                  {displayWebsite && (() => {
-                    const href = /^https?:\/\//i.test(displayWebsite) ? displayWebsite : `https://${displayWebsite}`;
-                    let label = displayWebsite;
-                    try { label = new URL(href).host.replace(/^www\./, '') + new URL(href).pathname.replace(/\/$/, ''); } catch {}
+                  {/* Website + Instagram links displayed below name */}
+                  {(displayWebsite || displayInstagram) && (() => {
+                    const websiteEl = displayWebsite ? (() => {
+                      const href = /^https?:\/\//i.test(displayWebsite) ? displayWebsite : `https://${displayWebsite}`;
+                      let label = displayWebsite;
+                      try { label = new URL(href).host.replace(/^www\./, '') + new URL(href).pathname.replace(/\/$/, ''); } catch {}
+                      return (
+                        <a
+                          key="web"
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm italic text-blue-500 hover:underline"
+                        >
+                          {label}
+                        </a>
+                      );
+                    })() : null;
+                    const instagramEl = displayInstagram ? (() => {
+                      const handle = displayInstagram.replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '');
+                      const igHref = /^https?:\/\//i.test(displayInstagram)
+                        ? displayInstagram
+                        : `https://www.instagram.com/${handle}`;
+                      return (
+                        <a
+                          key="ig"
+                          href={igHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm italic text-pink-600 hover:underline"
+                          style={{ color: '#c2185b' }}
+                        >
+                          <Instagram className="w-3.5 h-3.5" style={{ color: '#ec4899' }} />
+                          @{handle}
+                        </a>
+                      );
+                    })() : null;
                     return (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block text-sm italic text-blue-500 hover:underline mt-1"
-                      >
-                        {label}
-                      </a>
+                      <div className="mt-1 flex items-center justify-center gap-3 flex-wrap">
+                        {websiteEl}
+                        {instagramEl}
+                      </div>
                     );
                   })()}
                   {/* Generated headline: "Role1, Role2 based in Location" */}
