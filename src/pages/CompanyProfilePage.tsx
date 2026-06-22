@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanyFollows, Company } from '@/hooks/useCompanyFollows';
-import { Building2, Globe, MapPin, Users, ChevronLeft, Settings, UserPlus, ChevronDown, Plus, Camera, Loader2, Trash2, FolderKanban, Archive, Image, Sparkles, Palette, X } from 'lucide-react';
+import { Building2, Globe, MapPin, Users, ChevronLeft, Settings, UserPlus, ChevronDown, Plus, Camera, Loader2, Trash2, FolderKanban, Archive, Image, Sparkles, Palette, X, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -112,6 +112,7 @@ const PALETTE_PRESETS: Array<{ name: string; primary: string; accent: string; te
 
 const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = ({ company, onSaved }) => {
   const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
   const [name, setName] = useState(company.name);
   const [description, setDescription] = useState(company.description || '');
   const [location, setLocation] = useState(company.location || '');
@@ -172,31 +173,34 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
   const updateMutation = useMutation({
     mutationFn: async () => {
       const cleanedFacts = funFacts.map(f => f.trim()).filter(Boolean);
+      const updatePayload: Record<string, unknown> = {
+        name,
+        description: description || null,
+        location: location || null,
+        website_url: websiteUrl || null,
+        tagline: tagline || null,
+        mission: mission || null,
+        brand_primary_color: primary || null,
+        brand_accent_color: accent || null,
+        brand_text_color: textColor || null,
+        logo_url: logoUrl || null,
+        cover_image_url: coverUrl || null,
+        fun_facts: cleanedFacts,
+      };
       const { error } = await supabase
         .from('companies')
-        .update({
-          name,
-          description: description || null,
-          location: location || null,
-          website_url: websiteUrl || null,
-          tagline: tagline || null,
-          mission: mission || null,
-          brand_primary_color: primary || null,
-          brand_accent_color: accent || null,
-          brand_text_color: textColor || null,
-          logo_url: logoUrl || null,
-          cover_image_url: coverUrl || null,
-          fun_facts: cleanedFacts,
-        } as any)
+        .update(updatePayload as never)
         .eq('id', company.id);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success('Company updated');
+      queryClient.invalidateQueries({ queryKey: ['company', company.id] });
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
       onSaved();
       setOpen(false);
     },
-    onError: (e: any) => toast.error(e.message || 'Failed to update'),
+    onError: (e: any) => toast.error(e?.message || 'Failed to update company'),
   });
 
   return (
@@ -646,6 +650,20 @@ const CompanyProfilePage: React.FC = () => {
 
             {/* Action buttons */}
             <div className="flex gap-2 flex-wrap">
+              {isOwner && companyId && (
+                <Button
+                  variant="outline"
+                  className="rounded-full gap-2"
+                  onClick={() => {
+                    const url = `${window.location.origin}/c/${companyId}`;
+                    navigator.clipboard.writeText(url);
+                    toast.success('Public link copied');
+                  }}
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  Copy public link
+                </Button>
+              )}
               {!isOwner && companyId && (
                 <Button
                   variant={following ? 'outline' : 'default'}
