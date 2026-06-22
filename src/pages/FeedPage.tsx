@@ -741,7 +741,8 @@ const FeedPage: React.FC = () => {
 
             {/* Content Type Filters */}
             <div className="mb-4">
-              <div className="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-2">
+              <div className="relative">
+                <div className="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-2">
                 {contentFilters.map((filter) => (
                   <Button
                     key={filter.value}
@@ -761,6 +762,22 @@ const FeedPage: React.FC = () => {
                     )}
                   </Button>
                 ))}
+                </div>
+                <div className="mt-2 flex justify-end sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2 sm:mt-0">
+                  <Select value={viewMode} onValueChange={(v: ViewMode) => setViewMode(v)}>
+                    <SelectTrigger className="w-[120px] h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bento">
+                        <span className="inline-flex items-center gap-2"><LayoutGrid className="h-4 w-4" /> Grid</span>
+                      </SelectItem>
+                      <SelectItem value="scroll">
+                        <span className="inline-flex items-center gap-2"><Rows className="h-4 w-4" /> List</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
@@ -818,6 +835,16 @@ const FeedPage: React.FC = () => {
                         Log in to post
                       </Button>
                     )}
+                  </div>
+                ) : viewMode === 'scroll' ? (
+                  <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+                    {feedItems.map((item) => (
+                      <FeedItem
+                        key={`list-${item.type}-${item.id}`}
+                        item={item}
+                        networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
+                      />
+                    ))}
                   </div>
                 ) : (
                   <div
