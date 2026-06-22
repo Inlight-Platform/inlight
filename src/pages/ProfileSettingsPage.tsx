@@ -199,6 +199,7 @@ const ProfileSettingsPage: React.FC = () => {
   const [stageName, setStageName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [headline, setHeadline] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
   const [messagePrivacy, setMessagePrivacy] = useState('mutuals_only');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -257,6 +258,7 @@ const ProfileSettingsPage: React.FC = () => {
       setStageName(profile.stage_name || '');
       setAvatarUrl(profile.avatar_url || '');
       setHeadline(profile.headline || '');
+      setWebsiteUrl(((profile as unknown as { website_url?: string | null }).website_url) || '');
       setMessagePrivacy(profile.message_privacy || 'mutuals_only');
       setEmailNotifications(profile.email_notifications ?? true);
       // Professional details
@@ -377,14 +379,30 @@ const ProfileSettingsPage: React.FC = () => {
     if (trimmedName && !validateProfileField('display_name', trimmedName)) return;
     if (trimmedStageName && !validateProfileField('stage_name', trimmedStageName)) return;
     if (trimmedHeadline && !validateProfileField('headline', trimmedHeadline)) return;
-    
+
+    // Validate website URL if provided
+    const rawWebsite = websiteUrl.trim();
+    let normalizedWebsite: string | null = null;
+    if (rawWebsite) {
+      const candidate = /^https?:\/\//i.test(rawWebsite) ? rawWebsite : `https://${rawWebsite}`;
+      try {
+        const u = new URL(candidate);
+        if (!u.hostname.includes('.')) throw new Error('invalid');
+        normalizedWebsite = u.toString().replace(/\/$/, '');
+      } catch {
+        toast.error('Please enter a valid website URL');
+        return;
+      }
+    }
+
     updateProfile.mutate({
       display_name: trimmedName,
       stage_name: trimmedStageName,
       avatar_url: avatarUrl.trim() || null,
       headline: trimmedHeadline,
       message_privacy: messagePrivacy,
-    });
+      website_url: normalizedWebsite,
+    } as Partial<Profile>);
   };
 
   const handleDeleteMedia = async (id: string, filePath: string) => {
