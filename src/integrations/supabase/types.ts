@@ -2581,6 +2581,12 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_company_staff_ids: {
+        Args: { _company_id: string }
+        Returns: {
+          user_id: string
+        }[]
+      }
       get_message_privacy: { Args: { target_user_id: string }; Returns: string }
       get_mutual_connections: {
         Args: { target_user_id: string }
@@ -2598,6 +2604,27 @@ export type Database = {
           role_type: string
           status: string
           user_id: string
+        }[]
+      }
+      get_public_profiles: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          avatar_url: string
+          badges: string[]
+          bio: string
+          cover_url: string
+          display_name: string
+          graduation_status: string
+          graduation_year: number
+          headline: string
+          instagram_url: string
+          location: string
+          pronouns: string
+          role: string
+          skills: string[]
+          stage_name: string
+          user_id: string
+          website_url: string
         }[]
       }
       has_role: {
