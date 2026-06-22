@@ -1144,13 +1144,11 @@ export type Database = {
           preview_survey_role: string | null
           preview_survey_school: string | null
           primary_discipline: string | null
-          pronouns: string | null
           referred_by: string | null
           representation: string | null
           role: string | null
           secondary_disciplines: string[]
           show_gear_list: boolean
-          show_pronouns: boolean
           show_representation: boolean
           show_union_status: boolean
           skills: string[] | null
@@ -1193,13 +1191,11 @@ export type Database = {
           preview_survey_role?: string | null
           preview_survey_school?: string | null
           primary_discipline?: string | null
-          pronouns?: string | null
           referred_by?: string | null
           representation?: string | null
           role?: string | null
           secondary_disciplines?: string[]
           show_gear_list?: boolean
-          show_pronouns?: boolean
           show_representation?: boolean
           show_union_status?: boolean
           skills?: string[] | null
@@ -1242,13 +1238,11 @@ export type Database = {
           preview_survey_role?: string | null
           preview_survey_school?: string | null
           primary_discipline?: string | null
-          pronouns?: string | null
           referred_by?: string | null
           representation?: string | null
           role?: string | null
           secondary_disciplines?: string[]
           show_gear_list?: boolean
-          show_pronouns?: boolean
           show_representation?: boolean
           show_union_status?: boolean
           skills?: string[] | null
@@ -2433,9 +2427,6 @@ export type Database = {
           cover_url: string | null
           created_at: string | null
           display_name: string | null
-          favorite_artist: string | null
-          favorite_movie: string | null
-          favorite_song: string | null
           gear_list_display: string[] | null
           graduation_status: string | null
           graduation_year: number | null
@@ -2443,12 +2434,9 @@ export type Database = {
           id: string | null
           instagram_url: string | null
           location: string | null
-          message_privacy: string | null
-          pronouns: string | null
           representation: string | null
           role: string | null
           show_gear_list: boolean | null
-          show_pronouns: boolean | null
           show_representation: boolean | null
           show_union_status: boolean | null
           skills: string[] | null
@@ -2456,9 +2444,7 @@ export type Database = {
           union_status: string | null
           updated_at: string | null
           user_id: string | null
-          vouch_count: number | null
           website_url: string | null
-          why_artist: string | null
         }
         Insert: {
           activity_score?: number | null
@@ -2468,9 +2454,6 @@ export type Database = {
           cover_url?: string | null
           created_at?: string | null
           display_name?: string | null
-          favorite_artist?: string | null
-          favorite_movie?: string | null
-          favorite_song?: string | null
           gear_list_display?: never
           graduation_status?: string | null
           graduation_year?: number | null
@@ -2478,12 +2461,9 @@ export type Database = {
           id?: string | null
           instagram_url?: string | null
           location?: string | null
-          message_privacy?: string | null
-          pronouns?: never
           representation?: never
           role?: string | null
           show_gear_list?: boolean | null
-          show_pronouns?: boolean | null
           show_representation?: boolean | null
           show_union_status?: boolean | null
           skills?: string[] | null
@@ -2491,9 +2471,7 @@ export type Database = {
           union_status?: never
           updated_at?: string | null
           user_id?: string | null
-          vouch_count?: number | null
           website_url?: string | null
-          why_artist?: string | null
         }
         Update: {
           activity_score?: number | null
@@ -2503,9 +2481,6 @@ export type Database = {
           cover_url?: string | null
           created_at?: string | null
           display_name?: string | null
-          favorite_artist?: string | null
-          favorite_movie?: string | null
-          favorite_song?: string | null
           gear_list_display?: never
           graduation_status?: string | null
           graduation_year?: number | null
@@ -2513,12 +2488,9 @@ export type Database = {
           id?: string | null
           instagram_url?: string | null
           location?: string | null
-          message_privacy?: string | null
-          pronouns?: never
           representation?: never
           role?: string | null
           show_gear_list?: boolean | null
-          show_pronouns?: boolean | null
           show_representation?: boolean | null
           show_union_status?: boolean | null
           skills?: string[] | null
@@ -2526,9 +2498,7 @@ export type Database = {
           union_status?: never
           updated_at?: string | null
           user_id?: string | null
-          vouch_count?: number | null
           website_url?: string | null
-          why_artist?: string | null
         }
         Relationships: []
       }
