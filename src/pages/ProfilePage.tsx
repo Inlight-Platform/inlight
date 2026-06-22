@@ -296,6 +296,9 @@ const ProfilePage: React.FC = () => {
   const [editLocation, setEditLocation] = useState('');
   const [editRole, setEditRole] = useState('');
   const [editBio, setEditBio] = useState('');
+  const [bioExpanded, setBioExpanded] = useState(false);
+  const [bioCanExpand, setBioCanExpand] = useState(false);
+  const bioRef = useRef<HTMLParagraphElement>(null);
   const [isEditingInstagram, setIsEditingInstagram] = useState(false);
   const [isEditingWebsite, setIsEditingWebsite] = useState(false);
   const [editInstagram, setEditInstagram] = useState('');
