@@ -1,74 +1,54 @@
-## Goal
-Let any user request a company account from their own profile. Admin reviews requests and either approves (which auto-creates the company and assigns the requester as owner) or denies.
+## 1. Fix "Save Changes" on the company page
 
-## 1. Database — new migration
+The companies table already has all the new columns (`tagline`, `mission`, `brand_*`, `cover_image_url`, `fun_facts`, etc.) and they're in the generated types — so the schema is fine. To eliminate any flakiness and the `as any` cast that's masking real errors:
 
-Create `public.company_account_requests`:
-- `id`, `requester_id` (uuid, not null), `created_at`, `updated_at`
-- `company_name` (text, not null), `description` (text), `website_url` (text), `justification` (text — "why do you need a company account?")
-- `status` (text, default `'pending'`, allowed: `pending` | `approved` | `denied`)
-- `reviewed_by` (uuid, nullable), `reviewed_at` (timestamptz, nullable), `admin_notes` (text, nullable)
-- `created_company_id` (uuid, nullable — set when approved)
+- Remove the `as any` from the update payload in `EditCompanyDialog` so TypeScript catches mismatches.
+- Verify the companies UPDATE RLS policy allows `owner_user_id = auth.uid()` (and admin). If missing or restrictive, add a migration with a clear "Owners and admins can update companies" policy.
+- Invalidate the `['company', companyId]` query on success (currently it just calls `onSaved`) so the page re-renders with the saved values immediately instead of needing a refresh.
+- Surface the actual Postgres error in the toast (already partially there) so any future "schema cache" type error is visible, not silent.
 
-GRANTs: `authenticated` (SELECT/INSERT/UPDATE), `service_role` (ALL). No anon.
+## 2. Public, login-free company page
 
-RLS policies:
-- INSERT: `auth.uid() = requester_id`
-- SELECT: requester sees own rows; admins see all (`has_role(auth.uid(), 'admin')`)
-- UPDATE: admins only (for approve/deny)
+Create a dedicated public route that anyone can visit without an Inlight account, and that does NOT expose the rest of the platform.
 
-Trigger: `update_updated_at` standard trigger.
+**Route**
 
-Trigger: on INSERT, create a `notifications` row for every admin (type `company_request_new`) so admin gets notified.
+- New public route `/c/:companyId` (e.g. `/c/dca36794-be45-478e-ac2f-f6e8879492fc` for A Lab Theater).
+- Registered OUTSIDE the `AppShell` / `RequireAuth` wrapper in `App.tsx`, alongside the existing public routes (`/showcase/...`, `/preview`, etc.).
+- A friendly slug option later is possible, but for now the company ID URL is enough and matches what already exists.
 
-Trigger: on UPDATE when `status` changes to `approved` or `denied`, create a notification for the requester (type `company_request_approved` or `company_request_denied`).
+**Page (`PublicCompanyPage.tsx`)**
 
-## 2. Approval logic
+- Standalone layout — no sidebar, no bottom nav, no Inlight logo linking home.
+- Reuses the same hero/branding the owner customized (cover image, logo, palette, tagline, mission, fun facts).
+- Sections rendered read-only:
+  - Active projects
+  - Past / archived projects
+  - Photo gallery
+  - Staff / management team (cards with name, role, headshot)
+- Clicking a project opens a public project view `/c/:companyId/project/:projectId` (read-only project page within the same shell).
+- Clicking a staff member opens a public profile view `/c/:companyId/staff/:userId` showing only the public-safe fields (name, headline, role, bio, avatar) — no DMs, no follow buttons, no link out to the broader platform.
+- Top bar contains only the company name/logo and (optionally) a small "Powered by Inlight" footer link — no nav into Feed, People, Messages, etc.
 
-Use a `SECURITY DEFINER` function `public.approve_company_account_request(_request_id uuid, _admin_notes text)`:
-- Verifies caller is admin via `has_role`
-- Inserts new row into `public.companies` with `name`, `description`, `website_url` from the request and `owner_user_id = requester_id`
-- Updates the request: `status='approved'`, `reviewed_by=auth.uid()`, `reviewed_at=now()`, `created_company_id=<new id>`, `admin_notes`
-- Returns new company id
+**Data access (anonymous reads)**
 
-And a simpler `deny_company_account_request(_request_id uuid, _admin_notes text)` that just updates status to `denied`.
+Anonymous visitors are the `anon` Postgres role. Add a migration that grants minimal SELECT to `anon` and policies scoped only to what's needed:
 
-## 3. User-facing UI
+- `companies`: allow `anon` SELECT for any single company (already largely public).
+- `projects`: allow `anon` SELECT WHERE `company_id IS NOT NULL` (only company-linked projects are exposed publicly).
+- `company_photos`: allow `anon` SELECT for rows tied to a company.
+- `profiles_public` view: allow `anon` SELECT of the safe fields for users who appear as company staff/owners or as members of company-linked projects.
+- Project sub-tables (`project_members`, `project_roles`) needed to render team — allow `anon` SELECT only when the parent project is linked to a company.
 
-New component `src/components/profile/RequestCompanyAccountDialog.tsx`:
-- Triggered by a "Request Company Account" button
-- Form fields: Company name (required, max 100), Website (optional), Description (optional, max 500), Why do you need it? (required, max 1000)
-- Zod validation, character counters
-- On submit: insert into `company_account_requests`; show toast on success
-- If user already has a `pending` request, replace the form with a "Your request is being reviewed" status card
-- If user has an `approved` request, show "Approved — view your company" link to `/company/<id>`
+All other tables (messages, notifications, feed posts, opportunities, etc.) stay locked down — anonymous visitors literally cannot query them.
 
-In `src/pages/ProfilePage.tsx`, on own profile only (`userId === authUser?.id || !userId`), add a small "Request Company Account" button. Placement: in the profile header action row alongside existing edit/settings controls (Building2 icon, ghost variant). Opens the dialog.
+**Sharing**
 
-## 4. Admin UI
+In the existing company page (authenticated view), add a small "Copy public link" button next to "Customize Page" so owners can grab `https://inlight.social/c/<companyId>` to share.
 
-New component `src/components/admin/CompanyRequestsManager.tsx`:
-- Lists all requests grouped by status (Pending first, then Approved, then Denied)
-- Each row: requester name/avatar (joined from `profiles`), company name, why, website, submitted date
-- Pending rows have "Approve" + "Deny" buttons; both open a small confirm dialog where admin can add notes
-- Calls the `approve_company_account_request` / `deny_company_account_request` RPCs
-- React Query invalidation refreshes the list
+## Technical notes
 
-Add a new tab in `src/pages/AdminPage.tsx` ("Company Requests", Building2 icon) using the existing tab pattern. Place it next to "Verification".
-
-## 5. Notifications
-
-The existing `notifications` table is used (no schema change). Use `type` values `company_request_new`, `company_request_approved`, `company_request_denied`. Title/body composed in the trigger functions. Link payload (`data` jsonb) carries `request_id` (and `company_id` when approved) so the existing notifications UI can deep-link.
-
-## Technical Notes
-- Admin user_id is `802c2c17-c03f-4f0a-9829-96edbecdcd54` (info@inlight.social); detection uses existing `has_role(uid,'admin')` function, not a hardcoded id.
-- Companies table currently has no INSERT policy — that's intentional: only the security-definer RPC writes to it, so no broad INSERT policy is added.
-- No edge functions or external APIs needed.
+- Files to add: `src/pages/PublicCompanyPage.tsx`, `src/pages/PublicProjectPage.tsx`, `src/pages/PublicStaffProfilePage.tsx`, and one migration `supabase/migrations/<ts>_public_company_anon_access.sql`.
+- Files to edit: `src/App.tsx` (new public routes), `src/pages/CompanyProfilePage.tsx` (remove `as any`, invalidate query on save, add copy-link button).
+- No changes to `RequireAuth` — we just don't wrap the new routes.
 - No new dependencies.
-
-## Files Changed
-- New migration (table, grants, RLS, triggers, RPCs)
-- New: `src/components/profile/RequestCompanyAccountDialog.tsx`
-- New: `src/components/admin/CompanyRequestsManager.tsx`
-- Edit: `src/pages/ProfilePage.tsx` (add button on own profile)
-- Edit: `src/pages/AdminPage.tsx` (add tab)
