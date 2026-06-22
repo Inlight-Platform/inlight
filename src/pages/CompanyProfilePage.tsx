@@ -650,6 +650,23 @@ const CompanyProfilePage: React.FC = () => {
 
             {/* Action buttons */}
             <div className="flex gap-2 flex-wrap">
+              {isOwner && companyId && (
+                <Button
+                  variant="outline"
+                  className="rounded-full gap-2"
+                  onClick={() => {
+                    const url = `${window.location.origin}/c/${companyId}`;
+                    navigator.clipboard.writeText(url);
+                    toast.success('Public link copied');
+                  }}
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  Copy public link
+                </Button>
+              )}
+              {isOwner && company && (
+                <EditCompanyDialog company={company} onSaved={() => queryClient.invalidateQueries({ queryKey: ['company', companyId] })} />
+              )}
               {!isOwner && companyId && (
                 <Button
                   variant={following ? 'outline' : 'default'}
