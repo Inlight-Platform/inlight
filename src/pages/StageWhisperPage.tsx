@@ -564,12 +564,12 @@ const StageWhisperPage: React.FC = () => {
                               <Film className="w-12 h-12 text-muted-foreground" />
                             </div>}
                           {/* Save Button */}
-                          <button
+                          {user && <button
                             onClick={(e) => { e.stopPropagation(); isFilmSaved(film.id) ? unsaveFilm(film.id) : saveFilm(film.id); }}
                             className={`absolute top-2 left-2 p-2 rounded-full backdrop-blur-sm transition-all duration-200 ${isFilmSaved(film.id) ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-black/50 text-white hover:bg-primary hover:text-primary-foreground'}`}
                           >
                             <Heart className={`w-4 h-4 ${isFilmSaved(film.id) ? 'fill-current' : ''}`} />
-                          </button>
+                          </button>}
                           <div className="absolute top-2 right-2">
                             <Badge className="bg-background/90 text-foreground">
                               ⭐ {film.rating.toFixed(1)}
