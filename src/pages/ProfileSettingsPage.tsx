@@ -552,6 +552,21 @@ const ProfileSettingsPage: React.FC = () => {
                 </p>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="websiteUrl">Website</Label>
+                <Input
+                  id="websiteUrl"
+                  type="url"
+                  placeholder="https://yourwebsite.com"
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  maxLength={500}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown as a link directly below your name on your profile
+                </p>
+              </div>
+
               <div className="flex gap-3">
                 <Button 
                   type="submit" 
