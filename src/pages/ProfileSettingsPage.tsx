@@ -27,11 +27,12 @@ import { useTheme } from '@/hooks/useTheme';
 interface Profile {
   id: string;
   user_id: string;
-  email: string;
+  email?: string | null;
   display_name: string | null;
   stage_name: string | null;
   avatar_url: string | null;
   headline: string | null;
+  website_url: string | null;
   message_privacy: string;
   email_notifications: boolean;
   union_status: string | null;
@@ -44,6 +45,23 @@ interface Profile {
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type Visibility = 'public' | 'connections' | 'private';
+
+const PROFILE_SETTINGS_FIELDS = `
+  id,
+  user_id,
+  display_name,
+  stage_name,
+  avatar_url,
+  headline,
+  website_url,
+  message_privacy,
+  union_status,
+  representation,
+  gear_list,
+  show_union_status,
+  show_representation,
+  show_gear_list
+`;
 
 interface MediaItem {
   id: string;
@@ -225,7 +243,7 @@ const ProfileSettingsPage: React.FC = () => {
       if (!user?.id) return null;
       const { data: profileByUserId, error: profileByUserIdError } = await supabase
         .from('profiles')
-        .select('*')
+        .select(PROFILE_SETTINGS_FIELDS)
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -233,7 +251,22 @@ const ProfileSettingsPage: React.FC = () => {
         console.error('ProfileSettingsPage: failed loading profile by user id', profileByUserIdError);
       }
 
-      return (profileByUserId as Profile | null) ?? null;
+      if (!profileByUserId) return null;
+
+      const { data: notificationSettings, error: notificationSettingsError } = await supabase
+        .from('profiles')
+        .select('email_notifications')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (notificationSettingsError) {
+        console.error('ProfileSettingsPage: failed loading notification settings', notificationSettingsError);
+      }
+
+      return {
+        ...(profileByUserId as Profile),
+        email_notifications: notificationSettings?.email_notifications ?? true,
+      };
     },
     enabled: !!user?.id,
   });
@@ -279,9 +312,7 @@ const ProfileSettingsPage: React.FC = () => {
       const { data, error } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('user_id', user.id)
-        .select()
-        .single();
+        .eq('user_id', user.id);
       
       if (error) throw error;
       return data;
