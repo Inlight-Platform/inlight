@@ -1280,27 +1280,6 @@ const ProfilePage: React.FC = () => {
       {/* Centered profile frame */}
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pb-10">
 
-      {/* Profile Completion Bar - only visible to profile owner */}
-      {isOwnProfile && dbProfile && (
-        <div>
-          <ProfileCompletionBar
-            userId={authUser!.id}
-            profile={{
-              role: dbProfile.role,
-              graduation_year: dbProfile.graduation_year,
-              location: dbProfile.location,
-              pronouns: dbProfile.pronouns,
-              instagram_url: dbProfile.instagram_url,
-              website_url: dbProfile.website_url,
-              badges: dbProfile.badges,
-              skills: dbProfile.skills,
-              bio: dbProfile.bio,
-            }}
-            creditsCount={dbCredits.length}
-          />
-        </div>
-      )}
-
       {/* Unified profile content frame */}
       <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card/60 shadow-sm">
       {/* Two-column header: info bubbles on the LEFT, avatar rectangle on the RIGHT */}
@@ -1366,6 +1345,22 @@ const ProfilePage: React.FC = () => {
                       </div>
                     )}
                   </div>
+                  {/* Website link - displayed below name */}
+                  {displayWebsite && (() => {
+                    const href = /^https?:\/\//i.test(displayWebsite) ? displayWebsite : `https://${displayWebsite}`;
+                    let label = displayWebsite;
+                    try { label = new URL(href).host.replace(/^www\./, '') + new URL(href).pathname.replace(/\/$/, ''); } catch {}
+                    return (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-sm italic text-blue-500 hover:underline mt-1"
+                      >
+                        {label}
+                      </a>
+                    );
+                  })()}
                   {/* Headline - displayed below name */}
                   {dbProfile?.headline && (
                     <p className="text-muted-foreground text-sm mt-1">
@@ -1575,8 +1570,8 @@ const ProfilePage: React.FC = () => {
                 {/* Affiliation badges */}
                 {displayBadges.map((badge) => (
                   <div key={badge} className="relative group">
-                    <button onClick={() => handleBadgeClick(badge)} className="badge-pill">
-                      #{badge}
+                     <button onClick={() => handleBadgeClick(badge)} className="badge-pill">
+                      {badge}
                     </button>
                     {isOwnProfile && (
                       <button
@@ -1606,7 +1601,7 @@ const ProfilePage: React.FC = () => {
                             onClick={() => handleAddBadgeToDb(option.tag)}
                             className="cursor-pointer"
                           >
-                            <span className="text-primary font-medium">#{option.tag}</span>
+                            <span className="text-primary font-medium">{option.tag}</span>
                             <span className="ml-2 text-muted-foreground text-sm">{option.label}</span>
                           </DropdownMenuItem>
                         ))}
@@ -1619,50 +1614,6 @@ const ProfilePage: React.FC = () => {
                   </DropdownMenu>
                 )}
           </div>
-
-          {/* Skills compact dropdown */}
-          <Collapsible>
-            <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-2 rounded-xl border border-border bg-card text-sm font-medium hover:bg-accent/30 transition-colors">
-              <span>Skills{displaySkills.length > 0 && ` (${displaySkills.length})`}</span>
-              <ChevronDown className="w-4 h-4 transition-transform data-[state=open]:rotate-180" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-2 p-3 rounded-xl border border-border bg-card/40">
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {displaySkills.map((skill) => (
-                  <div key={skill} className="relative group">
-                    <Badge variant="secondary" className="px-3 py-1">
-                      {skill}
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => handleRemoveSkill(skill)}
-                          className="ml-1.5 hover:text-destructive transition-colors"
-                          aria-label={`Remove ${skill} skill`}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                    </Badge>
-                  </div>
-                ))}
-                {isOwnProfile && (
-                  <SkillsCombobox
-                    existingSkills={displaySkills}
-                    onAddSkill={async (skill) => {
-                      const currentSkills = displaySkills || [];
-                      if (currentSkills.some(s => s.toLowerCase() === skill.toLowerCase())) {
-                        toast.error('Skill already exists');
-                        return;
-                      }
-                      await saveProfileField('skills', [...currentSkills, skill]);
-                    }}
-                  />
-                )}
-                {displaySkills.length === 0 && !isOwnProfile && (
-                  <span className="text-muted-foreground text-sm">No skills added</span>
-                )}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
 
           {/* Bio — moved beneath Skills */}
           <div className="w-full text-center">
@@ -2160,6 +2111,49 @@ const ProfilePage: React.FC = () => {
         </section>
       </Collapsible>
 
+      {/* Skills Section - moved below Posts */}
+      <section id="profile-skills" className="scroll-mt-24 px-4 sm:px-6 lg:px-8 py-4">
+        <h2 className="text-lg font-display font-semibold mb-3">
+          Skills{displaySkills.length > 0 && ` (${displaySkills.length})`}
+        </h2>
+        <div className="p-3 rounded-xl border border-border bg-card/40">
+          <div className="flex flex-wrap items-center gap-2">
+            {displaySkills.map((skill) => (
+              <div key={skill} className="relative group">
+                <Badge variant="secondary" className="px-3 py-1">
+                  {skill}
+                  {isOwnProfile && (
+                    <button
+                      onClick={() => handleRemoveSkill(skill)}
+                      className="ml-1.5 hover:text-destructive transition-colors"
+                      aria-label={`Remove ${skill} skill`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </Badge>
+              </div>
+            ))}
+            {isOwnProfile && (
+              <SkillsCombobox
+                existingSkills={displaySkills}
+                onAddSkill={async (skill) => {
+                  const currentSkills = displaySkills || [];
+                  if (currentSkills.some(s => s.toLowerCase() === skill.toLowerCase())) {
+                    toast.error('Skill already exists');
+                    return;
+                  }
+                  await saveProfileField('skills', [...currentSkills, skill]);
+                }}
+              />
+            )}
+            {displaySkills.length === 0 && !isOwnProfile && (
+              <span className="text-muted-foreground text-sm">No skills added</span>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Conditional Professional Details - shown at bottom if user opted in */}
       {showProfessionalDetails && (
         <section id="profile-details" className="scroll-mt-24 px-4 py-4 sm:px-6 lg:px-8">
@@ -2196,6 +2190,27 @@ const ProfilePage: React.FC = () => {
       {/* /Section stack */}
       </div>
       {/* /Unified profile content frame */}
+
+      {/* Profile Completion Bar - moved to bottom, only visible to profile owner */}
+      {isOwnProfile && dbProfile && (
+        <div className="mt-4">
+          <ProfileCompletionBar
+            userId={authUser!.id}
+            profile={{
+              role: dbProfile.role,
+              graduation_year: dbProfile.graduation_year,
+              location: dbProfile.location,
+              pronouns: dbProfile.pronouns,
+              instagram_url: dbProfile.instagram_url,
+              website_url: dbProfile.website_url,
+              badges: dbProfile.badges,
+              skills: dbProfile.skills,
+              bio: dbProfile.bio,
+            }}
+            creditsCount={dbCredits.length}
+          />
+        </div>
+      )}
       </div>
       {/* /Centered profile frame */}
 
