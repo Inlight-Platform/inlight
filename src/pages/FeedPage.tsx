@@ -380,21 +380,37 @@ const FeedPage: React.FC = () => {
       creator_profile: project.creator_profile,
     }));
 
-  const renderProjectBento = (list: typeof allProjects) => (
-    <div
-      className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-5 sm:auto-rows-[220px]"
-      style={{ gridAutoFlow: 'dense' }}
-    >
-      {projectsToFeedItems(list).map((item, idx) => (
-        <FeedBentoCard
-          key={`project-${item.id}`}
-          item={item}
-          size={getBentoSize(idx)}
-          onClick={() => navigate(`/projects/${item.id}`)}
-        />
-      ))}
-    </div>
-  );
+  const renderProjectBento = (list: typeof allProjects) => {
+    const items = projectsToFeedItems(list);
+    if (viewMode === 'scroll') {
+      return (
+        <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+          {items.map((item) => (
+            <FeedItem
+              key={`project-list-${item.id}`}
+              item={item}
+              networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
+            />
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div
+        className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-5 sm:auto-rows-[220px]"
+        style={{ gridAutoFlow: 'dense' }}
+      >
+        {items.map((item, idx) => (
+          <FeedBentoCard
+            key={`project-${item.id}`}
+            item={item}
+            size={getBentoSize(idx)}
+            onClick={() => navigate(`/projects/${item.id}`)}
+          />
+        ))}
+      </div>
+    );
+  };
 
   // Convert projects to feed items for grid display
   const projectFeedItems: FeedItemData[] = useMemo(() => {
