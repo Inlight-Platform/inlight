@@ -352,7 +352,7 @@ const ProfileSettingsPage: React.FC = () => {
       if (error) throw error;
 
       const { error: pronounsError } = await supabase.rpc('update_profile_pronouns_settings', {
-        _pronouns: pronouns ?? null,
+        _pronouns: pronouns ?? '',
         _show_pronouns: show_pronouns ?? true,
       });
 
