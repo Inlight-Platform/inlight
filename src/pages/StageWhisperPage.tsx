@@ -463,10 +463,10 @@ const StageWhisperPage: React.FC = () => {
                       </>}
                   </p>
                 </div>
-                <AddShowDialog category={activeTab as 'off-off-broadway' | 'school'} trigger={<Button size="sm" className="gap-1.5 shrink-0">
+                {user && <AddShowDialog category={activeTab as 'off-off-broadway' | 'school'} trigger={<Button size="sm" className="gap-1.5 shrink-0">
                       <Plus className="w-4 h-4" />
                       Add Your Show
-                    </Button>} />
+                    </Button>} />}
               </div>}
 
             {viewTab === 'discover' ? <>
@@ -614,12 +614,12 @@ const StageWhisperPage: React.FC = () => {
                       Share it with the community!
                     </p>
                   </div>
-                  <AddFilmDialog trigger={
+                  {user && <AddFilmDialog trigger={
                     <Button size="sm" className="gap-1.5 shrink-0">
                       <Plus className="w-4 h-4" />
                       Add Film
                     </Button>
-                  } />
+                  } />}
                 </div>
 
                 {loadingUserFilms ? <div className="flex items-center justify-center py-12">
@@ -705,12 +705,12 @@ const StageWhisperPage: React.FC = () => {
                         Let your community know!
                       </p>
                     </div>
-                    <AddMusicShowDialog showType={musicTab === 'cabarets' ? 'cabaret' : 'concert'} trigger={
+                    {user && <AddMusicShowDialog showType={musicTab === 'cabarets' ? 'cabaret' : 'concert'} trigger={
                       <Button size="sm" className="gap-1.5 shrink-0">
                         <Plus className="w-4 h-4" />
                         Add Show
                       </Button>
-                    } />
+                    } />}
                   </div>
 
                   {loadingMusicShows ? <div className="flex items-center justify-center py-12">
