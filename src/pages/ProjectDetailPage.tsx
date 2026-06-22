@@ -194,6 +194,23 @@ const ProjectDetailPage: React.FC = () => {
   const canEditProject = canManageProjects && isCreator;
   const canManageProjectContent = canManageProjects && isMember;
 
+  const togglePublicMutation = useMutation({
+    mutationFn: async (next: boolean) => {
+      if (!projectId) throw new Error('Missing project');
+      const { error } = await supabase
+        .from('projects')
+        .update({ is_public: next })
+        .eq('id', projectId);
+      if (error) throw error;
+      return next;
+    },
+    onSuccess: (next) => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success(next ? 'Project is now public' : 'Project is now private');
+    },
+    onError: () => toast.error('Failed to update visibility'),
+  });
+
   // Handle file upload
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
