@@ -296,6 +296,9 @@ const ProfilePage: React.FC = () => {
   const [editLocation, setEditLocation] = useState('');
   const [editRole, setEditRole] = useState('');
   const [editBio, setEditBio] = useState('');
+  const [bioExpanded, setBioExpanded] = useState(false);
+  const [bioCanExpand, setBioCanExpand] = useState(false);
+  const bioRef = useRef<HTMLParagraphElement>(null);
   const [isEditingInstagram, setIsEditingInstagram] = useState(false);
   const [isEditingWebsite, setIsEditingWebsite] = useState(false);
   const [editInstagram, setEditInstagram] = useState('');
@@ -419,6 +422,20 @@ const ProfilePage: React.FC = () => {
     : [];
   const displayBadges = dbProfile?.badges || user?.badges || [];
   const displayBio = dbProfile?.bio || user?.bio || '';
+
+  useEffect(() => {
+    if (bioExpanded) {
+      setBioCanExpand(true);
+      return;
+    }
+    const el = bioRef.current;
+    if (!el) {
+      setBioCanExpand(false);
+      return;
+    }
+    setBioCanExpand(el.scrollHeight > el.clientHeight + 1);
+  }, [displayBio, bioExpanded]);
+
   const displayUnionStatus = dbProfile?.union_status || user?.unionStatus || '';
   const displayRepresentation = dbProfile?.representation || user?.representation || '';
   const displayGearList = dbProfile?.gear_list || user?.gearList || [];
@@ -1526,7 +1543,7 @@ const ProfilePage: React.FC = () => {
                 )}
           </div>
 
-          {/* Bio — moved beneath Skills */}
+          {/* Bio */}
           <div className="w-full text-center">
             {isOwnProfile && isEditingBio ? (
               <div className="space-y-3">
@@ -1551,19 +1568,47 @@ const ProfilePage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div
-                className={`${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-3 -m-3 rounded-lg transition-colors group' : ''}`}
-                onClick={isOwnProfile ? startEditingBio : undefined}
-              >
-                <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">
-                  {displayBio || ''}
-                </p>
-                {isOwnProfile && !displayBio && (
-                  <p className="text-muted-foreground text-sm italic">
-                    Add a bio to let others know who you are
+              <div className="space-y-1">
+                <div
+                  className={`${isOwnProfile ? 'cursor-pointer hover:bg-muted/50 p-3 -m-3 rounded-lg transition-colors group' : ''}`}
+                  onClick={isOwnProfile ? startEditingBio : undefined}
+                >
+                  <p
+                    ref={bioRef}
+                    className={cn(
+                      'text-sm leading-relaxed whitespace-pre-wrap italic text-muted-foreground',
+                      !bioExpanded && 'line-clamp-4'
+                    )}
+                  >
+                    {displayBio || ''}
                   </p>
+                  {isOwnProfile && !displayBio && (
+                    <p className="text-muted-foreground text-sm italic">
+                      Add a bio to let others know who you are
+                    </p>
+                  )}
+                  {isOwnProfile && displayBio && <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-50 transition-opacity" />}
+                </div>
+                {bioCanExpand && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBioExpanded((prev) => !prev);
+                    }}
+                    aria-label={bioExpanded ? 'Show less' : 'Show more'}
+                  >
+                    {bioExpanded ? 'Show less' : 'Show more'}
+                    <ChevronDown
+                      className={cn(
+                        'w-4 h-4 ml-1 transition-transform duration-200',
+                        bioExpanded && 'rotate-180'
+                      )}
+                    />
+                  </Button>
                 )}
-                {isOwnProfile && displayBio && <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-50 transition-opacity" />}
               </div>
             )}
           </div>
