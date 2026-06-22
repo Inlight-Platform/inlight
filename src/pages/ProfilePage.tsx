@@ -133,6 +133,7 @@ interface ProfileData {
   show_union_status?: boolean;
   show_representation?: boolean;
   show_gear_list?: boolean;
+  show_pronouns?: boolean;
 }
 
 class ProfileSectionErrorBoundary extends React.Component<
