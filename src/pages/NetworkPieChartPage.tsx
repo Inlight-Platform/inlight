@@ -11,27 +11,27 @@ import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import PersonCard from '@/components/people/PersonCard';
 
 const COLORS = [
-  'hsl(0, 70%, 55%)',    // red
-  'hsl(25, 80%, 55%)',   // orange
-  'hsl(45, 85%, 50%)',   // gold
-  'hsl(80, 60%, 45%)',   // olive
-  'hsl(140, 55%, 42%)',  // green
-  'hsl(170, 60%, 40%)',  // teal
-  'hsl(200, 70%, 50%)',  // sky
-  'hsl(220, 65%, 55%)',  // blue
-  'hsl(250, 55%, 55%)',  // indigo
-  'hsl(275, 55%, 55%)',  // purple
-  'hsl(300, 50%, 50%)',  // magenta
-  'hsl(330, 60%, 55%)',  // pink
-  'hsl(15, 75%, 50%)',   // burnt orange
-  'hsl(60, 60%, 45%)',   // yellow-green
-  'hsl(185, 60%, 42%)',  // cyan
-  'hsl(235, 50%, 60%)',  // periwinkle
-  'hsl(350, 65%, 50%)',  // crimson
-  'hsl(100, 50%, 45%)',  // lime
-  'hsl(155, 50%, 42%)',  // emerald
-  'hsl(290, 45%, 55%)',  // violet
-  'hsl(0, 0%, 55%)',     // gray (Other)
+  'hsl(0, 0%, 95%)',
+  'hsl(0, 0%, 88%)',
+  'hsl(0, 0%, 80%)',
+  'hsl(0, 0%, 72%)',
+  'hsl(0, 0%, 64%)',
+  'hsl(0, 0%, 56%)',
+  'hsl(0, 0%, 48%)',
+  'hsl(0, 0%, 40%)',
+  'hsl(0, 0%, 32%)',
+  'hsl(0, 0%, 24%)',
+  'hsl(0, 0%, 92%)',
+  'hsl(0, 0%, 84%)',
+  'hsl(0, 0%, 76%)',
+  'hsl(0, 0%, 68%)',
+  'hsl(0, 0%, 60%)',
+  'hsl(0, 0%, 52%)',
+  'hsl(0, 0%, 44%)',
+  'hsl(0, 0%, 36%)',
+  'hsl(0, 0%, 28%)',
+  'hsl(0, 0%, 20%)',
+  'hsl(0, 0%, 50%)', // Other
 ];
 
 const NetworkPieChartPage: React.FC = () => {

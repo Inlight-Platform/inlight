@@ -18,7 +18,9 @@ import {
   ChevronUp,
   X,
   FolderOpen,
-  ExternalLink
+  ExternalLink,
+  Globe,
+  Lock
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -191,6 +193,23 @@ const ProjectDetailPage: React.FC = () => {
   const isMember = members.some(m => m.user_id === user?.id) || isCreator;
   const canEditProject = canManageProjects && isCreator;
   const canManageProjectContent = canManageProjects && isMember;
+
+  const togglePublicMutation = useMutation({
+    mutationFn: async (next: boolean) => {
+      if (!projectId) throw new Error('Missing project');
+      const { error } = await supabase
+        .from('projects')
+        .update({ is_public: next })
+        .eq('id', projectId);
+      if (error) throw error;
+      return next;
+    },
+    onSuccess: (next) => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success(next ? 'Project is now public' : 'Project is now private');
+    },
+    onError: () => toast.error('Failed to update visibility'),
+  });
 
   // Handle file upload
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -487,6 +506,28 @@ const ProjectDetailPage: React.FC = () => {
 
           {user && (
             <div className="flex items-center gap-2">
+              {canEditProject && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => togglePublicMutation.mutate(!project.is_public)}
+                  disabled={togglePublicMutation.isPending}
+                  className="gap-1.5"
+                  title={project.is_public ? 'Currently public — click to make private' : 'Currently private — click to make public'}
+                >
+                  {project.is_public ? (
+                    <>
+                      <Globe className="w-4 h-4" />
+                      <span className="hidden sm:inline">Public</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4" />
+                      <span className="hidden sm:inline">Private</span>
+                    </>
+                  )}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"

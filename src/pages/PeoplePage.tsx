@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Compass, Users, GraduationCap, Clock, Building2, ChevronDown, Inbox, ArrowLeft, UserRound, UserPlus } from 'lucide-react';
+import { Search, Compass, Users, GraduationCap, Clock, Building2, ChevronDown, Inbox, UserRound, UserPlus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -113,7 +113,13 @@ const PeoplePage: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState('explore');
   const [searchQuery, setSearchQuery] = useState('');
-  const [section, setSection] = useState<null | 'people' | 'groups' | 'companies'>(null);
+  const [openSections, setOpenSections] = useState<Record<'people' | 'groups' | 'companies', boolean>>({
+    people: true,
+    groups: false,
+    companies: false,
+  });
+  const toggleSection = (key: 'people' | 'groups' | 'companies') =>
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   
   // Fetch all users from the database
   const { data: allUsers = [], isLoading, error: allUsersError } = useQuery({
@@ -267,18 +273,7 @@ const PeoplePage: React.FC = () => {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              {section && (
-                <button
-                  onClick={() => setSection(null)}
-                  className="p-1.5 rounded-full hover:bg-accent transition-colors"
-                  aria-label="Back"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-              )}
-              <h1 className="text-2xl font-display font-bold capitalize">
-                {section ?? 'People'}
-              </h1>
+              <h1 className="text-2xl font-display font-bold">People</h1>
             </div>
             <InviteFriendDialog>
               <Button size="sm" className="gap-2">
@@ -291,71 +286,22 @@ const PeoplePage: React.FC = () => {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        {section === null && (
-          <div className="flex min-h-[calc(100svh-9rem)] items-center justify-center sm:block sm:min-h-0">
-            <div className="mx-auto grid w-full max-w-40 grid-cols-1 gap-3 sm:mt-[calc(25vh-5.5rem)] sm:max-w-2xl sm:grid-cols-3 sm:gap-4 lg:max-w-4xl">
-              {[
-                { key: 'people', label: 'People', icon: UserRound, desc: 'Discover and connect with creators' },
-                { key: 'groups', label: 'Groups', icon: GraduationCap, desc: 'Explore by program or affiliation' },
-                { key: 'companies', label: 'Companies', icon: Building2, desc: 'Browse company portfolios and profiles' },
-              ].map(({ key, label, icon: Icon, desc }) => (
-                <button
-                  key={key}
-                  onClick={() => setSection(key as 'people' | 'groups' | 'companies')}
-                  className="group flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-2.5 text-center transition-all hover:border-primary/50 hover:bg-accent/40 sm:gap-3 sm:rounded-2xl sm:p-4 md:p-5"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 transition-transform group-hover:scale-110 sm:h-14 sm:w-14 sm:rounded-2xl md:h-16 md:w-16">
-                    <Icon className="h-5 w-5 text-primary sm:h-7 sm:w-7 md:h-8 md:w-8" />
-                  </div>
-                  <div>
-                    <h2 className="font-display text-sm font-semibold sm:text-base md:text-lg">{label}</h2>
-                    <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-muted-foreground sm:text-xs md:text-sm">{desc}</p>
-                  </div>
-                </button>
-              ))}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
+        {/* People dropdown */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('people')}
+            className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-accent/40 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <UserRound className="h-5 w-5 text-primary" />
+              <span className="font-display text-base sm:text-lg font-semibold">People</span>
             </div>
-          </div>
-        )}
-
-        {section === 'groups' && (
-          <GroupsSection studios={studios} studiosLoading={studiosLoading} onStudioClick={handleStudioClick} />
-        )}
-
-        {section === 'companies' && (
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <Building2 className="w-5 h-5 text-primary" />
-              <h2 className="text-xl font-display font-semibold">Companies</h2>
-            </div>
-            <p className="text-sm text-muted-foreground mb-6">
-              {companies.length} companies sharing their portfolios and profiles
-            </p>
-            {companiesLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-48 rounded-xl" />
-                ))}
-              </div>
-            ) : companies.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {companies.map((company) => (
-                  <CompanyCard
-                    key={company.id}
-                    company={company}
-                    isFollowing={isFollowingCompany(company.id)}
-                    onFollow={(id) => followCompany.mutate(id)}
-                    onUnfollow={(id) => unfollowCompany.mutate(id)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-8">No companies yet.</p>
-            )}
-          </section>
-        )}
-
-        {section === 'people' && (
+            <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${openSections.people ? 'rotate-180' : ''}`} />
+          </button>
+          {openSections.people && (
+            <div className="p-4 border-t border-border">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex sm:justify-center">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mb-6">
@@ -534,7 +480,72 @@ const PeoplePage: React.FC = () => {
             )}
           </TabsContent>
         </Tabs>
-        )}
+            </div>
+          )}
+        </div>
+
+        {/* Groups dropdown */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('groups')}
+            className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-accent/40 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <GraduationCap className="h-5 w-5 text-primary" />
+              <span className="font-display text-base sm:text-lg font-semibold">Groups</span>
+            </div>
+            <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${openSections.groups ? 'rotate-180' : ''}`} />
+          </button>
+          {openSections.groups && (
+            <div className="p-4 border-t border-border">
+              <GroupsSection studios={studios} studiosLoading={studiosLoading} onStudioClick={handleStudioClick} />
+            </div>
+          )}
+        </div>
+
+        {/* Companies dropdown */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('companies')}
+            className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-accent/40 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Building2 className="h-5 w-5 text-primary" />
+              <span className="font-display text-base sm:text-lg font-semibold">Companies</span>
+            </div>
+            <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${openSections.companies ? 'rotate-180' : ''}`} />
+          </button>
+          {openSections.companies && (
+            <div className="p-4 border-t border-border">
+              <p className="text-sm text-muted-foreground mb-6">
+                {companies.length} companies sharing their portfolios and profiles
+              </p>
+              {companiesLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-48 rounded-xl" />
+                  ))}
+                </div>
+              ) : companies.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {companies.map((company) => (
+                    <CompanyCard
+                      key={company.id}
+                      company={company}
+                      isFollowing={isFollowingCompany(company.id)}
+                      onFollow={(id) => followCompany.mutate(id)}
+                      onUnfollow={(id) => unfollowCompany.mutate(id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No companies yet.</p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
