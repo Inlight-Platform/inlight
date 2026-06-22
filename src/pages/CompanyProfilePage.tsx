@@ -664,9 +664,6 @@ const CompanyProfilePage: React.FC = () => {
                   Copy public link
                 </Button>
               )}
-              {isOwner && company && (
-                <EditCompanyDialog company={company} onSaved={() => queryClient.invalidateQueries({ queryKey: ['company', companyId] })} />
-              )}
               {!isOwner && companyId && (
                 <Button
                   variant={following ? 'outline' : 'default'}
