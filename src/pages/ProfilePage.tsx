@@ -1693,14 +1693,14 @@ const ProfilePage: React.FC = () => {
                     <>
                       <button
                         onClick={() => navigate("/saves")}
-                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-primary/15 hover:bg-primary/25 text-sm font-medium text-primary border border-primary/20 transition-colors"
+                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-primary/15 dark:bg-white/10 hover:bg-primary/25 dark:hover:bg-white/20 text-sm font-medium text-primary dark:text-white/80 border border-primary/20 dark:border-white/20 transition-colors"
                       >
                         <Bookmark className="w-4 h-4" />
                         My Saves
                       </button>
                       <button
                         onClick={() => navigate("/network")}
-                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-primary/15 hover:bg-primary/25 text-sm font-medium text-primary border border-primary/20 transition-colors"
+                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-primary/15 dark:bg-white/10 hover:bg-primary/25 dark:hover:bg-white/20 text-sm font-medium text-primary dark:text-white/80 border border-primary/20 dark:border-white/20 transition-colors"
                       >
                         <Users className="w-4 h-4" />
                         My Community
