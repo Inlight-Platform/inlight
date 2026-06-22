@@ -506,6 +506,28 @@ const ProjectDetailPage: React.FC = () => {
 
           {user && (
             <div className="flex items-center gap-2">
+              {canEditProject && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => togglePublicMutation.mutate(!project.is_public)}
+                  disabled={togglePublicMutation.isPending}
+                  className="gap-1.5"
+                  title={project.is_public ? 'Currently public — click to make private' : 'Currently private — click to make public'}
+                >
+                  {project.is_public ? (
+                    <>
+                      <Globe className="w-4 h-4" />
+                      <span className="hidden sm:inline">Public</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4" />
+                      <span className="hidden sm:inline">Private</span>
+                    </>
+                  )}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
