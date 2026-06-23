@@ -2012,17 +2012,15 @@ const ProfilePage: React.FC = () => {
                 className="scroll-mt-24"
               >
                 <section className="px-4 sm:px-6 lg:px-8 py-4">
-                  <CollapsibleTrigger className="flex items-center justify-between w-full group">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between w-full gap-2">
+                    <CollapsibleTrigger className="flex items-center gap-2 group flex-1 min-w-0 text-left">
                       <h2 className="text-lg font-display font-semibold">Attended</h2>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {isOwnProfile && attendedOpen && <AddAttendedDialog />}
                       <ChevronDown
                         className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${attendedOpen ? "rotate-180" : ""}`}
                       />
-                    </div>
-                  </CollapsibleTrigger>
+                    </CollapsibleTrigger>
+                    {isOwnProfile && attendedOpen && <AddAttendedDialog />}
+                  </div>
                   <CollapsibleContent className="mt-4">
                     <ProfileSectionErrorBoundary title="Attended">
                       <AttendedSection userId={resolvedUserId} />
