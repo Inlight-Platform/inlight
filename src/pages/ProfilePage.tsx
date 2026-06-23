@@ -1923,11 +1923,7 @@ const ProfilePage: React.FC = () => {
                               Add
                             </Button>
                           </DialogTrigger>
-                          <DialogContent
-                            className="bg-card border-border"
-                            onClick={(e) => e.stopPropagation()}
-                            onPointerDown={(e) => e.stopPropagation()}
-                          >
+                          <DialogContent className="bg-card border-border">
                             <DialogHeader>
                               <DialogTitle>Add Credit</DialogTitle>
                             </DialogHeader>
