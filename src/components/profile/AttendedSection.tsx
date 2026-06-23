@@ -1,6 +1,5 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Calendar, MapPin, Ticket, Theater } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,8 +22,6 @@ interface AttendedEvent {
 }
 
 export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
-  const navigate = useNavigate();
-
   const { data: attended = [], isLoading } = useQuery({
     queryKey: ['attended-events', userId],
     queryFn: async () => {
