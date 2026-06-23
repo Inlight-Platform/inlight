@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import ReactCrop, { Crop, PixelCrop, centerCrop, convertToPixelCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ interface AvatarCropperProps {
   onClose: () => void;
   imageSrc: string;
   onCropComplete: (blob: Blob) => Promise<void>;
+  title?: string;
+  saveLabel?: string;
 }
 
 function centerAspectCrop(
@@ -108,6 +110,8 @@ export const AvatarCropper: React.FC<AvatarCropperProps> = ({
   onClose,
   imageSrc,
   onCropComplete,
+  title = 'Crop Avatar',
+  saveLabel = 'Save Avatar',
 }) => {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
@@ -118,7 +122,9 @@ export const AvatarCropper: React.FC<AvatarCropperProps> = ({
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    setCrop(centerAspectCrop(width, height, 1));
+    const nextCrop = centerAspectCrop(width, height, 1);
+    setCrop(nextCrop);
+    setCompletedCrop(convertToPixelCrop(nextCrop, width, height));
   }, []);
 
   const handleSave = async () => {
@@ -149,7 +155,7 @@ export const AvatarCropper: React.FC<AvatarCropperProps> = ({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg bg-card border-border">
         <DialogHeader>
-          <DialogTitle>Crop Avatar</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -167,6 +173,7 @@ export const AvatarCropper: React.FC<AvatarCropperProps> = ({
                 ref={imgRef}
                 src={imageSrc}
                 alt="Crop preview"
+                crossOrigin="anonymous"
                 onLoad={onImageLoad}
                 style={{
                   transform: `scale(${scale}) rotate(${rotate}deg)`,
@@ -224,7 +231,7 @@ export const AvatarCropper: React.FC<AvatarCropperProps> = ({
                 Saving...
               </>
             ) : (
-              'Save Avatar'
+              saveLabel
             )}
           </Button>
         </DialogFooter>

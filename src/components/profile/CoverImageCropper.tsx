@@ -171,6 +171,7 @@ export const CoverImageCropper: React.FC<CoverImageCropperProps> = ({
                   ref={imgRef}
                   src={imageSrc}
                   alt="Cover crop preview"
+                  crossOrigin="anonymous"
                   onLoad={onImageLoad}
                   style={{
                     width: `${zoom * 100}%`,

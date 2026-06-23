@@ -17,6 +17,63 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { ProjectCreator } from '@/components/projects/ProjectCreator';
+import { compressImage, isCompressibleImage } from '@/lib/imageCompression';
+import { CoverImageCropper } from '@/components/profile/CoverImageCropper';
+import { AvatarCropper } from '@/components/profile/AvatarCropper';
+
+const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  avif: 'image/avif',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  tif: 'image/tiff',
+  tiff: 'image/tiff',
+  bmp: 'image/bmp',
+};
+
+const getImageContentType = (file: File) => {
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const extensionType = extension ? IMAGE_MIME_BY_EXTENSION[extension] : undefined;
+
+  if (!file.type || file.type === 'application/octet-stream') {
+    return extensionType || 'application/octet-stream';
+  }
+
+  return file.type;
+};
+
+const sanitizeStorageFileName = (name: string) => {
+  const fallback = 'company-image';
+  const trimmed = name.trim() || fallback;
+  return trimmed
+    .normalize('NFKD')
+    .replace(/[^\w.\-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 120) || fallback;
+};
+
+const prepareCompanyImageFile = async (file: File) => {
+  if (!getImageContentType(file).startsWith('image/')) {
+    throw new Error('Please choose an image file.');
+  }
+
+  if (isCompressibleImage(file)) {
+    return compressImage(file);
+  }
+
+  return file;
+};
+
+const canCropCompanyImage = (file: File) => {
+  const contentType = getImageContentType(file);
+  return ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/bmp', 'image/tiff', 'image/avif', 'image/heic', 'image/heif'].includes(contentType);
+};
 
 // ── Transfer Ownership Dialog ──────────────────────────────────
 const TransferOwnershipDialog: React.FC<{ companyId: string; currentOwnerId: string }> = ({ companyId, currentOwnerId }) => {
@@ -130,21 +187,68 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
   const [coverUploading, setCoverUploading] = useState(false);
   const [logoUrl, setLogoUrl] = useState(company.logo_url || '');
   const [coverUrl, setCoverUrl] = useState(company.cover_image_url || '');
+  const [logoCropperOpen, setLogoCropperOpen] = useState(false);
+  const [logoCropperImageSrc, setLogoCropperImageSrc] = useState('');
+  const [coverCropperOpen, setCoverCropperOpen] = useState(false);
+  const [coverCropperImageSrc, setCoverCropperImageSrc] = useState('');
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
   const uploadImage = async (file: File, kind: 'logo' | 'cover') => {
     if (!user?.id) throw new Error('You need to be signed in to upload images.');
-    const path = `${user.id}/companies/${company.id}/${kind}-${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from('profile-media').upload(path, file, { contentType: file.type, upsert: true });
+    const imageFile = await prepareCompanyImageFile(file);
+    const path = `${user.id}/companies/${company.id}/${kind}-${Date.now()}-${sanitizeStorageFileName(imageFile.name)}`;
+    const { error } = await supabase.storage.from('profile-media').upload(path, imageFile, {
+      contentType: getImageContentType(imageFile),
+    });
     if (error) throw error;
     const { data } = supabase.storage.from('profile-media').getPublicUrl(path);
     return data.publicUrl;
   };
 
+  const uploadCroppedCover = async (blob: Blob) => {
+    if (!user?.id) throw new Error('You need to be signed in to upload images.');
+    const path = `${user.id}/companies/${company.id}/cover-${Date.now()}-cropped.jpg`;
+    const { error } = await supabase.storage.from('profile-media').upload(path, blob, {
+      contentType: 'image/jpeg',
+    });
+    if (error) throw error;
+    const { data } = supabase.storage.from('profile-media').getPublicUrl(path);
+    setCoverUrl(`${data.publicUrl}?t=${Date.now()}`);
+    toast.success('Cover cropped');
+  };
+
+  const uploadCroppedLogo = async (blob: Blob) => {
+    if (!user?.id) throw new Error('You need to be signed in to upload images.');
+    const path = `${user.id}/companies/${company.id}/logo-${Date.now()}-cropped.jpg`;
+    const { error } = await supabase.storage.from('profile-media').upload(path, blob, {
+      contentType: 'image/jpeg',
+    });
+    if (error) throw error;
+    const { data } = supabase.storage.from('profile-media').getPublicUrl(path);
+    setLogoUrl(`${data.publicUrl}?t=${Date.now()}`);
+    toast.success('Logo cropped');
+  };
+
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (logoInputRef.current) {
+      logoInputRef.current.value = '';
+    }
+
+    if (canCropCompanyImage(file)) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setLogoCropperImageSrc(reader.result as string);
+        setLogoCropperOpen(true);
+      };
+      reader.onerror = () => toast.error('Could not read logo image');
+      reader.readAsDataURL(file);
+      return;
+    }
+
     setLogoUploading(true);
     try {
       const url = await uploadImage(file, 'logo');
@@ -160,6 +264,22 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
   const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (coverInputRef.current) {
+      coverInputRef.current.value = '';
+    }
+
+    if (canCropCompanyImage(file)) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setCoverCropperImageSrc(reader.result as string);
+        setCoverCropperOpen(true);
+      };
+      reader.onerror = () => toast.error('Could not read cover image');
+      reader.readAsDataURL(file);
+      return;
+    }
+
     setCoverUploading(true);
     try {
       const url = await uploadImage(file, 'cover');
@@ -206,14 +326,15 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Sparkles className="w-4 h-4" />
-          Customize Page
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-2">
+            <Sparkles className="w-4 h-4" />
+            Customize Page
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Sparkles className="w-5 h-5" /> Customize Your Company Page</DialogTitle>
         </DialogHeader>
@@ -246,9 +367,17 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
                     {logoUrl ? <img src={logoUrl} alt="" className="w-full h-full object-cover" /> : <Building2 className="w-6 h-6 text-muted-foreground" />}
                   </div>
                   <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
-                  <Button type="button" size="sm" variant="outline" onClick={() => logoInputRef.current?.click()} disabled={logoUploading}>
-                    {logoUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4 mr-2" />} Upload
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={() => logoInputRef.current?.click()} disabled={logoUploading}>
+                      {logoUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4 mr-2" />} Upload
+                    </Button>
+                    {logoUrl && (
+                      <Button type="button" size="sm" variant="ghost" onClick={() => setLogoUrl('')} disabled={logoUploading}>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Remove
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
               <div>
@@ -258,12 +387,23 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
                     {coverUrl ? <img src={coverUrl} alt="" className="w-full h-full object-cover" /> : <Image className="w-5 h-5 text-muted-foreground" />}
                   </div>
                   <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
-                  <Button type="button" size="sm" variant="outline" onClick={() => coverInputRef.current?.click()} disabled={coverUploading}>
-                    {coverUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4 mr-2" />} Upload
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={() => coverInputRef.current?.click()} disabled={coverUploading}>
+                      {coverUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4 mr-2" />} Upload
+                    </Button>
+                    {coverUrl && (
+                      <Button type="button" size="sm" variant="ghost" onClick={() => setCoverUrl('')} disabled={coverUploading}>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Remove
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Raster logo and banner uploads open a cropper before they are saved. SVG and GIF files upload directly.
+            </p>
           </div>
 
           {/* Palette */}
@@ -342,8 +482,45 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
             Save Changes
           </Button>
         </DialogFooter>
-      </DialogContent>
-    </Dialog>
+
+        </DialogContent>
+      </Dialog>
+
+      <CoverImageCropper
+        open={coverCropperOpen}
+        imageSrc={coverCropperImageSrc}
+        onClose={() => setCoverCropperOpen(false)}
+        onCropComplete={async (blob) => {
+          setCoverUploading(true);
+          try {
+            await uploadCroppedCover(blob);
+          } catch (err: any) {
+            toast.error(err.message || 'Cover crop failed');
+            throw err;
+          } finally {
+            setCoverUploading(false);
+          }
+        }}
+      />
+      <AvatarCropper
+        open={logoCropperOpen}
+        imageSrc={logoCropperImageSrc}
+        onClose={() => setLogoCropperOpen(false)}
+        title="Crop Company Logo"
+        saveLabel="Save Logo"
+        onCropComplete={async (blob) => {
+          setLogoUploading(true);
+          try {
+            await uploadCroppedLogo(blob);
+          } catch (err: any) {
+            toast.error(err.message || 'Logo crop failed');
+            throw err;
+          } finally {
+            setLogoUploading(false);
+          }
+        }}
+      />
+    </>
   );
 };
 
@@ -515,8 +692,11 @@ const CompanyProfilePage: React.FC = () => {
     if (!file || !user?.id || !companyId) return;
     setUploadingPhoto(true);
     try {
-      const fileName = `${user.id}/companies/${companyId}/${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage.from('profile-media').upload(fileName, file, { contentType: file.type });
+      const imageFile = await prepareCompanyImageFile(file);
+      const fileName = `${user.id}/companies/${companyId}/${Date.now()}-${sanitizeStorageFileName(imageFile.name)}`;
+      const { error: uploadError } = await supabase.storage.from('profile-media').upload(fileName, imageFile, {
+        contentType: getImageContentType(imageFile),
+      });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from('profile-media').getPublicUrl(fileName);
       const { error: insertError } = await supabase.from('company_photos').insert({ company_id: companyId, image_url: urlData.publicUrl, uploaded_by: user.id });
