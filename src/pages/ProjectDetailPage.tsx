@@ -50,6 +50,14 @@ import { useMinimizedChat } from '@/hooks/useMinimizedChat';
 import { useLocation } from 'react-router-dom';
 import { InviteFriendDialog } from '@/components/invitations/InviteFriendDialog';
 import { ProjectInvitationPrompt } from '@/components/invitations/ProjectInvitationPrompt';
+import { UserSearchInput } from '@/components/projects/UserSearchInput';
+
+interface InviteeProfile {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  role: string | null;
+}
 
 interface ProjectMember {
   id: string;
@@ -88,6 +96,7 @@ const ProjectDetailPage: React.FC = () => {
   const [editedDescription, setEditedDescription] = useState('');
   const [addRoleOpen, setAddRoleOpen] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
+  const [selectedRoleInvitee, setSelectedRoleInvitee] = useState<InviteeProfile | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -350,19 +359,43 @@ const ProjectDetailPage: React.FC = () => {
 
   // Add role mutation
   const addRoleMutation = useMutation({
-    mutationFn: async (roleName: string) => {
+    mutationFn: async ({ roleName, invitee }: { roleName: string; invitee: InviteeProfile | null }) => {
       if (!projectId) throw new Error('No project ID');
+      if (!user?.id) throw new Error('You must be logged in');
       if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
-      const { error } = await supabase
+
+      const { data: projectRole, error } = await supabase
         .from('project_roles')
-        .insert({ project_id: projectId, role_name: roleName });
+        .insert({
+          project_id: projectId,
+          role_name: roleName.trim(),
+          assigned_user_id: invitee?.user_id || null,
+        })
+        .select('id')
+        .single();
+
       if (error) throw error;
+
+      if (invitee) {
+        const { error: invitationError } = await supabase
+          .from('project_invitations')
+          .insert({
+            project_role_id: projectRole.id,
+            sender_id: user.id,
+            receiver_id: invitee.user_id,
+            status: 'pending',
+          });
+
+        if (invitationError) throw invitationError;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-role-invitations', projectId] });
       setNewRoleName('');
+      setSelectedRoleInvitee(null);
       setAddRoleOpen(false);
-      toast.success('Role added');
+      toast.success(variables.invitee ? 'Role added and invitation sent' : 'Role added');
     },
     onError: () => toast.error('Failed to add role'),
   });
@@ -720,7 +753,16 @@ const ProjectDetailPage: React.FC = () => {
                 </div>
               </CollapsibleTrigger>
               {canEditProject && (
-                <Dialog open={addRoleOpen} onOpenChange={setAddRoleOpen}>
+                <Dialog
+                  open={addRoleOpen}
+                  onOpenChange={(open) => {
+                    setAddRoleOpen(open);
+                    if (!open) {
+                      setNewRoleName('');
+                      setSelectedRoleInvitee(null);
+                    }
+                  }}
+                >
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline">
                       <Plus className="w-4 h-4 mr-2" />
@@ -732,17 +774,30 @@ const ProjectDetailPage: React.FC = () => {
                       <DialogTitle>Add Open Role</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-4">
-                      <Input
-                        placeholder="Role name (e.g., Gaffer, Sound Mixer)"
-                        value={newRoleName}
-                        onChange={(e) => setNewRoleName(e.target.value)}
-                      />
+                      <div className="space-y-2">
+                        <Input
+                          placeholder="Role name (e.g., Gaffer, Sound Mixer)"
+                          value={newRoleName}
+                          onChange={(e) => setNewRoleName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <UserSearchInput
+                          value={selectedRoleInvitee}
+                          onChange={setSelectedRoleInvitee}
+                          placeholder="Search to invite someone..."
+                          excludeUserIds={user?.id ? [user.id] : []}
+                        />
+                      </div>
                       <Button
-                        onClick={() => addRoleMutation.mutate(newRoleName)}
+                        onClick={() => addRoleMutation.mutate({
+                          roleName: newRoleName,
+                          invitee: selectedRoleInvitee,
+                        })}
                         disabled={!newRoleName.trim() || addRoleMutation.isPending}
                         className="w-full"
                       >
-                        Add Role
+                        {selectedRoleInvitee ? 'Add Role & Send Invitation' : 'Add Role'}
                       </Button>
                     </div>
                   </DialogContent>

@@ -397,9 +397,6 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Open Roles</h3>
-        {isCreator && allApplications.length > 0 && (
-          <Badge variant="outline">{allApplications.length} applications</Badge>
-        )}
       </div>
 
       <div className="grid gap-3">
@@ -478,94 +475,6 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
                 </div>
               </div>
 
-              {/* Show applications to creator */}
-              {isCreator && roleApplications.length > 0 && (
-                <div className="mt-4 space-y-3 pt-4 border-t border-border">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {roleApplications.length} application{roleApplications.length !== 1 ? 's' : ''}
-                  </p>
-                  {roleApplications.map((app) => (
-                    <div key={app.id} className="p-3 bg-muted/50 rounded-lg space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div 
-                          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => navigate(`/profile/${app.applicant_id}`)}
-                        >
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={app.applicant_profile?.avatar_url || undefined} />
-                            <AvatarFallback>
-                              {app.applicant_profile?.display_name?.[0] || 'U'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium text-sm hover:underline">
-                            {app.applicant_profile?.display_name || 'Unknown'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs gap-1"
-                            onClick={() => setViewingApplication({ ...app, role_name: role.role_name } as any)}
-                          >
-                            <Eye className="w-3 h-3" />
-                            View Application
-                          </Button>
-                          {getStatusBadge(app.status)}
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground">{app.message}</p>
-                      
-                      <div className="flex gap-2 flex-wrap">
-                        {app.reel_url && (
-                          <a
-                            href={app.reel_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline flex items-center gap-1"
-                          >
-                            <Link2 className="w-3 h-3" /> Reel
-                          </a>
-                        )}
-                        {app.resume_url && (
-                          <a
-                            href={app.resume_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline flex items-center gap-1"
-                          >
-                            <FileText className="w-3 h-3" /> Resume
-                          </a>
-                        )}
-                      </div>
-
-                      {app.status === 'pending' && (
-                        <div className="flex gap-2 pt-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleAcceptClick(
-                              app.id,
-                              app.applicant_id,
-                              app.applicant_profile?.display_name || 'Unknown',
-                              role.role_name
-                            )}
-                          >
-                            <Check className="w-4 h-4 mr-1" /> Accept
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateApplicationStatus.mutate({ applicationId: app.id, status: 'rejected' })}
-                          >
-                            <X className="w-4 h-4 mr-1" /> Decline
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           );
         })}
@@ -716,35 +625,6 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
           </div>
         </DialogContent>
       </Dialog>
-      {/* Application Detail Sheet */}
-      <ApplicationDetailSheet
-        open={!!viewingApplication}
-        onOpenChange={(open) => { if (!open) setViewingApplication(null); }}
-        application={viewingApplication}
-        isCreator={isCreator}
-        onAccept={(applicationId, applicantId, roleName) => {
-          const applicantName = viewingApplication?.applicant_profile?.display_name || 'Unknown';
-          handleAcceptClick(applicationId, applicantId, applicantName, roleName);
-        }}
-        onDecline={(applicationId) => {
-          updateApplicationStatus.mutate({ applicationId, status: 'rejected' });
-          setViewingApplication(null);
-        }}
-      />
-
-      {/* Accept Confirmation Dialog */}
-      <AcceptApplicationDialog
-        open={acceptDialogOpen}
-        onOpenChange={(open) => {
-          setAcceptDialogOpen(open);
-          if (!open) setPendingAccept(null);
-        }}
-        applicantName={pendingAccept?.applicantName || ''}
-        roleName={pendingAccept?.roleName || ''}
-        projectName={projectData?.title || ''}
-        isPending={updateApplicationStatus.isPending}
-        onConfirm={handleAcceptConfirm}
-      />
     </div>
   );
 };

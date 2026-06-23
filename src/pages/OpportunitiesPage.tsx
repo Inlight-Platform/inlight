@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, addMonths, isPast } from 'date-fns';
 import { Plus, Briefcase, TrendingUp, Clock, Loader2, Calendar, Trash2, Users, ExternalLink, FileText, ArrowLeft, ChevronRight } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import OpportunityCreator from '@/components/opportunities/OpportunityCreator';
 import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
 import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
+import { AcceptApplicationDialog } from '@/components/projects/AcceptApplicationDialog';
 import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -25,6 +26,8 @@ const STRIPE_POST_JOB_URL = 'https://buy.stripe.com/dRmaEWa8gaA3eVL3ufco002';
 interface PostedJobApplication {
   id: string;
   jobId: string;
+  source: 'opportunity' | 'project_role';
+  projectId?: string;
   opportunityTitle: string;
   applicantId: string;
   applicantName: string;
@@ -166,7 +169,71 @@ const PostedJobApplications: React.FC<{
   applications: PostedJobApplication[];
   isLoading: boolean;
 }> = ({ postedJobs, applications, isLoading }) => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [pendingAccept, setPendingAccept] = useState<PostedJobApplication | null>(null);
+
+  const updateApplicationStatus = async (application: PostedJobApplication, status: string) => {
+    if (application.source === 'project_role') {
+      const { error } = await supabase
+        .from('role_applications')
+        .update({ status })
+        .eq('id', application.id);
+
+      if (error) throw error;
+
+      if (status === 'accepted' && application.projectId) {
+        const { error: memberError } = await supabase
+          .from('project_members')
+          .insert({
+            project_id: application.projectId,
+            user_id: application.applicantId,
+            role: application.opportunityTitle,
+          });
+
+        if (memberError && !memberError.message.includes('duplicate')) {
+          throw memberError;
+        }
+      }
+      return;
+    }
+
+    const { error } = await supabase
+      .from('opportunity_applications')
+      .update({ status })
+      .eq('id', application.id);
+
+    if (error) throw error;
+  };
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ application, status, welcomeMessage }: {
+      application: PostedJobApplication;
+      status: string;
+      welcomeMessage?: string;
+    }) => {
+      await updateApplicationStatus(application, status);
+
+      if (status === 'accepted' && welcomeMessage?.trim() && user?.id) {
+        await supabase.from('messages').insert({
+          sender_id: user.id,
+          receiver_id: application.applicantId,
+          content: welcomeMessage.trim(),
+        });
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['posted-role-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['posted-job-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['project-members', variables.application.projectId] });
+      toast.success(variables.status === 'accepted' ? 'Application accepted.' : 'Application declined.');
+      setPendingAccept(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update application');
+    },
+  });
 
   if (isLoading) {
     return (
@@ -349,8 +416,53 @@ const PostedJobApplications: React.FC<{
               </Badge>
             ))}
           </div>
+
+          {application.status === 'pending' && (
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (application.source === 'project_role') {
+                    setPendingAccept(application);
+                  } else {
+                    updateStatusMutation.mutate({ application, status: 'accepted' });
+                  }
+                }}
+                disabled={updateStatusMutation.isPending}
+              >
+                Accept
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => updateStatusMutation.mutate({ application, status: 'rejected' })}
+                disabled={updateStatusMutation.isPending}
+              >
+                Decline
+              </Button>
+            </div>
+          )}
         </div>
       ))}
+
+      <AcceptApplicationDialog
+        open={!!pendingAccept}
+        onOpenChange={(open) => {
+          if (!open) setPendingAccept(null);
+        }}
+        applicantName={pendingAccept?.applicantName || ''}
+        roleName={pendingAccept?.opportunityTitle || ''}
+        projectName={pendingAccept ? (postedJobs.find((job) => job.id === pendingAccept.jobId)?.company || '') : ''}
+        isPending={updateStatusMutation.isPending}
+        onConfirm={(welcomeMessage) => {
+          if (!pendingAccept) return;
+          updateStatusMutation.mutate({
+            application: pendingAccept,
+            status: 'accepted',
+            welcomeMessage,
+          });
+        }}
+      />
     </div>
   );
 };
@@ -715,6 +827,7 @@ const OpportunitiesPage: React.FC = () => {
         return {
           id: application.id,
           jobId: application.opportunity_id,
+          source: 'opportunity',
           opportunityTitle: postedOpportunityMap.get(application.opportunity_id)?.title || 'Untitled job',
           applicantId: application.applicant_id,
           applicantName: profile?.display_name || 'Unknown applicant',
@@ -761,6 +874,8 @@ const OpportunitiesPage: React.FC = () => {
         return {
           id: application.id,
           jobId: application.project_role_id,
+          source: 'project_role',
+          projectId: role?.projectId,
           opportunityTitle: role?.title || 'Untitled role',
           applicantId: application.applicant_id,
           applicantName: profile?.display_name || 'Unknown applicant',
