@@ -112,7 +112,7 @@ export const VerifyCreditsDialog: React.FC<VerifyCreditsDialogProps> = ({ credit
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
           <ShieldCheck className="w-4 h-4 mr-2" />
           Verify Credits
         </Button>
