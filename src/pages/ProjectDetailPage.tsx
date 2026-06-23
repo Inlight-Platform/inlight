@@ -696,19 +696,24 @@ const ProjectDetailPage: React.FC = () => {
         </section>
 
         {/* Open Roles - Collapsible */}
-        {project.is_public && (
+        {(project.is_public || canEditProject) && (
           <Collapsible open={rolesOpen} onOpenChange={setRolesOpen}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between py-4">
                 <CollapsibleTrigger asChild>
-                  <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                    <CardTitle className="text-lg">Open Roles</CardTitle>
-                    {rolesOpen ? (
-                      <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                    )}
-                  </button>
+                  <div className="space-y-1">
+                    <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                      <CardTitle className="text-lg">Open Roles</CardTitle>
+                      {rolesOpen ? (
+                        <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </button>
+                    <p className="text-sm text-muted-foreground font-normal">
+                      Add roles needed for this project. Open roles on public projects appear on Jobs.
+                    </p>
+                  </div>
                 </CollapsibleTrigger>
                 {canEditProject && (
                   <Dialog open={addRoleOpen} onOpenChange={setAddRoleOpen}>
