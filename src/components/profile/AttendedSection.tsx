@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Calendar, MapPin, Ticket } from 'lucide-react';
+import { Calendar, MapPin, Ticket, Theater } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,7 @@ interface AttendedSectionProps {
 
 interface AttendedEvent {
   id: string;
-  source: 'rsvp' | 'ticket';
+  source: 'rsvp' | 'ticket' | 'show';
   title: string;
   description: string | null;
   image_url: string | null;
@@ -27,7 +27,7 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
   const { data: attended = [], isLoading } = useQuery({
     queryKey: ['attended-events', userId],
     queryFn: async () => {
-      const [rsvpsRes, ticketsRes] = await Promise.all([
+      const [rsvpsRes, ticketsRes, showsRes] = await Promise.all([
         // Only count RSVPs that were physically checked in via QR scan
         supabase
           .from('event_rsvps')
@@ -40,6 +40,12 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
           .select('event_id, checked_in_at, events!inner(id, title, description, image_url, event_date, location)')
           .eq('user_id', userId)
           .not('checked_in_at', 'is', null),
+        // Self-marked attended shows
+        supabase
+          .from('saved_shows')
+          .select('show_id, attended_at, nyc_shows!inner(id, title, description, poster_url, venue, run_start, run_end)')
+          .eq('user_id', userId)
+          .eq('attended', true),
       ]);
 
       const map = new Map<string, AttendedEvent>();
@@ -67,6 +73,19 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
           image_url: t.events.image_url,
           event_date: t.events.event_date,
           location: t.events.location,
+        });
+      });
+
+      (showsRes.data || []).forEach((s: any) => {
+        if (!s?.nyc_shows?.id) return;
+        map.set(`show-${s.nyc_shows.id}`, {
+          id: s.nyc_shows.id,
+          source: 'show',
+          title: s.nyc_shows.title,
+          description: s.nyc_shows.description,
+          image_url: s.nyc_shows.poster_url,
+          event_date: s.attended_at || s.nyc_shows.run_end || s.nyc_shows.run_start || new Date().toISOString(),
+          location: s.nyc_shows.venue,
         });
       });
 
@@ -106,8 +125,8 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
           <div className="p-3 space-y-1.5">
             <div className="flex items-center justify-between">
               <Badge variant={ev.source === 'ticket' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0 gap-1">
-                {ev.source === 'ticket' ? <Ticket className="h-2.5 w-2.5" /> : <Calendar className="h-2.5 w-2.5" />}
-                {ev.source === 'ticket' ? 'Ticketed' : 'RSVP'}
+                {ev.source === 'ticket' ? <Ticket className="h-2.5 w-2.5" /> : ev.source === 'show' ? <Theater className="h-2.5 w-2.5" /> : <Calendar className="h-2.5 w-2.5" />}
+                {ev.source === 'ticket' ? 'Ticketed' : ev.source === 'show' ? 'Show' : 'RSVP'}
               </Badge>
               <span className="text-[10px] text-muted-foreground">
                 {format(new Date(ev.event_date), 'MMM d, yyyy')}
