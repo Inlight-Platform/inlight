@@ -103,7 +103,7 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
   if (attended.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-4">
-        No attended events yet. Events appear here once you're checked in at the door.
+        No attended events or shows yet. Tickets/RSVPs appear here once you're checked in, and you can mark past events or shows you've attended using the button above.
       </p>
     );
   }
