@@ -31,44 +31,26 @@ interface Invitation {
 
 interface InvitationCardProps {
   invitation: Invitation;
-  currentUserId: string;
 }
 
 export const InvitationCard: React.FC<InvitationCardProps> = ({
   invitation,
-  currentUserId,
 }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const acceptMutation = useMutation({
     mutationFn: async () => {
-      // Update invitation status
-      const { error: invError } = await supabase
-        .from('project_invitations')
-        .update({ status: 'accepted' })
-        .eq('id', invitation.id);
-
-      if (invError) throw invError;
-
-      // Update project role with assigned user
-      const { error: roleError } = await supabase
-        .from('project_roles')
-        .update({ assigned_user_id: currentUserId })
-        .eq('id', invitation.project_role.id);
-
-      if (roleError) throw roleError;
-
-      // Add user as project member
-      await supabase.from('project_members').insert({
-        project_id: invitation.project_role.project.id,
-        user_id: currentUserId,
-        role: invitation.project_role.role_name,
+      const { error } = await (supabase as any).rpc('accept_project_invitation', {
+        _invitation_id: invitation.id,
       });
+
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-invitations'] });
-      queryClient.invalidateQueries({ queryKey: ['project-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['open-roles', invitation.project_role.project.id] });
+      queryClient.invalidateQueries({ queryKey: ['project-members', invitation.project_role.project.id] });
       toast.success(`You've joined "${invitation.project_role.project.title}" as ${invitation.project_role.role_name}!`);
     },
     onError: () => {

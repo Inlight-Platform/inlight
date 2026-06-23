@@ -62,19 +62,31 @@ Deno.serve(async (req) => {
       .from("profiles")
       .select("email, email_notifications, display_name")
       .eq("user_id", record.user_id)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile) {
-      console.error("[send-notification-email] Profile not found:", profileError);
-      return new Response(
-        JSON.stringify({ error: "Profile not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (profileError) {
+      console.warn("[send-notification-email] Profile lookup failed, falling back to auth user:", profileError);
     }
 
-    console.log("[send-notification-email] Recipient:", profile.email, "| email_notifications:", profile.email_notifications);
+    let recipientEmail = profileError ? "" : profile?.email || "";
+    let emailNotifications = profileError ? undefined : profile?.email_notifications;
+    if (!recipientEmail) {
+      const { data: authUser, error: authUserError } = await supabase.auth.admin.getUserById(record.user_id);
+      if (authUserError || !authUser.user?.email) {
+        console.error("[send-notification-email] Recipient email not found:", authUserError);
+        return new Response(
+          JSON.stringify({ error: "Recipient email not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    if (profile.email_notifications === false) {
+      recipientEmail = authUser.user.email;
+      emailNotifications = emailNotifications ?? true;
+    }
+
+    console.log("[send-notification-email] Recipient:", recipientEmail, "| email_notifications:", emailNotifications);
+
+    if (emailNotifications === false) {
       console.log("[send-notification-email] Email notifications disabled for user");
       return new Response(
         JSON.stringify({ message: "Email notifications disabled" }),
@@ -108,11 +120,11 @@ Deno.serve(async (req) => {
 
     const resend = new Resend(RESEND_API_KEY);
 
-    console.log("[send-notification-email] Sending email to:", profile.email, "| subject:", emailSubject);
+    console.log("[send-notification-email] Sending email to:", recipientEmail, "| subject:", emailSubject);
 
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "Inlight <notifications@inlight.social>",
-      to: [profile.email],
+      to: [recipientEmail],
       subject: emailSubject,
       html,
     });
@@ -203,7 +215,6 @@ async function buildEmailContent(
       <a href="${profileUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
     `;
   } else if (notificationType === "invitation" && data.sender_id) {
-    const senderName = await getDisplayName(supabase, data.sender_id);
     let roleName = data.role_name || "a role";
     let projectTitle = data.project_title || "a project";
     let projectId = data.project_id || "";
@@ -221,14 +232,15 @@ async function buildEmailContent(
       }
     }
 
+    const creatorName = await getProjectCreatorDisplayName(supabase, projectId, data.sender_id);
     const projectUrl = projectId
       ? `${siteUrl}/projects/${projectId}`
       : `${siteUrl}/notifications`;
 
-    emailSubject = `${senderName} invited you to join ${projectTitle}!`;
+    emailSubject = `${creatorName} invited you to join ${projectTitle}!`;
     emailBody = `
       <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">You've been invited!</h2>
-      <p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${escapeHtml(senderName)} has invited you to join <strong>${escapeHtml(projectTitle)}</strong> as <strong>${escapeHtml(roleName)}</strong>.</p>
+      <p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${escapeHtml(creatorName)} has invited you to join <strong>${escapeHtml(projectTitle)}</strong> as <strong>${escapeHtml(roleName)}</strong>.</p>
       <a href="${projectUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View Invitation</a>
     `;
   } else if (notificationType === "application_accepted" && data.sender_id && data.project_id) {
@@ -272,10 +284,43 @@ async function buildEmailContent(
 async function getDisplayName(supabase: any, userId: string): Promise<string> {
   const { data } = await supabase
     .from("profiles")
-    .select("display_name")
+    .select("display_name, email")
     .eq("user_id", userId)
-    .single();
-  return data?.display_name || "Someone";
+    .maybeSingle();
+
+  if (data?.display_name) return data.display_name;
+  if (data?.email) return data.email.split("@")[0];
+
+  const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+  const metadata = authUser?.user?.user_metadata || {};
+  const metadataName =
+    metadata.display_name ||
+    metadata.full_name ||
+    [metadata.first_name, metadata.last_name].filter(Boolean).join(" ");
+  if (metadataName) return String(metadataName);
+
+  const email = authUser?.user?.email || "";
+  return email ? email.split("@")[0] : "Someone";
+}
+
+async function getProjectCreatorDisplayName(
+  supabase: any,
+  projectId: string,
+  fallbackUserId: string
+): Promise<string> {
+  if (projectId) {
+    const { data: project } = await supabase
+      .from("projects")
+      .select("creator_id")
+      .eq("id", projectId)
+      .maybeSingle();
+
+    if (project?.creator_id) {
+      return getDisplayName(supabase, project.creator_id);
+    }
+  }
+
+  return getDisplayName(supabase, fallbackUserId);
 }
 
 function wrapEmailTemplate(emailBody: string): string {

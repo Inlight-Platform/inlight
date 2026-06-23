@@ -49,6 +49,7 @@ import FloatingChatButton from '@/components/messages/FloatingChatButton';
 import { useMinimizedChat } from '@/hooks/useMinimizedChat';
 import { useLocation } from 'react-router-dom';
 import { InviteFriendDialog } from '@/components/invitations/InviteFriendDialog';
+import { ProjectInvitationPrompt } from '@/components/invitations/ProjectInvitationPrompt';
 
 interface ProjectMember {
   id: string;
@@ -697,68 +698,68 @@ const ProjectDetailPage: React.FC = () => {
           )}
         </section>
 
+        <ProjectInvitationPrompt projectId={projectId!} projectTitle={project.title} />
+
         {/* Open Roles - Collapsible */}
-        {(project.is_public || canEditProject) && (
-          <Collapsible open={rolesOpen} onOpenChange={setRolesOpen}>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between py-4">
-                <CollapsibleTrigger asChild>
-                  <div className="space-y-1">
-                    <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                      <CardTitle className="text-lg">Open Roles</CardTitle>
-                      {rolesOpen ? (
-                        <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                      )}
-                    </button>
-                    <p className="text-sm text-muted-foreground font-normal">
-                      Add roles needed for this project. Open roles on public projects appear on Jobs.
-                    </p>
-                  </div>
-                </CollapsibleTrigger>
-                {canEditProject && (
-                  <Dialog open={addRoleOpen} onOpenChange={setAddRoleOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" variant="outline">
-                        <Plus className="w-4 h-4 mr-2" />
+        <Collapsible open={rolesOpen} onOpenChange={setRolesOpen}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between py-4">
+              <CollapsibleTrigger asChild>
+                <div className="space-y-1">
+                  <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                    <CardTitle className="text-lg">Open Roles</CardTitle>
+                    {rolesOpen ? (
+                      <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </button>
+                  <p className="text-sm text-muted-foreground font-normal">
+                    Add roles needed for this project. Open roles on public projects appear on Jobs.
+                  </p>
+                </div>
+              </CollapsibleTrigger>
+              {canEditProject && (
+                <Dialog open={addRoleOpen} onOpenChange={setAddRoleOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Role
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Open Role</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <Input
+                        placeholder="Role name (e.g., Gaffer, Sound Mixer)"
+                        value={newRoleName}
+                        onChange={(e) => setNewRoleName(e.target.value)}
+                      />
+                      <Button
+                        onClick={() => addRoleMutation.mutate(newRoleName)}
+                        disabled={!newRoleName.trim() || addRoleMutation.isPending}
+                        className="w-full"
+                      >
                         Add Role
                       </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add Open Role</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 pt-4">
-                        <Input
-                          placeholder="Role name (e.g., Gaffer, Sound Mixer)"
-                          value={newRoleName}
-                          onChange={(e) => setNewRoleName(e.target.value)}
-                        />
-                        <Button
-                          onClick={() => addRoleMutation.mutate(newRoleName)}
-                          disabled={!newRoleName.trim() || addRoleMutation.isPending}
-                          className="w-full"
-                        >
-                          Add Role
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
-              </CardHeader>
-              <CollapsibleContent>
-                <CardContent className="pt-0">
-                  <OpenRolesDisplay 
-                    projectId={projectId!} 
-                    creatorId={project.creator_id}
-                    onDeleteRole={canEditProject ? (roleId) => deleteRoleMutation.mutate(roleId) : undefined}
-                  />
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
-        )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <OpenRolesDisplay 
+                  projectId={projectId!} 
+                  creatorId={project.creator_id}
+                  onDeleteRole={canEditProject ? (roleId) => deleteRoleMutation.mutate(roleId) : undefined}
+                />
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
         {/* Members Section */}
         <Card>

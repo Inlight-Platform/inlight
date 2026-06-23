@@ -132,6 +132,7 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-role-applications-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['my-role-job-applications'] });
       toast.success('Application submitted!');
       setApplyDialogOpen(false);
       resetForm();

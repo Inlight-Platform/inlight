@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, addMonths, isPast } from 'date-fns';
 import { Plus, Briefcase, TrendingUp, Clock, Loader2, Calendar, Trash2, Users, ExternalLink, FileText, ArrowLeft, ChevronRight } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,7 +24,7 @@ const STRIPE_POST_JOB_URL = 'https://buy.stripe.com/dRmaEWa8gaA3eVL3ufco002';
 
 interface PostedJobApplication {
   id: string;
-  opportunityId: string;
+  jobId: string;
   opportunityTitle: string;
   applicantId: string;
   applicantName: string;
@@ -38,14 +39,27 @@ interface PostedJobApplication {
 
 interface MyJobApplication {
   id: string;
-  opportunityId: string;
+  jobId: string;
+  source: 'opportunity' | 'project_role';
+  projectId?: string;
   opportunityTitle: string;
   company?: string;
   status: string;
   message: string | null;
   resumeUrl: string | null;
   portfolioUrl: string | null;
+  additionalMaterials: { name?: string; file_path?: string; bucket?: string; type?: string }[];
   appliedAt: string;
+}
+
+interface PostedJobListing {
+  id: string;
+  source: 'opportunity' | 'project_role';
+  title: string;
+  company?: string;
+  deadline: string | null;
+  createdAt: string;
+  projectId?: string;
 }
 
 /** Compact card matching the Open Roles style — title, company, deadline */
@@ -58,6 +72,7 @@ const OpportunityCompactCard: React.FC<{
   const { isAdmin } = useAdmin();
   const { canManageJobs } = useFeatureAccess();
   const { deleteOpportunity } = useOpportunities();
+  const queryClient = useQueryClient();
   const [showDetail, setShowDetail] = useState(false);
   const [showApply, setShowApply] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
@@ -128,7 +143,10 @@ const OpportunityCompactCard: React.FC<{
         onOpenChange={setShowApply}
         opportunityId={opportunity.id}
         opportunityTitle={opportunity.title}
-        onApplicationSubmitted={() => setHasAppliedLocally(true)}
+        onApplicationSubmitted={() => {
+          setHasAppliedLocally(true);
+          queryClient.invalidateQueries({ queryKey: ['my-job-applications'] });
+        }}
       />
 
       <DeleteConfirmDialog
@@ -144,7 +162,7 @@ const OpportunityCompactCard: React.FC<{
 };
 
 const PostedJobApplications: React.FC<{
-  postedJobs: OpportunityView[];
+  postedJobs: PostedJobListing[];
   applications: PostedJobApplication[];
   isLoading: boolean;
 }> = ({ postedJobs, applications, isLoading }) => {
@@ -172,9 +190,9 @@ const PostedJobApplications: React.FC<{
 
   const applicationsByJob = new Map<string, PostedJobApplication[]>();
   applications.forEach((application) => {
-    const jobApplications = applicationsByJob.get(application.opportunityId) || [];
+    const jobApplications = applicationsByJob.get(application.jobId) || [];
     jobApplications.push(application);
-    applicationsByJob.set(application.opportunityId, jobApplications);
+    applicationsByJob.set(application.jobId, jobApplications);
   });
 
   const selectedJob = postedJobs.find((job) => job.id === selectedJobId) || null;
@@ -213,6 +231,11 @@ const PostedJobApplications: React.FC<{
                     {job.company && (
                       <p className="text-xs text-muted-foreground truncate">
                         {job.company}
+                      </p>
+                    )}
+                    {job.source === 'project_role' && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        Project open role
                       </p>
                     )}
                   </div>
@@ -337,6 +360,11 @@ const MyJobApplications: React.FC<{
   isLoading: boolean;
   onViewJob: (application: MyJobApplication) => void;
 }> = ({ applications, isLoading, onViewJob }) => {
+  const getMaterialUrl = (material: MyJobApplication['additionalMaterials'][number]) => {
+    if (!material.bucket || !material.file_path) return null;
+    return supabase.storage.from(material.bucket).getPublicUrl(material.file_path).data.publicUrl;
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -381,6 +409,7 @@ const MyJobApplications: React.FC<{
               )}
               <p className="text-sm text-muted-foreground mt-1">
                 Applied on {format(new Date(application.appliedAt), 'MMM d, yyyy')}
+                {application.source === 'project_role' ? ' via project open role' : ''}
               </p>
             </div>
             <Button
@@ -396,6 +425,9 @@ const MyJobApplications: React.FC<{
 
           {application.message && (
             <div className="rounded-md bg-muted/30 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
+                Submitted message
+              </p>
               <p className="text-sm whitespace-pre-wrap">{application.message}</p>
             </div>
           )}
@@ -413,10 +445,28 @@ const MyJobApplications: React.FC<{
               <Button size="sm" variant="secondary" className="gap-1.5" asChild>
                 <a href={application.portfolioUrl} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-4 h-4" />
-                  Portfolio
+                  {application.source === 'project_role' ? 'Reel / Portfolio' : 'Portfolio'}
                 </a>
               </Button>
             )}
+            {application.additionalMaterials.map((material, index) => {
+              const materialUrl = getMaterialUrl(material);
+              const label = material.name || `Material ${index + 1}`;
+
+              return materialUrl ? (
+                <Button key={`${application.id}-${index}`} size="sm" variant="secondary" className="gap-1.5" asChild>
+                  <a href={materialUrl} target="_blank" rel="noopener noreferrer">
+                    <FileText className="w-4 h-4" />
+                    {label}
+                  </a>
+                </Button>
+              ) : (
+                <Badge key={`${application.id}-${index}`} variant="outline" className="gap-1.5">
+                  <FileText className="w-3.5 h-3.5" />
+                  {label}
+                </Badge>
+              );
+            })}
           </div>
         </div>
       ))}
@@ -429,6 +479,7 @@ type UserRole = 'Actor' | 'Director' | 'Producer' | 'Musician' | 'Gaffer' | 'Gri
 type ExperienceLevel = 'entry' | 'intermediate' | 'senior' | 'any';
 
 const OpportunitiesPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const { canManageJobs, showRestrictedToast } = useFeatureAccess();
@@ -573,6 +624,66 @@ const OpportunitiesPage: React.FC = () => {
     [postedOpportunityMap]
   );
 
+  const standalonePostedJobs = useMemo<PostedJobListing[]>(
+    () => postedOpportunities.map((job) => ({
+      id: job.id,
+      source: 'opportunity',
+      title: job.title,
+      company: job.company,
+      deadline: job.deadline,
+      createdAt: job.createdAt,
+    })),
+    [postedOpportunities]
+  );
+
+  const { data: postedOpenRoles = [], isLoading: postedOpenRolesLoading } = useQuery({
+    queryKey: ['posted-open-role-jobs', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const { data: projects, error: projectError } = await supabase
+        .from('projects')
+        .select('id, title, end_date')
+        .eq('creator_id', user.id);
+
+      if (projectError) throw projectError;
+      if (!projects?.length) return [];
+
+      const projectMap = new Map(projects.map((project) => [project.id, project]));
+      const { data: roles, error: roleError } = await supabase
+        .from('project_roles')
+        .select('id, role_name, project_id, created_at')
+        .in('project_id', projects.map((project) => project.id))
+        .order('created_at', { ascending: false });
+
+      if (roleError) throw roleError;
+
+      return (roles || []).map((role) => {
+        const project = projectMap.get(role.project_id);
+        return {
+          id: role.id,
+          source: 'project_role',
+          title: role.role_name,
+          company: project?.title || 'Project',
+          deadline: project?.end_date || null,
+          createdAt: role.created_at,
+          projectId: role.project_id,
+        } satisfies PostedJobListing;
+      });
+    },
+    enabled: !!user?.id,
+  });
+
+  const postedJobsForReview = useMemo(
+    () => [...standalonePostedJobs, ...postedOpenRoles],
+    [standalonePostedJobs, postedOpenRoles]
+  );
+
+  const postedOpenRoleIds = useMemo(
+    () => postedOpenRoles.map((role) => role.id),
+    [postedOpenRoles]
+  );
+
   const { data: postedApplications = [], isLoading: applicationsLoading } = useQuery({
     queryKey: ['posted-job-applications', user?.id, postedOpportunityIds],
     queryFn: async () => {
@@ -603,7 +714,7 @@ const OpportunitiesPage: React.FC = () => {
 
         return {
           id: application.id,
-          opportunityId: application.opportunity_id,
+          jobId: application.opportunity_id,
           opportunityTitle: postedOpportunityMap.get(application.opportunity_id)?.title || 'Untitled job',
           applicantId: application.applicant_id,
           applicantName: profile?.display_name || 'Unknown applicant',
@@ -620,6 +731,57 @@ const OpportunitiesPage: React.FC = () => {
     enabled: !!user?.id && postedOpportunityIds.length > 0,
   });
 
+  const { data: postedRoleApplications = [], isLoading: roleApplicationsLoading } = useQuery({
+    queryKey: ['posted-role-applications', user?.id, postedOpenRoleIds],
+    queryFn: async () => {
+      if (!user?.id || postedOpenRoleIds.length === 0) return [];
+
+      const { data: applicationRows, error } = await supabase
+        .from('role_applications')
+        .select('id, project_role_id, applicant_id, message, reel_url, resume_url, status, created_at')
+        .in('project_role_id', postedOpenRoleIds)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!applicationRows?.length) return [];
+
+      const applicantIds = [...new Set(applicationRows.map((application) => application.applicant_id))];
+      const { data: profileRows } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, headline, role')
+        .in('user_id', applicantIds);
+
+      const profileMap = new Map((profileRows || []).map((profile) => [profile.user_id, profile]));
+      const roleMap = new Map(postedOpenRoles.map((role) => [role.id, role]));
+
+      return applicationRows.map((application) => {
+        const profile = profileMap.get(application.applicant_id);
+        const role = roleMap.get(application.project_role_id);
+
+        return {
+          id: application.id,
+          jobId: application.project_role_id,
+          opportunityTitle: role?.title || 'Untitled role',
+          applicantId: application.applicant_id,
+          applicantName: profile?.display_name || 'Unknown applicant',
+          applicantHeadline: profile?.headline || profile?.role || 'Inlight member',
+          message: application.message,
+          resumeUrl: application.resume_url,
+          portfolioUrl: application.reel_url,
+          additionalMaterials: [],
+          status: application.status,
+          appliedAt: application.created_at,
+        } satisfies PostedJobApplication;
+      });
+    },
+    enabled: !!user?.id && postedOpenRoleIds.length > 0,
+  });
+
+  const allPostedApplications = useMemo(
+    () => [...postedApplications, ...postedRoleApplications],
+    [postedApplications, postedRoleApplications]
+  );
+
   const opportunityMap = useMemo(
     () => new Map(allOpportunities.map((opportunity) => [opportunity.id, opportunity])),
     [allOpportunities]
@@ -632,7 +794,7 @@ const OpportunitiesPage: React.FC = () => {
 
       const { data: applicationRows, error } = await supabase
         .from('opportunity_applications')
-        .select('id, opportunity_id, message, resume_url, portfolio_url, status, created_at')
+        .select('id, opportunity_id, message, resume_url, portfolio_url, additional_materials, status, created_at')
         .eq('applicant_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -643,13 +805,17 @@ const OpportunitiesPage: React.FC = () => {
 
         return {
           id: application.id,
-          opportunityId: application.opportunity_id,
+          jobId: application.opportunity_id,
+          source: 'opportunity',
           opportunityTitle: opportunity?.title || 'Untitled job',
           company: opportunity?.company,
           status: application.status,
           message: application.message,
           resumeUrl: application.resume_url,
           portfolioUrl: application.portfolio_url,
+          additionalMaterials: Array.isArray(application.additional_materials)
+            ? (application.additional_materials as MyJobApplication['additionalMaterials'])
+            : [],
           appliedAt: application.created_at,
         } satisfies MyJobApplication;
       });
@@ -657,15 +823,56 @@ const OpportunitiesPage: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  const canReviewApplications = canManageJobs && !!user && (isAdmin || credits > 0 || postedOpportunityIds.length > 0 || postedApplications.length > 0);
-  const canViewMyApplications = !!user && (myApplicationsLoading || myJobApplications.length > 0);
+  const { data: myRoleApplications = [], isLoading: myRoleApplicationsLoading } = useQuery({
+    queryKey: ['my-role-job-applications', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const { data: applicationRows, error } = await (supabase as any)
+        .rpc('get_my_role_applications_for_jobs');
+
+      if (error) throw error;
+
+      return applicationRows.map((application) => {
+        return {
+          id: application.id,
+          jobId: application.project_role_id,
+          source: 'project_role',
+          projectId: application.project_id,
+          opportunityTitle: application.role_name || 'Untitled role',
+          company: application.project_title,
+          status: application.status,
+          message: application.message,
+          resumeUrl: application.resume_url,
+          portfolioUrl: application.reel_url,
+          additionalMaterials: [],
+          appliedAt: application.created_at,
+        } satisfies MyJobApplication;
+      });
+    },
+    enabled: !!user?.id,
+  });
+
+  const allMyJobApplications = useMemo(
+    () => [...myJobApplications, ...myRoleApplications].sort((a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()),
+    [myJobApplications, myRoleApplications]
+  );
+
+  const reviewApplicationsLoading = applicationsLoading || roleApplicationsLoading || postedOpenRolesLoading;
+  const canReviewApplications = canManageJobs && !!user && (isAdmin || credits > 0 || postedJobsForReview.length > 0 || allPostedApplications.length > 0);
+  const canViewMyApplications = !!user;
   const myApplicationStatusByOpportunity = useMemo(
-    () => new Map(myJobApplications.map((application) => [application.opportunityId, application.status])),
+    () => new Map(myJobApplications.map((application) => [application.jobId, application.status])),
     [myJobApplications]
   );
 
   const handleViewAppliedJob = (application: MyJobApplication) => {
-    const opportunity = opportunityMap.get(application.opportunityId);
+    if (application.source === 'project_role' && application.projectId) {
+      navigate(`/projects/${application.projectId}`);
+      return;
+    }
+
+    const opportunity = opportunityMap.get(application.jobId);
     setSearch(opportunity?.title || application.opportunityTitle);
     setSelectedType('all');
     setSelectedRole('all');
@@ -705,9 +912,9 @@ const OpportunitiesPage: React.FC = () => {
               >
                 <Users className="w-4 h-4" />
                 Applications
-                {postedApplications.length > 0 && (
+                {allPostedApplications.length > 0 && (
                   <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                    {postedApplications.length}
+                    {allPostedApplications.length}
                   </Badge>
                 )}
               </Button>
@@ -740,7 +947,7 @@ const OpportunitiesPage: React.FC = () => {
               {canViewMyApplications && (
                 <TabsTrigger value="my-applications" className="data-[state=active]:bg-[hsl(var(--neon-opportunities))]/20 whitespace-nowrap">
                   <Briefcase className="w-4 h-4 mr-2" />
-                  My Applications ({myJobApplications.length})
+                  My Applications ({allMyJobApplications.length})
                 </TabsTrigger>
               )}
             </TabsList>
@@ -817,9 +1024,9 @@ const OpportunitiesPage: React.FC = () => {
           {canReviewApplications && (
             <TabsContent value="applications" className="space-y-4">
               <PostedJobApplications
-                postedJobs={postedOpportunities}
-                applications={postedApplications}
-                isLoading={applicationsLoading}
+                postedJobs={postedJobsForReview}
+                applications={allPostedApplications}
+                isLoading={reviewApplicationsLoading}
               />
             </TabsContent>
           )}
@@ -827,8 +1034,8 @@ const OpportunitiesPage: React.FC = () => {
           {canViewMyApplications && (
             <TabsContent value="my-applications" className="space-y-4">
               <MyJobApplications
-                applications={myJobApplications}
-                isLoading={myApplicationsLoading}
+                applications={allMyJobApplications}
+                isLoading={myApplicationsLoading || myRoleApplicationsLoading}
                 onViewJob={handleViewAppliedJob}
               />
             </TabsContent>

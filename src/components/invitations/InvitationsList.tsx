@@ -113,7 +113,6 @@ export const InvitationsList: React.FC = () => {
           <InvitationCard
             key={invitation.id}
             invitation={invitation}
-            currentUserId={user.id}
           />
         ))}
       </div>
