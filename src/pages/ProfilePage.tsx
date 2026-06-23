@@ -463,8 +463,7 @@ const ProfilePage: React.FC = () => {
         savedProjectsRes,
         postsRes,
         eventsRes,
-        rsvpsRes,
-        ticketsRes,
+        attendanceRes,
       ] = await Promise.all([
         (() => {
           let query = supabase.from("user_media").select("id").eq("user_id", resolvedUserId).limit(1);
@@ -491,13 +490,7 @@ const ProfilePage: React.FC = () => {
           : Promise.resolve({ data: [] as Array<{ project_id: string | null }> }),
         supabase.from("posts").select("id").eq("user_id", resolvedUserId).limit(1),
         supabase.from("events").select("id").eq("user_id", resolvedUserId).limit(1),
-        supabase.from("event_rsvps").select("event_id").eq("user_id", resolvedUserId).eq("attended", true).limit(1),
-        supabase
-          .from("tickets")
-          .select("event_id")
-          .eq("user_id", resolvedUserId)
-          .not("checked_in_at", "is", null)
-          .limit(1),
+        supabase.rpc("get_profile_attendance", { _user_id: resolvedUserId }),
       ]);
 
       const ownedProjectIds = (ownedProjectsRes.data || []).map((project) => project.id).filter(Boolean);
@@ -519,7 +512,7 @@ const ProfilePage: React.FC = () => {
         materials: Boolean((mediaRes.data || []).length || whyAnswers),
         whyStarted: whyAnswers,
         credits: Boolean((creditsRes.data || []).length),
-        attended: Boolean((rsvpsRes.data || []).length || (ticketsRes.data || []).length),
+        attended: Boolean((attendanceRes.data || []).length),
         projects: Boolean(
           ownedProjectIds.length || (memberProjectsRes.data || []).length || (savedProjectsRes.data || []).length,
         ),
