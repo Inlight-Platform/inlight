@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2, MessageSquare, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -29,6 +29,16 @@ const NotificationsPage: React.FC = () => {
   const { acceptRequest, rejectRequest } = useConnectionRequests();
   const { conversations, loadingConversations, totalUnread } = useMessages();
   const { groupChats, loadingGroupChats } = useGroupChats();
+
+  // Auto-mark all notifications as read when this page is opened
+  const didAutoMarkRef = useRef(false);
+  useEffect(() => {
+    if (didAutoMarkRef.current) return;
+    if (unreadCount > 0) {
+      didAutoMarkRef.current = true;
+      markAllAsRead.mutate();
+    }
+  }, [unreadCount, markAllAsRead]);
 
   const getIcon = (type: string) => {
     switch (type) {
