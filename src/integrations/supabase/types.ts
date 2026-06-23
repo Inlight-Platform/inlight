@@ -1727,6 +1727,8 @@ export type Database = {
       }
       saved_shows: {
         Row: {
+          attended: boolean
+          attended_at: string | null
           id: string
           notes: string | null
           remind_closing: boolean | null
@@ -1736,6 +1738,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attended?: boolean
+          attended_at?: string | null
           id?: string
           notes?: string | null
           remind_closing?: boolean | null
@@ -1745,6 +1749,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attended?: boolean
+          attended_at?: string | null
           id?: string
           notes?: string | null
           remind_closing?: boolean | null
