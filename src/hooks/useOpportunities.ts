@@ -86,7 +86,7 @@ function toView(row: DBOpportunity): OpportunityView {
     compensation: row.compensation || undefined,
     experienceLevel: row.experience_level,
     roles: row.roles || [],
-    skills: row.skills || [],
+    skills: (row as { skills?: string[] }).skills || [],
     requirements: row.requirements || [],
     deadline: row.deadline || undefined,
     startDate: row.start_date || undefined,
