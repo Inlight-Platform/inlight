@@ -134,7 +134,7 @@ const OpportunityCompactCard: React.FC<{
       <DeleteConfirmDialog
         open={showDelete}
         onOpenChange={setShowDelete}
-        onConfirm={() => deleteOpportunity.mutate(opportunity.id)}
+        onConfirm={() => deleteOpportunity.mutate({ id: opportunity.id, source: opportunity.source })}
         title="Delete Opportunity"
         description="Are you sure you want to delete this opportunity? This action cannot be undone."
         isPending={deleteOpportunity.isPending}

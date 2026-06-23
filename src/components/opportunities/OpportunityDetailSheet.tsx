@@ -55,6 +55,22 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
   const calendarUrl = opportunity.actionType === 'calendar'
     ? buildOpportunityCalendarUrl(opportunity)
     : null;
+  const hasUsableExternalLink = (() => {
+    if (!opportunity.linkUrl) return false;
+
+    try {
+      const parsed = new URL(opportunity.linkUrl);
+      const host = parsed.hostname.toLowerCase();
+      return (
+        (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+        !host.includes('inlight') &&
+        host !== 'localhost' &&
+        host !== '127.0.0.1'
+      );
+    } catch {
+      return false;
+    }
+  })();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -223,15 +239,15 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
               <CalendarPlus className="w-4 h-4" />
               Add to Calendar
             </Button>
-          ) : opportunity.actionType === 'external' ? (
+          ) : opportunity.actionType === 'external' && hasUsableExternalLink ? (
             <Button
               size="sm"
               asChild
-              disabled={isDeadlinePast || opportunity.status !== 'open' || !opportunity.linkUrl}
+              disabled={isDeadlinePast || opportunity.status !== 'open'}
               className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
             >
               <a
-                href={opportunity.linkUrl || '#'}
+                href={opportunity.linkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
@@ -239,6 +255,15 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
                 <ExternalLink className="w-4 h-4" />
                 {opportunity.linkTitle || 'Apply Externally'}
               </a>
+            </Button>
+          ) : opportunity.actionType === 'external' ? (
+            <Button
+              size="sm"
+              disabled
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Apply link unavailable
             </Button>
           ) : hasApplied ? (
             <div className="flex items-center gap-2 text-sm">

@@ -64,7 +64,12 @@ export const RoleSlotBuilder: React.FC<RoleSlotBuilderProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Label className="text-base font-medium">Team Roles</Label>
+        <div>
+          <Label className="text-base font-medium">Open Roles (Optional)</Label>
+          <p className="text-sm text-muted-foreground mt-1">
+            Add roles you are still looking to fill. Public project roles appear on Jobs.
+          </p>
+        </div>
         <Button
           type="button"
           variant="outline"
@@ -78,7 +83,7 @@ export const RoleSlotBuilder: React.FC<RoleSlotBuilderProps> = ({
 
       {roles.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-4 border border-dashed border-border rounded-lg">
-          No roles added yet. Click "Add Role" to start building your team.
+          No open roles added yet. You can create the project without adding roles.
         </p>
       ) : (
         <div className="space-y-4">
@@ -103,7 +108,7 @@ export const RoleSlotBuilder: React.FC<RoleSlotBuilderProps> = ({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor={`role-name-${role.id}`}>Role Name</Label>
+                <Label htmlFor={`role-name-${role.id}`}>Role Title</Label>
                 <Input
                   id={`role-name-${role.id}`}
                   placeholder="e.g., Director, DP, Gaffer..."
@@ -113,7 +118,7 @@ export const RoleSlotBuilder: React.FC<RoleSlotBuilderProps> = ({
               </div>
 
               <div className="space-y-2">
-                <Label>Assign User (Optional)</Label>
+                <Label>Invite Someone (Optional)</Label>
                 <UserSearchInput
                   value={role.assignedUser}
                   onChange={(user) => updateAssignedUser(role.id, user)}

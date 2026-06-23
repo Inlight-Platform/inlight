@@ -370,11 +370,13 @@ const ProjectDetailPage: React.FC = () => {
   const deleteRoleMutation = useMutation({
     mutationFn: async (roleId: string) => {
       if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('project_roles')
         .delete()
-        .eq('id', roleId);
+        .eq('id', roleId)
+        .select('id');
       if (error) throw error;
+      if (!data?.length) throw new Error('No matching role was removed.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });

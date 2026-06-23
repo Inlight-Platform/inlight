@@ -179,6 +179,16 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
     return myApplications.find(a => a.project_role_id === roleId)?.status;
   };
 
+  const openApplicationDialog = (role: OpenRole, applicationStatus?: string) => {
+    if (applicationStatus) return;
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    setSelectedRole(role);
+    setApplyDialogOpen(true);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -230,12 +240,10 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
             return (
               <div
                 key={role.roleId}
-                className="flex flex-col justify-between gap-2 p-4 rounded-lg border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all"
+                className="flex flex-col justify-between gap-2 p-4 rounded-lg border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all cursor-pointer"
+                onClick={() => openApplicationDialog(role, applicationStatus)}
               >
-                <div
-                  className="space-y-1 cursor-pointer"
-                  onClick={() => navigate(`/projects/${role.projectId}`)}
-                >
+                <div className="space-y-1">
                   <h3 className="font-semibold text-foreground text-sm leading-tight">
                     {role.roleName}
                   </h3>
@@ -258,8 +266,7 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
                         className="h-7 w-7 p-0 text-primary hover:bg-primary/10"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedRole(role);
-                          setApplyDialogOpen(true);
+                          openApplicationDialog(role, applicationStatus);
                         }}
                       >
                         <Send className="w-4 h-4" />

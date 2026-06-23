@@ -61,6 +61,22 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
   const calendarUrl = opportunity.actionType === 'calendar'
     ? buildOpportunityCalendarUrl(opportunity)
     : null;
+  const hasUsableExternalLink = (() => {
+    if (!opportunity.linkUrl) return false;
+
+    try {
+      const parsed = new URL(opportunity.linkUrl);
+      const host = parsed.hostname.toLowerCase();
+      return (
+        (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+        !host.includes('inlight') &&
+        host !== 'localhost' &&
+        host !== '127.0.0.1'
+      );
+    } catch {
+      return false;
+    }
+  })();
   const hasApplied = hasAppliedDB;
 
   // Fetch poster profile
@@ -99,7 +115,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
     e.stopPropagation();
     if (opportunity.actionType === 'calendar') {
       handleAddToCalendar(e);
-    } else if (opportunity.actionType === 'external' && opportunity.linkUrl) {
+    } else if (opportunity.actionType === 'external' && hasUsableExternalLink) {
       window.open(opportunity.linkUrl, '_blank', 'noopener,noreferrer');
     } else {
       setShowApplicationDialog(true);
@@ -331,12 +347,12 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
             ) : opportunity.actionType === 'external' ? (
               <Button
                 size="sm"
-                disabled={isDeadlinePast || opportunity.status !== 'open' || !opportunity.linkUrl}
+                disabled={isDeadlinePast || opportunity.status !== 'open' || !hasUsableExternalLink}
                 onClick={handleApply}
                 className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
               >
                 <ExternalLink className="w-4 h-4" />
-                {opportunity.linkTitle || 'Apply Externally'}
+                {hasUsableExternalLink ? opportunity.linkTitle || 'Apply Externally' : 'Apply link unavailable'}
               </Button>
             ) : hasApplied ? (
               <div className="flex items-center gap-2 text-sm">

@@ -103,6 +103,10 @@ function toView(row: DBOpportunity): OpportunityView {
   };
 }
 
+function extractFirstUrl(value: string) {
+  return value.match(/https?:\/\/[^\s)]+/)?.[0]?.trim();
+}
+
 function postToView(row: DBJobPost): OpportunityView {
   const titleMatch = row.content.match(/^🎯\s+\*\*(.+?)\*\*/);
   const title = titleMatch?.[1]?.trim() || 'Job Opportunity';
@@ -130,8 +134,8 @@ function postToView(row: DBJobPost): OpportunityView {
     isFeatured: false,
     actionType: 'external',
     imageUrl: row.image_url || undefined,
-    linkUrl: row.link_url || undefined,
-    linkTitle: row.link_title || undefined,
+    linkUrl: row.link_url || extractFirstUrl(row.content) || undefined,
+    linkTitle: row.link_title || 'Apply Externally',
     source: 'post',
     applicants: [],
   };
@@ -139,6 +143,23 @@ function postToView(row: DBJobPost): OpportunityView {
 
 function normalizeOpportunityTitle(title: string) {
   return title.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function isUsableExternalUrl(value?: string | null) {
+  if (!value) return false;
+
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.toLowerCase();
+    return (
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      !host.includes('inlight') &&
+      host !== 'localhost' &&
+      host !== '127.0.0.1'
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function useOpportunities() {
@@ -168,7 +189,8 @@ export function useOpportunities() {
       const canonicalTitles = new Set(canonicalOpportunities.map((row) => normalizeOpportunityTitle(row.title)));
       const feedOnlyJobs = ((jobPostRows || []) as DBJobPost[])
         .map(postToView)
-        .filter((row) => !canonicalTitles.has(normalizeOpportunityTitle(row.title)));
+        .filter((row) => !canonicalTitles.has(normalizeOpportunityTitle(row.title)))
+        .filter((row) => isUsableExternalUrl(row.linkUrl));
 
       return [
         ...canonicalOpportunities,
@@ -306,18 +328,22 @@ export function useOpportunities() {
   });
 
   const deleteOpportunity = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (input: string | { id: string; source?: OpportunityView['source'] }) => {
       if (!user) throw new Error('Not authenticated');
       if (!canManageJobs) {
         throw new Error('This beta group cannot delete jobs.');
       }
 
-      const { error } = await supabase
-        .from('opportunities')
-        .delete()
-        .eq('id', id);
+      const id = typeof input === 'string' ? input : input.id;
+      const source = typeof input === 'string' ? 'opportunity' : input.source || 'opportunity';
 
+      const query = source === 'post'
+        ? supabase.from('posts').delete().eq('id', id).select('id')
+        : supabase.from('opportunities').delete().eq('id', id).select('id');
+
+      const { data, error } = await query;
       if (error) throw error;
+      if (!data?.length) throw new Error('No matching job was deleted.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['opportunities'] });
