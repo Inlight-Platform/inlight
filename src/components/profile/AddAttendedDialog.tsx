@@ -92,6 +92,7 @@ export const AddAttendedDialog: React.FC = () => {
 
       toast.success(`Marked "${event.title}" as attended`);
       queryClient.invalidateQueries({ queryKey: ['attended-events', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['profile-section-content', user.id] });
       close();
     } catch (err: any) {
       toast.error(err.message || 'Failed to mark as attended');
@@ -104,31 +105,12 @@ export const AddAttendedDialog: React.FC = () => {
     if (!user) return;
     setSubmittingId(show.id);
     try {
-      const { data: existing } = await supabase
-        .from('saved_shows')
-        .select('id')
-        .eq('show_id', show.id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from('saved_shows')
-          .update({ attended: true, attended_at: new Date().toISOString() })
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('saved_shows').insert({
-          user_id: user.id,
-          show_id: show.id,
-          attended: true,
-          attended_at: new Date().toISOString(),
-        });
-        if (error) throw error;
-      }
+      const { error } = await supabase.rpc('mark_show_attended', { _show_id: show.id });
+      if (error) throw error;
 
       toast.success(`Marked "${show.title}" as attended`);
       queryClient.invalidateQueries({ queryKey: ['attended-events', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['profile-section-content', user.id] });
       close();
     } catch (err: any) {
       toast.error(err.message || 'Failed to mark as attended');
@@ -160,7 +142,11 @@ export const AddAttendedDialog: React.FC = () => {
       </DropdownMenu>
 
       <Dialog open={mode === 'event'} onOpenChange={(o) => { if (!o) close(); }}>
-        <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
+        <DialogContent
+          className="max-w-lg p-0 gap-0 overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle>Mark a past event as attended</DialogTitle>
             <DialogDescription className="text-xs">
@@ -209,7 +195,11 @@ export const AddAttendedDialog: React.FC = () => {
       </Dialog>
 
       <Dialog open={mode === 'show'} onOpenChange={(o) => { if (!o) close(); }}>
-        <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
+        <DialogContent
+          className="max-w-lg p-0 gap-0 overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle>Mark a show as attended</DialogTitle>
             <DialogDescription className="text-xs">

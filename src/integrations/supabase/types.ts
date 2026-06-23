@@ -2597,6 +2597,19 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_profile_attendance: {
+        Args: { _user_id: string }
+        Returns: {
+          description: string
+          event_date: string
+          id: string
+          image_url: string
+          kind: string
+          location: string
+          source: string
+          title: string
+        }[]
+      }
       get_profile_pronouns_settings: {
         Args: never
         Returns: {
@@ -2645,6 +2658,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin_email: { Args: { _email: string }; Returns: boolean }
+      mark_show_attended: { Args: { _show_id: string }; Returns: undefined }
       update_profile_pronouns_settings: {
         Args: { _pronouns: string; _show_pronouns: boolean }
         Returns: undefined
