@@ -92,6 +92,7 @@ export const AddAttendedDialog: React.FC = () => {
 
       toast.success(`Marked "${event.title}" as attended`);
       queryClient.invalidateQueries({ queryKey: ['attended-events', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['profile-section-content', user.id] });
       close();
     } catch (err: any) {
       toast.error(err.message || 'Failed to mark as attended');
