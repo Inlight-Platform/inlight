@@ -14,6 +14,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface NotificationBellProps {
   collapsed?: boolean;
@@ -83,7 +84,20 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
     toast.success('Following back!');
   };
 
-  const handleNotificationClick = (notification: typeof notifications[0]) => {
+  const resolveInvitationProjectPath = async (data: Record<string, string>) => {
+    if (data.project_id) return `/projects/${data.project_id}`;
+    if (!data.role_id) return '/projects';
+
+    const { data: role } = await supabase
+      .from('project_roles')
+      .select('project_id')
+      .eq('id', data.role_id)
+      .maybeSingle();
+
+    return role?.project_id ? `/projects/${role.project_id}` : '/projects';
+  };
+
+  const handleNotificationClick = async (notification: typeof notifications[0]) => {
     // Mark as read
     if (!notification.read_at) {
       markAsRead.mutate(notification.id);
@@ -104,8 +118,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
         }
         break;
       case 'invitation':
-        // Navigate to invitations
-        navigate('/projects');
+        navigate(await resolveInvitationProjectPath(data));
         break;
       case 'follow':
         // Navigate to follower's profile

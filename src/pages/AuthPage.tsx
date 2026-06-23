@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import type { Location } from 'react-router-dom';
 import { accountAlreadyExistsMessage, useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ interface AuthRouteState {
   password?: string;
   displayName?: string;
   mode?: AuthView;
+  from?: Location;
 }
 
 const fieldClass =
@@ -125,6 +127,9 @@ const AuthPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const routeState = (location.state || {}) as AuthRouteState;
+  const redirectPath = routeState.from
+    ? `${routeState.from.pathname}${routeState.from.search}${routeState.from.hash}`
+    : '/feed';
   const mode = searchParams.get('mode');
   const inviteToken = searchParams.get('invite')?.trim() || null;
   const creditInviteToken = searchParams.get('credit_invite')?.trim() || null;
@@ -168,9 +173,9 @@ const AuthPage: React.FC = () => {
   useEffect(() => {
     // Don't redirect if in password recovery mode
     if (!loading && user && view !== 'reset' && !isPasswordRecovery) {
-      navigate('/feed');
+      navigate(redirectPath, { replace: true });
     }
-  }, [user, loading, navigate, view, isPasswordRecovery]);
+  }, [user, loading, navigate, view, isPasswordRecovery, redirectPath]);
 
   useEffect(() => {
     if (mode === 'reset') {
@@ -196,7 +201,7 @@ const AuthPage: React.FC = () => {
       toast.error(formatSignInErrorMessage(error.message));
     } else {
       toast.success('Welcome back!');
-      navigate('/feed');
+      navigate(redirectPath, { replace: true });
     }
 
     setIsLoading(false);
@@ -251,7 +256,7 @@ const AuthPage: React.FC = () => {
         setView('login');
       } else {
         toast.success('Account created! Welcome to Inlight.');
-        navigate('/feed');
+        navigate(redirectPath, { replace: true });
       }
     } catch (error) {
       console.error('Signup failed:', error);
@@ -304,7 +309,7 @@ const AuthPage: React.FC = () => {
       toast.error(error.message);
     } else {
       toast.success('Password updated successfully! Your existing account data is ready to use.');
-      navigate('/feed');
+      navigate(redirectPath, { replace: true });
     }
 
     setIsLoading(false);

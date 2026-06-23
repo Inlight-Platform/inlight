@@ -30,6 +30,12 @@ interface OpenRole {
   project_id: string;
 }
 
+interface RoleInvitation {
+  project_role_id: string;
+  receiver_id: string;
+  status: string;
+}
+
 interface RoleApplication {
   id: string;
   project_role_id: string;
@@ -99,7 +105,8 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
     },
   });
 
-  // Fetch open roles (unassigned)
+  // Fetch project roles. Unassigned roles are open for applications; assigned
+  // roles show who was invited/placed into that role.
   const { data: openRoles = [] } = useQuery({
     queryKey: ['open-roles', projectId],
     queryFn: async () => {
@@ -107,11 +114,49 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
         .from('project_roles')
         .select('*')
         .eq('project_id', projectId)
-        .is('assigned_user_id', null);
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
       return data as OpenRole[];
     },
+  });
+
+  const openApplicationRoles = openRoles.filter((role) => !role.assigned_user_id);
+
+  const { data: assignedProfiles = new Map<string, { display_name: string | null; avatar_url: string | null }>() } = useQuery({
+    queryKey: ['project-role-assigned-profiles', projectId, openRoles.map((r) => r.assigned_user_id).filter(Boolean).join(',')],
+    queryFn: async () => {
+      const assignedUserIds = [...new Set(openRoles.map((role) => role.assigned_user_id).filter(Boolean) as string[])];
+      if (assignedUserIds.length === 0) return new Map<string, { display_name: string | null; avatar_url: string | null }>();
+
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', assignedUserIds);
+
+      if (error) throw error;
+      return new Map((data || []).map((profile) => [profile.user_id, {
+        display_name: profile.display_name,
+        avatar_url: profile.avatar_url,
+      }]));
+    },
+    enabled: openRoles.some((role) => !!role.assigned_user_id),
+  });
+
+  const { data: roleInvitations = [] } = useQuery({
+    queryKey: ['project-role-invitations', projectId],
+    queryFn: async () => {
+      if (!isCreator || openRoles.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from('project_invitations')
+        .select('project_role_id, receiver_id, status')
+        .in('project_role_id', openRoles.map((role) => role.id));
+
+      if (error) throw error;
+      return data as RoleInvitation[];
+    },
+    enabled: isCreator && openRoles.length > 0,
   });
 
   // Fetch user's existing applications
@@ -123,12 +168,12 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
         .from('role_applications')
         .select('project_role_id, status')
         .eq('applicant_id', user.id)
-        .in('project_role_id', openRoles.map(r => r.id));
+        .in('project_role_id', openApplicationRoles.map(r => r.id));
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id && openRoles.length > 0,
+    enabled: !!user?.id && openApplicationRoles.length > 0,
   });
 
   // Fetch all applications for creator
@@ -136,7 +181,7 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
     queryKey: ['role-applications', projectId],
     queryFn: async () => {
       if (!isCreator) return [];
-      const roleIds = openRoles.map(r => r.id);
+      const roleIds = openApplicationRoles.map(r => r.id);
       if (roleIds.length === 0) return [];
 
       const { data, error } = await supabase
@@ -161,7 +206,7 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
         applicant_profile: profileMap.get(app.applicant_id),
       })) as RoleApplication[];
     },
-    enabled: isCreator && openRoles.length > 0,
+    enabled: isCreator && openApplicationRoles.length > 0,
   });
 
   // Auto-open application from URL param (e.g., from notification click)
@@ -353,6 +398,9 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
         {openRoles.map((role) => {
           const applicationStatus = getApplicationStatus(role.id);
           const roleApplications = allApplications.filter(a => a.project_role_id === role.id);
+          const assignedProfile = role.assigned_user_id ? assignedProfiles.get(role.assigned_user_id) : null;
+          const roleInvitation = roleInvitations.find((invitation) => invitation.project_role_id === role.id);
+          const canApplyToRole = !isCreator && user && !role.assigned_user_id;
 
           return (
             <div
@@ -362,7 +410,24 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">{role.role_name}</p>
-                  <p className="text-sm text-muted-foreground">Looking for candidates</p>
+                  {role.assigned_user_id ? (
+                    <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={assignedProfile?.avatar_url || undefined} />
+                        <AvatarFallback className="text-[10px]">
+                          {assignedProfile?.display_name?.[0] || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>
+                        Invited: {assignedProfile?.display_name || 'User'}
+                        {roleInvitation?.status && (
+                          <span className="capitalize"> · {roleInvitation.status}</span>
+                        )}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Looking for candidates</p>
+                  )}
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -376,7 +441,12 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   )}
-                  {!isCreator && user && (
+                  {role.assigned_user_id && (
+                    <Badge variant={roleInvitation?.status === 'accepted' ? 'default' : 'secondary'} className="capitalize">
+                      {roleInvitation?.status || 'Invited'}
+                    </Badge>
+                  )}
+                  {canApplyToRole && (
                     applicationStatus ? (
                       getStatusBadge(applicationStatus)
                     ) : (

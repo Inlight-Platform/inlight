@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -57,7 +58,20 @@ const NotificationsPage: React.FC = () => {
     });
   };
 
-  const handleNotificationClick = (notification: typeof notifications[0]) => {
+  const resolveInvitationProjectPath = async (data: Record<string, string>) => {
+    if (data.project_id) return `/projects/${data.project_id}`;
+    if (!data.role_id) return '/projects';
+
+    const { data: role } = await supabase
+      .from('project_roles')
+      .select('project_id')
+      .eq('id', data.role_id)
+      .maybeSingle();
+
+    return role?.project_id ? `/projects/${role.project_id}` : '/projects';
+  };
+
+  const handleNotificationClick = async (notification: typeof notifications[0]) => {
     if (!notification.read_at) markAsRead.mutate(notification.id);
     const data = notification.data as Record<string, string>;
     switch (notification.type) {
@@ -69,7 +83,7 @@ const NotificationsPage: React.FC = () => {
         if (data.project_id) navigate(`/projects/${data.project_id}?application=${data.application_id || ''}`);
         else navigate('/projects');
         break;
-      case 'invitation': navigate('/projects'); break;
+      case 'invitation': navigate(await resolveInvitationProjectPath(data)); break;
       case 'follow': if (data.follower_id) navigate(`/profile/${data.follower_id}`); break;
       case 'connection_request': if (data.sender_id) navigate(`/profile/${data.sender_id}`); break;
       case 'connection_request_accepted': if (data.user_id) navigate(`/profile/${data.user_id}`); break;

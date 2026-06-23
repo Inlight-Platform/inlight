@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { ProjectHeaderImageUploader } from './ProjectHeaderImageUploader';
+import { RoleSlotBuilder, RoleSlot } from './RoleSlotBuilder';
 
 export const PROJECT_CATEGORIES = [
   { value: 'film', label: 'Film' },
@@ -50,6 +51,7 @@ export const ProjectCreator: React.FC<ProjectCreatorProps> = ({
   const [description, setDescription] = useState('');
   const [mainImageUrl, setMainImageUrl] = useState('');
   const [category, setCategory] = useState<ProjectCategory>('other');
+  const [roles, setRoles] = useState<RoleSlot[]>([]);
 
   const createProjectMutation = useMutation({
     mutationFn: async () => {
@@ -78,6 +80,35 @@ export const ProjectCreator: React.FC<ProjectCreatorProps> = ({
           role: 'Creator',
         });
 
+      for (const role of roles) {
+        if (!role.roleName.trim()) continue;
+
+        const { data: projectRole, error: roleError } = await supabase
+          .from('project_roles')
+          .insert({
+            project_id: data.id,
+            role_name: role.roleName.trim(),
+            assigned_user_id: role.assignedUser?.user_id || null,
+          })
+          .select('id')
+          .single();
+
+        if (roleError) throw roleError;
+
+        if (role.assignedUser) {
+          const { error: invitationError } = await supabase
+            .from('project_invitations')
+            .insert({
+              project_role_id: projectRole.id,
+              sender_id: user.id,
+              receiver_id: role.assignedUser.user_id,
+              status: 'pending',
+            });
+
+          if (invitationError) throw invitationError;
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -86,6 +117,7 @@ export const ProjectCreator: React.FC<ProjectCreatorProps> = ({
       setDescription('');
       setMainImageUrl('');
       setCategory('other');
+      setRoles([]);
       onOpenChange(false);
       onSuccess?.();
       toast.success('Project created!');
@@ -171,6 +203,14 @@ export const ProjectCreator: React.FC<ProjectCreatorProps> = ({
               aspect={4 / 3}
               outputWidth={1200}
               outputHeight={900}
+            />
+          </div>
+
+          <div className="pt-2 border-t border-border">
+            <RoleSlotBuilder
+              roles={roles}
+              onChange={setRoles}
+              excludeUserIds={[user.id]}
             />
           </div>
 

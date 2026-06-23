@@ -204,9 +204,9 @@ async function buildEmailContent(
     `;
   } else if (notificationType === "invitation" && data.sender_id) {
     const senderName = await getDisplayName(supabase, data.sender_id);
-    let roleName = "a role";
-    let projectTitle = "a project";
-    let projectId = "";
+    let roleName = data.role_name || "a role";
+    let projectTitle = data.project_title || "a project";
+    let projectId = data.project_id || "";
 
     if (data.role_id) {
       const { data: roleData } = await supabase
