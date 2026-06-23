@@ -1,13 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ShieldCheck, Upload, X, Loader2, FileText, Check, Clock } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { ShieldCheck, Loader2, Clock } from 'lucide-react';
 import { useVerificationRequests } from '@/hooks/useCreditVerification';
-import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 interface Credit {
@@ -24,14 +21,10 @@ interface VerifyCreditsDialogProps {
 }
 
 export const VerifyCreditsDialog: React.FC<VerifyCreditsDialogProps> = ({ credits }) => {
-  const { user } = useAuth();
   const { myRequests, submitRequest, isSubmitting } = useVerificationRequests();
   const [open, setOpen] = useState(false);
   const [selectedCredits, setSelectedCredits] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
-  const [uploading, setUploading] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; url: string }[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filter to unverified credits that don't have pending requests
   const pendingRequestCreditIds = myRequests
@@ -41,43 +34,6 @@ export const VerifyCreditsDialog: React.FC<VerifyCreditsDialogProps> = ({ credit
   const unverifiedCredits = credits.filter(
     c => !c.verified && !pendingRequestCreditIds.includes(c.id)
   );
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || !user?.id) return;
-
-    setUploading(true);
-    try {
-      const newFiles: { name: string; url: string }[] = [];
-
-      for (const file of Array.from(files)) {
-        const fileName = `${user.id}/verification/${Date.now()}-${file.name}`;
-        const { error } = await supabase.storage
-          .from('profile-media')
-          .upload(fileName, file);
-
-        if (error) throw error;
-
-        const { data: urlData } = supabase.storage
-          .from('profile-media')
-          .getPublicUrl(fileName);
-
-        newFiles.push({ name: file.name, url: urlData.publicUrl });
-      }
-
-      setUploadedFiles(prev => [...prev, ...newFiles]);
-      toast.success(`${newFiles.length} file(s) uploaded`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to upload files');
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const removeFile = (url: string) => {
-    setUploadedFiles(prev => prev.filter(f => f.url !== url));
-  };
 
   const handleSubmit = async () => {
     if (selectedCredits.length === 0) {
@@ -89,15 +45,14 @@ export const VerifyCreditsDialog: React.FC<VerifyCreditsDialogProps> = ({ credit
     for (const creditId of selectedCredits) {
       submitRequest({
         creditId,
-        materialsUrls: uploadedFiles.map(f => f.url),
+        materialsUrls: [],
         notes,
       });
     }
 
-    // Reset and close
+    toast.success('Verification request submitted! Our team will review it shortly.');
     setSelectedCredits([]);
     setNotes('');
-    setUploadedFiles([]);
     setOpen(false);
   };
 
@@ -117,7 +72,11 @@ export const VerifyCreditsDialog: React.FC<VerifyCreditsDialogProps> = ({ credit
           Verify Credits
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent
+        className="max-w-lg"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDownOutside={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5" />
@@ -129,7 +88,7 @@ export const VerifyCreditsDialog: React.FC<VerifyCreditsDialogProps> = ({ credit
           {/* Credits selection */}
           <div>
             <p className="text-sm text-muted-foreground mb-3">
-              Select the credits you'd like to verify. You can also upload supporting materials (contracts, call sheets, credits screenshots, etc.)
+              Select the credits you'd like to verify. An admin will review your request.
             </p>
 
             {unverifiedCredits.length === 0 ? (
@@ -173,53 +132,6 @@ export const VerifyCreditsDialog: React.FC<VerifyCreditsDialogProps> = ({ credit
           {/* File upload */}
           {unverifiedCredits.length > 0 && (
             <>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Supporting Materials</label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*,.pdf,.doc,.docx"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                >
-                  {uploading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Upload className="w-4 h-4 mr-2" />
-                  )}
-                  Upload Files
-                </Button>
-
-                {uploadedFiles.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {uploadedFiles.map(file => (
-                      <div
-                        key={file.url}
-                        className="flex items-center gap-2 p-2 rounded bg-muted/50"
-                      >
-                        <FileText className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm flex-1 truncate">{file.name}</span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6"
-                          onClick={() => removeFile(file.url)}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               {/* Notes */}
               <div>
                 <label className="text-sm font-medium mb-2 block">Additional Notes</label>
