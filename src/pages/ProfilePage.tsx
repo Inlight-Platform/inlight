@@ -58,6 +58,7 @@ import { CoverImageCropper } from "@/components/profile/CoverImageCropper";
 import { MyProjects } from "@/components/profile/MyProjects";
 import { UserPosts } from "@/components/profile/UserPosts";
 import { AttendedSection } from "@/components/profile/AttendedSection";
+import { AddAttendedDialog } from "@/components/profile/AddAttendedDialog";
 import { SavedProjects } from "@/components/profile/SavedProjects";
 import { supabase } from "@/integrations/supabase/client";
 import { PostCreator, PostType } from "@/components/feed/PostCreator";
@@ -2015,9 +2016,12 @@ const ProfilePage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <h2 className="text-lg font-display font-semibold">Attended</h2>
                     </div>
-                    <ChevronDown
-                      className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${attendedOpen ? "rotate-180" : ""}`}
-                    />
+                    <div className="flex items-center gap-2">
+                      {isOwnProfile && attendedOpen && <AddAttendedDialog />}
+                      <ChevronDown
+                        className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${attendedOpen ? "rotate-180" : ""}`}
+                      />
+                    </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-4">
                     <ProfileSectionErrorBoundary title="Attended">
