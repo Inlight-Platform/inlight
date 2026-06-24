@@ -16,6 +16,25 @@ import { toast } from 'sonner';
 
 type Mode = 'event' | 'show' | null;
 
+type EventOption = {
+  id: string;
+  title: string;
+  event_date: string;
+  location: string | null;
+};
+
+type ShowOption = {
+  id: string;
+  title: string;
+  venue: string | null;
+  show_type: string | null;
+  run_start: string | null;
+  run_end: string | null;
+};
+
+const getErrorMessage = (err: unknown) =>
+  err instanceof Error ? err.message : 'Failed to mark as attended';
+
 export const AddAttendedDialog: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -23,7 +42,7 @@ export const AddAttendedDialog: React.FC = () => {
   const [query, setQuery] = useState('');
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
-  const nowIso = useMemo(() => new Date().toISOString(), [mode]);
+  const nowIso = useMemo(() => (mode === 'event' ? new Date().toISOString() : ''), [mode]);
 
   const { data: events = [], isLoading: loadingEvents } = useQuery({
     queryKey: ['attended-picker-events', nowIso],
@@ -59,61 +78,101 @@ export const AddAttendedDialog: React.FC = () => {
     setQuery('');
   };
 
-  const handleMarkEvent = async (event: { id: string; title: string }) => {
+  const refreshAttendance = async () => {
+    if (!user) return;
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['attended-events', user.id] }),
+      queryClient.invalidateQueries({ queryKey: ['profile-section-content', user.id] }),
+    ]);
+  };
+
+  const markEventDirectly = async (event: { id: string }) => {
+    if (!user) return;
+
+    const { data: existing, error: existingError } = await supabase
+      .from('event_rsvps')
+      .select('id')
+      .eq('event_id', event.id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (existingError) throw existingError;
+
+    if (existing) {
+      const { error } = await supabase
+        .from('event_rsvps')
+        .update({ attended: true, attended_at: new Date().toISOString(), status: 'going' })
+        .eq('id', existing.id);
+      if (error) throw error;
+      return;
+    }
+
+    const { error } = await supabase.from('event_rsvps').insert({
+      event_id: event.id,
+      user_id: user.id,
+      name: user.user_metadata?.display_name || user.user_metadata?.full_name || user.email || 'Attendee',
+      email: user.email || '',
+      role_type: 'audience',
+      status: 'going',
+      attended: true,
+      attended_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+  };
+
+  const markShowDirectly = async (show: { id: string }) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('saved_shows')
+      .upsert(
+        {
+          user_id: user.id,
+          show_id: show.id,
+          attended: true,
+          attended_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,show_id' },
+      );
+
+    if (error) throw error;
+  };
+
+  const handleMarkEvent = async (event: EventOption) => {
     if (!user) return;
     setSubmittingId(event.id);
     try {
-      const { data: existing } = await supabase
-        .from('event_rsvps')
-        .select('id')
-        .eq('event_id', event.id)
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const { error } = await supabase.rpc('mark_event_attended', { _event_id: event.id });
 
-      if (existing) {
-        const { error } = await supabase
-          .from('event_rsvps')
-          .update({ attended: true, attended_at: new Date().toISOString(), status: 'going' })
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('event_rsvps').insert({
-          event_id: event.id,
-          user_id: user.id,
-          name: user.user_metadata?.display_name || user.email || 'Attendee',
-          email: user.email || '',
-          role_type: 'audience',
-          status: 'going',
-          attended: true,
-          attended_at: new Date().toISOString(),
-        });
-        if (error) throw error;
+      if (error) {
+        await markEventDirectly(event);
       }
 
       toast.success(`Marked "${event.title}" as attended`);
-      queryClient.invalidateQueries({ queryKey: ['attended-events', user.id] });
-      queryClient.invalidateQueries({ queryKey: ['profile-section-content', user.id] });
+      await refreshAttendance();
       close();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to mark as attended');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setSubmittingId(null);
     }
   };
 
-  const handleMarkShow = async (show: { id: string; title: string }) => {
+  const handleMarkShow = async (show: ShowOption) => {
     if (!user) return;
     setSubmittingId(show.id);
     try {
       const { error } = await supabase.rpc('mark_show_attended', { _show_id: show.id });
-      if (error) throw error;
+
+      if (error) {
+        await markShowDirectly(show);
+      }
 
       toast.success(`Marked "${show.title}" as attended`);
-      queryClient.invalidateQueries({ queryKey: ['attended-events', user.id] });
-      queryClient.invalidateQueries({ queryKey: ['profile-section-content', user.id] });
+      await refreshAttendance();
       close();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to mark as attended');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setSubmittingId(null);
     }
@@ -165,7 +224,7 @@ export const AddAttendedDialog: React.FC = () => {
               ) : (
                 <>
                   <CommandEmpty>No past events match your search.</CommandEmpty>
-                  {events.map((ev: any) => (
+                  {events.map((ev: EventOption) => (
                     <CommandItem
                       key={ev.id}
                       value={`${ev.title} ${ev.location || ''}`}
@@ -218,7 +277,7 @@ export const AddAttendedDialog: React.FC = () => {
               ) : (
                 <>
                   <CommandEmpty>No shows match your search.</CommandEmpty>
-                  {shows.map((sh: any) => (
+                  {shows.map((sh: ShowOption) => (
                     <CommandItem
                       key={sh.id}
                       value={`${sh.title} ${sh.venue || ''} ${sh.show_type || ''}`}
