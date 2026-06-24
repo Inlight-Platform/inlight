@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,9 +27,15 @@ import CompanyRequestsManager from '@/components/admin/CompanyRequestsManager';
 
 const AdminPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, isLoading: adminLoading } = useAdmin();
   const queryClient = useQueryClient();
+  const activeTab = searchParams.get('tab') || 'verification';
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(value === 'verification' ? {} : { tab: value });
+  };
 
   // Redirect if not admin
   React.useEffect(() => {
@@ -62,9 +68,9 @@ const AdminPage: React.FC = () => {
         <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
       </div>
 
-      <Tabs defaultValue="verification" className="space-y-4">
-        <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex sm:justify-center">
-          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 h-auto gap-1 p-1">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+        <div className="rounded-xl border border-border/60 bg-card/40 p-2">
+          <TabsList className="flex h-auto w-full flex-wrap items-center justify-start gap-1 bg-transparent p-0">
                 <TabsTrigger value="verification" className="gap-2 whitespace-nowrap">
                   <ShieldCheck className="w-4 h-4" />
                   <span className="hidden sm:inline">Verification</span>

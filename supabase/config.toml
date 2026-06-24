@@ -33,6 +33,9 @@ verify_jwt = false
 [functions.track-analytics-event]
 verify_jwt = false
 
+[functions.approve-company-account]
+verify_jwt = true
+
 [auth.email.template.confirmation]
 subject = "Confirm your Inlight account"
 content_path = "./supabase/templates/confirmation.html"

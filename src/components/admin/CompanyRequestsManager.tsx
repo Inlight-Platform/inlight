@@ -48,10 +48,11 @@ const CompanyRequestsManager: React.FC = () => {
       const userIds = Array.from(new Set((reqs || []).map((r: any) => r.requester_id)));
       let profileMap = new Map<string, any>();
       if (userIds.length) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('user_id, display_name, email, avatar_url')
-          .in('user_id', userIds);
+        const { data: profiles, error: profilesError } = await supabase.rpc(
+          'get_company_requester_profiles',
+          { _user_ids: userIds }
+        );
+        if (profilesError) throw profilesError;
         profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
       }
       return (reqs || []).map((r: any) => ({ ...r, profile: profileMap.get(r.requester_id) })) as RequestRow[];

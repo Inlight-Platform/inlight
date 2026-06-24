@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2 } from 'lucide-react';
+import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -46,6 +46,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
         return <Link2 className="w-4 h-4" />;
       case 'connection_request_accepted':
         return <Check className="w-4 h-4" />;
+      case 'company_request_new':
+        return <Building2 className="w-4 h-4" />;
       default:
         return <Bell className="w-4 h-4" />;
     }
@@ -137,6 +139,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
         if (data.user_id) {
           navigate(`/profile/${data.user_id}`);
         }
+        break;
+      case 'company_request_new':
+        navigate('/admin?tab=company-requests');
         break;
       default:
         break;
