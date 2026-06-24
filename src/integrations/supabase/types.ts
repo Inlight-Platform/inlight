@@ -2669,6 +2669,10 @@ export type Database = {
       is_admin_email: { Args: { _email: string }; Returns: boolean }
       mark_event_attended: { Args: { _event_id: string }; Returns: undefined }
       mark_show_attended: { Args: { _show_id: string }; Returns: undefined }
+      remove_profile_attendance: {
+        Args: { _item_id: string; _kind: string }
+        Returns: undefined
+      }
       update_profile_pronouns_settings: {
         Args: { _pronouns: string; _show_pronouns: boolean }
         Returns: undefined

@@ -2016,7 +2016,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <CollapsibleContent className="mt-4">
                     <ProfileSectionErrorBoundary title="Attended">
-                      <AttendedSection userId={resolvedUserId} />
+                      <AttendedSection userId={resolvedUserId} isOwnProfile={isOwnProfile} />
                     </ProfileSectionErrorBoundary>
                   </CollapsibleContent>
                 </section>

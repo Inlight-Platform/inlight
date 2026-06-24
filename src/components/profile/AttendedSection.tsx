@@ -1,13 +1,18 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Calendar, MapPin, Ticket, Theater } from 'lucide-react';
+import { Calendar, Loader2, MapPin, Ticket, Theater, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 interface AttendedSectionProps {
   userId: string;
+  isOwnProfile?: boolean;
 }
 
 interface AttendedEvent {
@@ -21,7 +26,14 @@ interface AttendedEvent {
   location: string | null;
 }
 
-export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
+const getErrorMessage = (err: unknown) =>
+  err instanceof Error ? err.message : 'Failed to remove attended item';
+
+export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId, isOwnProfile = false }) => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [removeTarget, setRemoveTarget] = useState<AttendedEvent | null>(null);
+
   const { data: attended = [], isLoading } = useQuery({
     queryKey: ['attended-events', userId],
     queryFn: async () => {
@@ -40,6 +52,34 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
       })) as AttendedEvent[];
     },
     enabled: !!userId,
+  });
+
+  const canManageAttendance = isOwnProfile && user?.id === userId;
+
+  const removeMutation = useMutation({
+    mutationFn: async (item: AttendedEvent) => {
+      if (item.source === 'ticket') {
+        throw new Error('Ticketed attendance cannot be removed from your profile.');
+      }
+
+      const { error } = await supabase.rpc('remove_profile_attendance', {
+        _kind: item.kind,
+        _item_id: item.id,
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast.success('Removed from attended');
+      setRemoveTarget(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['attended-events', userId] }),
+        queryClient.invalidateQueries({ queryKey: ['profile-section-content', userId] }),
+      ]);
+    },
+    onError: (err: unknown) => {
+      toast.error(getErrorMessage(err));
+    },
   });
 
   const attendedEvents = attended.filter((item) => item.kind === 'event');
@@ -67,8 +107,25 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
         {items.map((ev) => (
           <Card
             key={`${ev.source}-${ev.id}`}
-            className="overflow-hidden bg-card border-border"
+            className="relative overflow-hidden bg-card border-border group"
           >
+            {canManageAttendance && ev.source !== 'ticket' && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className="absolute right-2 top-2 z-10 h-7 w-7 bg-background/90 text-muted-foreground shadow-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                onClick={() => setRemoveTarget(ev)}
+                disabled={removeMutation.isPending}
+                title={`Remove ${ev.title} from attended`}
+              >
+                {removeMutation.isPending && removeTarget?.id === ev.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            )}
             {ev.image_url ? (
               <img src={ev.image_url} alt={ev.title} className="w-full h-32 object-cover" />
             ) : (
@@ -105,22 +162,41 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Theater className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold text-foreground">Shows</h3>
+    <>
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Theater className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground">Shows</h3>
+          </div>
+          {renderCards(attendedShows, 'No attended shows yet.')}
         </div>
-        {renderCards(attendedShows, 'No attended shows yet.')}
+
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground">Events</h3>
+          </div>
+          {renderCards(attendedEvents, 'No attended events yet.')}
+        </div>
       </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold text-foreground">Events</h3>
-        </div>
-        {renderCards(attendedEvents, 'No attended events yet.')}
-      </div>
-    </div>
+      <DeleteConfirmDialog
+        open={!!removeTarget}
+        onOpenChange={(open) => {
+          if (!open && !removeMutation.isPending) setRemoveTarget(null);
+        }}
+        onConfirm={() => {
+          if (removeTarget) removeMutation.mutate(removeTarget);
+        }}
+        title="Remove from attended?"
+        description={
+          removeTarget
+            ? `"${removeTarget.title}" will be removed from the Attended section of your profile.`
+            : undefined
+        }
+        isPending={removeMutation.isPending}
+      />
+    </>
   );
 };
