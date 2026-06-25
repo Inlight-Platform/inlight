@@ -107,7 +107,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
 
     // Navigate based on type
     const data = notification.data as Record<string, string>;
-    switch (notification.type) {
+    switch (notification.type as string) {
       case 'message':
         navigate(`/messages?user=${data.sender_id}`);
         break;
