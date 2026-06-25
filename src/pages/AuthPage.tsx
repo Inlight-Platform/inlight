@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { ArrowLeft, CheckCircle2, Circle, GraduationCap, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Circle, Eye, EyeOff, GraduationCap, Loader2 } from 'lucide-react';
 import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { Sparkle } from '@/components/Sparkle';
 import { Starfield } from '@/components/Starfield';
@@ -72,6 +72,44 @@ const PasswordChecklist: React.FC<{ password: string }> = ({ password }) => (
     </div>
   </div>
 );
+
+const PasswordInput: React.FC<{
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  minLength?: number;
+  ariaRequired?: boolean;
+}> = ({ id, value, onChange, placeholder = '••••••••', required, minLength, ariaRequired }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const VisibilityIcon = isVisible ? EyeOff : Eye;
+
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type={isVisible ? 'text' : 'password'}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        minLength={minLength}
+        aria-required={ariaRequired}
+        className={cn(fieldClass, 'pr-12')}
+      />
+      <button
+        type="button"
+        className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-muted-foreground transition hover:text-white"
+        onClick={() => setIsVisible((current) => !current)}
+        aria-label={isVisible ? 'Hide password' : 'Show password'}
+        aria-pressed={isVisible}
+      >
+        <VisibilityIcon className="h-4 w-4" />
+      </button>
+    </div>
+  );
+};
 
 const AuthFrame: React.FC<{
   children: React.ReactNode;
@@ -281,7 +319,7 @@ const AuthPage: React.FC = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Password reset email sent. Use the same email as before the migration to set a new password.');
+      toast.success('Password reset email sent. Check your inbox for the link.');
       setView('login');
     }
 
@@ -308,7 +346,7 @@ const AuthPage: React.FC = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Password updated successfully! Your existing account data is ready to use.');
+      toast.success('Password updated successfully!');
       navigate(redirectPath, { replace: true });
     }
 
@@ -346,7 +384,7 @@ const AuthPage: React.FC = () => {
         <AuthFrame
           eyebrow="Reset link"
           title={<>Link <em className="italic text-accent-blue font-normal">expired</em>.</>}
-          caption="This password reset link has expired or is invalid. Request a fresh one and continue with the same email."
+          caption="This password reset link has expired or is invalid. Request a fresh one to continue."
         >
           {recoveryError && (
             <Alert className="mb-4 border-destructive/40 bg-destructive/10 text-white" variant="destructive">
@@ -371,37 +409,32 @@ const AuthPage: React.FC = () => {
       <AuthFrame
         eyebrow="Password recovery"
         title={<>Set a new <em className="italic text-accent-blue font-normal">password</em>.</>}
-        caption="Choose a new password below. Your existing Inlight profile and account data stay connected."
+        caption="Choose a new password below."
       >
         <form onSubmit={handleResetPassword} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="new-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
               New Password
             </Label>
-            <Input
+            <PasswordInput
               id="new-password"
-              type="password"
-              placeholder="••••••••"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
               required
               minLength={8}
-              className={fieldClass}
             />
+            <PasswordChecklist password={password} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirm-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Confirm Password
             </Label>
-            <Input
+            <PasswordInput
               id="confirm-password"
-              type="password"
-              placeholder="••••••••"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={setConfirmPassword}
               required
               minLength={8}
-              className={fieldClass}
             />
           </div>
           <Button type="submit" className={cn('w-full', primaryButtonClass)} disabled={isLoading}>
@@ -425,16 +458,9 @@ const AuthPage: React.FC = () => {
       <AuthFrame
         eyebrow="Account recovery"
         title={<>Reset your <em className="italic text-accent-blue font-normal">password</em>.</>}
-        caption="Enter the same email tied to your old account and we will send you a reset link."
+        caption="Enter your account email and we will send you a reset link."
       >
         <form onSubmit={handleForgotPassword} className="space-y-4">
-          <Alert className="border-border bg-secondary/30 text-white">
-            <GraduationCap className="h-4 w-4" />
-            <AlertTitle>Returning after the migration?</AlertTitle>
-            <AlertDescription className="text-muted-foreground">
-              Your account still exists, but you need to set a new password once before signing in again.
-            </AlertDescription>
-          </Alert>
           <div className="space-y-2">
             <Label htmlFor="reset-email" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Email
@@ -519,13 +545,6 @@ const AuthPage: React.FC = () => {
 
       {view === 'login' ? (
         <form onSubmit={handleLogin} className="space-y-4">
-          <Alert className="border-border bg-secondary/30 text-white">
-            <GraduationCap className="h-4 w-4" />
-            <AlertTitle>Already had an account?</AlertTitle>
-            <AlertDescription className="text-muted-foreground">
-              We moved to a new sign-in system. Existing users should reset their password once, then log in normally.
-            </AlertDescription>
-          </Alert>
           <div className="space-y-2">
             <Label htmlFor="login-email" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Email
@@ -544,14 +563,11 @@ const AuthPage: React.FC = () => {
             <Label htmlFor="login-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Password
             </Label>
-            <Input
+            <PasswordInput
               id="login-password"
-              type="password"
-              placeholder="••••••••"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
               required
-              className={fieldClass}
             />
           </div>
           <Button type="submit" className={cn('w-full', primaryButtonClass)} disabled={isLoading}>
@@ -611,14 +627,11 @@ const AuthPage: React.FC = () => {
             <Label htmlFor="signup-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Password
             </Label>
-            <Input
+            <PasswordInput
               id="signup-password"
-              type="password"
-              placeholder="••••••••"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              aria-required="true"
-              className={fieldClass}
+              onChange={setPassword}
+              ariaRequired
             />
             <PasswordChecklist password={password} />
           </div>

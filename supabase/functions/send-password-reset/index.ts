@@ -9,8 +9,23 @@ const corsHeaders = {
 
 const DEFAULT_SITE_URL = "https://inlight.social";
 const DEFAULT_RESET_PATH = "/auth?mode=reset";
+const DEFAULT_RESET_CONTINUE_PATH = "/auth/reset/continue";
+const LOCAL_RESET_ORIGINS = new Set([
+  "http://127.0.0.1:8081",
+  "http://localhost:8081",
+]);
 
-function getSiteUrl() {
+function getRequestOrigin(req: Request) {
+  const origin = req.headers.get("origin")?.replace(/\/+$/, "");
+  return origin && LOCAL_RESET_ORIGINS.has(origin) ? origin : null;
+}
+
+function getSiteUrl(req: Request) {
+  const requestOrigin = getRequestOrigin(req);
+  if (requestOrigin) {
+    return requestOrigin;
+  }
+
   return (Deno.env.get("SITE_URL") || DEFAULT_SITE_URL).replace(/\/+$/, "");
 }
 
@@ -23,13 +38,24 @@ function normalizeResetUrl(url: string) {
   return `${trimmed.replace(/\/+$/, "")}${DEFAULT_RESET_PATH}`;
 }
 
-function getResetRedirectUrl() {
+function getResetRedirectUrl(req: Request) {
+  const requestOrigin = getRequestOrigin(req);
+  if (requestOrigin) {
+    return `${requestOrigin}${DEFAULT_RESET_PATH}`;
+  }
+
   const configuredResetUrl = Deno.env.get("PASSWORD_RESET_REDIRECT_URL");
   if (configuredResetUrl) {
     return normalizeResetUrl(configuredResetUrl);
   }
 
-  return `${getSiteUrl()}${DEFAULT_RESET_PATH}`;
+  return `${getSiteUrl(req)}${DEFAULT_RESET_PATH}`;
+}
+
+function getResetContinueUrl(req: Request, actionLink: string) {
+  const continueUrl = new URL(DEFAULT_RESET_CONTINUE_PATH, `${getSiteUrl(req)}/`);
+  continueUrl.searchParams.set("confirmation_url", actionLink);
+  return continueUrl.toString();
 }
 
 function buildEmailHtml(resetUrl: string) {
@@ -57,7 +83,7 @@ function buildEmailHtml(resetUrl: string) {
                     We received a request to reset the password for your Inlight account.
                   </p>
                   <p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">
-                    Click the button below to set a new password. This link expires in 1 hour.
+                    Click the button below to continue. On the next screen, confirm once more to set a new password. This link expires in 10 minutes.
                   </p>
                   <a href="${resetUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Reset Password</a>
                   <p style="margin:24px 0 0;color:#a1a1aa;font-size:12px;line-height:1.6;">
@@ -95,7 +121,7 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false, autoRefreshToken: false } }
     );
 
-    const resetRedirectTo = getResetRedirectUrl();
+    const resetRedirectTo = getResetRedirectUrl(req);
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "recovery",
       email,
@@ -127,7 +153,7 @@ Deno.serve(async (req) => {
       from: "Inlight <notifications@inlight.social>",
       to: [email],
       subject: "Reset Your Inlight Password",
-      html: buildEmailHtml(linkData.properties.action_link),
+      html: buildEmailHtml(getResetContinueUrl(req, linkData.properties.action_link)),
     });
 
     if (emailError) {

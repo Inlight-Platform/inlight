@@ -16,7 +16,7 @@ export const signupEmailPolicyMessage =
 
 export const formatSignInErrorMessage = (message: string) => {
   if (message.toLowerCase().includes('invalid login credentials')) {
-    return 'Invalid email or password. If you had an account before the migration, reset your password once, then sign in with the new password.';
+    return 'Invalid email or password. Please try again or reset your password.';
   }
 
   return message;

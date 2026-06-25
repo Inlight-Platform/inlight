@@ -19,6 +19,7 @@ import EventsPage from "./pages/EventsPage";
 import MessagesPage from "./pages/MessagesPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import AuthPage from "./pages/AuthPage";
+import AuthResetContinuePage from "./pages/AuthResetContinuePage";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
@@ -76,6 +77,7 @@ const App = () => (
           {/* Public routes - no shell */}
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/auth/reset/continue" element={<AuthResetContinuePage />} />
           <Route path="/preview" element={<PreviewPage />} />
           <Route path="/showcase/join/:programSlug" element={<ShowcaseJoinPage />} />
           <Route path="/showcase/:programId/:userId" element={<ShowcaseProfilePage />} />
