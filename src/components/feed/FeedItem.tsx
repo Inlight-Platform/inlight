@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useEventRsvps } from '@/hooks/useEventRsvps';
 import { cn, capitalizeName } from '@/lib/utils';
+import { isEventPast } from '@/lib/eventDates';
 
 export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show' | 'open_role';
 
@@ -107,6 +108,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
 
   const isEventItem = item.type === 'event';
   const isPaidEvent = isEventItem && !!item.is_paid;
+  const eventHasPassed = isEventPast(item.event_date);
   const { goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
 
   const isOwner = user?.id === item.user_id;
@@ -204,6 +206,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
 
   const handleBuyTicket = async () => {
+    if (eventHasPassed) {
+      toast.error('Tickets are closed for this past event.');
+      return;
+    }
+
     // If a direct payment link exists, auto-RSVP and open it
     if (item.payment_link_url) {
       // Auto-RSVP the logged-in user as "going"
@@ -429,7 +436,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Link display for posts */}
-        {item.link_url && (
+        {item.link_url && !(isPaidEvent && eventHasPassed) && (
           <a
             href={item.link_url}
             target="_blank"
@@ -440,6 +447,12 @@ export const FeedItem: React.FC<FeedItemProps> = ({
             <ExternalLink className="h-4 w-4" />
             {item.link_title || item.link_url}
           </a>
+        )}
+        {item.link_url && isPaidEvent && eventHasPassed && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+            <ExternalLink className="h-4 w-4" />
+            Ticket link closed for this past event
+          </div>
         )}
 
         {/* Visibility badge for non-public posts */}
@@ -522,10 +535,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                     e.stopPropagation();
                     void handleBuyTicket();
                   }}
-                  disabled={buyingTicket}
+                  disabled={buyingTicket || eventHasPassed}
                 >
                   <Ticket className="h-4 w-4 mr-2" />
-                  {buyingTicket ? 'Redirecting...' : 'Buy Ticket'}
+                  {eventHasPassed ? 'Tickets Closed' : buyingTicket ? 'Redirecting...' : 'Buy Ticket'}
                 </Button>
               ) : !rsvpSubmitted ? (
                 <Button

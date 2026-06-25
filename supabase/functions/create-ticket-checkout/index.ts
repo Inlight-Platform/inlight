@@ -42,7 +42,7 @@ serve(async (req) => {
 
     const { data: eventRecord, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, title, stripe_price_id, is_paid")
+      .select("id, title, event_date, stripe_price_id, is_paid")
       .eq("id", event_id)
       .single();
 
@@ -52,6 +52,10 @@ serve(async (req) => {
 
     if (!eventRecord.is_paid) {
       throw new Error("This event is not configured for paid ticket checkout");
+    }
+
+    if (new Date(eventRecord.event_date).getTime() < Date.now()) {
+      throw new Error("Tickets are closed for this past event");
     }
 
     if (!eventRecord.stripe_price_id) {

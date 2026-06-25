@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { isEventPast } from '@/lib/eventDates';
 
 interface EventRsvpFormProps {
   eventId: string;
@@ -27,9 +28,10 @@ interface EventRsvpFormProps {
   currency?: string;
   stripePriceId?: string | null;
   paymentLinkUrl?: string | null;
+  eventDate?: string | null;
 }
 
-const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, isPaid, price, currency = 'usd', stripePriceId, paymentLinkUrl }) => {
+const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, isPaid, price, currency = 'usd', stripePriceId, paymentLinkUrl, eventDate }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { rsvps, goingRsvps, goingCount, cantMakeItCount, submitRsvp } = useEventRsvps(eventId);
@@ -47,6 +49,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   // Check for ticket success from Stripe redirect
   const ticketStatus = searchParams.get('ticket');
   const hasTicketSuccess = ticketStatus === 'success';
+  const eventHasPassed = isEventPast(eventDate);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
@@ -102,6 +105,11 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   };
 
   const handleBuyTicket = async () => {
+    if (eventHasPassed) {
+      toast.error('Tickets are closed for this past event.');
+      return;
+    }
+
     if (paymentLinkUrl) {
       // Auto-RSVP the logged-in user as "going"
       const { data: { user } } = await supabase.auth.getUser();
@@ -180,10 +188,10 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
             className="w-full gap-2 text-base py-6"
             size="lg"
             onClick={handleBuyTicket}
-            disabled={buyingTicket}
+            disabled={buyingTicket || eventHasPassed}
           >
             <Ticket className="w-5 h-5" />
-            {buyingTicket ? 'Redirecting...' : 'Buy Ticket'}
+            {eventHasPassed ? 'Tickets Closed' : buyingTicket ? 'Redirecting...' : 'Buy Ticket'}
           </Button>
         </div>
       )}
