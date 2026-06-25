@@ -48,7 +48,7 @@ const CompanyRequestsManager: React.FC = () => {
       const userIds = Array.from(new Set((reqs || []).map((r: any) => r.requester_id)));
       let profileMap = new Map<string, any>();
       if (userIds.length) {
-        const { data: profiles, error: profilesError } = await supabase.rpc(
+        const { data: profiles, error: profilesError } = await (supabase.rpc as any)(
           'get_company_requester_profiles',
           { _user_ids: userIds }
         );
