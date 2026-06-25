@@ -2617,15 +2617,6 @@ export type Database = {
           show_pronouns: boolean
         }[]
       }
-      get_company_requester_profiles: {
-        Args: { _user_ids: string[] }
-        Returns: {
-          avatar_url: string
-          display_name: string
-          email: string
-          user_id: string
-        }[]
-      }
       get_public_event_rsvps: {
         Args: { target_event_id: string }
         Returns: {
@@ -2667,12 +2658,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin_email: { Args: { _email: string }; Returns: boolean }
-      mark_event_attended: { Args: { _event_id: string }; Returns: undefined }
       mark_show_attended: { Args: { _show_id: string }; Returns: undefined }
-      remove_profile_attendance: {
-        Args: { _item_id: string; _kind: string }
-        Returns: undefined
-      }
       update_profile_pronouns_settings: {
         Args: { _pronouns: string; _show_pronouns: boolean }
         Returns: undefined

@@ -142,7 +142,7 @@ export const AddAttendedDialog: React.FC = () => {
     if (!user) return;
     setSubmittingId(event.id);
     try {
-      const { error } = await supabase.rpc('mark_event_attended', { _event_id: event.id });
+      const { error } = await (supabase.rpc as any)('mark_event_attended', { _event_id: event.id });
 
       if (error) {
         await markEventDirectly(event);

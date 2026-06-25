@@ -62,7 +62,7 @@ export const AttendedSection: React.FC<AttendedSectionProps> = ({ userId, isOwnP
         throw new Error('Ticketed attendance cannot be removed from your profile.');
       }
 
-      const { error } = await supabase.rpc('remove_profile_attendance', {
+      const { error } = await (supabase.rpc as any)('remove_profile_attendance', {
         _kind: item.kind,
         _item_id: item.id,
       });
