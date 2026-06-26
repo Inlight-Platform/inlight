@@ -75,9 +75,11 @@ export const AddMusicShowDialog: React.FC<AddMusicShowDialogProps> = ({ trigger,
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      const authUser = authData.user;
-      if (authError || !authUser) throw new Error('You must be logged in');
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const authUser = sessionData.session?.user;
+      if (sessionError || !sessionData.session?.access_token || !authUser) {
+        throw new Error('Your sign-in session expired. Please sign in again to post a show.');
+      }
       if (!title.trim()) throw new Error('Title is required');
       if (!posterFile) throw new Error('An image is required');
       if (!isFree && !ticketUrl.trim()) throw new Error('Please provide a ticket link or mark as free');
@@ -87,8 +89,10 @@ export const AddMusicShowDialog: React.FC<AddMusicShowDialogProps> = ({ trigger,
       const fileName = `${authUser.id}/music-shows/${musicShowId}/poster-${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
-        .upload(fileName, posterFile, { upsert: true, contentType: posterFile.type });
-      if (uploadError) throw uploadError;
+        .upload(fileName, posterFile, { contentType: posterFile.type });
+      if (uploadError) {
+        throw new Error(`Could not upload show flyer: ${uploadError.message}`);
+      }
 
       const { data: urlData } = supabase.storage.from('profile-media').getPublicUrl(fileName);
 
@@ -107,11 +111,11 @@ export const AddMusicShowDialog: React.FC<AddMusicShowDialogProps> = ({ trigger,
           is_anonymous: isAnonymous,
           is_active: true,
           show_type: showType,
-        })
-        .select('id')
-        .single();
+        });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        throw new Error(`Could not create music listing: ${insertError.message}`);
+      }
     },
     onSuccess: () => {
       toast.success('Your show has been added! 🎵');
