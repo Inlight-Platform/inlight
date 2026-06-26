@@ -209,7 +209,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
               </div>
             ) : null}
 
-            {connectionStatus === 'none' && !showCancelButton ? (
+            {connectionStatus === 'none' && !showCancelButton && !showIncomingActions ? (
               <>
                 <Button className="h-10 flex-1 gap-2" onClick={handleConnect}>
                   <Users className="h-4 w-4" />

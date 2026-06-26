@@ -74,6 +74,33 @@ export function useConnectionRequests() {
   const sendRequest = useMutation({
     mutationFn: async (receiverId: string) => {
       if (!user?.id) throw new Error('Must be logged in');
+
+      const incomingRequest = pendingRequests.find((request) => request.sender_id === receiverId);
+      if (incomingRequest) {
+        const { error } = await supabase
+          .from('connection_requests')
+          .update({ status: 'accepted' })
+          .eq('id', incomingRequest.id)
+          .eq('receiver_id', user.id)
+          .eq('status', 'pending');
+        if (error) throw error;
+        return;
+      }
+
+      const previousSentRequest = sentRequests.find((request) => request.receiver_id === receiverId);
+      if (previousSentRequest?.status === 'pending') {
+        return;
+      }
+
+      if (previousSentRequest && previousSentRequest.status !== 'pending') {
+        const { error: deleteError } = await supabase
+          .from('connection_requests')
+          .delete()
+          .eq('id', previousSentRequest.id)
+          .eq('sender_id', user.id);
+        if (deleteError) throw deleteError;
+      }
+
       const { error } = await supabase
         .from('connection_requests')
         .insert({ sender_id: user.id, receiver_id: receiverId });
@@ -81,6 +108,9 @@ export function useConnectionRequests() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['connection-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['connections'] });
+      queryClient.invalidateQueries({ queryKey: ['following'] });
+      queryClient.invalidateQueries({ queryKey: ['followers'] });
     },
   });
 

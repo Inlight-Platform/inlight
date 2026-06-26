@@ -110,6 +110,11 @@ const PeoplePage: React.FC = () => {
     new Set(pendingSentRequests.map(r => r.receiver_id)), 
     [pendingSentRequests]
   );
+
+  const incomingRequestBySenderId = useMemo(() =>
+    new Map(pendingRequests.map((request) => [request.sender_id, request])),
+    [pendingRequests]
+  );
   
   const [activeTab, setActiveTab] = useState('explore');
   const [searchQuery, setSearchQuery] = useState('');
@@ -375,7 +380,8 @@ const PeoplePage: React.FC = () => {
                     const userId = user.user_id || '';
                     const isOwnProfile = userId === currentUserId;
                     const status = getConnectionStatus(userId);
-                    const pendingRequestId = status === 'pending' ? getPendingRequestId(userId) : undefined;
+                    const incomingRequest = incomingRequestBySenderId.get(userId);
+                    const pendingRequestId = status === 'pending' ? getPendingRequestId(userId) : incomingRequest?.id;
                     
                     return (
                       <PersonCard
@@ -383,10 +389,13 @@ const PeoplePage: React.FC = () => {
                         user={user}
                         connectionStatus={status}
                         showCancelButton={status === 'pending'}
+                        showIncomingActions={!!incomingRequest && status === 'none'}
                         requestId={pendingRequestId}
                         isOwnProfile={isOwnProfile}
                         onConnect={handleConnect}
                         onCancel={handleCancelRequest}
+                        onAccept={handleAcceptRequest}
+                        onDecline={handleDeclineRequest}
                         
                       />
                     );
