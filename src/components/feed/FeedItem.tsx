@@ -109,6 +109,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const isEventItem = item.type === 'event';
   const isPaidEvent = isEventItem && !!item.is_paid;
   const eventHasPassed = isEventPast(item.event_date);
+  const eventLinkClosed = isEventItem && eventHasPassed;
   const { goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
 
   const isOwner = user?.id === item.user_id;
@@ -436,7 +437,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Link display for posts */}
-        {item.link_url && !(isPaidEvent && eventHasPassed) && (
+        {item.link_url && !eventLinkClosed && (
           <a
             href={item.link_url}
             target="_blank"
@@ -448,10 +449,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
             {item.link_title || item.link_url}
           </a>
         )}
-        {item.link_url && isPaidEvent && eventHasPassed && (
+        {item.link_url && eventLinkClosed && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
             <ExternalLink className="h-4 w-4" />
-            Ticket link closed for this past event
+            {isPaidEvent ? 'Ticket link closed for this past event' : 'RSVP link closed for this past event'}
           </div>
         )}
 
@@ -548,9 +549,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                     e.stopPropagation();
                     setRsvpDialogOpen(true);
                   }}
+                  disabled={eventHasPassed}
                 >
                   <PartyPopper className="h-4 w-4 mr-2" />
-                  RSVP
+                  {eventHasPassed ? 'RSVP Closed' : 'RSVP'}
                 </Button>
               ) : (
                 <div className="flex-1 flex items-center justify-center gap-2 text-sm text-primary font-medium py-1">
@@ -627,6 +629,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
+                  if (eventHasPassed) {
+                    toast.error('RSVPs are closed for this past event.');
+                    return;
+                  }
                   if (!rsvpName.trim() || !rsvpEmail.trim()) {
                     toast.error('Please fill in all fields');
                     return;
@@ -652,7 +658,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                           });
                         }
                       },
-                      onError: () => toast.error('Something went wrong. Try again.'),
+                      onError: (error) => toast.error(error?.message || 'Something went wrong. Try again.'),
                     }
                   );
                 }}
@@ -681,8 +687,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                     />
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={submitRsvp.isPending}>
-                  {submitRsvp.isPending ? 'Submitting...' : 'Confirm RSVP'}
+                <Button type="submit" className="w-full" disabled={submitRsvp.isPending || eventHasPassed}>
+                  {eventHasPassed ? 'RSVP Closed' : submitRsvp.isPending ? 'Submitting...' : 'Confirm RSVP'}
                 </Button>
               </form>
             </DialogContent>

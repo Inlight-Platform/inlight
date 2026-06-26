@@ -62,6 +62,10 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (eventHasPassed) {
+      toast.error('RSVPs are closed for this past event.');
+      return;
+    }
     if (alreadyRsvpd) {
       toast.error("You've already RSVP'd to this event");
       return;
@@ -202,9 +206,10 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
           className="w-full gap-2 text-base py-6"
           size="lg"
           onClick={() => setDialogOpen(true)}
+          disabled={eventHasPassed}
         >
           <PartyPopper className="w-5 h-5" />
-          RSVP to this Event
+          {eventHasPassed ? 'RSVP Closed' : 'RSVP to this Event'}
         </Button>
       ) : !isPaid ? (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 text-center space-y-2">
@@ -400,9 +405,9 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
             <Button
               type="submit"
               className="w-full"
-              disabled={submitRsvp.isPending}
+              disabled={submitRsvp.isPending || eventHasPassed}
             >
-              {submitRsvp.isPending ? 'Submitting...' : 'Submit RSVP'}
+              {eventHasPassed ? 'RSVP Closed' : submitRsvp.isPending ? 'Submitting...' : 'Submit RSVP'}
             </Button>
           </form>
         </DialogContent>

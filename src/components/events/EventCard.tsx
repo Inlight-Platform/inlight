@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Users, Video, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isEventPast } from '@/lib/eventDates';
 
 interface EventCardProps {
   event: Event;
@@ -28,6 +29,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
   const host = getUser(event.hostId);
   const myRsvp = event.attendees.find(a => a.userId === currentUserId);
   const goingCount = event.attendees.filter(a => a.status === 'going').length;
+  const eventHasPassed = isEventPast(event.date);
   const connections = get1stDegree(currentUserId);
   const connectionsGoing = event.attendees.filter(
     a => a.status === 'going' && connections.some(c => c.id === a.userId)
@@ -52,6 +54,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
   };
 
   const handleRsvp = (status: 'going' | 'interested') => {
+    if (eventHasPassed) return;
     rsvpToEvent(event.id, currentUserId, status);
   };
 
@@ -183,13 +186,15 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
             variant={myRsvp?.status === 'going' ? 'default' : 'outline'}
             className="flex-1"
             onClick={() => handleRsvp('going')}
+            disabled={eventHasPassed}
           >
-            {myRsvp?.status === 'going' ? '✓ Going' : 'RSVP'}
+            {eventHasPassed ? 'RSVP Closed' : myRsvp?.status === 'going' ? '✓ Going' : 'RSVP'}
           </Button>
           <Button
             size="sm"
             variant={myRsvp?.status === 'interested' ? 'secondary' : 'ghost'}
             onClick={() => handleRsvp('interested')}
+            disabled={eventHasPassed}
           >
             {myRsvp?.status === 'interested' ? '★ Interested' : '☆'}
           </Button>
