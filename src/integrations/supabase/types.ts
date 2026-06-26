@@ -652,6 +652,68 @@ export type Database = {
           },
         ]
       }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          faculty_owner_id: string | null
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          faculty_owner_id?: string | null
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          faculty_owner_id?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       industry_highlights: {
         Row: {
           category: string
@@ -987,6 +1049,39 @@ export type Database = {
           token?: string
         }
         Relationships: []
+      }
+      post_groups: {
+        Row: {
+          created_at: string
+          group_id: string
+          post_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          post_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_groups_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       post_recipients: {
         Row: {
@@ -2597,6 +2692,23 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_my_faculty_group: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+          slug: string
+        }[]
+      }
+      get_my_groups: {
+        Args: never
+        Returns: {
+          id: string
+          is_faculty: boolean
+          name: string
+          slug: string
+        }[]
+      }
       get_profile_attendance: {
         Args: { _user_id: string }
         Returns: {
@@ -2658,6 +2770,14 @@ export type Database = {
         Returns: boolean
       }
       is_admin_email: { Args: { _email: string }; Returns: boolean }
+      is_group_faculty: {
+        Args: { _group: string; _user: string }
+        Returns: boolean
+      }
+      is_group_member: {
+        Args: { _group: string; _user: string }
+        Returns: boolean
+      }
       mark_show_attended: { Args: { _show_id: string }; Returns: undefined }
       update_profile_pronouns_settings: {
         Args: { _pronouns: string; _show_pronouns: boolean }
