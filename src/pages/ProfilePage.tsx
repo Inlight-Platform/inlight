@@ -58,6 +58,26 @@ import { CoverImageCropper } from "@/components/profile/CoverImageCropper";
 import { MyProjects } from "@/components/profile/MyProjects";
 import { UserPosts } from "@/components/profile/UserPosts";
 import { AttendedSection } from "@/components/profile/AttendedSection";
+import { useMyFacultyGroup } from "@/hooks/useGroups";
+
+const ManageGroupButton: React.FC = () => {
+  const facultyGroup = useMyFacultyGroup();
+  const navigate = useNavigate();
+  if (!facultyGroup) return null;
+  return (
+    <div className="mt-3 flex justify-center">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => navigate(`/groups/${facultyGroup.slug}`)}
+        className="gap-1.5"
+      >
+        <GraduationCap className="h-4 w-4" />
+        Manage {facultyGroup.name} Group
+      </Button>
+    </div>
+  );
+};
 import { AddAttendedDialog } from "@/components/profile/AddAttendedDialog";
 import { SavedProjects } from "@/components/profile/SavedProjects";
 import { supabase } from "@/integrations/supabase/client";
