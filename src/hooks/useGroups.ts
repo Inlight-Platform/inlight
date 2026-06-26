@@ -38,8 +38,7 @@ export const useGroupBySlug = (slug?: string) => {
     queryKey: ['group-by-slug', slug],
     enabled: !!slug,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('groups' as any)
+      const { data, error } = await (supabase.from as any)('groups')
         .select('*')
         .eq('slug', slug!)
         .maybeSingle();
