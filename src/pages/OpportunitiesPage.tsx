@@ -21,8 +21,6 @@ import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-const STRIPE_POST_JOB_URL = 'https://buy.stripe.com/dRmaEWa8gaA3eVL3ufco002';
-
 interface PostedJobApplication {
   id: string;
   jobId: string;
@@ -645,20 +643,14 @@ const OpportunitiesPage: React.FC = () => {
   }, [user?.id]);
 
   const handlePostJobClick = () => {
+    if (!isAdmin) return;
+
     if (!canManageJobs) {
       showRestrictedToast('jobs');
       return;
     }
 
-    if (isAdmin || credits > 0) {
-      setShowCreator(true);
-    } else if (user) {
-      // Pass the user id to Stripe via client_reference_id so the webhook
-      // knows whose account to credit on payment success.
-      const url = `${STRIPE_POST_JOB_URL}?client_reference_id=${encodeURIComponent(user.id)}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
-      toast.info('Complete payment in the new tab. Your posting credit will unlock automatically once Stripe confirms.');
-    }
+    setShowCreator(true);
   };
 
   const handleCreatorOpenChange = (open: boolean) => {
@@ -1034,7 +1026,7 @@ const OpportunitiesPage: React.FC = () => {
                 )}
               </Button>
             )}
-            {canManageJobs && (
+            {isAdmin && (
               <Button
                 onClick={handlePostJobClick}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
@@ -1108,7 +1100,7 @@ const OpportunitiesPage: React.FC = () => {
                 <p className="text-muted-foreground mb-4">
                   Try adjusting your filters or check back later
                 </p>
-                 {canManageJobs && (
+                 {isAdmin && (
                    <Button onClick={handlePostJobClick}>
                      Post A Job
                    </Button>
