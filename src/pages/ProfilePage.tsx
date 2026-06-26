@@ -1603,6 +1603,7 @@ const ProfilePage: React.FC = () => {
                       <RequestCompanyAccountDialog />
                     </div>
                   )}
+                  {isOwnProfile && <ManageGroupButton />}
                 </div>
               </div>
 
