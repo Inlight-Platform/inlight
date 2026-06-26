@@ -12,6 +12,8 @@ import { FeedBentoCard, getBentoSize } from '@/components/feed/FeedBentoCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { WelcomeMessage } from '@/components/feed/WelcomeMessage';
 import { YouTab } from '@/components/feed/YouTab';
+import { useMyGroups } from '@/hooks/useGroups';
+import { GraduationCap } from 'lucide-react';
 import { FeedSurvey, FeedSurveyAnswers } from '@/components/feed/FeedSurvey';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -23,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 type NetworkFilter = 'all' | '1st';
-type ContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates';
+type ContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates' | 'group';
 type ProjectSubTab = 'feed' | 'my-network' | 'saved' | 'archive';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 type ViewMode = 'bento' | 'scroll';
@@ -47,7 +49,7 @@ const FeedPage: React.FC = () => {
   const [searchParamsInit] = [new URLSearchParams(window.location.search)];
   const _initialTab = searchParamsInit.get('tab');
   const [contentFilter, setContentFilter] = useState<ContentFilter>(
-    _initialTab && ['all', 'you', 'events', 'projects', 'updates'].includes(_initialTab)
+    _initialTab && ['all', 'you', 'events', 'projects', 'updates', 'group'].includes(_initialTab)
       ? (_initialTab as ContentFilter)
       : 'all'
   );
@@ -61,7 +63,7 @@ const FeedPage: React.FC = () => {
     const tab = searchParams.get('tab');
     const compose = searchParams.get('compose');
     let changed = false;
-    if (tab && ['all', 'you', 'events', 'projects', 'updates'].includes(tab)) {
+    if (tab && ['all', 'you', 'events', 'projects', 'updates', 'group'].includes(tab)) {
       setContentFilter(tab as ContentFilter);
       searchParams.delete('tab');
       changed = true;
@@ -76,6 +78,37 @@ const FeedPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const { firstDegree, secondDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
+
+  // Groups the user belongs to (for the per-group tab)
+  const { data: myGroups = [] } = useMyGroups();
+  const primaryGroup = myGroups[0] || null;
+
+  // Fetch posts tagged to the primary group (for the group tab)
+  const { data: groupPosts = [] } = useQuery({
+    queryKey: ['feed-group-posts', primaryGroup?.id],
+    enabled: !!primaryGroup?.id,
+    queryFn: async () => {
+      const { data: links, error } = await (supabase.from as any)('post_groups')
+        .select('post_id, posts(*)')
+        .eq('group_id', primaryGroup!.id);
+      if (error) throw error;
+      const rows = (links as any[]).map((l) => l.posts).filter(Boolean);
+      const uids = [...new Set(rows.map((p) => p.user_id))];
+      if (!uids.length) return [] as FeedItemData[];
+      const { data: profiles } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', uids);
+      const map = new Map((profiles || []).map((p) => [p.user_id, p]));
+      return rows
+        .map((p) => ({
+          ...p,
+          type: 'post' as const,
+          creator_profile: map.get(p.user_id),
+        }))
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as FeedItemData[];
+    },
+  });
 
   // Project-specific state
   const [projectSubTab, setProjectSubTab] = useState<ProjectSubTab>('feed');
@@ -489,6 +522,9 @@ const FeedPage: React.FC = () => {
     { value: 'projects', label: 'Projects', icon: <FolderKanban className="h-4 w-4" /> },
     { value: 'updates', label: 'Services', icon: <User className="h-4 w-4" /> },
   ];
+  if (primaryGroup) {
+    contentFilters.push({ value: 'group', label: primaryGroup.name, icon: <GraduationCap className="h-4 w-4" /> });
+  }
 
   const itemCounts = useMemo(() => ({
     events: events.filter(hasVisibleCreator).length,
@@ -813,6 +849,31 @@ const FeedPage: React.FC = () => {
               <YouTab />
             ) : contentFilter === 'projects' ? (
               renderProjectsContent()
+            ) : contentFilter === 'group' && primaryGroup ? (
+              <div className="space-y-4 max-w-2xl mx-auto">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold">{primaryGroup.name}</h2>
+                    <p className="text-sm text-muted-foreground">Private feed for {primaryGroup.name} members.</p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => navigate(`/groups/${primaryGroup.slug}`)}>
+                    Open group
+                  </Button>
+                </div>
+                {groupPosts.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-12">No posts in {primaryGroup.name} yet.</p>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {groupPosts.map((item) => (
+                      <FeedItem
+                        key={`group-${item.id}`}
+                        item={item}
+                        networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : (
               <>
                 {/* Feed Items */}

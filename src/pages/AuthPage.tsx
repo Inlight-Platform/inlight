@@ -587,6 +587,12 @@ const AuthPage: React.FC = () => {
           >
             Reset your password
           </button>
+          <div className="border-t border-border/40 pt-3 text-center">
+            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+              <GraduationCap className="inline h-3 w-3 mr-1" />
+              Faculty? Sign in with your faculty email above.
+            </p>
+          </div>
         </form>
       ) : (
         <form onSubmit={handleSignup} className="space-y-4">

@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { ImageUploader } from './ImageUploader';
 import { AudienceSelector, PostVisibility } from './AudienceSelector';
 import { ImagePositioner } from '@/components/profile/ImagePositioner';
+import { useMyGroups } from '@/hooks/useGroups';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
 
@@ -47,6 +48,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [linkUrl, setLinkUrl] = useState('');
   const [visibility, setVisibility] = useState<PostVisibility>('public');
   const [selectedRecipients, setSelectedRecipients] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const { data: myGroups = [] } = useMyGroups();
   const [linkTitle, setLinkTitle] = useState('');
   const [customQuestion, setCustomQuestion] = useState('');
   const [positionX, setPositionX] = useState(50);
@@ -114,6 +117,13 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
               }))
             );
           if (recError) console.error('Failed to add recipients:', recError);
+        }
+
+        // Tag to a group for group visibility
+        if (visibility === 'group' && selectedGroupId && postData) {
+          const { error: gErr } = await (supabase.from as any)('post_groups')
+            .insert({ post_id: postData.id, group_id: selectedGroupId });
+          if (gErr) console.error('Failed to tag post group:', gErr);
         }
       } else if (postType === 'event') {
         // Convert datetime-local to ISO format for Supabase
@@ -521,6 +531,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                       selectedUsers={selectedRecipients}
                       onSelectedUsersChange={setSelectedRecipients}
                       currentUserId={user.id}
+                      availableGroups={myGroups.map((g) => ({ id: g.id, name: g.name }))}
+                      selectedGroupId={selectedGroupId}
+                      onSelectedGroupChange={setSelectedGroupId}
                     />
                   )}
 
