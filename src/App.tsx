@@ -26,6 +26,7 @@ import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ProjectNewPage from "./pages/ProjectNewPage";
 import StageWhisperPage from "./pages/StageWhisperPage";
 import GroupMembersPage from "./pages/GroupMembersPage";
+import GroupPage from "./pages/GroupPage";
 import AdminPage from "./pages/AdminPage";
 import CompanyProfilePage from "./pages/CompanyProfilePage";
 import MySavesPage from "./pages/MySavesPage";
@@ -113,6 +114,7 @@ const App = () => (
             <Route path="/company/:companyId" element={<CompanyProfilePage />} />
             <Route path="/saves" element={<MySavesPage />} />
             <Route path="/group" element={<GroupMembersPage />} />
+            <Route path="/groups/:slug" element={<GroupPage />} />
             <Route path="/pie-chart" element={<NetworkPieChartPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
