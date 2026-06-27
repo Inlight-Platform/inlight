@@ -14,6 +14,7 @@ import { Starfield } from '@/components/Starfield';
 import { useForceTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 import { formatSignInErrorMessage } from '@/lib/authPolicy';
+import { supabase } from '@/integrations/supabase/client';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset';
 
@@ -239,7 +240,17 @@ const AuthPage: React.FC = () => {
       toast.error(formatSignInErrorMessage(error.message));
     } else {
       toast.success('Welcome back!');
-      navigate(redirectPath, { replace: true });
+      try {
+        const { data: facultyGroup } = await (supabase.rpc as any)('get_my_faculty_group');
+        const first = Array.isArray(facultyGroup) ? facultyGroup[0] : facultyGroup;
+        if (first?.slug) {
+          navigate(`/groups/${first.slug}`, { replace: true });
+        } else {
+          navigate(redirectPath, { replace: true });
+        }
+      } catch {
+        navigate(redirectPath, { replace: true });
+      }
     }
 
     setIsLoading(false);
