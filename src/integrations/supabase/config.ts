@@ -1,8 +1,8 @@
-const CURRENT_SUPABASE_URL = 'https://piofmmawwnermvaysonw.supabase.co';
-const CURRENT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Np7ZYBlXrk0bOtzAGzYW5g_Rfr0xubM';
+const CURRENT_SUPABASE_URL = 'https://gbiostpdhvfxpppfqskw.supabase.co';
+const CURRENT_SUPABASE_PUBLISHABLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdiaW9zdHBkaHZmeHBwcGZxc2t3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwNzk5MzIsImV4cCI6MjA4MzY1NTkzMn0.JnNtO8ai56DAOPPxXbIcGYbWY1i4AB7xgqxdJprs_FA';
 
 const RETIRED_SUPABASE_HOSTS = new Set([
-  'gbiostpdhvfxpppfqskw.supabase.co',
+  'piofmmawwnermvaysonw.supabase.co',
 ]);
 
 const envSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
