@@ -6,6 +6,7 @@ import { ChevronLeft, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
+import { useMyGroups } from '@/hooks/useGroups';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
