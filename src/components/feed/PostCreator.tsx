@@ -21,6 +21,8 @@ import { ImageUploader } from './ImageUploader';
 import { AudienceSelector, PostVisibility } from './AudienceSelector';
 import { ImagePositioner } from '@/components/profile/ImagePositioner';
 import { useMyGroups } from '@/hooks/useGroups';
+import { SERVICE_CATEGORIES } from '@/data/services';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
 
@@ -56,6 +58,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [positionY, setPositionY] = useState(50);
   const [isPaid, setIsPaid] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
+  const [serviceCategory, setServiceCategory] = useState<string>('');
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
   useEffect(() => {
@@ -83,6 +86,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setPositionY(50);
     setIsPaid(false);
     setTicketPrice('');
+    setServiceCategory('');
   };
 
   const createPostMutation = useMutation({
@@ -90,11 +94,15 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       if (!user?.id) throw new Error('Must be logged in');
       
       if (postType === 'update') {
+        const categoryLabel = SERVICE_CATEGORIES.find((c) => c.slug === serviceCategory)?.label;
+        const prefixedContent = categoryLabel
+          ? `[${categoryLabel}] ${content.trim()}`
+          : content.trim();
         const { data: postData, error } = await supabase
           .from('posts')
           .insert({
             user_id: user.id,
-            content: content.trim(),
+            content: prefixedContent,
             image_url: imageUrl || null,
             image_position_x: positionX,
             image_position_y: positionY,
@@ -105,6 +113,26 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           .select('id')
           .single();
         if (error) throw error;
+
+        // Also tag the user's profile with the chosen service so they appear
+        // in the Services discovery tab.
+        if (serviceCategory) {
+          const categoryLabel = SERVICE_CATEGORIES.find((c) => c.slug === serviceCategory)?.label;
+          if (categoryLabel) {
+            const { data: profileRow } = await supabase
+              .from('profiles')
+              .select('skills')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            const existing = (profileRow?.skills as string[] | null) || [];
+            if (!existing.some((s) => s.toLowerCase() === categoryLabel.toLowerCase())) {
+              await supabase
+                .from('profiles')
+                .update({ skills: [...existing, categoryLabel] })
+                .eq('user_id', user.id);
+            }
+          }
+        }
         
         // Insert recipients for specific visibility
         if (visibility === 'specific' && selectedRecipients.length > 0 && postData) {
@@ -324,6 +352,29 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   )}
 
                   {/* Content textarea */}
+                  {postType === 'update' && (
+                    <div className="space-y-1.5">
+                      <label className="text-sm text-muted-foreground">
+                        Service category (optional)
+                      </label>
+                      <Select value={serviceCategory} onValueChange={setServiceCategory}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a service you're offering..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50">
+                          {SERVICE_CATEGORIES.map((c) => (
+                            <SelectItem key={c.slug} value={c.slug}>
+                              {c.emoji}  {c.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Picking a category lists you under that service for people to discover.
+                      </p>
+                    </div>
+                  )}
+
                   <Textarea
                     placeholder={
                       postType === 'update' ? "Share a skill or service you offer..." :

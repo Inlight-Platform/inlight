@@ -12,6 +12,7 @@ import { FeedBentoCard, getBentoSize } from '@/components/feed/FeedBentoCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { WelcomeMessage } from '@/components/feed/WelcomeMessage';
 import { YouTab } from '@/components/feed/YouTab';
+import { ServicesTab } from '@/components/feed/ServicesTab';
 import { useMyGroups } from '@/hooks/useGroups';
 import { GraduationCap } from 'lucide-react';
 import { FeedSurvey, FeedSurveyAnswers } from '@/components/feed/FeedSurvey';
@@ -884,6 +885,8 @@ const FeedPage: React.FC = () => {
             {/* Show project sub-content when on projects tab */}
             {contentFilter === 'you' ? (
               <YouTab />
+            ) : contentFilter === 'updates' ? (
+              <ServicesTab />
             ) : contentFilter === 'projects' ? (
               renderProjectsContent()
             ) : contentFilter === 'group' && primaryGroup ? (
