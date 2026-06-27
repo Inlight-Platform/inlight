@@ -110,6 +110,43 @@ const FeedPage: React.FC = () => {
     },
   });
 
+  // Fetch projects tagged to the primary group (for the group tab)
+  const { data: groupProjects = [] } = useQuery({
+    queryKey: ['feed-group-projects', primaryGroup?.id],
+    enabled: !!primaryGroup?.id,
+    queryFn: async () => {
+      const { data: links, error } = await supabase
+        .from('project_groups')
+        .select('project_id, projects(*)')
+        .eq('group_id', primaryGroup!.id);
+      if (error) throw error;
+      const rows = (links as any[]).map((l) => l.projects).filter(Boolean);
+      const uids = [...new Set(rows.map((p) => p.creator_id))];
+      if (!uids.length) return [] as FeedItemData[];
+      const { data: profiles } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', uids);
+      const map = new Map((profiles || []).map((p) => [p.user_id, p]));
+      return rows
+        .map((p) => ({
+          id: p.id,
+          type: 'project' as const,
+          user_id: p.creator_id,
+          title: p.title,
+          description: p.description,
+          image_url: p.header_image_url || p.main_image_url,
+          created_at: p.created_at,
+          category: p.category,
+          project_status: p.status,
+          link_url: p.link_url,
+          link_title: p.link_title,
+          creator_profile: map.get(p.creator_id),
+        }))
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as FeedItemData[];
+    },
+  });
+
   // Project-specific state
   const [projectSubTab, setProjectSubTab] = useState<ProjectSubTab>('feed');
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('all');
