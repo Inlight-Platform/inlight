@@ -41,6 +41,14 @@ export function useTour() {
       setHasCompleted(completed);
       localStorage.setItem(LS_KEY, completed ? '1' : '0');
 
+      const { data: facultyGroups } = await (supabase.rpc as any)('get_my_faculty_group');
+      const isFaculty = Array.isArray(facultyGroups) && facultyGroups.length > 0;
+
+      if (isFaculty) {
+        localStorage.setItem(LS_ACTIVE_KEY, '0');
+        return;
+      }
+
       // Auto-start tour for first-time users
       if (!completed && localStorage.getItem(LS_ACTIVE_KEY) !== '0') {
         if (!isActive) {
