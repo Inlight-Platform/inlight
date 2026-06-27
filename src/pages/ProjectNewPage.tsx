@@ -443,6 +443,24 @@ const ProjectNewPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Group Feed Toggle */}
+          {canPostToGroup && (
+            <div className="pt-6 border-t border-border">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Post to {primaryGroup.name}</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Share this project with {primaryGroup.name} members in the private group feed
+                  </p>
+                </div>
+                <Switch
+                  checked={postToGroup}
+                  onCheckedChange={setPostToGroup}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Submit */}
           <div className="pt-6 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
             <p>
