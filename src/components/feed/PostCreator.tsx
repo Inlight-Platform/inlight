@@ -113,6 +113,26 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           .select('id')
           .single();
         if (error) throw error;
+
+        // Also tag the user's profile with the chosen service so they appear
+        // in the Services discovery tab.
+        if (serviceCategory) {
+          const categoryLabel = SERVICE_CATEGORIES.find((c) => c.slug === serviceCategory)?.label;
+          if (categoryLabel) {
+            const { data: profileRow } = await supabase
+              .from('profiles')
+              .select('skills')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            const existing = (profileRow?.skills as string[] | null) || [];
+            if (!existing.some((s) => s.toLowerCase() === categoryLabel.toLowerCase())) {
+              await supabase
+                .from('profiles')
+                .update({ skills: [...existing, categoryLabel] })
+                .eq('user_id', user.id);
+            }
+          }
+        }
         
         // Insert recipients for specific visibility
         if (visibility === 'specific' && selectedRecipients.length > 0 && postData) {
