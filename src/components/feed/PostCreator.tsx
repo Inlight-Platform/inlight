@@ -21,6 +21,8 @@ import { ImageUploader } from './ImageUploader';
 import { AudienceSelector, PostVisibility } from './AudienceSelector';
 import { ImagePositioner } from '@/components/profile/ImagePositioner';
 import { useMyGroups } from '@/hooks/useGroups';
+import { SERVICE_CATEGORIES } from '@/data/services';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
 
@@ -56,6 +58,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [positionY, setPositionY] = useState(50);
   const [isPaid, setIsPaid] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
+  const [serviceCategory, setServiceCategory] = useState<string>('');
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
   useEffect(() => {
@@ -83,6 +86,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setPositionY(50);
     setIsPaid(false);
     setTicketPrice('');
+    setServiceCategory('');
   };
 
   const createPostMutation = useMutation({
@@ -90,11 +94,15 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       if (!user?.id) throw new Error('Must be logged in');
       
       if (postType === 'update') {
+        const categoryLabel = SERVICE_CATEGORIES.find((c) => c.slug === serviceCategory)?.label;
+        const prefixedContent = categoryLabel
+          ? `[${categoryLabel}] ${content.trim()}`
+          : content.trim();
         const { data: postData, error } = await supabase
           .from('posts')
           .insert({
             user_id: user.id,
-            content: content.trim(),
+            content: prefixedContent,
             image_url: imageUrl || null,
             image_position_x: positionX,
             image_position_y: positionY,
