@@ -238,6 +238,7 @@ const AuthPage: React.FC = () => {
 
     if (error) {
       toast.error(formatSignInErrorMessage(error.message));
+      setIsLoading(false);
     } else {
       toast.success('Welcome back!');
       try {
@@ -252,8 +253,6 @@ const AuthPage: React.FC = () => {
         navigate(redirectPath, { replace: true });
       }
     }
-
-    setIsLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
