@@ -92,7 +92,7 @@ export function useConnectionRequests() {
         return;
       }
 
-      if (previousSentRequest && previousSentRequest.status !== 'pending') {
+      if (previousSentRequest) {
         const { error: deleteError } = await supabase
           .from('connection_requests')
           .delete()
