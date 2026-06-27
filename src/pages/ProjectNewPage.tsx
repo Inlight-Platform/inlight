@@ -6,6 +6,7 @@ import { ChevronLeft, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
+import { useMyGroups } from '@/hooks/useGroups';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,6 +37,7 @@ const ProjectNewPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { canManageProjects, showRestrictedToast } = useFeatureAccess();
+  const { data: myGroups = [] } = useMyGroups();
   const queryClient = useQueryClient();
 
   const [title, setTitle] = useState('');
@@ -47,11 +49,16 @@ const ProjectNewPage: React.FC = () => {
   const [category, setCategory] = useState<ProjectCategory>('other');
   const [status, setStatus] = useState<ProjectStatus>('planning');
   const [isPublic, setIsPublic] = useState(false);
+  const [postToGroup, setPostToGroup] = useState(false);
   const [roles, setRoles] = useState<RoleSlot[]>([]);
   const [startDateStr, setStartDateStr] = useState('');
   const [endDateStr, setEndDateStr] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
+
+  // Prefer the Strasberg group, otherwise fall back to the user's first group
+  const primaryGroup = myGroups.find((g) => g.slug === 'strasberg') ?? myGroups[0];
+  const canPostToGroup = Boolean(primaryGroup);
 
   const startDate = startDateStr ? new Date(startDateStr) : undefined;
   const endDate = endDateStr ? new Date(endDateStr) : undefined;
@@ -138,11 +145,23 @@ const ProjectNewPage: React.FC = () => {
         }
       }
 
+      // 4. Tag project to the user's group when "Post to Strasberg" is enabled
+      if (postToGroup && primaryGroup) {
+        const { error: groupError } = await supabase
+          .from('project_groups')
+          .insert({ project_id: project.id, group_id: primaryGroup.id });
+        if (groupError) {
+          console.error('Failed to tag project to group:', groupError);
+          // Non-fatal: project is created, group tag can be retried later
+        }
+      }
+
       return project;
     },
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['projects-feed'] });
       queryClient.invalidateQueries({ queryKey: ['my-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-group-projects', primaryGroup?.id] });
       toast.success('Project created! Invitations sent to assigned team members.');
       navigate(`/projects/${project.id}`);
     },
@@ -423,6 +442,24 @@ const ProjectNewPage: React.FC = () => {
               />
             </div>
           </div>
+
+          {/* Group Feed Toggle */}
+          {canPostToGroup && (
+            <div className="pt-6 border-t border-border">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Post to {primaryGroup.name}</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Share this project with {primaryGroup.name} members in the private group feed
+                  </p>
+                </div>
+                <Switch
+                  checked={postToGroup}
+                  onCheckedChange={setPostToGroup}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Submit */}
           <div className="pt-6 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
