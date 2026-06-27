@@ -145,11 +145,23 @@ const ProjectNewPage: React.FC = () => {
         }
       }
 
+      // 4. Tag project to the user's group when "Post to Strasberg" is enabled
+      if (postToGroup && primaryGroup) {
+        const { error: groupError } = await supabase
+          .from('project_groups')
+          .insert({ project_id: project.id, group_id: primaryGroup.id });
+        if (groupError) {
+          console.error('Failed to tag project to group:', groupError);
+          // Non-fatal: project is created, group tag can be retried later
+        }
+      }
+
       return project;
     },
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['projects-feed'] });
       queryClient.invalidateQueries({ queryKey: ['my-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-group-projects', primaryGroup?.id] });
       toast.success('Project created! Invitations sent to assigned team members.');
       navigate(`/projects/${project.id}`);
     },
