@@ -332,6 +332,29 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   )}
 
                   {/* Content textarea */}
+                  {postType === 'update' && (
+                    <div className="space-y-1.5">
+                      <label className="text-sm text-muted-foreground">
+                        Service category (optional)
+                      </label>
+                      <Select value={serviceCategory} onValueChange={setServiceCategory}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a service you're offering..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50">
+                          {SERVICE_CATEGORIES.map((c) => (
+                            <SelectItem key={c.slug} value={c.slug}>
+                              {c.emoji}  {c.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Picking a category lists you under that service for people to discover.
+                      </p>
+                    </div>
+                  )}
+
                   <Textarea
                     placeholder={
                       postType === 'update' ? "Share a skill or service you offer..." :
