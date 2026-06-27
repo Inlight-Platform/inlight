@@ -211,10 +211,10 @@ const AuthPage: React.FC = () => {
 
   useEffect(() => {
     // Don't redirect if in password recovery mode
-    if (!loading && user && view !== 'reset' && !isPasswordRecovery) {
+    if (!loading && !isLoading && user && view !== 'reset' && !isPasswordRecovery) {
       navigate(redirectPath, { replace: true });
     }
-  }, [user, loading, navigate, view, isPasswordRecovery, redirectPath]);
+  }, [user, loading, isLoading, navigate, view, isPasswordRecovery, redirectPath]);
 
   useEffect(() => {
     if (mode === 'reset') {
