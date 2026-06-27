@@ -897,19 +897,23 @@ const FeedPage: React.FC = () => {
                     Open group
                   </Button>
                 </div>
-                {groupPosts.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-12">No posts in {primaryGroup.name} yet.</p>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    {groupPosts.map((item) => (
-                      <FeedItem
-                        key={`group-${item.id}`}
-                        item={item}
-                        networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
-                      />
-                    ))}
-                  </div>
-                )}
+                {(() => {
+                  const groupFeedItems = [...groupPosts, ...groupProjects]
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                  return groupFeedItems.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-12">No posts or projects in {primaryGroup.name} yet.</p>
+                  ) : (
+                    <div className="flex flex-col gap-4">
+                      {groupFeedItems.map((item) => (
+                        <FeedItem
+                          key={`group-${item.type}-${item.id}`}
+                          item={item}
+                          networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               <>
