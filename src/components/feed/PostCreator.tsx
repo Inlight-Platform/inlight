@@ -208,6 +208,13 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             );
           if (recError) console.error('Failed to add recipients:', recError);
         }
+
+        // Tag to a group for group visibility
+        if (visibility === 'group' && selectedGroupId && jobData) {
+          const { error: gErr } = await (supabase.from as any)('post_groups')
+            .insert({ post_id: jobData.id, group_id: selectedGroupId });
+          if (gErr) console.error('Failed to tag post group:', gErr);
+        }
       }
     },
     onSuccess: () => {
