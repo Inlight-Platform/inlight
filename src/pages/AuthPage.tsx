@@ -14,6 +14,7 @@ import { Starfield } from '@/components/Starfield';
 import { useForceTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 import { formatSignInErrorMessage } from '@/lib/authPolicy';
+import { supabase } from '@/integrations/supabase/client';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset';
 
