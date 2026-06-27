@@ -37,6 +37,7 @@ const ProjectNewPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { canManageProjects, showRestrictedToast } = useFeatureAccess();
+  const { data: myGroups = [] } = useMyGroups();
   const queryClient = useQueryClient();
 
   const [title, setTitle] = useState('');
@@ -48,11 +49,16 @@ const ProjectNewPage: React.FC = () => {
   const [category, setCategory] = useState<ProjectCategory>('other');
   const [status, setStatus] = useState<ProjectStatus>('planning');
   const [isPublic, setIsPublic] = useState(false);
+  const [postToGroup, setPostToGroup] = useState(false);
   const [roles, setRoles] = useState<RoleSlot[]>([]);
   const [startDateStr, setStartDateStr] = useState('');
   const [endDateStr, setEndDateStr] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
+
+  // Prefer the Strasberg group, otherwise fall back to the user's first group
+  const primaryGroup = myGroups.find((g) => g.slug === 'strasberg') ?? myGroups[0];
+  const canPostToGroup = Boolean(primaryGroup);
 
   const startDate = startDateStr ? new Date(startDateStr) : undefined;
   const endDate = endDateStr ? new Date(endDateStr) : undefined;
