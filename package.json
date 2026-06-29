@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "verify:supabase": "node scripts/verify-supabase-config.mjs",
+    "prebuild": "npm run verify:supabase",
     "build": "vite build",
+    "prebuild:dev": "npm run verify:supabase",
     "build:dev": "vite build --mode development",
-    "lint": "eslint .",
+    "lint": "npm run verify:supabase && eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
