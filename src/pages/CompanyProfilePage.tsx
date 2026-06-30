@@ -436,7 +436,7 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void; acces
                 <Label>Logo</Label>
                 <div className="mt-2 flex items-center gap-3">
                   <div className="w-16 h-16 rounded-full bg-muted overflow-hidden flex items-center justify-center border">
-                    {logoUrl ? <img src={logoUrl} alt="" className="w-full h-full object-cover" /> : <Building2 className="w-6 h-6 text-muted-foreground" />}
+                    {logoUrl ? <img src={logoUrl} alt="" className="w-full h-full object-contain p-1" /> : <Building2 className="w-6 h-6 text-muted-foreground" />}
                   </div>
                   <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
                   <div className="flex flex-wrap gap-2">
@@ -456,7 +456,7 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void; acces
                 <Label>Cover banner</Label>
                 <div className="mt-2 flex items-center gap-3">
                   <div className="w-24 h-16 rounded-md bg-muted overflow-hidden flex items-center justify-center border">
-                    {coverUrl ? <img src={coverUrl} alt="" className="w-full h-full object-cover" /> : <Image className="w-5 h-5 text-muted-foreground" />}
+                    {coverUrl ? <img src={coverUrl} alt="" className="w-full h-full object-contain" /> : <Image className="w-5 h-5 text-muted-foreground" />}
                   </div>
                   <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
                   <div className="flex flex-wrap gap-2">
@@ -896,7 +896,7 @@ const CompanyProfilePage: React.FC = () => {
       <header className="relative">
         <div className="relative h-[200px] sm:h-[280px] md:h-[350px] lg:h-[450px] overflow-hidden">
           {company.cover_image_url ? (
-            <img src={company.cover_image_url} alt="" className="w-full h-full object-cover" />
+            <img src={company.cover_image_url} alt="" className="w-full h-full object-contain" style={{ background: `linear-gradient(135deg, ${brandPrimary}22, ${brandAccent}22)` }} />
           ) : (
             <div
               className="w-full h-full"
@@ -915,7 +915,7 @@ const CompanyProfilePage: React.FC = () => {
           <div className="absolute -top-16 sm:-top-20 left-4 sm:left-6 lg:left-8">
             <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-[120px] lg:h-[120px] rounded-full border-4 border-background bg-card flex items-center justify-center shadow-card overflow-hidden">
               {company.logo_url ? (
-                <img src={company.logo_url} alt={company.name} className="w-full h-full object-cover" />
+                <img src={company.logo_url} alt={company.name} className="w-full h-full object-contain p-2" />
               ) : (
                 <Building2 className="w-10 h-10 text-primary" />
               )}
