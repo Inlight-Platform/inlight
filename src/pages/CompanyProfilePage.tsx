@@ -17,7 +17,10 @@ import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { ProjectCreator } from '@/components/projects/ProjectCreator';
+import { PROJECT_CATEGORIES, ProjectCategory } from '@/components/projects/ProjectCreator';
+import { ProjectHeaderImageUploader } from '@/components/projects/ProjectHeaderImageUploader';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { compressImage, isCompressibleImage } from '@/lib/imageCompression';
 import { CoverImageCropper } from '@/components/profile/CoverImageCropper';
 import { AvatarCropper } from '@/components/profile/AvatarCropper';
@@ -597,10 +600,30 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void; acces
 };
 
 // ── Add Project to Company Dialog ──────────────────────────────
-const AddProjectDialog: React.FC<{ companyId: string; status: 'active' | 'archived'; onAdded: () => void }> = ({ companyId, status, onAdded }) => {
+const AddProjectDialog: React.FC<{ companyId: string; status: 'active' | 'archived'; onAdded: () => void; accessToken?: string }> = ({ companyId, status, onAdded, accessToken }) => {
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<ProjectCategory>('other');
+  const [mainImageUrl, setMainImageUrl] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const projectTypeLabel = status === 'archived' ? 'Past' : 'Current';
+
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setCategory('other');
+    setMainImageUrl('');
+    setStartDate('');
+    setEndDate('');
+    setLinkTitle('');
+    setLinkUrl('');
+  };
 
   // Fetch user's projects that aren't already linked to this company
   const { data: availableProjects = [] } = useQuery({
@@ -618,6 +641,72 @@ const AddProjectDialog: React.FC<{ companyId: string; status: 'active' | 'archiv
     enabled: !!user?.id && open,
   });
 
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      if (!title.trim()) throw new Error('Please enter a project title.');
+
+      const normalizedLinkUrl = linkUrl.trim();
+      if (accessToken) {
+        const { data, error } = await (supabase.rpc as any)('create_company_project_with_staff_token', {
+          _token: accessToken,
+          _title: title.trim(),
+          _description: description.trim() || null,
+          _category: category,
+          _status: status === 'archived' ? 'archived' : 'active',
+          _main_image_url: null,
+          _start_date: startDate || null,
+          _end_date: endDate || null,
+          _link_title: linkTitle.trim() || (normalizedLinkUrl ? 'Project link' : null),
+          _link_url: normalizedLinkUrl || null,
+        });
+        if (error) throw error;
+        return { id: data as string };
+      }
+
+      if (!user?.id) throw new Error('You need to be signed in to add a company project.');
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({
+          title: title.trim(),
+          description: description.trim() || null,
+          category,
+          creator_id: user.id,
+          company_id: companyId,
+          status: status === 'archived' ? 'archived' : 'active',
+          is_public: true,
+          main_image_url: mainImageUrl.trim() || null,
+          start_date: startDate || null,
+          end_date: endDate || null,
+          link_title: linkTitle.trim() || (normalizedLinkUrl ? 'Project link' : null),
+          link_url: normalizedLinkUrl || null,
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      const { error: memberError } = await supabase
+        .from('project_members')
+        .insert({
+          project_id: data.id,
+          user_id: user.id,
+          role: 'Company admin',
+        });
+      if (memberError) throw memberError;
+
+      return data;
+    },
+    onSuccess: () => {
+      toast.success(`${projectTypeLabel} project added to company`);
+      queryClient.invalidateQueries({ queryKey: ['company-projects', companyId] });
+      queryClient.invalidateQueries({ queryKey: ['projects-feed'] });
+      onAdded();
+      resetForm();
+      setOpen(false);
+    },
+    onError: (error: Error) => toast.error(error.message || 'Failed to create project'),
+  });
+
   const linkMutation = useMutation({
     mutationFn: async (projectId: string) => {
       const newStatus = status === 'archived' ? 'archived' : 'active';
@@ -631,13 +720,22 @@ const AddProjectDialog: React.FC<{ companyId: string; status: 'active' | 'archiv
       toast.success('Project linked to company');
       queryClient.invalidateQueries({ queryKey: ['company-projects', companyId] });
       onAdded();
+      resetForm();
       setOpen(false);
     },
     onError: () => toast.error('Failed to link project'),
   });
 
+  const handleCreateSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    createMutation.mutate();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      setOpen(nextOpen);
+      if (!nextOpen) resetForm();
+    }}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
           <Plus className="w-4 h-4 mr-2" />
@@ -646,22 +744,145 @@ const AddProjectDialog: React.FC<{ companyId: string; status: 'active' | 'archiv
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add {status === 'archived' ? 'Past' : 'Current'} Project</DialogTitle>
+          <DialogTitle>Add {projectTypeLabel} Project</DialogTitle>
         </DialogHeader>
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {availableProjects.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">No available projects to link.</p>
-          ) : (
-            availableProjects.map((p) => (
-              <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
-                <span className="font-medium text-sm">{p.title}</span>
-                <Button size="sm" onClick={() => linkMutation.mutate(p.id)} disabled={linkMutation.isPending}>
-                  Link
-                </Button>
-              </div>
-            ))
+        <Tabs defaultValue="create" className="w-full">
+          {user?.id && !accessToken && (
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="create">Create new</TabsTrigger>
+              <TabsTrigger value="existing">Link existing</TabsTrigger>
+            </TabsList>
           )}
-        </div>
+          <TabsContent value="create" className="mt-4">
+            <form className="space-y-4" onSubmit={handleCreateSubmit}>
+              <div className="space-y-2">
+                <Label htmlFor={`company-project-title-${status}`}>Project title</Label>
+                <Input
+                  id={`company-project-title-${status}`}
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Project title"
+                  maxLength={100}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Project type</Label>
+                  <Select value={category} onValueChange={(value) => setCategory(value as ProjectCategory)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PROJECT_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`company-project-start-${status}`}>Start date</Label>
+                  <Input
+                    id={`company-project-start-${status}`}
+                    type="date"
+                    value={startDate}
+                    onChange={(event) => setStartDate(event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`company-project-end-${status}`}>End date</Label>
+                <Input
+                  id={`company-project-end-${status}`}
+                  type="date"
+                  value={endDate}
+                  onChange={(event) => setEndDate(event.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`company-project-description-${status}`}>Description</Label>
+                <Textarea
+                  id={`company-project-description-${status}`}
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Describe the project..."
+                  rows={3}
+                  maxLength={1000}
+                />
+              </div>
+
+              {user?.id && !accessToken && (
+                <div className="space-y-2">
+                  <Label>Project image</Label>
+                  <ProjectHeaderImageUploader
+                    userId={user.id}
+                    currentImageUrl={mainImageUrl}
+                    onImageUploaded={setMainImageUrl}
+                    onRemoveImage={() => setMainImageUrl('')}
+                    imageKind="main"
+                    cropTitle="Crop project image"
+                    helperText="Upload a project thumbnail"
+                    recommendedDimensions="Recommended: 1200x800 or similar"
+                    aspect={1.5}
+                    outputWidth={1200}
+                    outputHeight={800}
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor={`company-project-link-title-${status}`}>Link title</Label>
+                  <Input
+                    id={`company-project-link-title-${status}`}
+                    value={linkTitle}
+                    onChange={(event) => setLinkTitle(event.target.value)}
+                    placeholder="Trailer, website, press..."
+                    maxLength={80}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`company-project-link-url-${status}`}>Link URL</Label>
+                  <Input
+                    id={`company-project-link-url-${status}`}
+                    type="url"
+                    value={linkUrl}
+                    onChange={(event) => setLinkUrl(event.target.value)}
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                  Create {status === 'archived' ? 'Past' : 'Current'} Project
+                </Button>
+              </DialogFooter>
+            </form>
+          </TabsContent>
+          <TabsContent value="existing" className="mt-4">
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {availableProjects.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No available projects to link.</p>
+              ) : (
+                availableProjects.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
+                    <span className="font-medium text-sm">{p.title}</span>
+                    <Button size="sm" onClick={() => linkMutation.mutate(p.id)} disabled={linkMutation.isPending}>
+                      {linkMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                      Link
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
@@ -772,6 +993,7 @@ const CompanyProfilePage: React.FC = () => {
   const hasStaffAccess = !!staffToken && !!staffAccess && staffAccess.company_id === company?.id;
   const canManageCompany = isOwner || isAdmin || hasStaffAccess;
   const canManageProjects = isOwner || isAdmin;
+  const canAddProjects = canManageProjects || hasStaffAccess;
   const following = companyId ? isFollowingCompany(companyId) : false;
 
   const normalizeStatus = (s: string | null): string => {
@@ -1093,21 +1315,21 @@ const CompanyProfilePage: React.FC = () => {
       {/* Current Projects - Collapsible */}
       <Collapsible open={currentProjectsOpen} onOpenChange={setCurrentProjectsOpen} className="border-b border-border">
         <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <CollapsibleTrigger className="flex items-center justify-between w-full group">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between w-full gap-2">
+            <CollapsibleTrigger className="flex items-center gap-2 flex-1 group text-left">
               <FolderKanban className="w-5 h-5 text-muted-foreground" />
               <h2 className="text-lg font-display font-semibold">Current Projects</h2>
               {currentProjects.length > 0 && (
                 <Badge variant="secondary" className="text-xs">{currentProjects.length}</Badge>
               )}
-            </div>
+              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ml-auto ${currentProjectsOpen ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
             <div className="flex items-center gap-2">
-              {canManageProjects && currentProjectsOpen && (
-                <AddProjectDialog companyId={company.id} status="active" onAdded={() => queryClient.invalidateQueries({ queryKey: ['company-projects', companyId] })} />
+              {canAddProjects && currentProjectsOpen && (
+                <AddProjectDialog companyId={company.id} status="active" accessToken={staffToken} onAdded={() => queryClient.invalidateQueries({ queryKey: ['company-projects', companyId] })} />
               )}
-              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${currentProjectsOpen ? 'rotate-180' : ''}`} />
             </div>
-          </CollapsibleTrigger>
+          </div>
           <CollapsibleContent className="mt-4">
             {currentProjects.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">No current projects.</p>
@@ -1143,21 +1365,21 @@ const CompanyProfilePage: React.FC = () => {
       {/* Past Projects - Collapsible */}
       <Collapsible open={pastProjectsOpen} onOpenChange={setPastProjectsOpen} className="border-b border-border">
         <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <CollapsibleTrigger className="flex items-center justify-between w-full group">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between w-full gap-2">
+            <CollapsibleTrigger className="flex items-center gap-2 flex-1 group text-left">
               <Archive className="w-5 h-5 text-muted-foreground" />
               <h2 className="text-lg font-display font-semibold">Past Projects</h2>
               {pastProjects.length > 0 && (
                 <Badge variant="secondary" className="text-xs">{pastProjects.length}</Badge>
               )}
-            </div>
+              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ml-auto ${pastProjectsOpen ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
             <div className="flex items-center gap-2">
-              {canManageProjects && pastProjectsOpen && (
-                <AddProjectDialog companyId={company.id} status="archived" onAdded={() => queryClient.invalidateQueries({ queryKey: ['company-projects', companyId] })} />
+              {canAddProjects && pastProjectsOpen && (
+                <AddProjectDialog companyId={company.id} status="archived" accessToken={staffToken} onAdded={() => queryClient.invalidateQueries({ queryKey: ['company-projects', companyId] })} />
               )}
-              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${pastProjectsOpen ? 'rotate-180' : ''}`} />
             </div>
-          </CollapsibleTrigger>
+          </div>
           <CollapsibleContent className="mt-4">
             {pastProjects.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">No past projects.</p>
