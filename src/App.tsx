@@ -86,6 +86,7 @@ const App = () => (
           <Route path="/c/:companyId" element={<PublicCompanyPage />} />
           <Route path="/c/:companyId/project/:projectId" element={<PublicCompanyProjectPage />} />
           <Route path="/c/:companyId/staff/:userId" element={<PublicCompanyStaffPage />} />
+          <Route path="/company-edit/:token" element={<CompanyProfilePage />} />
           <Route path="/industry-now" element={<StageWhisperPage />} />
           <Route path="/plan-selection" element={<RequireAuth><PlanSelectionPage /></RequireAuth>} />
           <Route path="/onboarding" element={<RequireAuth><OnboardingSurveyPage /></RequireAuth>} />

@@ -66,6 +66,16 @@ const PublicCompanyPage: React.FC = () => {
     enabled: !!companyId,
   });
 
+  const { data: invitedStaff = [] } = useQuery({
+    queryKey: ['public-company-invited-staff', companyId],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('get_company_staff_access_public', { _company_id: companyId });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!companyId,
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -202,12 +212,12 @@ const PublicCompanyPage: React.FC = () => {
       )}
 
       {/* Staff */}
-      {staff.length > 0 && (
+      {(staff.length > 0 || invitedStaff.length > 0) && (
         <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 border-b border-border">
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-5 h-5 text-muted-foreground" />
             <h2 className="text-lg font-display font-semibold">Team</h2>
-            <Badge variant="secondary" className="text-xs">{staff.length}</Badge>
+            <Badge variant="secondary" className="text-xs">{staff.length + invitedStaff.length}</Badge>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {staff.map((person: any) => (
@@ -227,6 +237,21 @@ const PublicCompanyPage: React.FC = () => {
                 {person.role && <p className="text-xs text-muted-foreground truncate w-full">{person.role}</p>}
               </Link>
             ))}
+            {invitedStaff.map((person: any) => {
+              const displayName = person.staff_name || person.email;
+              return (
+                <div
+                  key={`${person.email}-${displayName}`}
+                  className="flex flex-col items-center text-center p-4 rounded-xl border border-border bg-card"
+                >
+                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-lg font-semibold mb-2">
+                    {(displayName || '?').charAt(0)}
+                  </div>
+                  <p className="font-semibold text-sm truncate w-full">{displayName}</p>
+                  <p className="text-xs text-muted-foreground truncate w-full">Staff</p>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}

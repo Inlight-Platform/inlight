@@ -4,6 +4,7 @@ import { safeBack } from '@/lib/safeBack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { useCompanyFollows, Company } from '@/hooks/useCompanyFollows';
 import { Building2, Globe, MapPin, Users, ChevronLeft, Settings, UserPlus, ChevronDown, Plus, Camera, Loader2, Trash2, FolderKanban, Archive, Image, Sparkles, Palette, X, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -73,6 +74,42 @@ const prepareCompanyImageFile = async (file: File) => {
 const canCropCompanyImage = (file: File) => {
   const contentType = getImageContentType(file);
   return ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/bmp', 'image/tiff', 'image/avif', 'image/heic', 'image/heif'].includes(contentType);
+};
+
+const blobToBase64 = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        resolve(result.split(',').pop() || result);
+      } else {
+        reject(new Error('Could not read image file.'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Could not read image file.'));
+    reader.readAsDataURL(blob);
+  });
+
+const uploadStaffCompanyMedia = async (
+  token: string,
+  blob: Blob,
+  fileName: string,
+  kind: 'logo' | 'cover' | 'photo',
+) => {
+  const fileBase64 = await blobToBase64(blob);
+  const { data, error } = await supabase.functions.invoke('company-staff-media', {
+    body: {
+      token,
+      kind,
+      fileName,
+      contentType: blob.type || 'image/jpeg',
+      fileBase64,
+    },
+  });
+  if (error) throw error;
+  if ((data as any)?.error) throw new Error((data as any).error);
+  return data as { publicUrl: string; photoId?: string | null };
 };
 
 // ── Transfer Ownership Dialog ──────────────────────────────────
@@ -167,7 +204,7 @@ const PALETTE_PRESETS: Array<{ name: string; primary: string; accent: string; te
   { name: 'Peach Cream',   primary: '#f97316', accent: '#fb7185', text: '#1a1a1a' },
 ];
 
-const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = ({ company, onSaved }) => {
+const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void; accessToken?: string }> = ({ company, onSaved, accessToken }) => {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -195,8 +232,12 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
   const coverInputRef = useRef<HTMLInputElement>(null);
 
   const uploadImage = async (file: File, kind: 'logo' | 'cover') => {
-    if (!user?.id) throw new Error('You need to be signed in to upload images.');
     const imageFile = await prepareCompanyImageFile(file);
+    if (accessToken) {
+      const uploaded = await uploadStaffCompanyMedia(accessToken, imageFile, imageFile.name, kind);
+      return uploaded.publicUrl;
+    }
+    if (!user?.id) throw new Error('You need to be signed in to upload images.');
     const path = `${user.id}/companies/${company.id}/${kind}-${Date.now()}-${sanitizeStorageFileName(imageFile.name)}`;
     const { error } = await supabase.storage.from('profile-media').upload(path, imageFile, {
       contentType: getImageContentType(imageFile),
@@ -207,6 +248,12 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
   };
 
   const uploadCroppedCover = async (blob: Blob) => {
+    if (accessToken) {
+      const uploaded = await uploadStaffCompanyMedia(accessToken, blob, 'cover-cropped.jpg', 'cover');
+      setCoverUrl(`${uploaded.publicUrl}?t=${Date.now()}`);
+      toast.success('Cover cropped');
+      return;
+    }
     if (!user?.id) throw new Error('You need to be signed in to upload images.');
     const path = `${user.id}/companies/${company.id}/cover-${Date.now()}-cropped.jpg`;
     const { error } = await supabase.storage.from('profile-media').upload(path, blob, {
@@ -219,6 +266,12 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
   };
 
   const uploadCroppedLogo = async (blob: Blob) => {
+    if (accessToken) {
+      const uploaded = await uploadStaffCompanyMedia(accessToken, blob, 'logo-cropped.jpg', 'logo');
+      setLogoUrl(`${uploaded.publicUrl}?t=${Date.now()}`);
+      toast.success('Logo cropped');
+      return;
+    }
     if (!user?.id) throw new Error('You need to be signed in to upload images.');
     const path = `${user.id}/companies/${company.id}/logo-${Date.now()}-cropped.jpg`;
     const { error } = await supabase.storage.from('profile-media').upload(path, blob, {
@@ -295,6 +348,25 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void }> = (
   const updateMutation = useMutation({
     mutationFn: async () => {
       const cleanedFacts = funFacts.map(f => f.trim()).filter(Boolean);
+      if (accessToken) {
+        const { error } = await (supabase.rpc as any)('update_company_with_staff_token', {
+          _token: accessToken,
+          _name: name,
+          _description: description || null,
+          _location: location || null,
+          _website_url: websiteUrl || null,
+          _tagline: tagline || null,
+          _mission: mission || null,
+          _brand_primary_color: primary || null,
+          _brand_accent_color: accent || null,
+          _brand_text_color: textColor || null,
+          _logo_url: logoUrl || null,
+          _cover_image_url: coverUrl || null,
+          _fun_facts: cleanedFacts,
+        });
+        if (error) throw error;
+        return;
+      }
       const updatePayload: Record<string, unknown> = {
         name,
         description: description || null,
@@ -597,9 +669,10 @@ const AddProjectDialog: React.FC<{ companyId: string; status: 'active' | 'archiv
 
 // ── Main Page Component ────────────────────────────────────────
 const CompanyProfilePage: React.FC = () => {
-  const { companyId } = useParams<{ companyId: string }>();
+  const { companyId: routeCompanyId, token: staffToken } = useParams<{ companyId?: string; token?: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const queryClient = useQueryClient();
   const { isFollowingCompany, followCompany, unfollowCompany } = useCompanyFollows();
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -609,6 +682,21 @@ const CompanyProfilePage: React.FC = () => {
   const [currentProjectsOpen, setCurrentProjectsOpen] = useState(true);
   const [pastProjectsOpen, setPastProjectsOpen] = useState(true);
   const [photosOpen, setPhotosOpen] = useState(true);
+
+  const { data: staffAccess, isLoading: staffAccessLoading, isError: staffAccessError } = useQuery({
+    queryKey: ['company-staff-access', staffToken],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('validate_company_staff_access', {
+        _token: staffToken,
+      });
+      if (error) throw error;
+      return (data || [])[0] as { company_id: string; email: string; staff_name: string | null } | undefined;
+    },
+    enabled: !!staffToken,
+    retry: false,
+  });
+
+  const companyId = routeCompanyId || staffAccess?.company_id;
 
   const { data: company, isLoading } = useQuery({
     queryKey: ['company', companyId],
@@ -638,6 +726,16 @@ const CompanyProfilePage: React.FC = () => {
       return data;
     },
     enabled: !!company?.owner_user_id,
+  });
+
+  const { data: invitedStaff = [] } = useQuery({
+    queryKey: ['company-invited-staff', companyId],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('get_company_staff_access_public', { _company_id: companyId });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!companyId,
   });
 
   // Fetch company projects
@@ -671,6 +769,9 @@ const CompanyProfilePage: React.FC = () => {
   });
 
   const isOwner = user?.id === company?.owner_user_id;
+  const hasStaffAccess = !!staffToken && !!staffAccess && staffAccess.company_id === company?.id;
+  const canManageCompany = isOwner || isAdmin || hasStaffAccess;
+  const canManageProjects = isOwner || isAdmin;
   const following = companyId ? isFollowingCompany(companyId) : false;
 
   const normalizeStatus = (s: string | null): string => {
@@ -689,10 +790,17 @@ const CompanyProfilePage: React.FC = () => {
   // Photo upload
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user?.id || !companyId) return;
+    if (!file || !companyId) return;
     setUploadingPhoto(true);
     try {
       const imageFile = await prepareCompanyImageFile(file);
+      if (staffToken) {
+        await uploadStaffCompanyMedia(staffToken, imageFile, imageFile.name, 'photo');
+        toast.success('Photo uploaded!');
+        refetchPhotos();
+        return;
+      }
+      if (!user?.id) throw new Error('You need to be signed in to upload images.');
       const fileName = `${user.id}/companies/${companyId}/${Date.now()}-${sanitizeStorageFileName(imageFile.name)}`;
       const { error: uploadError } = await supabase.storage.from('profile-media').upload(fileName, imageFile, {
         contentType: getImageContentType(imageFile),
@@ -713,6 +821,14 @@ const CompanyProfilePage: React.FC = () => {
 
   const deletePhotoMutation = useMutation({
     mutationFn: async (photoId: string) => {
+      if (staffToken) {
+        const { error } = await (supabase.rpc as any)('delete_company_photo_with_staff_token', {
+          _token: staffToken,
+          _photo_id: photoId,
+        });
+        if (error) throw error;
+        return;
+      }
       const { error } = await supabase.from('company_photos').delete().eq('id', photoId);
       if (error) throw error;
     },
@@ -735,7 +851,7 @@ const CompanyProfilePage: React.FC = () => {
     onError: () => toast.error('Failed to unlink project'),
   });
 
-  if (isLoading) {
+  if (isLoading || staffAccessLoading) {
     return (
       <div className="min-h-screen bg-background">
         <div className="h-[200px] sm:h-[280px] bg-muted animate-pulse" />
@@ -743,6 +859,15 @@ const CompanyProfilePage: React.FC = () => {
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-96" />
         </div>
+      </div>
+    );
+  }
+
+  if (staffToken && (staffAccessError || !staffAccess)) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <p className="text-muted-foreground">This company edit link is invalid or expired.</p>
+        <Button variant="ghost" onClick={() => navigate('/people')} className="mt-4">Back to People</Button>
       </div>
     );
   }
@@ -832,7 +957,7 @@ const CompanyProfilePage: React.FC = () => {
 
             {/* Action buttons */}
             <div className="flex gap-2 flex-wrap">
-              {isOwner && companyId && (
+              {canManageCompany && companyId && (
                 <Button
                   variant="outline"
                   className="rounded-full gap-2"
@@ -846,7 +971,7 @@ const CompanyProfilePage: React.FC = () => {
                   Copy public link
                 </Button>
               )}
-              {!isOwner && companyId && (
+              {!canManageCompany && companyId && (
                 <Button
                   variant={following ? 'outline' : 'default'}
                   className="rounded-full"
@@ -923,25 +1048,44 @@ const CompanyProfilePage: React.FC = () => {
       )}
 
       {/* Staff Section - only visible to owner */}
-      {isOwner && ownerProfile && (
+      {canManageCompany && (ownerProfile || invitedStaff.length > 0) && (
         <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-b border-border">
           <h2 className="text-lg font-display font-semibold mb-3">Staff</h2>
-          <div
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-            onClick={() => navigate(`/profile/${ownerProfile.user_id}`)}
-          >
-            {ownerProfile.avatar_url ? (
-              <img src={ownerProfile.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-semibold">
-                {ownerProfile.display_name?.charAt(0)}
+          <div className="space-y-2">
+            {ownerProfile && (
+              <div
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                onClick={() => navigate(`/profile/${ownerProfile.user_id}`)}
+              >
+                {ownerProfile.avatar_url ? (
+                  <img src={ownerProfile.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-semibold">
+                    {ownerProfile.display_name?.charAt(0)}
+                  </div>
+                )}
+                <div>
+                  <p className="font-semibold text-sm">{ownerProfile.display_name}</p>
+                  <p className="text-xs text-muted-foreground">{ownerProfile.role || 'Owner'}</p>
+                </div>
+                <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">Owner</span>
               </div>
             )}
-            <div>
-              <p className="font-semibold text-sm">{ownerProfile.display_name}</p>
-              <p className="text-xs text-muted-foreground">{ownerProfile.role || 'Owner'}</p>
-            </div>
-            <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">Owner</span>
+            {invitedStaff.map((staff: any) => {
+              const displayName = staff.staff_name || staff.email;
+              return (
+                <div key={`${staff.email}-${displayName}`} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-semibold">
+                    {(displayName || '?').charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate">{displayName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{staff.staff_name ? staff.email : 'Staff editor'}</p>
+                  </div>
+                  <span className="ml-auto text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full font-medium">Editor</span>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
@@ -958,7 +1102,7 @@ const CompanyProfilePage: React.FC = () => {
               )}
             </div>
             <div className="flex items-center gap-2">
-              {isOwner && currentProjectsOpen && (
+              {canManageProjects && currentProjectsOpen && (
                 <AddProjectDialog companyId={company.id} status="active" onAdded={() => queryClient.invalidateQueries({ queryKey: ['company-projects', companyId] })} />
               )}
               <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${currentProjectsOpen ? 'rotate-180' : ''}`} />
@@ -981,7 +1125,7 @@ const CompanyProfilePage: React.FC = () => {
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <h3 className="font-medium text-foreground text-sm line-clamp-1">{project.title}</h3>
-                        {isOwner && (
+                        {canManageProjects && (
                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); unlinkProjectMutation.mutate(project.id); }}>
                             <Trash2 className="w-3 h-3 text-muted-foreground" />
                           </Button>
@@ -1008,7 +1152,7 @@ const CompanyProfilePage: React.FC = () => {
               )}
             </div>
             <div className="flex items-center gap-2">
-              {isOwner && pastProjectsOpen && (
+              {canManageProjects && pastProjectsOpen && (
                 <AddProjectDialog companyId={company.id} status="archived" onAdded={() => queryClient.invalidateQueries({ queryKey: ['company-projects', companyId] })} />
               )}
               <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${pastProjectsOpen ? 'rotate-180' : ''}`} />
@@ -1031,7 +1175,7 @@ const CompanyProfilePage: React.FC = () => {
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <h3 className="font-medium text-foreground text-sm line-clamp-1">{project.title}</h3>
-                        {isOwner && (
+                        {canManageProjects && (
                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); unlinkProjectMutation.mutate(project.id); }}>
                             <Trash2 className="w-3 h-3 text-muted-foreground" />
                           </Button>
@@ -1058,7 +1202,7 @@ const CompanyProfilePage: React.FC = () => {
               )}
               <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ml-auto ${photosOpen ? 'rotate-180' : ''}`} />
             </CollapsibleTrigger>
-            {isOwner && photosOpen && (
+            {canManageCompany && photosOpen && (
               <>
                 <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
                 <Button variant="outline" size="sm" onClick={() => photoInputRef.current?.click()} disabled={uploadingPhoto}>
@@ -1076,7 +1220,7 @@ const CompanyProfilePage: React.FC = () => {
                 {companyPhotos.map((photo) => (
                   <div key={photo.id} className="relative group rounded-lg overflow-hidden aspect-square">
                     <img src={photo.image_url} alt={photo.caption || ''} className="w-full h-full object-cover" />
-                    {isOwner && (
+                    {canManageCompany && (
                       <button
                         onClick={() => deletePhotoMutation.mutate(photo.id)}
                         className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
@@ -1093,12 +1237,14 @@ const CompanyProfilePage: React.FC = () => {
       </Collapsible>
 
       {/* Owner Controls */}
-      {isOwner && (
+      {canManageCompany && (
         <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-t border-border">
           <h2 className="text-lg font-display font-semibold mb-3">Manage Company</h2>
           <div className="flex flex-wrap gap-3">
-            <EditCompanyDialog company={company} onSaved={() => queryClient.invalidateQueries({ queryKey: ['company', companyId] })} />
-            <TransferOwnershipDialog companyId={company.id} currentOwnerId={company.owner_user_id!} />
+            <EditCompanyDialog company={company} accessToken={staffToken} onSaved={() => queryClient.invalidateQueries({ queryKey: ['company', companyId] })} />
+            {canManageProjects && company.owner_user_id && (
+              <TransferOwnershipDialog companyId={company.id} currentOwnerId={company.owner_user_id} />
+            )}
           </div>
         </section>
       )}
