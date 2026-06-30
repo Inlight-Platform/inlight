@@ -114,7 +114,7 @@ const PublicCompanyPage: React.FC = () => {
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-background/70 border-b border-border/50">
         <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3">
           {company.logo_url ? (
-            <img src={company.logo_url} alt={company.name} className="w-7 h-7 rounded-full object-contain p-0.5" />
+            <img src={company.logo_url} alt={company.name} className="w-7 h-7 rounded-full object-cover" />
           ) : (
             <Building2 className="w-5 h-5" style={{ color: brandPrimary }} />
           )}
@@ -139,7 +139,7 @@ const PublicCompanyPage: React.FC = () => {
           <div className="absolute -top-16 sm:-top-20 left-4 sm:left-6 lg:left-8">
             <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-background bg-card flex items-center justify-center shadow-card overflow-hidden">
               {company.logo_url ? (
-                <img src={company.logo_url} alt={company.name} className="w-full h-full object-contain p-2" />
+                <img src={company.logo_url} alt={company.name} className="w-full h-full rounded-full object-cover" />
               ) : (
                 <Building2 className="w-10 h-10 text-primary" />
               )}

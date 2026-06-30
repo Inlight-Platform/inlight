@@ -28,9 +28,9 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, isFollowing, onFollo
         }}
       />
       <CardContent className="pt-0 pb-5 px-5 text-center -mt-8">
-        <div className="w-16 h-16 rounded-xl bg-card border-4 border-background flex items-center justify-center mx-auto mb-3 shadow-md">
+        <div className="w-16 h-16 rounded-full bg-card border-4 border-background flex items-center justify-center mx-auto mb-3 shadow-md overflow-hidden">
           {company.logo_url ? (
-            <img src={company.logo_url} alt={company.name} className="w-full h-full rounded-lg object-cover" />
+            <img src={company.logo_url} alt={company.name} className="w-full h-full rounded-full object-cover" />
           ) : (
             <Building2 className="w-7 h-7 text-primary" />
           )}

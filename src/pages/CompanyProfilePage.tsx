@@ -915,7 +915,7 @@ const CompanyProfilePage: React.FC = () => {
           <div className="absolute -top-16 sm:-top-20 left-4 sm:left-6 lg:left-8">
             <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-[120px] lg:h-[120px] rounded-full border-4 border-background bg-card flex items-center justify-center shadow-card overflow-hidden">
               {company.logo_url ? (
-                <img src={company.logo_url} alt={company.name} className="w-full h-full object-contain p-2" />
+                <img src={company.logo_url} alt={company.name} className="w-full h-full rounded-full object-cover" />
               ) : (
                 <Building2 className="w-10 h-10 text-primary" />
               )}
