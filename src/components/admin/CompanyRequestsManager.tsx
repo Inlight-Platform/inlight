@@ -166,12 +166,16 @@ const CompanyRequestsManager: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('approve-company-account', {
         body: { request_id: id, admin_notes: adminNotes || null },
       });
-      if (error) throw error;
+      if (error) throw new Error(await getFunctionErrorMessage(error, 'Failed to approve company account'));
       if ((data as any)?.error) throw new Error((data as any).error);
       return data;
     },
-    onSuccess: () => {
-      toast.success('Company account created');
+    onSuccess: (result: any) => {
+      if (result?.approval_email_sent === false) {
+        toast.warning('Company account created, but the approval email was not sent');
+      } else {
+        toast.success('Company account created and approval email sent');
+      }
       qc.invalidateQueries({ queryKey: ['admin-company-requests'] });
       reset();
     },

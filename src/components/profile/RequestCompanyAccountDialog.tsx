@@ -139,7 +139,7 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
       if (editingRequest && editingRequest.status === 'pending') {
         const { error } = await supabase
           .from('company_account_requests')
-          .update(payload)
+          .update({ ...payload, admin_notes: null })
           .eq('id', editingRequest.id);
         if (error) throw error;
       } else {
@@ -168,6 +168,14 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
   });
 
   const formTitle = editingRequest ? `Edit request for ${editingRequest.company_name}` : 'New company request';
+  const getRequestNextStep = (request: CompanyAccountRequest) => {
+    if (request.status !== 'pending' || !request.admin_notes) return null;
+    const note = request.admin_notes.toLowerCase();
+    if (note.includes('company login email') && note.includes('already registered')) {
+      return 'Fix company email';
+    }
+    return 'Edit pending request';
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -231,13 +239,22 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
                     </Badge>
                   </div>
                   {request.admin_notes && (
-                    <p className="mt-2 text-xs text-muted-foreground">Admin note: {request.admin_notes}</p>
+                    <div className={`mt-3 rounded-md border p-3 text-xs ${
+                      request.status === 'pending'
+                        ? 'border-amber-200 bg-amber-50 text-amber-950'
+                        : 'border-border bg-muted/30 text-muted-foreground'
+                    }`}>
+                      <p className="font-medium">
+                        {request.status === 'pending' ? 'Next step' : 'Admin note'}
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap">{request.admin_notes}</p>
+                    </div>
                   )}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {request.status === 'pending' && (
                       <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => editRequest(request)}>
                         <Pencil className="h-3.5 w-3.5" />
-                        Edit pending request
+                        {getRequestNextStep(request) || 'Edit pending request'}
                       </Button>
                     )}
                     {request.status === 'approved' && request.created_company_id && (
