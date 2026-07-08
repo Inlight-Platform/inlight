@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Developer guide
+    url: https://github.com/Inlight-Platform/inlight/blob/main/docs/dev-guide.md
+    about: Read local setup and troubleshooting before opening setup issues.

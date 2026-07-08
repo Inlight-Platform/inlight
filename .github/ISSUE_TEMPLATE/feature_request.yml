@@ -1,0 +1,66 @@
+name: Feature request
+description: Propose a new product capability or user workflow.
+title: "[Feature]: "
+labels: ["type: feature"]
+body:
+  - type: textarea
+    id: user_story
+    attributes:
+      label: User story
+      placeholder: "As a user, I want to..."
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: Why does this matter now?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the intended workflow and major UI/data changes.
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - urgent
+        - high
+        - medium
+        - low
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - auth
+        - profile
+        - feed
+        - industry-now
+        - projects
+        - opportunities
+        - messaging
+        - events
+        - admin
+        - supabase
+        - mobile
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - Users can...
+        - Admins can...
+        - Unauthorized users cannot...
+    validations:
+      required: true

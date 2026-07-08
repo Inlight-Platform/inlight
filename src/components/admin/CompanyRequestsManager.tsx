@@ -183,15 +183,20 @@ const CompanyRequestsManager: React.FC = () => {
   });
 
   const denyMut = useMutation({
-    mutationFn: async ({ id }: { id: string; adminNotes: string }) => {
-      const { error } = await supabase.rpc('deny_company_account_request', {
-        _request_id: id,
-        _admin_notes: null,
+    mutationFn: async ({ id, adminNotes }: { id: string; adminNotes: string }) => {
+      const { data, error } = await supabase.functions.invoke('deny-company-account', {
+        body: { request_id: id, admin_notes: adminNotes || null },
       });
-      if (error) throw error;
+      if (error) throw new Error(await getFunctionErrorMessage(error, 'Failed to deny company account request'));
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data;
     },
-    onSuccess: () => {
-      toast.success('Request removed');
+    onSuccess: (result: any) => {
+      if (result?.denial_email_sent === false) {
+        toast.warning('Request denied, but the denial email was not sent');
+      } else {
+        toast.success('Request denied and email sent');
+      }
       qc.invalidateQueries({ queryKey: ['admin-company-requests'] });
       reset();
     },

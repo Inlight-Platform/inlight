@@ -20,6 +20,7 @@ import {
   FolderOpen,
   ExternalLink,
   Globe,
+  Link,
   Lock
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -77,6 +79,15 @@ interface ProjectPhoto {
   created_at: string;
 }
 
+interface ProjectLink {
+  id: string;
+  project_id: string;
+  user_id: string;
+  title: string;
+  url: string;
+  created_at: string;
+}
+
 const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -87,6 +98,9 @@ const ProjectDetailPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [addPhotoOpen, setAddPhotoOpen] = useState(false);
   const [photoCaption, setPhotoCaption] = useState('');
+  const [addLinkOpen, setAddLinkOpen] = useState(false);
+  const [linkTitle, setLinkTitle] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [memberEmail, setMemberEmail] = useState('');
   const [memberRole, setMemberRole] = useState('');
@@ -104,6 +118,12 @@ const ProjectDetailPage: React.FC = () => {
   const [isEditingDrive, setIsEditingDrive] = useState(false);
   
   const { uploadPhoto, uploading, progress } = useProjectPhotoUpload();
+
+  const normalizeLinkUrl = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  };
 
   // Clear minimized chat state if we're not the origin page
   useEffect(() => {
@@ -179,6 +199,23 @@ const ProjectDetailPage: React.FC = () => {
       
       if (error) throw error;
       return data as ProjectPhoto[];
+    },
+    enabled: !!projectId,
+  });
+
+  // Fetch project links
+  const { data: projectLinks = [] } = useQuery({
+    queryKey: ['project-links', projectId],
+    queryFn: async () => {
+      if (!projectId) return [];
+      const { data, error } = await supabase
+        .from('project_links')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as ProjectLink[];
     },
     enabled: !!projectId,
   });
@@ -316,6 +353,60 @@ const ProjectDetailPage: React.FC = () => {
       toast.success(isSaved ? 'Removed from saved' : 'Project saved!');
     },
     onError: () => toast.error('Failed to update'),
+  });
+
+  // Add project link mutation
+  const addProjectLinkMutation = useMutation({
+    mutationFn: async () => {
+      if (!projectId || !user?.id) throw new Error('You must be logged in');
+      if (!canManageProjectContent) throw new Error('Only project team members can add links.');
+
+      const title = linkTitle.trim();
+      const url = normalizeLinkUrl(linkUrl);
+      if (!title || !url) throw new Error('Add a title and URL.');
+
+      try {
+        new URL(url);
+      } catch {
+        throw new Error('Enter a valid URL.');
+      }
+
+      const { error } = await supabase
+        .from('project_links')
+        .insert({
+          project_id: projectId,
+          user_id: user.id,
+          title,
+          url,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-links', projectId] });
+      setLinkTitle('');
+      setLinkUrl('');
+      setAddLinkOpen(false);
+      toast.success('Link added');
+    },
+    onError: (error: Error) => toast.error(error.message || 'Failed to add link'),
+  });
+
+  // Delete project link mutation
+  const deleteProjectLinkMutation = useMutation({
+    mutationFn: async (linkId: string) => {
+      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
+      const { error } = await supabase
+        .from('project_links')
+        .delete()
+        .eq('id', linkId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-links', projectId] });
+      toast.success('Link removed');
+    },
+    onError: () => toast.error('Failed to remove link'),
   });
 
   // Delete project mutation
@@ -730,6 +821,116 @@ const ProjectDetailPage: React.FC = () => {
             </a>
           )}
         </section>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Link className="w-5 h-5" />
+              Links ({projectLinks.length + (project.link_url ? 1 : 0)})
+            </CardTitle>
+            {canManageProjectContent && (
+              <Dialog
+                open={addLinkOpen}
+                onOpenChange={(open) => {
+                  setAddLinkOpen(open);
+                  if (!open) {
+                    setLinkTitle('');
+                    setLinkUrl('');
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Link
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Project Link</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="project-link-title">Title</Label>
+                      <Input
+                        id="project-link-title"
+                        placeholder="Trailer, pitch deck, call sheet..."
+                        value={linkTitle}
+                        onChange={(e) => setLinkTitle(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="project-link-url">URL</Label>
+                      <Input
+                        id="project-link-url"
+                        type="url"
+                        placeholder="https://..."
+                        value={linkUrl}
+                        onChange={(e) => setLinkUrl(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      onClick={() => addProjectLinkMutation.mutate()}
+                      disabled={!linkTitle.trim() || !linkUrl.trim() || addProjectLinkMutation.isPending}
+                      className="w-full"
+                    >
+                      {addProjectLinkMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : null}
+                      Add Link
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </CardHeader>
+          <CardContent>
+            {!project.link_url && projectLinks.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No links yet</p>
+            ) : (
+              <div className="space-y-2">
+                {project.link_url && (
+                  <a
+                    href={project.link_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="font-medium truncate">{project.link_title || 'Project link'}</span>
+                  </a>
+                )}
+                {projectLinks.map((link) => (
+                  <div
+                    key={link.id}
+                    className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm"
+                  >
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex min-w-0 flex-1 items-center gap-3 hover:text-primary transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <span className="font-medium truncate">{link.title}</span>
+                    </a>
+                    {canManageProjects && (isCreator || link.user_id === user?.id) && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => deleteProjectLinkMutation.mutate(link.id)}
+                        disabled={deleteProjectLinkMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <ProjectInvitationPrompt projectId={projectId!} projectTitle={project.title} />
 

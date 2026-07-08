@@ -16,6 +16,14 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#39;");
 }
 
+function getOriginFromUrl(value: string) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return Deno.env.get("SITE_URL") || "https://inlight.social";
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -87,6 +95,29 @@ Deno.serve(async (req) => {
       });
     }
 
+    const siteOrigin = getOriginFromUrl(normalizedEditUrl).replace(/\/+$/, "");
+    let accountUrl = `${siteOrigin}/auth`;
+    let accountInviteError: string | null = null;
+
+    const { data: invite, error: inviteError } = await userClient.rpc("create_platform_invite", {
+      _email: normalizedEmail,
+      _note: `Staff access for ${normalizedCompany}`,
+    });
+
+    if (inviteError) {
+      accountInviteError = inviteError.message || "Failed to create platform invite";
+    } else {
+      const token = typeof invite === "object" && invite && "token" in invite
+        ? String((invite as { token?: unknown }).token || "")
+        : "";
+      const acceptedAt = typeof invite === "object" && invite && "accepted_at" in invite
+        ? (invite as { accepted_at?: unknown }).accepted_at
+        : null;
+      if (token && !acceptedAt) {
+        accountUrl = `${siteOrigin}/auth?mode=signup&invite=${encodeURIComponent(token)}`;
+      }
+    }
+
     const greeting = normalizedName ? `Hi ${escapeHtml(normalizedName)},` : "Hi,";
     const resend = new Resend(resendApiKey);
     const { data, error } = await resend.emails.send({
@@ -101,6 +132,11 @@ Deno.serve(async (req) => {
           <p style="margin:24px 0;">
             <a href="${escapeHtml(normalizedEditUrl)}" style="display:inline-block;background:#171717;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;">Edit company page</a>
           </p>
+          <div style="background:#f7f4ee;border:1px solid #e6dccb;border-radius:10px;padding:14px;margin:22px 0;">
+            <p style="margin:0 0 8px;"><strong>Recommended next step</strong></p>
+            <p style="margin:0 0 14px;">Create or sign in to an Inlight account so future company access can live with your own login. The edit link above will still work for this company page.</p>
+            <a href="${escapeHtml(accountUrl)}" style="display:inline-block;color:#171717;font-weight:600;">Create or sign in to Inlight</a>
+          </div>
           <p style="font-size:13px;color:#666;margin:24px 0 0;">If the button does not work, paste this link into your browser:<br>${escapeHtml(normalizedEditUrl)}</p>
         </div>
       `,
@@ -116,7 +152,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ message: "Email sent", id: data?.id }), {
+    return new Response(JSON.stringify({ message: "Email sent", id: data?.id, account_invite_error: accountInviteError }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

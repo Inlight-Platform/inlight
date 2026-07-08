@@ -1,0 +1,46 @@
+name: Onboarding task
+description: A scoped task suitable for a new engineer.
+title: "[Onboarding]: "
+labels: ["good first issue"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What should the engineer understand before starting?
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Suggested files or areas
+      placeholder: |
+        - src/pages/...
+        - src/components/...
+        - supabase/migrations/...
+    validations:
+      required: true
+  - type: textarea
+    id: task
+    attributes:
+      label: Task
+      description: What exactly should be changed?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - ...
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Required checks
+      value: |
+        - npm run lint
+        - npm run build
+    validations:
+      required: true

@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a broken or confusing behavior in Inlight.
+title: "[Bug]: "
+labels: ["type: bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is broken?
+      description: Describe the behavior and where it happens.
+      placeholder: "On /industry-now, clicking..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include route, user role, test account type, and data conditions when relevant.
+      placeholder: |
+        1. Sign in as...
+        2. Go to...
+        3. Click...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - auth
+        - profile
+        - feed
+        - industry-now
+        - projects
+        - opportunities
+        - messaging
+        - events
+        - admin
+        - supabase
+        - mobile
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - The user can...
+        - The app prevents...
+        - Error states show...
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots, logs, or notes
+      description: Add screenshots, console logs, Supabase errors, or related context.

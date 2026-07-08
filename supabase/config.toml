@@ -36,6 +36,9 @@ verify_jwt = false
 [functions.approve-company-account]
 verify_jwt = true
 
+[functions.deny-company-account]
+verify_jwt = true
+
 [auth.email.template.confirmation]
 subject = "Confirm your Inlight account"
 content_path = "./supabase/templates/confirmation.html"
