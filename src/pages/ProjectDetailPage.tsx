@@ -20,7 +20,6 @@ import {
   FolderOpen,
   ExternalLink,
   Globe,
-  Link,
   Lock
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -101,6 +100,7 @@ const ProjectDetailPage: React.FC = () => {
   const [addLinkOpen, setAddLinkOpen] = useState(false);
   const [linkTitle, setLinkTitle] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [memberEmail, setMemberEmail] = useState('');
   const [memberRole, setMemberRole] = useState('');
@@ -123,6 +123,19 @@ const ProjectDetailPage: React.FC = () => {
     const trimmed = value.trim();
     if (!trimmed) return '';
     return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  };
+
+  const resetLinkDialog = () => {
+    setLinkTitle('');
+    setLinkUrl('');
+    setEditingLinkId(null);
+  };
+
+  const openEditLinkDialog = (link: ProjectLink) => {
+    setEditingLinkId(link.id);
+    setLinkTitle(link.title);
+    setLinkUrl(link.url);
+    setAddLinkOpen(true);
   };
 
   // Clear minimized chat state if we're not the origin page
@@ -384,12 +397,43 @@ const ProjectDetailPage: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-links', projectId] });
-      setLinkTitle('');
-      setLinkUrl('');
+      resetLinkDialog();
       setAddLinkOpen(false);
       toast.success('Link added');
     },
     onError: (error: Error) => toast.error(error.message || 'Failed to add link'),
+  });
+
+  // Edit project link mutation
+  const updateProjectLinkMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingLinkId) throw new Error('Missing link');
+      if (!canManageProjectContent) throw new Error('Only project team members can edit links.');
+
+      const title = linkTitle.trim();
+      const url = normalizeLinkUrl(linkUrl);
+      if (!title || !url) throw new Error('Add a title and URL.');
+
+      try {
+        new URL(url);
+      } catch {
+        throw new Error('Enter a valid URL.');
+      }
+
+      const { error } = await supabase
+        .from('project_links')
+        .update({ title, url })
+        .eq('id', editingLinkId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-links', projectId] });
+      resetLinkDialog();
+      setAddLinkOpen(false);
+      toast.success('Link updated');
+    },
+    onError: (error: Error) => toast.error(error.message || 'Failed to update link'),
   });
 
   // Delete project link mutation
@@ -809,128 +853,132 @@ const ProjectDetailPage: React.FC = () => {
             )}
           </div>
 
-          {/* Optional external link */}
-          {project.link_url && (
-            <a
-              href={project.link_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-md border border-border bg-secondary hover:bg-secondary/80 text-secondary-foreground text-sm font-medium transition-colors"
-            >
-              {project.link_title || 'Visit Link'}
-            </a>
-          )}
-        </section>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Link className="w-5 h-5" />
-              Links ({projectLinks.length + (project.link_url ? 1 : 0)})
-            </CardTitle>
-            {canManageProjectContent && (
-              <Dialog
-                open={addLinkOpen}
-                onOpenChange={(open) => {
-                  setAddLinkOpen(open);
-                  if (!open) {
-                    setLinkTitle('');
-                    setLinkUrl('');
-                  }
-                }}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {project.link_url && (
+              <a
+                href={project.link_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex max-w-full items-center gap-2 rounded-md border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
               >
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="outline">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Link
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Project Link</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="project-link-title">Title</Label>
-                      <Input
-                        id="project-link-title"
-                        placeholder="Trailer, pitch deck, call sheet..."
-                        value={linkTitle}
-                        onChange={(e) => setLinkTitle(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="project-link-url">URL</Label>
-                      <Input
-                        id="project-link-url"
-                        type="url"
-                        placeholder="https://..."
-                        value={linkUrl}
-                        onChange={(e) => setLinkUrl(e.target.value)}
-                      />
-                    </div>
-                    <Button
-                      onClick={() => addProjectLinkMutation.mutate()}
-                      disabled={!linkTitle.trim() || !linkUrl.trim() || addProjectLinkMutation.isPending}
-                      className="w-full"
-                    >
-                      {addProjectLinkMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : null}
-                      Add Link
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">{project.link_title || 'Visit Link'}</span>
+              </a>
             )}
-          </CardHeader>
-          <CardContent>
-            {!project.link_url && projectLinks.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No links yet</p>
-            ) : (
-              <div className="space-y-2">
-                {project.link_url && (
+            {projectLinks.map((link) => {
+              const canEditLink = canManageProjectContent && (isCreator || link.user_id === user?.id);
+
+              return (
+                <div
+                  key={link.id}
+                  className="group inline-flex max-w-full items-center gap-1 rounded-md border border-border bg-secondary text-sm font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
+                >
                   <a
-                    href={project.link_url}
+                    href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent transition-colors"
+                    className="inline-flex min-w-0 items-center gap-2 px-4 py-2"
                   >
-                    <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <span className="font-medium truncate">{project.link_title || 'Project link'}</span>
+                    <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{link.title}</span>
                   </a>
-                )}
-                {projectLinks.map((link) => (
-                  <div
-                    key={link.id}
-                    className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm"
-                  >
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex min-w-0 flex-1 items-center gap-3 hover:text-primary transition-colors"
-                    >
-                      <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      <span className="font-medium truncate">{link.title}</span>
-                    </a>
-                    {canManageProjects && (isCreator || link.user_id === user?.id) && (
+                  {canEditLink && (
+                    <div className="flex items-center border-l border-border/70 pr-1">
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        className="h-8 w-8"
+                        onClick={() => openEditLinkDialog(link)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => deleteProjectLinkMutation.mutate(link.id)}
                         disabled={deleteProjectLinkMutation.isPending}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {canManageProjectContent && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    resetLinkDialog();
+                    setAddLinkOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  {project.link_url || projectLinks.length > 0 ? 'Add more links' : 'Add link'}
+                </Button>
+                <Dialog
+                  open={addLinkOpen}
+                  onOpenChange={(open) => {
+                    setAddLinkOpen(open);
+                    if (!open) resetLinkDialog();
+                  }}
+                >
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{editingLinkId ? 'Edit Project Link' : 'Add Project Link'}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="project-link-title">Title</Label>
+                        <Input
+                          id="project-link-title"
+                          placeholder="Trailer, pitch deck, call sheet..."
+                          value={linkTitle}
+                          onChange={(e) => setLinkTitle(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="project-link-url">URL</Label>
+                        <Input
+                          id="project-link-url"
+                          type="url"
+                          placeholder="https://..."
+                          value={linkUrl}
+                          onChange={(e) => setLinkUrl(e.target.value)}
+                        />
+                      </div>
+                      <Button
+                        onClick={() => {
+                          if (editingLinkId) {
+                            updateProjectLinkMutation.mutate();
+                          } else {
+                            addProjectLinkMutation.mutate();
+                          }
+                        }}
+                        disabled={
+                          !linkTitle.trim() ||
+                          !linkUrl.trim() ||
+                          addProjectLinkMutation.isPending ||
+                          updateProjectLinkMutation.isPending
+                        }
+                        className="w-full"
+                      >
+                        {addProjectLinkMutation.isPending || updateProjectLinkMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : null}
+                        {editingLinkId ? 'Save Link' : 'Add Link'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
         <ProjectInvitationPrompt projectId={projectId!} projectTitle={project.title} />
 
