@@ -259,22 +259,55 @@ const StageWhisperPage: React.FC = () => {
   // Surprise Me
   const handleSurpriseMe = () => {
     if (industryTab === 'theatre') {
-      if (filteredShows.length === 0) {
+      if (activeShows.length === 0) {
         toast.error('No shows match your filters');
         return;
       }
-      const randomIndex = Math.floor(Math.random() * filteredShows.length);
-      const randomShow = filteredShows[randomIndex];
+      const randomIndex = Math.floor(Math.random() * activeShows.length);
+      const randomShow = activeShows[randomIndex];
       setSelectedShow(randomShow);
       toast.success(`🎲 How about "${randomShow.title}"?`);
-    } else {
-      if (theatreFilms.length === 0) {
-        toast.error('No films available');
+      return;
+    }
+
+    if (industryTab === 'film') {
+      if (filmViewTab === 'theatres') {
+        if (activeTheatreFilms.length === 0) {
+          toast.error('No active films available');
+          return;
+        }
+        const randomFilm = activeTheatreFilms[Math.floor(Math.random() * activeTheatreFilms.length)];
+        setSelectedFilm(randomFilm);
+        toast.success(`🎲 How about "${randomFilm.title}"?`);
         return;
       }
-      const randomItem = theatreFilms[Math.floor(Math.random() * theatreFilms.length)];
-      toast.success(`🎲 How about "${randomItem.title}"?`);
+
+      if (filmViewTab === 'student') {
+        if (userFilms.length === 0) {
+          toast.error('No community films available');
+          return;
+        }
+        const randomFilm = userFilms[Math.floor(Math.random() * userFilms.length)];
+        window.open(randomFilm.link_url, '_blank', 'noopener,noreferrer');
+        toast.success(`🎲 How about "${randomFilm.title}"?`);
+        return;
+      }
+
+      toast.error('No festival listings available yet');
+      return;
     }
+
+    if (activeMusicShows.length === 0) {
+      toast.error(`No active ${musicTab} available`);
+      return;
+    }
+    const randomShow = activeMusicShows[Math.floor(Math.random() * activeMusicShows.length)];
+    if (randomShow.ticket_url) {
+      window.open(randomShow.ticket_url, '_blank', 'noopener,noreferrer');
+    } else {
+      toast.info('This show does not have a ticket link yet');
+    }
+    toast.success(`🎲 How about "${randomShow.title}"?`);
   };
   const hasActiveFilters = Object.values(filters).some(arr => arr.length > 0);
   const activeFilterCount = Object.values(filters).reduce((sum, arr) => sum + arr.length, 0);
