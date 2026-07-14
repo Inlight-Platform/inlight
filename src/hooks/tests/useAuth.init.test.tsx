@@ -1,9 +1,11 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, vi, expect, beforeEach } from 'vitest';
+
+const fakeUser = { id: 'user_1', email: 'test@example.com' };
+let currentSession: { user: typeof fakeUser } | null = null;
 
 // Mock the supabase client used in useAuth.ts
 vi.mock('@/integrations/supabase/client', () => {
-  const fakeUser = { id: 'user_1', email: 'test@example.com' };
   return {
     supabase: {
       auth: {
@@ -11,16 +13,17 @@ vi.mock('@/integrations/supabase/client', () => {
           if (access_token === 'bad') {
             return { data: null, error: { message: 'Invalid token' } };
           }
-          return { data: { session: { user: fakeUser }, user: fakeUser }, error: null };
+          currentSession = { user: fakeUser };
+          return { data: { session: currentSession, user: fakeUser }, error: null };
         }),
-        getSession: vi.fn(async () => ({ data: { session: null } })),
+        getSession: vi.fn(async () => ({ data: { session: currentSession } })),
         onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: () => {} } } })),
         exchangeCodeForSession: vi.fn(async (code: string) => {
           if (code === 'bad') {
             return { data: null, error: { message: 'Bad code' } };
           }
-          const fakeUser = { id: 'user_1', email: 'test@example.com' };
-          return { data: { session: { user: fakeUser }, user: fakeUser }, error: null };
+          currentSession = { user: fakeUser };
+          return { data: { session: currentSession, user: fakeUser }, error: null };
         }),
       },
       rpc: vi.fn(async () => ({ data: null, error: null })),
@@ -31,25 +34,26 @@ vi.mock('@/integrations/supabase/client', () => {
 
 describe('useAuth initialization (smoke)', () => {
   beforeEach(() => {
+    currentSession = null;
     // Reset location/hash between tests
-    delete (window as any).location;
-    (window as any).location = new URL('http://localhost/');
-    (window as any).history.replaceState({}, '', '/');
+    window.history.replaceState({}, '', '/');
   });
 
   it('handles hash tokens and marks recovery when hash type is recovery', async () => {
-    (window as any).location = new URL('http://localhost/#access_token=good&refresh_token=ref&token_type=bearer&type=recovery');
-    const { result, waitFor } = renderHook(() => require('@/hooks/useAuth').useAuth());
+    window.history.replaceState({}, '', '/#access_token=good&refresh_token=ref&token_type=bearer&type=recovery');
+    const { useAuth } = await import('@/hooks/useAuth');
+    const { result } = renderHook(() => useAuth());
 
-    await waitFor(() => !result.current.loading);
+    await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.session).not.toBeNull();
     expect(result.current.isPasswordRecovery).toBe(true);
   });
 
   it('handles code exchange and sets recovery when ?type=recovery', async () => {
-    (window as any).location = new URL('http://localhost/?code=good&type=recovery');
-    const { result, waitFor } = renderHook(() => require('@/hooks/useAuth').useAuth());
-    await waitFor(() => !result.current.loading);
+    window.history.replaceState({}, '', '/?code=good&type=recovery');
+    const { useAuth } = await import('@/hooks/useAuth');
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.session).not.toBeNull();
     expect(result.current.isPasswordRecovery).toBe(true);
   });
