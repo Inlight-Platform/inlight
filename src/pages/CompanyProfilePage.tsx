@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useCompanyFollows, Company } from '@/hooks/useCompanyFollows';
-import { Building2, Globe, MapPin, Users, ChevronLeft, Settings, UserPlus, ChevronDown, Plus, Camera, Loader2, Trash2, FolderKanban, Archive, Image, Sparkles, Palette, X, Link as LinkIcon } from 'lucide-react';
+import { Building2, Globe, MapPin, Users, ChevronLeft, Settings, UserPlus, ChevronDown, Plus, Camera, Loader2, Trash2, FolderKanban, Archive, Image, Sparkles, Palette, X, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -1180,28 +1180,30 @@ const CompanyProfilePage: React.FC = () => {
             {/* Action buttons */}
             <div className="flex gap-2 flex-wrap">
               {companyId && (
-                <Button
-                  variant="outline"
-                  className="rounded-full gap-2"
-                  onClick={() => navigate(`/c/${companyId}`)}
-                >
-                  <Globe className="w-4 h-4" />
-                  View public page
-                </Button>
-              )}
-              {companyId && (
-                <Button
-                  variant="outline"
-                  className="rounded-full gap-2"
-                  onClick={() => {
-                    const url = `${window.location.origin}/c/${companyId}`;
-                    navigator.clipboard.writeText(url);
-                    toast.success('Public link copied');
-                  }}
-                >
-                  <LinkIcon className="w-4 h-4" />
-                  Copy public link
-                </Button>
+                <div className="inline-flex overflow-hidden rounded-full border border-input bg-background">
+                  <Button
+                    variant="ghost"
+                    className="rounded-none gap-2 px-4"
+                    onClick={() => navigate(`/c/${companyId}`)}
+                  >
+                    <Globe className="w-4 h-4" />
+                    View page
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-none border-l border-input"
+                    aria-label="Copy public company page link"
+                    title="Copy link"
+                    onClick={() => {
+                      const url = `${window.location.origin}/c/${companyId}`;
+                      navigator.clipboard.writeText(url);
+                      toast.success('Copied link');
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
               )}
               {!canManageCompany && companyId && (
                 <Button
