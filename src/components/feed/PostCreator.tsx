@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign } from 'lucide-react';
+import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ImageUploader } from './ImageUploader';
+import { ImageUploader, ImageUploaderHandle } from './ImageUploader';
 import { AudienceSelector, PostVisibility } from './AudienceSelector';
 import { ImagePositioner } from '@/components/profile/ImagePositioner';
 import { useMyGroups } from '@/hooks/useGroups';
@@ -43,7 +43,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [postType, setPostType] = useState<PostType>(defaultPostType);
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const imageUploaderRef = useRef<ImageUploaderHandle>(null);
   const [location, setLocation] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventType, setEventType] = useState('');
@@ -72,7 +73,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const resetForm = () => {
     setContent('');
     setTitle('');
-    setImageUrl('');
+    setImageUrls([]);
     setLocation('');
     setEventDate('');
     setEventType('');
@@ -103,7 +104,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           .insert({
             user_id: user.id,
             content: prefixedContent,
-            image_url: imageUrl || null,
+            image_url: imageUrls[0] || null,
+            image_urls: imageUrls.length > 0 ? imageUrls : null,
             image_position_x: positionX,
             image_position_y: positionY,
             link_url: linkUrl.trim() || null,
@@ -175,7 +177,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             event_date: eventDateValue,
             location: location.trim() || null,
             event_type: eventType.trim() || 'general',
-            image_url: imageUrl || null,
+            image_url: imageUrls[0] || null,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             custom_question: customQuestion.trim() || null,
@@ -213,7 +215,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           .insert({
             user_id: user.id,
             content: `🎯 **${title.trim()}**\n\n${content.trim()}${location ? `\n\n📍 ${location}` : ''}`,
-            image_url: imageUrl || null,
+            image_url: imageUrls[0] || null,
+            image_urls: imageUrls.length > 0 ? imageUrls : null,
             image_position_x: positionX,
             image_position_y: positionY,
             link_url: linkUrl.trim() || null,
@@ -223,7 +226,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           .select('id')
           .single();
         if (error) throw error;
-        
+
         // Insert recipients for specific visibility
         if (visibility === 'specific' && selectedRecipients.length > 0 && jobData) {
           const { error: recError } = await supabase
@@ -268,15 +271,13 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       console.log('Update validation failed');
       return;
     }
-    if (postType === 'event' && (!title.trim() || !eventDate || !imageUrl)) {
-      console.log('Event validation failed', { title: title.trim(), eventDate, imageUrl });
-      if (!imageUrl) toast.error('Please add an image for your event');
+    if (postType === 'event' && (!title.trim() || !eventDate || imageUrls.length === 0)) {
+      if (imageUrls.length === 0) toast.error('Please add an image for your event');
       else toast.error('Please fill in the event title and date');
       return;
     }
-    if (postType === 'job' && (!title.trim() || !content.trim() || !imageUrl)) {
-      console.log('Job validation failed');
-      if (!imageUrl) toast.error('Please add an image for your opportunity');
+    if (postType === 'job' && (!title.trim() || !content.trim() || imageUrls.length === 0)) {
+      if (imageUrls.length === 0) toast.error('Please add an image for your opportunity');
       return;
     }
     console.log('Creating post/event...');
@@ -286,8 +287,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const isValid = () => {
     if (visibility === 'specific' && selectedRecipients.length === 0 && (postType === 'update' || postType === 'job')) return false;
     if (postType === 'update') return content.trim().length > 0;
-    if (postType === 'event') return title.trim().length > 0 && eventDate.length > 0 && imageUrl.length > 0;
-    if (postType === 'job') return title.trim().length > 0 && content.trim().length > 0 && imageUrl.length > 0;
+    if (postType === 'event') return title.trim().length > 0 && eventDate.length > 0 && imageUrls.length > 0;
+    if (postType === 'job') return title.trim().length > 0 && content.trim().length > 0 && imageUrls.length > 0;
     return false;
   };
 
@@ -529,46 +530,82 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                     </div>
                   )}
                   
-                  {/* Image Upload Section */}
-                  {imageUrl ? (
-                    <div className="relative rounded-lg overflow-hidden max-h-48">
-                      <img
-                        src={imageUrl}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                        style={{ objectPosition: `${positionX}% ${positionY}%` }}
-                      />
-                      <div className="absolute top-2 right-2 flex gap-2">
-                        <ImagePositioner
-                          imageUrl={imageUrl}
-                          initialPositionX={positionX}
-                          initialPositionY={positionY}
-                          aspectRatio={16 / 9}
-                          onSave={(x, y) => {
-                            setPositionX(x);
-                            setPositionY(y);
-                          }}
-                          trigger={
-                            <Button variant="secondary" size="icon" className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background">
-                              <Move className="h-4 w-4" />
+                  {/* Multi-image preview — exact same layout as FeedItem */}
+                  {imageUrls.length > 0 && (
+                    <div>
+                      {imageUrls.length === 1 ? (
+                        <div className="relative rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                          <img
+                            src={imageUrls[0]}
+                            alt="Image 1"
+                            className="w-full max-h-[32rem] object-contain"
+                            style={{ objectPosition: `${positionX}% ${positionY}%` }}
+                          />
+                          <div className="absolute top-1.5 right-1.5 flex gap-1">
+                            <ImagePositioner
+                              imageUrl={imageUrls[0]}
+                              initialPositionX={positionX}
+                              initialPositionY={positionY}
+                              aspectRatio={16 / 9}
+                              onSave={(x, y) => { setPositionX(x); setPositionY(y); }}
+                              trigger={
+                                <Button variant="secondary" size="icon" className="h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-background">
+                                  <Move className="h-3.5 w-3.5" />
+                                </Button>
+                              }
+                            />
+                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => setImageUrls([])}>
+                              <X className="h-3.5 w-3.5" />
                             </Button>
-                          }
-                        />
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => {
-                            setImageUrl('');
-                            setPositionX(50);
-                            setPositionY(50);
-                          }}
+                          </div>
+                        </div>
+                      ) : imageUrls.length === 2 ? (
+                        <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
+                          {imageUrls.map((url, idx) => (
+                            <div key={url} className="relative">
+                              <img src={url} alt={`Image ${idx + 1}`} className="w-full h-48 object-cover" />
+                              <Button variant="destructive" size="icon" className="absolute top-1.5 right-1.5 h-7 w-7" onClick={() => setImageUrls((p) => p.filter((_, i) => i !== idx))}>
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : imageUrls.length === 3 ? (
+                        <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
+                          {imageUrls.map((url, idx) => (
+                            <div key={url} className={`relative ${idx === 0 ? 'col-span-2' : ''}`}>
+                              <img src={url} alt={`Image ${idx + 1}`} className={`w-full object-cover ${idx === 0 ? 'h-48' : 'h-36'}`} />
+                              <Button variant="destructive" size="icon" className="absolute top-1.5 right-1.5 h-7 w-7" onClick={() => setImageUrls((p) => p.filter((_, i) => i !== idx))}>
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
+                          {imageUrls.map((url, idx) => (
+                            <div key={url} className="relative">
+                              <img src={url} alt={`Image ${idx + 1}`} className="w-full h-36 object-cover" />
+                              <Button variant="destructive" size="icon" className="absolute top-1.5 right-1.5 h-7 w-7" onClick={() => setImageUrls((p) => p.filter((_, i) => i !== idx))}>
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Add more button — outside the grid so it never disrupts the layout */}
+                      {imageUrls.length < 4 && (
+                        <button
+                          type="button"
+                          onClick={() => imageUploaderRef.current?.trigger()}
+                          className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
+                          <Plus className="h-3.5 w-3.5" />
+                          Add photo ({4 - imageUrls.length} remaining)
+                        </button>
+                      )}
                     </div>
-                  ) : null}
+                  )}
 
                   {/* Validation helper */}
                   {postType === 'event' && !isValid() && (title.trim() || eventDate) && (
@@ -597,9 +634,11 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
                   <div className="flex items-center justify-between">
                     <ImageUploader
+                      ref={imageUploaderRef}
                       userId={user.id}
-                      onImageUploaded={setImageUrl}
+                      onImageUploaded={(url) => setImageUrls((prev) => [...prev, url])}
                       compact
+                      currentCount={imageUrls.length}
                     />
                     <div className="flex items-center gap-2">
                       {onClose && (
