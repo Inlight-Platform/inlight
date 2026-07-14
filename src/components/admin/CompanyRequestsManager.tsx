@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Building2, Loader2, ExternalLink, CheckCircle2, XCircle, Copy, RefreshCw, UserPlus, Mail, Trash2, Plus } from 'lucide-react';
+import { Building2, Loader2, ExternalLink, CheckCircle2, XCircle, Copy, RefreshCw, UserPlus, Mail, Trash2, Plus, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -98,11 +98,17 @@ const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
   return (error as any)?.message || fallback;
 };
 
+const INITIAL_COMPANY_PAGE_COUNT = 4;
+
 const CompanyRequestsManager: React.FC = () => {
   const qc = useQueryClient();
   const [actionReq, setActionReq] = useState<RequestRow | null>(null);
   const [action, setAction] = useState<'approve' | 'deny' | null>(null);
   const [notes, setNotes] = useState('');
+  const [requestSearch, setRequestSearch] = useState('');
+  const [requestFilter, setRequestFilter] = useState<'all' | 'pending' | 'approved' | 'denied'>('pending');
+  const [showCreateCompanyForm, setShowCreateCompanyForm] = useState(false);
+  const [showAllCompanyPages, setShowAllCompanyPages] = useState(false);
   const [companyName, setCompanyName] = useState('');
   const [companyDescription, setCompanyDescription] = useState('');
   const [companyWebsite, setCompanyWebsite] = useState('');
@@ -114,6 +120,7 @@ const CompanyRequestsManager: React.FC = () => {
   const [staffNameByCompany, setStaffNameByCompany] = useState<Record<string, string>>({});
   const [freshInviteByAccessKey, setFreshInviteByAccessKey] = useState<Record<string, StaffInviteLink>>({});
   const [deletingCompanyId, setDeletingCompanyId] = useState<string | null>(null);
+  const [deletingRequestId, setDeletingRequestId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-company-requests'],
@@ -325,6 +332,23 @@ const CompanyRequestsManager: React.FC = () => {
     onError: (e: any) => toast.error(e?.message || 'Failed to delete company page'),
   });
 
+  const deleteReviewedRequestMut = useMutation({
+    mutationFn: async (requestId: string) => {
+      const { error } = await supabase
+        .from('company_account_requests')
+        .delete()
+        .eq('id', requestId)
+        .neq('status', 'pending');
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Reviewed request removed');
+      setDeletingRequestId(null);
+      qc.invalidateQueries({ queryKey: ['admin-company-requests'] });
+    },
+    onError: (e: any) => toast.error(e?.message || 'Failed to remove reviewed request'),
+  });
+
   const reset = () => {
     setActionReq(null);
     setAction(null);
@@ -341,11 +365,35 @@ const CompanyRequestsManager: React.FC = () => {
 
   const pending = data?.filter((r) => r.status === 'pending') || [];
   const reviewed = data?.filter((r) => r.status !== 'pending') || [];
+  const approved = reviewed.filter((r) => r.status === 'approved');
+  const denied = reviewed.filter((r) => r.status === 'denied');
+  const normalizedSearch = requestSearch.trim().toLowerCase();
+  const filteredRequests = (data || []).filter((request) => {
+    if (requestFilter !== 'all' && request.status !== requestFilter) return false;
+    if (!normalizedSearch) return true;
+    const searchable = [
+      request.company_name,
+      request.description,
+      request.website_url,
+      request.justification,
+      request.admin_notes,
+      request.profile?.display_name,
+      request.profile?.email,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return searchable.includes(normalizedSearch);
+  });
   const staffByCompany = staffAccessRows.reduce<Record<string, StaffAccessRow[]>>((acc, row) => {
     acc[row.company_id] = acc[row.company_id] || [];
     acc[row.company_id].push(row);
     return acc;
   }, {});
+  const visibleCompanies = showAllCompanyPages
+    ? trackedCompanies
+    : trackedCompanies.slice(0, INITIAL_COMPANY_PAGE_COUNT);
+  const hiddenCompanyCount = Math.max(trackedCompanies.length - visibleCompanies.length, 0);
 
   const copyText = async (text: string, message: string) => {
     await navigator.clipboard.writeText(text);
@@ -433,12 +481,49 @@ const CompanyRequestsManager: React.FC = () => {
           </div>
         )}
 
-        {r.status === 'approved' && r.created_company_id && (
-          <Button asChild size="sm" variant="outline">
-            <a href={`/company/${r.created_company_id}`} target="_blank" rel="noreferrer">
-              View company <ExternalLink className="h-3 w-3 ml-1" />
-            </a>
-          </Button>
+        {r.status !== 'pending' && (
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
+            {r.status === 'approved' && r.created_company_id && (
+              <Button asChild size="sm" variant="outline">
+                <a href={`/company/${r.created_company_id}`} target="_blank" rel="noreferrer">
+                  View company <ExternalLink className="h-3 w-3 ml-1" />
+                </a>
+              </Button>
+            )}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="ghost" className="gap-1 text-muted-foreground hover:text-destructive">
+                  <Trash2 className="h-3 w-3" />
+                  Remove record
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove reviewed request?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This removes the request card from admin history. It will not delete the company page or the requester's Inlight account.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deleteReviewedRequestMut.isPending}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={deleteReviewedRequestMut.isPending}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setDeletingRequestId(r.id);
+                      deleteReviewedRequestMut.mutate(r.id);
+                    }}
+                  >
+                    {deleteReviewedRequestMut.isPending && deletingRequestId === r.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
+                    Remove record
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -446,13 +531,97 @@ const CompanyRequestsManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="border-border">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Pending</p>
+            <p className="mt-1 text-2xl font-semibold">{pending.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Approved</p>
+            <p className="mt-1 text-2xl font-semibold">{approved.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Denied</p>
+            <p className="mt-1 text-2xl font-semibold">{denied.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Company pages</p>
+            <p className="mt-1 text-2xl font-semibold">{trackedCompanies.length}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <section className="space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Company requests
+            </h3>
+            <p className="text-sm text-muted-foreground">Review new requests and remove old test records from history.</p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative sm:w-72">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={requestSearch}
+                onChange={(e) => setRequestSearch(e.target.value)}
+                className="pl-9"
+                placeholder="Search requests"
+              />
+            </div>
+            <div className="flex flex-wrap gap-1 rounded-md border border-border p-1">
+              {[
+                ['pending', `Pending ${pending.length}`],
+                ['approved', `Approved ${approved.length}`],
+                ['denied', `Denied ${denied.length}`],
+                ['all', `All ${(data || []).length}`],
+              ].map(([value, label]) => (
+                <Button
+                  key={value}
+                  type="button"
+                  size="sm"
+                  variant={requestFilter === value ? 'secondary' : 'ghost'}
+                  onClick={() => setRequestFilter(value as typeof requestFilter)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+        {filteredRequests.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No matching company requests.</p>
+        ) : (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">{filteredRequests.map(renderRow)}</div>
+        )}
+      </section>
+
       <Card className="border-border">
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-primary" />
-            Create company page
-          </CardTitle>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-primary" />
+              Create company page
+            </CardTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() => setShowCreateCompanyForm((current) => !current)}
+            >
+              {showCreateCompanyForm ? 'Hide form' : 'New company page'}
+            </Button>
+          </div>
         </CardHeader>
+        {showCreateCompanyForm && (
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -576,6 +745,7 @@ const CompanyRequestsManager: React.FC = () => {
             </div>
           )}
         </CardContent>
+        )}
       </Card>
 
       <section className="space-y-3">
@@ -591,7 +761,7 @@ const CompanyRequestsManager: React.FC = () => {
           <p className="text-sm text-muted-foreground">No company pages yet.</p>
         ) : (
           <div className="space-y-3">
-            {trackedCompanies.map((company) => {
+            {visibleCompanies.map((company) => {
               const staffRows = staffByCompany[company.id] || [];
               const publicUrl = `${window.location.origin}/c/${company.id}`;
               const adminUrl = `${window.location.origin}/company/${company.id}`;
@@ -767,29 +937,30 @@ const CompanyRequestsManager: React.FC = () => {
                 </Card>
               );
             })}
+            {trackedCompanies.length > INITIAL_COMPANY_PAGE_COUNT && (
+              <div className="flex justify-center pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setShowAllCompanyPages((current) => !current)}
+                >
+                  {showAllCompanyPages ? (
+                    <>
+                      <ChevronUp className="h-4 w-4" />
+                      Show less
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4" />
+                      View {hiddenCompanyCount} more
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Pending ({pending.length})
-        </h3>
-        {pending.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No pending requests.</p>
-        ) : (
-          <div className="space-y-3">{pending.map(renderRow)}</div>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Reviewed ({reviewed.length})
-        </h3>
-        {reviewed.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No reviewed requests yet.</p>
-        ) : (
-          <div className="space-y-3">{reviewed.map(renderRow)}</div>
         )}
       </section>
 

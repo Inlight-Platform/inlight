@@ -26,10 +26,12 @@ async function sendCompanyApprovalEmail({
   email,
   companyName,
   companyId,
+  companyContactEmail,
 }: {
   email: string;
   companyName: string;
   companyId: string;
+  companyContactEmail: string | null;
 }) {
   const resendApiKey = Deno.env.get('RESEND_API_KEY');
   if (!resendApiKey) {
@@ -53,11 +55,11 @@ async function sendCompanyApprovalEmail({
         <div style="background:#f7f4ee;border:1px solid #e6dccb;border-radius:10px;padding:16px;margin:20px 0;">
           <p style="margin:0 0 8px;"><strong>How to access it</strong></p>
           <ol style="margin:0;padding-left:20px;">
-            <li>Sign in with this email: <strong>${escapeHtml(email)}</strong></li>
-            <li>Use the password you entered when requesting the company account.</li>
+            <li>Sign in with the Inlight account that submitted this request: <strong>${escapeHtml(email)}</strong></li>
             <li>Open your company page to manage details, media, and projects.</li>
           </ol>
         </div>
+        ${companyContactEmail ? `<p style="margin:0 0 16px;">Company contact email on the request: <strong>${escapeHtml(companyContactEmail)}</strong></p>` : ''}
         <p style="margin:24px 0;">
           <a href="${escapeHtml(signInUrl)}" style="display:inline-block;background:#171717;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;">Sign in to Inlight</a>
         </p>
@@ -146,114 +148,49 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (!reqRow.company_email || !reqRow.company_password) {
-      return new Response(JSON.stringify({ error: 'Request missing company email/password' }), {
+    if (!reqRow.requester_id) {
+      return new Response(JSON.stringify({ error: 'Request missing requester' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const companyEmail = String(reqRow.company_email).trim().toLowerCase();
-    let newOwnerId: string | null = null;
-    let createdOwnerInThisRequest = false;
-
-    const { error: inviteErr } = await userClient.rpc('create_platform_invite', {
-      _email: companyEmail,
-      _note: `Company account approval for ${reqRow.company_name}`,
-    });
-    if (inviteErr) {
-      return new Response(JSON.stringify({ error: inviteErr.message || 'Failed to prepare company signup invite' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: created, error: createErr } = await admin.auth.admin.createUser({
-      email: companyEmail,
-      password: reqRow.company_password,
-      email_confirm: true,
-      user_metadata: { display_name: reqRow.company_name, is_company: true },
-    });
-    if (createErr || !created.user) {
-      const isDuplicateEmail = /already been registered|already registered|already exists/i.test(createErr?.message || '');
-      if (isDuplicateEmail) {
-        const duplicateEmailNote =
-          `Action needed: ${companyEmail} is already registered on Inlight. ` +
-          'Please edit this pending company request and enter a different company login email that is not already used by an Inlight account. ' +
-          'After you update the request, an admin can approve it.';
-
-        await admin
-          .from('company_account_requests')
-          .update({
-            admin_notes: duplicateEmailNote,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', request_id)
-          .eq('status', 'pending');
-
-        return new Response(
-          JSON.stringify({
-            error:
-              'That company login email is already registered. The pending request now includes next steps for the requester.',
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-      }
-    }
-
-    if (!newOwnerId && (createErr || !created.user)) {
-      return new Response(JSON.stringify({ error: createErr?.message || 'Failed to create account' }), {
+    const ownerUserId = String(reqRow.requester_id);
+    const companyContactEmail = reqRow.company_email
+      ? String(reqRow.company_email).trim().toLowerCase()
+      : null;
+    const { data: ownerRes, error: ownerErr } = await admin.auth.admin.getUserById(ownerUserId);
+    if (ownerErr || !ownerRes.user?.email) {
+      return new Response(JSON.stringify({ error: ownerErr?.message || 'Requester account not found' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    if (!newOwnerId) {
-      newOwnerId = created.user.id;
-      createdOwnerInThisRequest = true;
-    }
-
-    await admin.auth.admin.updateUserById(newOwnerId, {
-      user_metadata: { display_name: reqRow.company_name, is_company: true },
-    });
-
-    // Best-effort profile sync. Company approval should not fail if profile grants drift.
-    await admin
-      .from('profiles')
-      .upsert({
-        user_id: newOwnerId,
-        email: companyEmail,
-        display_name: reqRow.company_name,
-        headline: reqRow.description || null,
-        website_url: reqRow.website_url || null,
-      }, { onConflict: 'user_id' });
 
     // Create company row + finalize request
     const { data: newCompanyId, error: finErr } = await admin.rpc(
       'finalize_company_account_approval',
       {
         _request_id: request_id,
-        _new_owner_id: newOwnerId,
+        _new_owner_id: ownerUserId,
         _admin_notes: admin_notes || null,
       },
     );
     if (finErr) {
-      if (createdOwnerInThisRequest) {
-        await admin.auth.admin.deleteUser(newOwnerId);
-      }
-
       return new Response(JSON.stringify({ error: finErr.message }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const approvalEmail = await sendCompanyApprovalEmail({
-      email: companyEmail,
+      email: ownerRes.user.email,
       companyName: reqRow.company_name,
       companyId: newCompanyId,
+      companyContactEmail,
     });
 
     return new Response(
       JSON.stringify({
         company_id: newCompanyId,
-        owner_user_id: newOwnerId,
+        owner_user_id: ownerUserId,
         approval_email_sent: approvalEmail.sent,
         approval_email_error: approvalEmail.error,
       }),

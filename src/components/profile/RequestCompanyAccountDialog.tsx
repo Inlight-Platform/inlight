@@ -37,10 +37,6 @@ const requestSchema = z.object({
     .min(20, 'Tell us a bit more (20+ chars)')
     .max(1000, 'Max 1000 characters'),
   company_email: z.string().trim().email('Valid email required').max(255),
-  company_password: z
-    .string()
-    .max(72, 'Password too long')
-    .optional(),
 });
 
 interface Props {
@@ -55,7 +51,6 @@ type CompanyAccountRequest = {
   website_url: string | null;
   justification: string;
   company_email?: string | null;
-  company_password?: string | null;
   status: 'pending' | 'approved' | 'denied';
   admin_notes: string | null;
   created_company_id: string | null;
@@ -72,7 +67,6 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [justification, setJustification] = useState('');
   const [companyEmail, setCompanyEmail] = useState('');
-  const [companyPassword, setCompanyPassword] = useState('');
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
 
   const resetForm = () => {
@@ -82,7 +76,6 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
     setWebsiteUrl('');
     setJustification('');
     setCompanyEmail('');
-    setCompanyPassword('');
   };
 
   const editRequest = (request: CompanyAccountRequest) => {
@@ -92,7 +85,6 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
     setWebsiteUrl(request.website_url || '');
     setJustification(request.justification || '');
     setCompanyEmail(request.company_email || '');
-    setCompanyPassword('');
   };
 
   const { data: requests = [], isLoading } = useQuery({
@@ -120,21 +112,13 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
         website_url: websiteUrl,
         justification,
         company_email: companyEmail,
-        company_password: companyPassword || undefined,
       });
-      if (!editingRequest && !parsed.company_password) {
-        throw new Error('Password must be at least 8 characters');
-      }
-      if (parsed.company_password && parsed.company_password.length < 8) {
-        throw new Error('Password must be at least 8 characters');
-      }
       const payload = {
         company_name: parsed.company_name,
         description: parsed.description || null,
         website_url: parsed.website_url || null,
         justification: parsed.justification,
         company_email: parsed.company_email.toLowerCase(),
-        ...(parsed.company_password ? { company_password: parsed.company_password } : {}),
       };
       if (editingRequest && editingRequest.status === 'pending') {
         const { error } = await supabase
@@ -172,7 +156,7 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
     if (request.status !== 'pending' || !request.admin_notes) return null;
     const note = request.admin_notes.toLowerCase();
     if (note.includes('company login email') && note.includes('already registered')) {
-      return 'Fix company email';
+      return 'Review request';
     }
     return 'Edit pending request';
   };
@@ -306,10 +290,10 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
 
             <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
               <p className="text-xs text-muted-foreground">
-                These credentials will become the login for your company account on Inlight once approved.
+                This can be any company contact email. If approved, ownership stays with the Inlight account submitting this request.
               </p>
               <div className="space-y-1.5">
-                <Label htmlFor="company_email">Company login email *</Label>
+                <Label htmlFor="company_email">Company contact email *</Label>
                 <Input
                   id="company_email"
                   type="email"
@@ -318,18 +302,6 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
                   maxLength={255}
                   placeholder="hello@yourcompany.com"
                   required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="company_password">Company login password *</Label>
-                <Input
-                  id="company_password"
-                  type="password"
-                  value={companyPassword}
-                  onChange={(e) => setCompanyPassword(e.target.value)}
-                  maxLength={72}
-                  placeholder={editingRequest ? 'Leave blank to keep current password' : 'At least 8 characters'}
-                  required={!editingRequest}
                 />
               </div>
             </div>
