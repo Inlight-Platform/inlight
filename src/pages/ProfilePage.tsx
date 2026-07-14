@@ -58,6 +58,7 @@ import { CoverImageCropper } from "@/components/profile/CoverImageCropper";
 import { MyProjects } from "@/components/profile/MyProjects";
 import { UserPosts } from "@/components/profile/UserPosts";
 import { AttendedSection } from "@/components/profile/AttendedSection";
+import { SavedShows } from "@/components/profile/SavedShows";
 import { useMyFacultyGroup } from "@/hooks/useGroups";
 
 const ManageGroupButton: React.FC = () => {
@@ -147,6 +148,7 @@ interface ProfileData {
   show_union_status?: boolean;
   show_representation?: boolean;
   show_gear_list?: boolean;
+  watchlist_public?: boolean;
 }
 
 class ProfileSectionErrorBoundary extends React.Component<
@@ -290,6 +292,7 @@ const ProfilePage: React.FC = () => {
   const [materialsOpen, setMaterialsOpen] = useState(false);
   const [postsOpen, setPostsOpen] = useState(false);
   const [attendedOpen, setAttendedOpen] = useState(false);
+  const [savedShowsOpen, setSavedShowsOpen] = useState(false);
   const sectionDefaultsProfileRef = useRef<string | null>(null);
   const manuallyChangedSectionsRef = useRef<Record<ProfileSectionKey, boolean>>({
     materials: false,
@@ -413,6 +416,20 @@ const ProfilePage: React.FC = () => {
         }
         return data as unknown as ProfileData | null;
       }
+    },
+    enabled: !!resolvedUserId,
+  });
+
+  // Fetch watchlist privacy setting separately so a missing column never breaks the profile load
+  const { data: watchlistPublic = false } = useQuery({
+    queryKey: ["watchlist-public", resolvedUserId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("watchlist_public")
+        .eq("user_id", resolvedUserId!)
+        .maybeSingle();
+      return (data as any)?.watchlist_public ?? false;
     },
     enabled: !!resolvedUserId,
   });
@@ -2038,6 +2055,34 @@ const ProfilePage: React.FC = () => {
                   <CollapsibleContent className="mt-4">
                     <ProfileSectionErrorBoundary title="Attended">
                       <AttendedSection userId={resolvedUserId} isOwnProfile={isOwnProfile} />
+                    </ProfileSectionErrorBoundary>
+                  </CollapsibleContent>
+                </section>
+              </Collapsible>
+            )}
+
+            {/* Saved Shows - own profile always; others only if watchlist_public */}
+            {resolvedUserId && (isOwnProfile || watchlistPublic) && (
+              <Collapsible
+                id="profile-saved-shows"
+                open={savedShowsOpen}
+                onOpenChange={(open) => setSavedShowsOpen(open)}
+                className="scroll-mt-24"
+              >
+                <section className="px-4 sm:px-6 lg:px-8 py-4">
+                  <CollapsibleTrigger className="flex items-center gap-2 group flex-1 min-w-0 text-left w-full">
+                    <h2 className="text-lg font-display font-semibold">Watchlist</h2>
+                    <ChevronDown
+                      className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${savedShowsOpen ? "rotate-180" : ""}`}
+                    />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-4">
+                    <ProfileSectionErrorBoundary title="Watchlist">
+                      <SavedShows
+                        userId={resolvedUserId}
+                        isOwnProfile={isOwnProfile}
+                        watchlistPublic={watchlistPublic}
+                      />
                     </ProfileSectionErrorBoundary>
                   </CollapsibleContent>
                 </section>
