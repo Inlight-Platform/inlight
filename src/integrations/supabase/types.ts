@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliation_requests: {
+        Row: {
+          id: string
+          user_id: string
+          requested_name: string
+          description_or_context: string | null
+          status: 'pending' | 'approved' | 'denied'
+          admin_notes: string | null
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          requested_name: string
+          description_or_context?: string | null
+          status?: 'pending' | 'approved' | 'denied'
+          admin_notes?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          requested_name?: string
+          description_or_context?: string | null
+          status?: 'pending' | 'approved' | 'denied'
+          admin_notes?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliation_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_events: {
         Row: {
           created_at: string
