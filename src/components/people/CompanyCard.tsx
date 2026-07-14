@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2 } from 'lucide-react';
+import { Building2, ExternalLink } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Company } from '@/hooks/useCompanyFollows';
@@ -18,7 +18,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, isFollowing, onFollo
   return (
     <Card
       className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-      onClick={() => navigate(`/company/${company.id}`)}
+      onClick={() => navigate(`/c/${company.id}`)}
     >
       {/* Header gradient */}
       <div 
@@ -42,17 +42,31 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, isFollowing, onFollo
         {company.location && (
           <p className="text-xs text-muted-foreground mb-3">{company.location}</p>
         )}
-        <Button
-          variant={isFollowing ? 'outline' : 'default'}
-          size="sm"
-          className="w-full rounded-full"
-          onClick={(e) => {
-            e.stopPropagation();
-            isFollowing ? onUnfollow(company.id) : onFollow(company.id);
-          }}
-        >
-          {isFollowing ? 'Following' : 'Follow'}
-        </Button>
+        <div className="space-y-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full rounded-full gap-1.5"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/c/${company.id}`);
+            }}
+          >
+            View public page
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant={isFollowing ? 'outline' : 'default'}
+            size="sm"
+            className="w-full rounded-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              isFollowing ? onUnfollow(company.id) : onFollow(company.id);
+            }}
+          >
+            {isFollowing ? 'Following' : 'Follow'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

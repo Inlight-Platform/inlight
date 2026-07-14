@@ -1179,7 +1179,17 @@ const CompanyProfilePage: React.FC = () => {
 
             {/* Action buttons */}
             <div className="flex gap-2 flex-wrap">
-              {canManageCompany && companyId && (
+              {companyId && (
+                <Button
+                  variant="outline"
+                  className="rounded-full gap-2"
+                  onClick={() => navigate(`/c/${companyId}`)}
+                >
+                  <Globe className="w-4 h-4" />
+                  View public page
+                </Button>
+              )}
+              {companyId && (
                 <Button
                   variant="outline"
                   className="rounded-full gap-2"
