@@ -51,6 +51,31 @@ npm run preview          # Preview the built app locally
 npm run verify:supabase  # Check that required Supabase host values are present
 ```
 
+## Local testing before pull requests
+
+All engineers should run the automated checks locally before opening or updating a pull request, especially because multiple people may be working against the same shared Supabase project.
+
+After pulling the latest `main`, install dependencies once:
+
+```sh
+npm install
+```
+
+For day-to-day test runs:
+
+```sh
+npm run test:run
+```
+
+Before submitting a pull request, run the same full flow that CI runs:
+
+```sh
+mkdir -p test-results
+npm run test:ci
+```
+
+`npm run test` starts Vitest in interactive watch mode, so use `npm run test:run` or `npm run test:ci` when you want a command that exits.
+
 ## Product areas
 
 - Public landing, auth, preview, showcase, company, and Industry Now pages.
