@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp, Ticket } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -111,6 +111,23 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const eventHasPassed = isEventPast(item.event_date);
   const eventLinkClosed = isEventItem && eventHasPassed;
   const { goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
+
+  const attendeeUserIds = goingRsvps
+    .map((r) => r.user_id)
+    .filter((id): id is string => !!id);
+  const { data: attendeeProfiles = [] } = useQuery({
+    queryKey: ['attendee-profiles', item.id, attendeeUserIds],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('user_id, avatar_url')
+        .in('user_id', attendeeUserIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isEventItem && showAttendees && attendeeUserIds.length > 0,
+  });
+  const avatarByUserId = new Map(attendeeProfiles.map((p) => [p.user_id, p.avatar_url]));
 
   const isOwner = user?.id === item.user_id;
   const canManageFeedItem =
@@ -280,7 +297,9 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   
   // For anonymous shows, hide the creator info
   const showAnonymous = item.type === 'show' && item.is_anonymous;
-  const displayName = showAnonymous ? 'Anonymous' : capitalizeName(item.creator_profile?.display_name || 'Unknown');
+  const displayName = showAnonymous
+    ? 'Anonymous'
+    : capitalizeName(item.creator_profile?.display_name || '') || 'Inlight Member';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
   const bodyText = item.content || item.description;
   const compactCollapsed = compactSquare && !compactTextExpanded;
@@ -599,16 +618,30 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 </button>
                 {showAttendees && (
                   <div className="border-t border-border max-h-40 overflow-y-auto divide-y divide-border">
-                    {goingRsvps.map((rsvp) => (
-                      <div key={rsvp.id} className="flex items-center gap-2 p-2">
+                    {goingRsvps.map((rsvp) => {
+                      const canOpenProfile = !!rsvp.user_id && avatarByUserId.has(rsvp.user_id);
+                      return (
+                      <div
+                        key={rsvp.id}
+                        className={cn(
+                          'flex items-center gap-2 p-2',
+                          canOpenProfile ? 'cursor-pointer hover:bg-accent/50 transition-colors' : 'cursor-default'
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (canOpenProfile) navigate(`/profile/${rsvp.user_id}`);
+                        }}
+                      >
                         <Avatar className="w-6 h-6">
+                          <AvatarImage src={(rsvp.user_id && avatarByUserId.get(rsvp.user_id)) || undefined} />
                           <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
-                            {rsvp.name[0]?.toUpperCase()}
+                            {rsvp.name[0]?.toUpperCase() || 'IM'}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-xs font-medium truncate">{rsvp.name}</span>
+                        <span className="text-xs font-medium truncate">{rsvp.name || 'Inlight Member'}</span>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
