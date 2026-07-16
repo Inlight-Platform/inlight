@@ -52,15 +52,3 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION public.set_watchlist_public(boolean) TO authenticated;
-
--- Allow reading another user's saved shows when their watchlist is public
-CREATE POLICY "Public watchlists are readable by anyone"
-ON public.saved_shows FOR SELECT
-USING (
-  auth.uid() = user_id
-  OR EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.user_id = saved_shows.user_id
-      AND profiles.watchlist_public = true
-  )
-);
