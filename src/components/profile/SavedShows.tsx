@@ -32,6 +32,20 @@ interface SavedShowRow {
   };
 }
 
+interface WatchlistRow {
+  id: string;
+  saved_at: string;
+  show_id: string;
+  title: string;
+  venue: string;
+  borough: string;
+  show_type: string;
+  poster_url: string | null;
+  run_start: string | null;
+  run_end: string | null;
+  official_url: string | null;
+}
+
 const closingLabel = (runEnd: string | null): { text: string; urgent: boolean } | null => {
   if (!runEnd) return null;
   const days = differenceInDays(parseISO(runEnd), new Date());
@@ -51,25 +65,20 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
   const [isPublic, setIsPublic] = useState(watchlistPublic);
   useEffect(() => { setIsPublic(watchlistPublic); }, [watchlistPublic]);
 
-  const { data: saves = [], isLoading } = useQuery({
+  const { data: rawSaves = [], isLoading } = useQuery({
     queryKey: ['saved-shows-profile', userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('saved_shows')
-        .select('id, saved_at, nyc_shows(id, title, venue, borough, show_type, poster_url, run_start, run_end, official_url)')
-        .eq('user_id', userId)
-        .order('saved_at', { ascending: false });
+      const { data, error } = await (supabase.rpc as any)('get_profile_watchlist', { p_user_id: userId });
       if (error) throw error;
-      // Product decision: hide shows that closed more than 30 days ago to keep the watchlist current.
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 30);
-      return ((data ?? []) as unknown as SavedShowRow[]).filter((s) => {
-        const end = s.nyc_shows?.run_end;
-        return !end || new Date(end) >= cutoff;
-      });
+      return (data ?? []) as WatchlistRow[];
     },
     enabled: !!userId,
   });
+
+  // Product decision: hide shows closed more than 30 days ago.
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const saves = rawSaves.filter((s) => !s.run_end || new Date(s.run_end) >= cutoff);
 
   const unsaveMutation = useMutation({
     mutationFn: async (saveId: string) => {
@@ -138,8 +147,8 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {saves.map((save) => {
-            const show = save.nyc_shows;
-            const closing = closingLabel(show.run_end);
+            const show = { ...save, id: save.show_id };
+            const closing = closingLabel(save.run_end);
             return (
               <Card
                 key={save.id}
