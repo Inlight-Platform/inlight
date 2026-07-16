@@ -260,7 +260,8 @@ export const ProjectHeaderImageUploader: React.FC<ProjectHeaderImageUploaderProp
         <img
           src={currentImageUrl}
           alt="Header preview"
-          className="w-full h-48 object-cover"
+          className="w-full object-cover"
+          style={{ aspectRatio: `${aspect}` }}
         />
         {onRemoveImage && (
           <Button
