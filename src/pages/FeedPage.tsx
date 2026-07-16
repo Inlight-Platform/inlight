@@ -77,7 +77,7 @@ const FeedPage: React.FC = () => {
     }
     if (changed) setSearchParams(searchParams, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
   const { firstDegree, secondDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
 
   // Groups the user belongs to (for the per-group tab)
