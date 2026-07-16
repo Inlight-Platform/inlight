@@ -104,7 +104,7 @@ import inlightLogo from "@/assets/inlight-logo.jpeg";
 
 type MediaType = "photo" | "video" | "audio" | "document";
 type MediaVisibility = "public" | "connections" | "private";
-type ProfileSectionKey = "materials" | "credits" | "attended" | "projects" | "posts";
+type ProfileSectionKey = "materials" | "credits" | "attended" | "projects" | "posts" | "savedShows";
 
 interface MediaItem {
   id: string;
@@ -300,6 +300,7 @@ const ProfilePage: React.FC = () => {
     attended: false,
     projects: false,
     posts: false,
+    savedShows: false,
   });
 
   // Editing states
@@ -420,18 +421,19 @@ const ProfilePage: React.FC = () => {
     enabled: !!resolvedUserId,
   });
 
-  // Fetch watchlist privacy setting separately so a missing column never breaks the profile load
+  // Fetch watchlist privacy setting from profiles_public (respects RLS, works for own + other profiles).
+  // Must wait for authUser so the query doesn't fire unauthenticated and cache a false negative.
   const { data: watchlistPublic = false } = useQuery({
     queryKey: ["watchlist-public", resolvedUserId],
     queryFn: async () => {
       const { data } = await supabase
-        .from("profiles")
+        .from("profiles_public")
         .select("watchlist_public")
         .eq("user_id", resolvedUserId!)
         .maybeSingle();
       return (data as any)?.watchlist_public ?? false;
     },
-    enabled: !!resolvedUserId,
+    enabled: !!resolvedUserId && !!authUser?.id,
   });
 
   // Fetch credits from database - for any user
@@ -501,6 +503,7 @@ const ProfilePage: React.FC = () => {
         postsRes,
         eventsRes,
         attendanceRes,
+        savedShowsRes,
       ] = await Promise.all([
         (() => {
           let query = supabase.from("user_media").select("id").eq("user_id", resolvedUserId).limit(1);
@@ -528,6 +531,7 @@ const ProfilePage: React.FC = () => {
         supabase.from("posts").select("id").eq("user_id", resolvedUserId).limit(1),
         supabase.from("events").select("id").eq("user_id", resolvedUserId).limit(1),
         supabase.rpc("get_profile_attendance", { _user_id: resolvedUserId }),
+        supabase.from("saved_shows").select("id").eq("user_id", resolvedUserId).limit(1),
       ]);
 
       const ownedProjectIds = (ownedProjectsRes.data || []).map((project) => project.id).filter(Boolean);
@@ -550,6 +554,7 @@ const ProfilePage: React.FC = () => {
         whyStarted: whyAnswers,
         credits: Boolean((creditsRes.data || []).length),
         attended: Boolean((attendanceRes.data || []).length),
+        savedShows: Boolean((savedShowsRes.data || []).length),
         projects: Boolean(
           ownedProjectIds.length || (memberProjectsRes.data || []).length || (savedProjectsRes.data || []).length,
         ),
@@ -658,12 +663,14 @@ const ProfilePage: React.FC = () => {
       attended: false,
       projects: false,
       posts: false,
+      savedShows: false,
     };
     setMaterialsOpen(false);
     setCreditsOpen(false);
     setAttendedOpen(false);
     setProjectsOpen(false);
     setPostsOpen(false);
+    setSavedShowsOpen(false);
   }, [resolvedUserId]);
 
   useEffect(() => {
@@ -676,6 +683,7 @@ const ProfilePage: React.FC = () => {
     if (!manuallyChangedSectionsRef.current.attended) setAttendedOpen(sectionContent.attended);
     if (!manuallyChangedSectionsRef.current.projects) setProjectsOpen(sectionContent.projects);
     if (!manuallyChangedSectionsRef.current.posts) setPostsOpen(sectionContent.posts);
+    if (!manuallyChangedSectionsRef.current.savedShows) setSavedShowsOpen(sectionContent.savedShows);
   }, [resolvedUserId, sectionContent]);
 
   const handleSectionOpenChange =
@@ -2066,7 +2074,7 @@ const ProfilePage: React.FC = () => {
               <Collapsible
                 id="profile-saved-shows"
                 open={savedShowsOpen}
-                onOpenChange={(open) => setSavedShowsOpen(open)}
+                onOpenChange={handleSectionOpenChange("savedShows", setSavedShowsOpen)}
                 className="scroll-mt-24"
               >
                 <section className="px-4 sm:px-6 lg:px-8 py-4">

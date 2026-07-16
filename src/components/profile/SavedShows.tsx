@@ -60,7 +60,13 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
         .eq('user_id', userId)
         .order('saved_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as unknown as SavedShowRow[];
+      // Product decision: hide shows that closed more than 30 days ago to keep the watchlist current.
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 30);
+      return ((data ?? []) as unknown as SavedShowRow[]).filter((s) => {
+        const end = s.nyc_shows?.run_end;
+        return !end || new Date(end) >= cutoff;
+      });
     },
     enabled: !!userId,
   });
@@ -87,8 +93,8 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
       toast.success(value ? 'Watchlist is now public' : 'Watchlist is now private');
       queryClient.invalidateQueries({ queryKey: ['watchlist-public', userId] });
     },
-    onError: (err: any) => {
-      setIsPublic(!isPublic);
+    onError: (err: any, value) => {
+      setIsPublic(!value);
       toast.error(err?.message || 'Failed to update privacy');
     },
   });
