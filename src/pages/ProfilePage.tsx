@@ -393,7 +393,7 @@ const ProfilePage: React.FC = () => {
         const { data, error } = await supabase
           .from("profiles")
           .select(
-            "display_name, stage_name, avatar_url, cover_url, location, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list",
+            "display_name, stage_name, avatar_url, cover_url, location, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list, watchlist_public",
           )
           .eq("user_id", resolvedUserId)
           .maybeSingle();
@@ -407,7 +407,7 @@ const ProfilePage: React.FC = () => {
         const { data, error } = await supabase
           .from("profiles_public")
           .select(
-            "display_name, stage_name, avatar_url, cover_url, location, role, badges, bio, union_status, representation, gear_list:gear_list_display, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list",
+            "display_name, stage_name, avatar_url, cover_url, location, role, badges, bio, union_status, representation, gear_list:gear_list_display, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list, watchlist_public",
           )
           .eq("user_id", resolvedUserId)
           .maybeSingle();
@@ -421,20 +421,7 @@ const ProfilePage: React.FC = () => {
     enabled: !!resolvedUserId,
   });
 
-  // Fetch watchlist privacy setting from profiles_public (respects RLS, works for own + other profiles).
-  // Must wait for authUser so the query doesn't fire unauthenticated and cache a false negative.
-  const { data: watchlistPublic = false } = useQuery({
-    queryKey: ["watchlist-public", resolvedUserId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles_public")
-        .select("watchlist_public")
-        .eq("user_id", resolvedUserId!)
-        .maybeSingle();
-      return (data as any)?.watchlist_public ?? false;
-    },
-    enabled: !!resolvedUserId && !!authUser?.id,
-  });
+  const watchlistPublic = dbProfile?.watchlist_public ?? false;
 
   // Fetch credits from database - for any user
   const { data: dbCredits = [], refetch: refetchCredits } = useQuery({

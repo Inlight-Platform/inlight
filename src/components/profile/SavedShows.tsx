@@ -91,7 +91,7 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
     onMutate: (value) => { setIsPublic(value); },
     onSuccess: (_, value) => {
       toast.success(value ? 'Watchlist is now public' : 'Watchlist is now private');
-      queryClient.invalidateQueries({ queryKey: ['watchlist-public', userId] });
+      queryClient.invalidateQueries({ queryKey: ['profile', userId] });
     },
     onError: (err: any, value) => {
       setIsPublic(!value);
