@@ -451,6 +451,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 compactSquare && 'h-full max-h-none object-cover',
                 imageClassName
               )}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />
           </div>
         )}
