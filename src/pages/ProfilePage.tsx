@@ -393,7 +393,7 @@ const ProfilePage: React.FC = () => {
         const { data, error } = await supabase
           .from("profiles")
           .select(
-            "display_name, stage_name, avatar_url, cover_url, location, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list, watchlist_public",
+            "display_name, stage_name, avatar_url, cover_url, location, role, badges, bio, union_status, representation, gear_list, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list",
           )
           .eq("user_id", resolvedUserId)
           .maybeSingle();
@@ -421,7 +421,21 @@ const ProfilePage: React.FC = () => {
     enabled: !!resolvedUserId,
   });
 
-  const watchlistPublic = dbProfile?.watchlist_public ?? false;
+  // Own-profile: read from profiles_public (has watchlist_public via view migration).
+  // Other-user: already included in dbProfile via the profiles_public SELECT above.
+  const { data: ownWatchlistPublic = false } = useQuery({
+    queryKey: ["watchlist-public", resolvedUserId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles_public")
+        .select("watchlist_public")
+        .eq("user_id", resolvedUserId!)
+        .maybeSingle();
+      return (data as any)?.watchlist_public ?? false;
+    },
+    enabled: isOwnProfile && !!resolvedUserId && !!authUser?.id,
+  });
+  const watchlistPublic = isOwnProfile ? ownWatchlistPublic : (dbProfile?.watchlist_public ?? false);
 
   // Fetch credits from database - for any user
   const { data: dbCredits = [], refetch: refetchCredits } = useQuery({
