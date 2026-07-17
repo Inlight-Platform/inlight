@@ -177,7 +177,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
               variant="outline"
               size="sm"
               className="shrink-0 self-start sm:self-auto"
-              onClick={() => navigate('/projects')}
+              onClick={() => navigate('/projects/new')}
             >
               <Plus className="w-4 h-4 mr-2" />
               New Project
