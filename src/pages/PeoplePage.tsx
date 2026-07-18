@@ -119,7 +119,7 @@ const PeoplePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('explore');
   const [searchQuery, setSearchQuery] = useState('');
   const [openSections, setOpenSections] = useState<Record<'people' | 'groups' | 'companies', boolean>>({
-    people: true,
+    people: false,
     groups: false,
     companies: false,
   });
