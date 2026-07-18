@@ -83,7 +83,6 @@ import { AddAttendedDialog } from "@/components/profile/AddAttendedDialog";
 import { SavedProjects } from "@/components/profile/SavedProjects";
 import { supabase } from "@/integrations/supabase/client";
 import { PostCreator, PostType } from "@/components/feed/PostCreator";
-import { ProjectCreator } from "@/components/projects/ProjectCreator";
 import { GradYearDialog } from "@/components/profile/GradYearDialog";
 import { toast } from "sonner";
 import { validateProfileField, PROFILE_FIELD_LIMITS } from "@/lib/profileValidation";
@@ -285,7 +284,6 @@ const ProfilePage: React.FC = () => {
   // Post creator states
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [defaultPostType, setDefaultPostType] = useState<PostType>("update");
-  const [showProjectCreator, setShowProjectCreator] = useState(false);
 
   // Collapsible section states are initialized from each section's content.
   // Removed detailsOpen - Details section moved to settings
@@ -2281,14 +2279,6 @@ const ProfilePage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Project Creator Dialog */}
-      {isOwnProfile && authUser && (
-        <ProjectCreator
-          open={showProjectCreator}
-          onOpenChange={setShowProjectCreator}
-          onSuccess={() => setShowProjectCreator(false)}
-        />
-      )}
       {/* Floating chat icon for connected users - or minimized bubble */}
       {!isOwnProfile &&
         isConnected &&
