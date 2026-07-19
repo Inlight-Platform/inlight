@@ -176,6 +176,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             location: location.trim() || null,
             event_type: eventType.trim() || 'general',
             image_url: imageUrl || null,
+            image_position_x: positionX,
+            image_position_y: positionY,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             custom_question: customQuestion.trim() || null,
