@@ -170,7 +170,9 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
 
             {/* Saved result — no zoom */}
             <div>
-              <p className="text-xs text-muted-foreground mb-1.5">Saved result (what the post will show)</p>
+              <p className="text-xs text-muted-foreground mb-1.5">
+                Saved result — position: {Math.round(positionX)}%, {Math.round(positionY)}%
+              </p>
               <div
                 className="relative w-full overflow-hidden rounded-lg border border-border bg-muted"
                 style={{ aspectRatio: String(aspectRatio) }}
