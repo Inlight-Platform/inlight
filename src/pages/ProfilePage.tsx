@@ -256,7 +256,7 @@ const ProfilePage: React.FC = () => {
     close: closeChat,
     expand: expandChat,
   } = useMinimizedChat();
-  const { user: authUser, loading: authLoading } = useAuth();
+  const { user: authUser } = useAuth();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -482,7 +482,6 @@ const ProfilePage: React.FC = () => {
 
   const { data: sectionContent } = useQuery({
     queryKey: ["profile-section-content", resolvedUserId, isOwnProfile, connectionStatus],
-    enabled: !authLoading,
     queryFn: async () => {
       if (!resolvedUserId) {
         return {
@@ -676,18 +675,25 @@ const ProfilePage: React.FC = () => {
   }, [resolvedUserId]);
 
   useEffect(() => {
-    const sectionKey = `${resolvedUserId}:${isOwnProfile}`;
-    if (!resolvedUserId || !sectionContent || sectionDefaultsProfileRef.current === sectionKey) return;
+    if (!resolvedUserId || !sectionContent || sectionDefaultsProfileRef.current === resolvedUserId) return;
 
-    sectionDefaultsProfileRef.current = sectionKey;
+    sectionDefaultsProfileRef.current = resolvedUserId;
 
     if (!manuallyChangedSectionsRef.current.materials) setMaterialsOpen(sectionContent.materials);
     if (!manuallyChangedSectionsRef.current.credits) setCreditsOpen(sectionContent.credits);
     if (!manuallyChangedSectionsRef.current.attended) setAttendedOpen(sectionContent.attended);
     if (!manuallyChangedSectionsRef.current.projects) setProjectsOpen(sectionContent.projects);
     if (!manuallyChangedSectionsRef.current.posts) setPostsOpen(sectionContent.posts);
-    if (!manuallyChangedSectionsRef.current.savedShows) setSavedShowsOpen(sectionContent.savedShows);
-  }, [resolvedUserId, isOwnProfile, sectionContent]);
+  }, [resolvedUserId, sectionContent]);
+
+  // Watchlist expand: handled separately because the saved_shows RLS read may
+  // initially return empty before auth restores. We only ever open — never close —
+  // so the first query that confirms savedShows=true wins.
+  useEffect(() => {
+    if (sectionContent?.savedShows && !manuallyChangedSectionsRef.current.savedShows) {
+      setSavedShowsOpen(true);
+    }
+  }, [sectionContent?.savedShows]);
 
   const handleSectionOpenChange =
     (section: ProfileSectionKey, setOpen: React.Dispatch<React.SetStateAction<boolean>>) => (open: boolean) => {
