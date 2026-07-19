@@ -70,6 +70,7 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   };
 
   const handleSave = () => {
+    console.log('[ImagePositioner] saving position', positionX, positionY);
     onSave(Math.round(positionX), Math.round(positionY));
     setOpen(false);
   };
