@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Move, Check, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { Move, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
 import {
   Dialog,
   DialogContent,
@@ -14,9 +13,8 @@ interface ImagePositionerProps {
   imageUrl: string;
   initialPositionX?: number;
   initialPositionY?: number;
-  initialZoom?: number;
   aspectRatio?: number;
-  onSave: (positionX: number, positionY: number, zoom?: number) => void;
+  onSave: (positionX: number, positionY: number) => void;
   onCancel?: () => void;
   trigger?: React.ReactNode;
 }
@@ -25,7 +23,6 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   imageUrl,
   initialPositionX = 50,
   initialPositionY = 50,
-  initialZoom = 100,
   aspectRatio = 16 / 9,
   onSave,
   onCancel,
@@ -34,7 +31,6 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   const [open, setOpen] = useState(false);
   const [positionX, setPositionX] = useState(initialPositionX);
   const [positionY, setPositionY] = useState(initialPositionY);
-  const [zoom, setZoom] = useState(initialZoom);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number; posX: number; posY: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,9 +39,8 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
     if (open) {
       setPositionX(initialPositionX);
       setPositionY(initialPositionY);
-      setZoom(initialZoom);
     }
-  }, [open, initialPositionX, initialPositionY, initialZoom]);
+  }, [open, initialPositionX, initialPositionY]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -62,15 +57,12 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
     if (!isDragging || !containerRef.current || !dragStart) return;
 
     const rect = containerRef.current.getBoundingClientRect();
-    // Scale sensitivity by zoom level - more zoom = finer control
-    const sensitivity = 100 / (zoom / 100);
-    const dx = ((e.clientX - dragStart.x) / rect.width) * sensitivity;
-    const dy = ((e.clientY - dragStart.y) / rect.height) * sensitivity;
+    const dx = ((e.clientX - dragStart.x) / rect.width) * 100;
+    const dy = ((e.clientY - dragStart.y) / rect.height) * 100;
 
-    // Invert: dragging right should move the image left (decrease position)
     setPositionX(Math.max(0, Math.min(100, dragStart.posX - dx)));
     setPositionY(Math.max(0, Math.min(100, dragStart.posY - dy)));
-  }, [isDragging, dragStart, zoom]);
+  }, [isDragging, dragStart]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
@@ -89,21 +81,15 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
 
     const touch = e.touches[0];
     const rect = containerRef.current.getBoundingClientRect();
-    const sensitivity = 100 / (zoom / 100);
-    const dx = ((touch.clientX - dragStart.x) / rect.width) * sensitivity;
-    const dy = ((touch.clientY - dragStart.y) / rect.height) * sensitivity;
+    const dx = ((touch.clientX - dragStart.x) / rect.width) * 100;
+    const dy = ((touch.clientY - dragStart.y) / rect.height) * 100;
 
     setPositionX(Math.max(0, Math.min(100, dragStart.posX - dx)));
     setPositionY(Math.max(0, Math.min(100, dragStart.posY - dy)));
-  }, [isDragging, dragStart, zoom]);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    setZoom(prev => Math.max(100, Math.min(300, prev - e.deltaY * 0.5)));
-  }, []);
+  }, [isDragging, dragStart]);
 
   const handleSave = () => {
-    onSave(Math.round(positionX), Math.round(positionY), Math.round(zoom));
+    onSave(Math.round(positionX), Math.round(positionY));
     setOpen(false);
   };
 
@@ -139,9 +125,9 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
 
           <div className="py-4 space-y-4">
             <p className="text-sm text-muted-foreground">
-              Drag to reposition. Scroll or use the slider to zoom.
+              Drag to reposition. This preview matches exactly what will be shown.
             </p>
-            
+
             <div
               ref={containerRef}
               className="relative w-full overflow-hidden rounded-lg border border-border cursor-grab active:cursor-grabbing bg-muted"
@@ -153,7 +139,6 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
               onTouchMove={handleTouchMove}
-              onWheel={handleWheel}
             >
               <img
                 src={imageUrl}
@@ -162,26 +147,9 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
                 style={{
                   objectFit: 'cover',
                   objectPosition: `${positionX}% ${positionY}%`,
-                  transform: `scale(${zoom / 100})`,
-                  transformOrigin: `${positionX}% ${positionY}%`,
                 }}
                 draggable={false}
               />
-            </div>
-
-            {/* Zoom controls */}
-            <div className="flex items-center gap-3">
-              <ZoomOut className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <Slider
-                value={[zoom]}
-                onValueChange={([val]) => setZoom(val)}
-                min={100}
-                max={300}
-                step={5}
-                className="flex-1"
-              />
-              <ZoomIn className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs text-muted-foreground w-10 text-right">{zoom}%</span>
             </div>
           </div>
 
