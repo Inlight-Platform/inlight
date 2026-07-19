@@ -54,11 +54,7 @@ export const useSavedShows = () => {
   const unsaveMutation = useMutation({
     mutationFn: async (showId: string) => {
       if (!user?.id) throw new Error('Must be logged in');
-      const { error } = await supabase
-        .from('saved_shows')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('show_id', showId);
+      const { error } = await (supabase.rpc as any)('remove_saved_show', { p_show_id: showId });
       if (error) throw error;
     },
     onSuccess: () => {
