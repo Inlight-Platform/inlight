@@ -256,7 +256,7 @@ const ProfilePage: React.FC = () => {
     close: closeChat,
     expand: expandChat,
   } = useMinimizedChat();
-  const { user: authUser } = useAuth();
+  const { user: authUser, loading: authLoading } = useAuth();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -482,6 +482,7 @@ const ProfilePage: React.FC = () => {
 
   const { data: sectionContent } = useQuery({
     queryKey: ["profile-section-content", resolvedUserId, isOwnProfile, connectionStatus],
+    enabled: !authLoading,
     queryFn: async () => {
       if (!resolvedUserId) {
         return {
