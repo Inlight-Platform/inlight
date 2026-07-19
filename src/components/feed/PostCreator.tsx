@@ -531,11 +531,11 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   
                   {/* Image Upload Section */}
                   {imageUrl ? (
-                    <div className="relative rounded-lg overflow-hidden max-h-48">
+                    <div className="relative rounded-lg overflow-hidden aspect-video">
                       <img
                         src={imageUrl}
                         alt="Preview"
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover"
                         style={{ objectPosition: `${positionX}% ${positionY}%` }}
                       />
                       <div className="absolute top-2 right-2 flex gap-2">
