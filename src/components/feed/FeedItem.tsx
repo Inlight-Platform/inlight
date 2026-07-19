@@ -40,6 +40,7 @@ export interface FeedItemData {
   image_url?: string | null;
   image_position_x?: number | null;
   image_position_y?: number | null;
+  image_zoom?: number | null;
   link_url?: string | null;
   link_title?: string | null;
   created_at: string;
@@ -434,26 +435,49 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Image - skip for open roles */}
-        {item.image_url && item.type !== 'open_role' && (
-          <div
-            className={cn(
-              'rounded-lg overflow-hidden mb-3 bg-muted flex items-center justify-center',
-              compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1',
-              compactSquare && compactTextExpanded && 'aspect-square mb-0',
-              imageContainerClassName
-            )}
-          >
-            <img
-              src={item.image_url}
-              alt={item.title || 'Post image'}
+        {item.image_url && item.type !== 'open_role' && (() => {
+          const posX = item.image_position_x ?? 50;
+          const posY = item.image_position_y ?? 50;
+          const zoom = item.image_zoom ?? 1;
+          const hasPosition = item.image_position_x != null || item.image_position_y != null || (item.image_zoom != null && item.image_zoom !== 1);
+          return (
+            <div
               className={cn(
-                'w-full max-h-[32rem] object-contain',
-                compactSquare && 'h-full max-h-none object-cover',
-                imageClassName
+                'rounded-lg overflow-hidden mb-3 relative bg-muted',
+                !compactSquare && 'aspect-video',
+                compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1',
+                compactSquare && compactTextExpanded && 'aspect-square mb-0',
+                compactSquare && !compactTextExpanded && 'aspect-square',
+                imageContainerClassName
               )}
-            />
-          </div>
-        )}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${posX * (1 - zoom)}%`,
+                  top: `${posY * (1 - zoom)}%`,
+                  right: `${(100 - posX) * (1 - zoom)}%`,
+                  bottom: `${(100 - posY) * (1 - zoom)}%`,
+                }}
+              >
+                <img
+                  src={item.image_url}
+                  alt={item.title || 'Post image'}
+                  className={imageClassName}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: `${posX}% ${posY}%`,
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Link display for posts */}
         {item.link_url && !eventLinkClosed && (
@@ -504,7 +528,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Event details */}
-        {item.type === 'event' && (
+        {item.type === 'event' && !compactCollapsed && (
           <div className="space-y-3 mt-2">
             <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-muted/50">
               {item.event_date && (

@@ -54,15 +54,25 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
     >
       {/* Image header - shown whenever the item has an image_url, with a placeholder icon for project/event/show without one */}
       {showImage && (
-        <div className="w-full h-32 overflow-hidden flex-shrink-0 bg-muted">
+        <div className="relative w-full h-32 overflow-hidden flex-shrink-0 bg-muted">
           {hasImage ? (
-            <img
-              src={item.image_url!}
-              alt={item.title || item.content?.slice(0, 40) || 'Feed image'}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              style={{ objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` }}
-              loading="lazy"
-            />
+            <div
+              style={{
+                position: 'absolute',
+                left: `${(item.image_position_x ?? 50) * (1 - (item.image_zoom ?? 1))}%`,
+                top: `${(item.image_position_y ?? 50) * (1 - (item.image_zoom ?? 1))}%`,
+                right: `${(100 - (item.image_position_x ?? 50)) * (1 - (item.image_zoom ?? 1))}%`,
+                bottom: `${(100 - (item.image_position_y ?? 50)) * (1 - (item.image_zoom ?? 1))}%`,
+              }}
+            >
+              <img
+                src={item.image_url!}
+                alt={item.title || item.content?.slice(0, 40) || 'Feed image'}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                style={{ objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` }}
+                loading="lazy"
+              />
+            </div>
           ) : (
             <div className="w-full h-full bg-muted/50 flex items-center justify-center">
               <div className="p-3 rounded-full bg-background/80">

@@ -1,7 +1,6 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Move, Check, X, ZoomIn, ZoomOut } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Move, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
 import {
   Dialog,
   DialogContent,
@@ -14,9 +13,8 @@ interface ImagePositionerProps {
   imageUrl: string;
   initialPositionX?: number;
   initialPositionY?: number;
-  initialZoom?: number;
   aspectRatio?: number;
-  onSave: (positionX: number, positionY: number, zoom?: number) => void;
+  onSave: (positionX: number, positionY: number, zoom: number) => void;
   onCancel?: () => void;
   trigger?: React.ReactNode;
 }
@@ -25,7 +23,6 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   imageUrl,
   initialPositionX = 50,
   initialPositionY = 50,
-  initialZoom = 100,
   aspectRatio = 16 / 9,
   onSave,
   onCancel,
@@ -34,76 +31,46 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   const [open, setOpen] = useState(false);
   const [positionX, setPositionX] = useState(initialPositionX);
   const [positionY, setPositionY] = useState(initialPositionY);
-  const [zoom, setZoom] = useState(initialZoom);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; posX: number; posY: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{
+    startX: number; startY: number; startPosX: number; startPosY: number;
+  } | null>(null);
 
   useEffect(() => {
     if (open) {
       setPositionX(initialPositionX);
       setPositionY(initialPositionY);
-      setZoom(initialZoom);
+      setZoom(1);
     }
-  }, [open, initialPositionX, initialPositionY, initialZoom]);
+  }, [open, initialPositionX, initialPositionY]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY, posX: positionX, posY: positionY });
-  }, [positionX, positionY]);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: positionX,
+      startPosY: positionY,
+    };
+  };
 
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    setDragStart(null);
-  }, []);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !containerRef.current || !dragStart) return;
-
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    // Scale sensitivity by zoom level - more zoom = finer control
-    const sensitivity = 100 / (zoom / 100);
-    const dx = ((e.clientX - dragStart.x) / rect.width) * sensitivity;
-    const dy = ((e.clientY - dragStart.y) / rect.height) * sensitivity;
+    const dx = ((e.clientX - dragRef.current.startX) / rect.width) * (100 / zoom);
+    const dy = ((e.clientY - dragRef.current.startY) / rect.height) * (100 / zoom);
+    setPositionX(Math.max(0, Math.min(100, dragRef.current.startPosX - dx)));
+    setPositionY(Math.max(0, Math.min(100, dragRef.current.startPosY - dy)));
+  };
 
-    // Invert: dragging right should move the image left (decrease position)
-    setPositionX(Math.max(0, Math.min(100, dragStart.posX - dx)));
-    setPositionY(Math.max(0, Math.min(100, dragStart.posY - dy)));
-  }, [isDragging, dragStart, zoom]);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    setIsDragging(true);
-    setDragStart({ x: touch.clientX, y: touch.clientY, posX: positionX, posY: positionY });
-  }, [positionX, positionY]);
-
-  const handleTouchEnd = useCallback(() => {
-    setIsDragging(false);
-    setDragStart(null);
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging || !containerRef.current || !dragStart) return;
-
-    const touch = e.touches[0];
-    const rect = containerRef.current.getBoundingClientRect();
-    const sensitivity = 100 / (zoom / 100);
-    const dx = ((touch.clientX - dragStart.x) / rect.width) * sensitivity;
-    const dy = ((touch.clientY - dragStart.y) / rect.height) * sensitivity;
-
-    setPositionX(Math.max(0, Math.min(100, dragStart.posX - dx)));
-    setPositionY(Math.max(0, Math.min(100, dragStart.posY - dy)));
-  }, [isDragging, dragStart, zoom]);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    setZoom(prev => Math.max(100, Math.min(300, prev - e.deltaY * 0.5)));
-  }, []);
+  const handlePointerUp = () => {
+    dragRef.current = null;
+  };
 
   const handleSave = () => {
-    onSave(Math.round(positionX), Math.round(positionY), Math.round(zoom));
+    onSave(Math.round(positionX), Math.round(positionY), parseFloat(zoom.toFixed(2)));
     setOpen(false);
   };
 
@@ -111,6 +78,8 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
     setOpen(false);
     onCancel?.();
   };
+
+  const objectPosition = `${positionX}% ${positionY}%`;
 
   return (
     <>
@@ -137,60 +106,116 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="py-4 space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Drag to reposition. Scroll or use the slider to zoom.
-            </p>
-            
+          <div className="py-2 space-y-3">
+            {/* Drag + zoom area */}
             <div
               ref={containerRef}
-              className="relative w-full overflow-hidden rounded-lg border border-border cursor-grab active:cursor-grabbing bg-muted"
-              style={{ paddingBottom: `${100 / aspectRatio}%` }}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseUp}
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
-              onTouchMove={handleTouchMove}
-              onWheel={handleWheel}
+              className="relative w-full overflow-hidden rounded-lg border border-border cursor-grab active:cursor-grabbing bg-muted select-none"
+              style={{ aspectRatio: String(aspectRatio) }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
             >
-              <img
-                src={imageUrl}
-                alt="Position preview"
-                className="absolute w-full h-full select-none pointer-events-none"
+              <div
                 style={{
-                  objectFit: 'cover',
-                  objectPosition: `${positionX}% ${positionY}%`,
-                  transform: `scale(${zoom / 100})`,
-                  transformOrigin: `${positionX}% ${positionY}%`,
+                  position: 'absolute',
+                  left: `${positionX * (1 - zoom)}%`,
+                  top: `${positionY * (1 - zoom)}%`,
+                  right: `${(100 - positionX) * (1 - zoom)}%`,
+                  bottom: `${(100 - positionY) * (1 - zoom)}%`,
                 }}
-                draggable={false}
-              />
+              >
+                <img
+                  src={imageUrl}
+                  alt="Positioning view"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition,
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                  draggable={false}
+                />
+              </div>
             </div>
 
             {/* Zoom controls */}
-            <div className="flex items-center gap-3">
-              <ZoomOut className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <Slider
-                value={[zoom]}
-                onValueChange={([val]) => setZoom(val)}
-                min={100}
-                max={300}
-                step={5}
-                className="flex-1"
-              />
-              <ZoomIn className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs text-muted-foreground w-10 text-right">{zoom}%</span>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Zoom: {Math.round(zoom * 100)}%</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-3"
+                  disabled={zoom <= 1}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setZoom((z) => Math.max(1, parseFloat((z - 0.25).toFixed(2))))}
+                >
+                  − Zoom out
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-3"
+                  disabled={zoom >= 3}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setZoom((z) => Math.min(3, parseFloat((z + 0.25).toFixed(2))))}
+                >
+                  + Zoom in
+                </Button>
+              </div>
+            </div>
+
+            {/* Saved result */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Saved result (what the post will show)</p>
+              <div
+                className="relative w-full overflow-hidden rounded-lg border border-border bg-muted"
+                style={{ aspectRatio: String(aspectRatio) }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${positionX * (1 - zoom)}%`,
+                    top: `${positionY * (1 - zoom)}%`,
+                    right: `${(100 - positionX) * (1 - zoom)}%`,
+                    bottom: `${(100 - positionY) * (1 - zoom)}%`,
+                  }}
+                >
+                  <img
+                    src={imageUrl}
+                    alt="Saved result preview"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      objectPosition,
+                      pointerEvents: 'none',
+                    }}
+                    draggable={false}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={handleCancel}>
+            <Button type="button" variant="outline" onClick={handleCancel}>
               <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
-            <Button onClick={handleSave}>
+            <Button type="button" onClick={handleSave}>
               <Check className="w-4 h-4 mr-2" />
               Save Position
             </Button>
