@@ -14,7 +14,7 @@ interface ImagePositionerProps {
   initialPositionX?: number;
   initialPositionY?: number;
   aspectRatio?: number;
-  onSave: (positionX: number, positionY: number) => void;
+  onSave: (positionX: number, positionY: number, zoom: number) => void;
   onCancel?: () => void;
   trigger?: React.ReactNode;
 }
@@ -70,7 +70,7 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   };
 
   const handleSave = () => {
-    onSave(Math.round(positionX), Math.round(positionY));
+    onSave(Math.round(positionX), Math.round(positionY), parseFloat(zoom.toFixed(2)));
     setOpen(false);
   };
 
@@ -80,20 +80,6 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   };
 
   const objectPosition = `${positionX}% ${positionY}%`;
-
-  // Zoom by expanding the image beyond the container and offsetting it
-  // so the current positionX/Y stays anchored inside the visible area
-  const imgStyle: React.CSSProperties = {
-    position: 'absolute',
-    width: `${zoom * 100}%`,
-    height: `${zoom * 100}%`,
-    left: `${positionX * (1 - zoom)}%`,
-    top: `${positionY * (1 - zoom)}%`,
-    objectFit: 'cover',
-    objectPosition,
-    pointerEvents: 'none',
-    userSelect: 'none',
-  };
 
   return (
     <>
@@ -134,7 +120,18 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
               <img
                 src={imageUrl}
                 alt="Positioning view"
-                style={imgStyle}
+                style={{
+                  position: 'absolute',
+                  width: `${zoom * 100}%`,
+                  height: `${zoom * 100}%`,
+                  left: `${positionX * (1 - zoom)}%`,
+                  top: `${positionY * (1 - zoom)}%`,
+                  objectFit: 'cover',
+                  objectPosition,
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                  display: 'block',
+                }}
                 draggable={false}
               />
             </div>
@@ -168,7 +165,7 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
               </div>
             </div>
 
-            {/* Saved result — no zoom */}
+            {/* Saved result */}
             <div>
               <p className="text-xs text-muted-foreground mb-1.5">Saved result (what the post will show)</p>
               <div
@@ -178,8 +175,16 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
                 <img
                   src={imageUrl}
                   alt="Saved result preview"
-                  className="absolute inset-0 w-full h-full"
-                  style={{ objectFit: 'cover', objectPosition, pointerEvents: 'none' }}
+                  style={{
+                    position: 'absolute',
+                    width: `${zoom * 100}%`,
+                    height: `${zoom * 100}%`,
+                    left: `${positionX * (1 - zoom)}%`,
+                    top: `${positionY * (1 - zoom)}%`,
+                    objectFit: 'cover',
+                    objectPosition,
+                    pointerEvents: 'none',
+                  }}
                   draggable={false}
                 />
               </div>

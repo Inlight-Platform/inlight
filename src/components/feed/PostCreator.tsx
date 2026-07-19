@@ -56,6 +56,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [customQuestion, setCustomQuestion] = useState('');
   const [positionX, setPositionX] = useState(50);
   const [positionY, setPositionY] = useState(50);
+  const [imageZoom, setImageZoom] = useState(1);
   const [isPaid, setIsPaid] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
   const [serviceCategory, setServiceCategory] = useState<string>('');
@@ -84,6 +85,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setSelectedRecipients([]);
     setPositionX(50);
     setPositionY(50);
+    setImageZoom(1);
     setIsPaid(false);
     setTicketPrice('');
     setServiceCategory('');
@@ -106,6 +108,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             image_url: imageUrl || null,
             image_position_x: positionX,
             image_position_y: positionY,
+            image_zoom: imageZoom,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -178,6 +181,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             image_url: imageUrl || null,
             image_position_x: positionX,
             image_position_y: positionY,
+            image_zoom: imageZoom,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             custom_question: customQuestion.trim() || null,
@@ -218,6 +222,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             image_url: imageUrl || null,
             image_position_x: positionX,
             image_position_y: positionY,
+            image_zoom: imageZoom,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -225,7 +230,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           .select('id')
           .single();
         if (error) throw error;
-        
+
         // Insert recipients for specific visibility
         if (visibility === 'specific' && selectedRecipients.length > 0 && jobData) {
           const { error: recError } = await supabase
@@ -537,8 +542,15 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                       <img
                         src={imageUrl}
                         alt="Preview"
-                        className="absolute inset-0 w-full h-full object-cover"
-                        style={{ objectPosition: `${positionX}% ${positionY}%` }}
+                        style={{
+                          position: 'absolute',
+                          width: `${imageZoom * 100}%`,
+                          height: `${imageZoom * 100}%`,
+                          left: `${positionX * (1 - imageZoom)}%`,
+                          top: `${positionY * (1 - imageZoom)}%`,
+                          objectFit: 'cover',
+                          objectPosition: `${positionX}% ${positionY}%`,
+                        }}
                       />
                       <div className="absolute top-2 right-2 flex gap-2">
                         <ImagePositioner
@@ -546,9 +558,10 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                           initialPositionX={positionX}
                           initialPositionY={positionY}
                           aspectRatio={16 / 9}
-                          onSave={(x, y) => {
+                          onSave={(x, y, z) => {
                             setPositionX(x);
                             setPositionY(y);
+                            setImageZoom(z);
                           }}
                           trigger={
                             <Button variant="secondary" size="icon" className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background">
@@ -564,6 +577,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                             setImageUrl('');
                             setPositionX(50);
                             setPositionY(50);
+                            setImageZoom(1);
                           }}
                         >
                           <X className="h-4 w-4" />

@@ -40,6 +40,7 @@ export interface FeedItemData {
   image_url?: string | null;
   image_position_x?: number | null;
   image_position_y?: number | null;
+  image_zoom?: number | null;
   link_url?: string | null;
   link_title?: string | null;
   created_at: string;
@@ -434,31 +435,46 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Image - skip for open roles */}
-        {item.image_url && item.type !== 'open_role' && (
-          <div
-            className={cn(
-              'rounded-lg overflow-hidden mb-3 bg-muted flex items-center justify-center',
-              compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1',
-              compactSquare && compactTextExpanded && 'aspect-square mb-0',
-              imageContainerClassName
-            )}
-          >
-            <img
-              src={item.image_url}
-              alt={item.title || 'Post image'}
+        {item.image_url && item.type !== 'open_role' && (() => {
+          const posX = item.image_position_x ?? 50;
+          const posY = item.image_position_y ?? 50;
+          const zoom = item.image_zoom ?? 1;
+          const hasPosition = item.image_position_x != null || item.image_position_y != null || (item.image_zoom != null && item.image_zoom !== 1);
+          return (
+            <div
               className={cn(
-                'w-full max-h-[32rem] object-contain',
-                compactSquare && 'h-full max-h-none object-cover',
-                imageClassName
+                'rounded-lg overflow-hidden mb-3 relative bg-muted',
+                !compactSquare && 'aspect-video',
+                compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1',
+                compactSquare && compactTextExpanded && 'aspect-square mb-0',
+                compactSquare && !compactTextExpanded && 'aspect-square',
+                imageContainerClassName
               )}
-              style={
-                (item.image_position_x != null || item.image_position_y != null)
-                  ? { objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` }
-                  : undefined
-              }
-            />
-          </div>
-        )}
+            >
+              <img
+                src={item.image_url}
+                alt={item.title || 'Post image'}
+                className={imageClassName}
+                style={hasPosition ? {
+                  position: 'absolute',
+                  width: `${zoom * 100}%`,
+                  height: `${zoom * 100}%`,
+                  left: `${posX * (1 - zoom)}%`,
+                  top: `${posY * (1 - zoom)}%`,
+                  objectFit: 'cover',
+                  objectPosition: `${posX}% ${posY}%`,
+                } : {
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  objectPosition: '50% 50%',
+                }}
+              />
+            </div>
+          );
+        })()}
 
         {/* Link display for posts */}
         {item.link_url && !eventLinkClosed && (
