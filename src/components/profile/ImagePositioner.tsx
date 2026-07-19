@@ -33,9 +33,8 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   const [positionX, setPositionX] = useState(initialPositionX);
   const [positionY, setPositionY] = useState(initialPositionY);
   const [zoom, setZoom] = useState(1);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; posX: number; posY: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -45,49 +44,49 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
     }
   }, [open, initialPositionX, initialPositionY]);
 
+  // Attach global mousemove/mouseup so drag works even when cursor leaves the container
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragRef.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const dx = ((e.clientX - dragRef.current.startX) / rect.width) * (100 / zoom);
+      const dy = ((e.clientY - dragRef.current.startY) / rect.height) * (100 / zoom);
+      setPositionX(Math.max(0, Math.min(100, dragRef.current.startPosX - dx)));
+      setPositionY(Math.max(0, Math.min(100, dragRef.current.startPosY - dy)));
+    };
+    const onMouseUp = () => { dragRef.current = null; };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [zoom]);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY, posX: positionX, posY: positionY });
+    dragRef.current = { startX: e.clientX, startY: e.clientY, startPosX: positionX, startPosY: positionY };
   }, [positionX, positionY]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    setDragStart(null);
-  }, []);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !containerRef.current || !dragStart) return;
-
-    const rect = containerRef.current.getBoundingClientRect();
-    const dx = ((e.clientX - dragStart.x) / rect.width) * (100 / zoom);
-    const dy = ((e.clientY - dragStart.y) / rect.height) * (100 / zoom);
-
-    setPositionX(Math.max(0, Math.min(100, dragStart.posX - dx)));
-    setPositionY(Math.max(0, Math.min(100, dragStart.posY - dy)));
-  }, [isDragging, dragStart, zoom]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
     const touch = e.touches[0];
-    setIsDragging(true);
-    setDragStart({ x: touch.clientX, y: touch.clientY, posX: positionX, posY: positionY });
+    dragRef.current = { startX: touch.clientX, startY: touch.clientY, startPosX: positionX, startPosY: positionY };
   }, [positionX, positionY]);
 
-  const handleTouchEnd = useCallback(() => {
-    setIsDragging(false);
-    setDragStart(null);
-  }, []);
-
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging || !containerRef.current || !dragStart) return;
+    if (!dragRef.current || !containerRef.current) return;
+    e.preventDefault();
     const touch = e.touches[0];
     const rect = containerRef.current.getBoundingClientRect();
-    const dx = ((touch.clientX - dragStart.x) / rect.width) * (100 / zoom);
-    const dy = ((touch.clientY - dragStart.y) / rect.height) * (100 / zoom);
-    setPositionX(Math.max(0, Math.min(100, dragStart.posX - dx)));
-    setPositionY(Math.max(0, Math.min(100, dragStart.posY - dy)));
-  }, [isDragging, dragStart, zoom]);
+    const dx = ((touch.clientX - dragRef.current.startX) / rect.width) * (100 / zoom);
+    const dy = ((touch.clientY - dragRef.current.startY) / rect.height) * (100 / zoom);
+    setPositionX(Math.max(0, Math.min(100, dragRef.current.startPosX - dx)));
+    setPositionY(Math.max(0, Math.min(100, dragRef.current.startPosY - dy)));
+  }, [zoom]);
+
+  const handleTouchEnd = useCallback(() => { dragRef.current = null; }, []);
 
   const handleSave = () => {
     onSave(Math.round(positionX), Math.round(positionY));
@@ -127,23 +126,20 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
           </DialogHeader>
 
           <div className="py-2 space-y-3">
-            {/* Zoomed positioning view */}
+            {/* Zoomed drag area */}
             <div
               ref={containerRef}
-              className="relative w-full overflow-hidden rounded-lg border border-border cursor-grab active:cursor-grabbing bg-muted"
+              className="relative w-full overflow-hidden rounded-lg border border-border cursor-grab active:cursor-grabbing bg-muted select-none"
               style={{ paddingBottom: `${100 / aspectRatio}%` }}
               onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseUp}
               onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
               onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
             >
               <img
                 src={imageUrl}
                 alt="Positioning view"
-                className="absolute w-full h-full select-none pointer-events-none"
+                className="absolute w-full h-full pointer-events-none"
                 style={{
                   objectFit: 'cover',
                   objectPosition,
@@ -169,7 +165,7 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
               <span className="text-xs text-muted-foreground w-10 text-right">{Math.round(zoom * 100)}%</span>
             </div>
 
-            {/* Actual result preview */}
+            {/* Actual saved result — no zoom */}
             <div>
               <p className="text-xs text-muted-foreground mb-1.5">Saved result</p>
               <div
@@ -179,7 +175,7 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
                 <img
                   src={imageUrl}
                   alt="Saved result preview"
-                  className="absolute w-full h-full select-none pointer-events-none"
+                  className="absolute w-full h-full pointer-events-none"
                   style={{ objectFit: 'cover', objectPosition }}
                   draggable={false}
                 />
