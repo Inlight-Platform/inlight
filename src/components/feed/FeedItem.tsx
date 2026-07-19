@@ -451,6 +451,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 compactSquare && 'h-full max-h-none object-cover',
                 imageClassName
               )}
+              style={
+                (item.image_position_x != null || item.image_position_y != null)
+                  ? { objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` }
+                  : undefined
+              }
             />
           </div>
         )}
