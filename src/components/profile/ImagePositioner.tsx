@@ -187,11 +187,11 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={handleCancel}>
+            <Button type="button" variant="outline" onClick={handleCancel}>
               <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
-            <Button onClick={handleSave}>
+            <Button type="button" onClick={handleSave}>
               <Check className="w-4 h-4 mr-2" />
               Save Position
             </Button>
