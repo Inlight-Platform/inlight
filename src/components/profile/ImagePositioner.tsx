@@ -129,20 +129,30 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
               />
             </div>
 
-            {/* Zoom slider */}
-            <div className="flex items-center gap-3">
-              <ZoomOut className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <input
-                type="range"
-                min={1}
-                max={3}
-                step={0.05}
-                value={zoom}
-                onChange={(e) => setZoom(Number(e.target.value))}
-                className="flex-1 accent-primary"
-              />
-              <ZoomIn className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs text-muted-foreground w-10 text-right">{Math.round(zoom * 100)}%</span>
+            {/* Zoom controls */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Zoom</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setZoom((z) => Math.max(1, +(z - 0.25).toFixed(2)))}
+                disabled={zoom <= 1}
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </Button>
+              <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(zoom * 100)}%</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))}
+                disabled={zoom >= 3}
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </Button>
             </div>
 
             {/* Saved result preview — no zoom */}
