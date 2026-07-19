@@ -35,6 +35,7 @@ interface ShowCardProps {
   onUnsave: (showId: string) => void;
   onClick: (show: Show) => void;
   onDelete?: (showId: string) => void;
+  archived?: boolean;
 }
 
 export const ShowCard: React.FC<ShowCardProps> = ({
@@ -44,6 +45,7 @@ export const ShowCard: React.FC<ShowCardProps> = ({
   onUnsave,
   onClick,
   onDelete,
+  archived = false,
 }) => {
   const daysUntilClosing = show.run_end 
     ? differenceInDays(new Date(show.run_end), new Date()) 
@@ -98,7 +100,7 @@ export const ShowCard: React.FC<ShowCardProps> = ({
       className={cn(
         "group relative bg-card border border-border rounded-2xl overflow-hidden cursor-pointer transition-all duration-300",
         "hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1",
-        hasClosed && "opacity-60"
+        (archived || hasClosed) && "opacity-60"
       )}
       onClick={() => onClick(show)}
     >
