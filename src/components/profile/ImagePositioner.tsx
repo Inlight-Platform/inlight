@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Move, Check, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
 import {
   Dialog,
   DialogContent,
@@ -133,13 +132,14 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
             {/* Zoom slider */}
             <div className="flex items-center gap-3">
               <ZoomOut className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <Slider
-                value={[zoom]}
-                onValueChange={([val]) => setZoom(val)}
+              <input
+                type="range"
                 min={1}
                 max={3}
                 step={0.05}
-                className="flex-1"
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="flex-1 accent-primary"
               />
               <ZoomIn className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <span className="text-xs text-muted-foreground w-10 text-right">{Math.round(zoom * 100)}%</span>
