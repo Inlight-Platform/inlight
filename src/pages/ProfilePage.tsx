@@ -437,6 +437,19 @@ const ProfilePage: React.FC = () => {
   });
   const watchlistPublic = isOwnProfile ? ownWatchlistPublic : (dbProfile?.watchlist_public ?? false);
 
+  // Fetch watchlist for section auto-expand. Uses the same key as SavedShows so
+  // the result is shared. Gated on auth being confirmed to avoid the RLS timing
+  // issue where the unauthenticated read returns empty and locks the section closed.
+  const { data: savedShowsForExpand = [] } = useQuery({
+    queryKey: ['saved-shows-profile', resolvedUserId],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('get_profile_watchlist', { p_user_id: resolvedUserId });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    enabled: (isOwnProfile && !!authUser?.id) || (!isOwnProfile && watchlistPublic && !!resolvedUserId),
+  });
+
   // Fetch credits from database - for any user
   const { data: dbCredits = [], refetch: refetchCredits } = useQuery({
     queryKey: ["credits", resolvedUserId],
@@ -686,14 +699,13 @@ const ProfilePage: React.FC = () => {
     if (!manuallyChangedSectionsRef.current.posts) setPostsOpen(sectionContent.posts);
   }, [resolvedUserId, sectionContent]);
 
-  // Watchlist expand: handled separately because the saved_shows RLS read may
-  // initially return empty before auth restores. We only ever open — never close —
-  // so the first query that confirms savedShows=true wins.
+  // Watchlist expand: driven by the auth-gated RPC query, not sectionContent,
+  // so it only fires once auth.uid() is confirmed and the RLS read is accurate.
   useEffect(() => {
-    if (sectionContent?.savedShows && !manuallyChangedSectionsRef.current.savedShows) {
+    if (savedShowsForExpand.length > 0 && !manuallyChangedSectionsRef.current.savedShows) {
       setSavedShowsOpen(true);
     }
-  }, [sectionContent?.savedShows]);
+  }, [savedShowsForExpand.length]);
 
   const handleSectionOpenChange =
     (section: ProfileSectionKey, setOpen: React.Dispatch<React.SetStateAction<boolean>>) => (open: boolean) => {
