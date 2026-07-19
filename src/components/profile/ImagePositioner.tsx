@@ -117,23 +117,32 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
             >
-              <img
-                src={imageUrl}
-                alt="Positioning view"
+              <div
                 style={{
                   position: 'absolute',
-                  width: `${zoom * 100}%`,
-                  height: `${zoom * 100}%`,
                   left: `${positionX * (1 - zoom)}%`,
                   top: `${positionY * (1 - zoom)}%`,
-                  objectFit: 'cover',
-                  objectPosition,
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                  display: 'block',
+                  right: `${(100 - positionX) * (1 - zoom)}%`,
+                  bottom: `${(100 - positionY) * (1 - zoom)}%`,
                 }}
-                draggable={false}
-              />
+              >
+                <img
+                  src={imageUrl}
+                  alt="Positioning view"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition,
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                  draggable={false}
+                />
+              </div>
             </div>
 
             {/* Zoom controls */}
@@ -172,21 +181,31 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
                 className="relative w-full overflow-hidden rounded-lg border border-border bg-muted"
                 style={{ aspectRatio: String(aspectRatio) }}
               >
-                <img
-                  src={imageUrl}
-                  alt="Saved result preview"
+                <div
                   style={{
                     position: 'absolute',
-                    width: `${zoom * 100}%`,
-                    height: `${zoom * 100}%`,
                     left: `${positionX * (1 - zoom)}%`,
                     top: `${positionY * (1 - zoom)}%`,
-                    objectFit: 'cover',
-                    objectPosition,
-                    pointerEvents: 'none',
+                    right: `${(100 - positionX) * (1 - zoom)}%`,
+                    bottom: `${(100 - positionY) * (1 - zoom)}%`,
                   }}
-                  draggable={false}
-                />
+                >
+                  <img
+                    src={imageUrl}
+                    alt="Saved result preview"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      objectPosition,
+                      pointerEvents: 'none',
+                    }}
+                    draggable={false}
+                  />
+                </div>
               </div>
             </div>
           </div>

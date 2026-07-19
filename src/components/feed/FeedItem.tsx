@@ -451,27 +451,30 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 imageContainerClassName
               )}
             >
-              <img
-                src={item.image_url}
-                alt={item.title || 'Post image'}
-                className={imageClassName}
-                style={hasPosition ? {
+              <div
+                style={{
                   position: 'absolute',
-                  width: `${zoom * 100}%`,
-                  height: `${zoom * 100}%`,
                   left: `${posX * (1 - zoom)}%`,
                   top: `${posY * (1 - zoom)}%`,
-                  objectFit: 'cover',
-                  objectPosition: `${posX}% ${posY}%`,
-                } : {
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  objectPosition: '50% 50%',
+                  right: `${(100 - posX) * (1 - zoom)}%`,
+                  bottom: `${(100 - posY) * (1 - zoom)}%`,
                 }}
-              />
+              >
+                <img
+                  src={item.image_url}
+                  alt={item.title || 'Post image'}
+                  className={imageClassName}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: `${posX}% ${posY}%`,
+                  }}
+                />
+              </div>
             </div>
           );
         })()}
@@ -525,7 +528,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Event details */}
-        {item.type === 'event' && (
+        {item.type === 'event' && !compactCollapsed && (
           <div className="space-y-3 mt-2">
             <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-muted/50">
               {item.event_date && (

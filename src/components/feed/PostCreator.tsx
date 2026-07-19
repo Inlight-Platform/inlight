@@ -539,19 +539,29 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   {/* Image Upload Section */}
                   {imageUrl ? (
                     <div className="relative rounded-lg overflow-hidden aspect-video">
-                      <img
-                        src={imageUrl}
-                        alt="Preview"
+                      <div
                         style={{
                           position: 'absolute',
-                          width: `${imageZoom * 100}%`,
-                          height: `${imageZoom * 100}%`,
                           left: `${positionX * (1 - imageZoom)}%`,
                           top: `${positionY * (1 - imageZoom)}%`,
-                          objectFit: 'cover',
-                          objectPosition: `${positionX}% ${positionY}%`,
+                          right: `${(100 - positionX) * (1 - imageZoom)}%`,
+                          bottom: `${(100 - positionY) * (1 - imageZoom)}%`,
                         }}
-                      />
+                      >
+                        <img
+                          src={imageUrl}
+                          alt="Preview"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            objectPosition: `${positionX}% ${positionY}%`,
+                          }}
+                        />
+                      </div>
                       <div className="absolute top-2 right-2 flex gap-2">
                         <ImagePositioner
                           imageUrl={imageUrl}

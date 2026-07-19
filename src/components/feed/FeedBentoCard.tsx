@@ -91,7 +91,26 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
     (item.content ? item.content.slice(0, 80) + (item.content.length > 80 ? '…' : '') : 'Untitled');
   const subtitle = item.description || item.content;
   const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
-  const objectPosition = `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%`;
+  const posX = item.image_position_x ?? 50;
+  const posY = item.image_position_y ?? 50;
+  const zoom = item.image_zoom ?? 1;
+  const objectPosition = `${posX}% ${posY}%`;
+  const zoomStyle = {
+    position: 'absolute' as const,
+    left: `${posX * (1 - zoom)}%`,
+    top: `${posY * (1 - zoom)}%`,
+    right: `${(100 - posX) * (1 - zoom)}%`,
+    bottom: `${(100 - posY) * (1 - zoom)}%`,
+  };
+  const imgFillStyle = {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover' as const,
+    objectPosition,
+  };
 
   const baseShell =
     'group relative col-span-1 overflow-hidden rounded-3xl cursor-pointer transition-all duration-500 sm:col-span-12';
@@ -109,13 +128,15 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
       >
         {hasImage && (
           <>
-            <img
-              src={item.image_url!}
-              alt={title}
-              loading="lazy"
-              style={{ objectPosition }}
-              className="absolute inset-0 h-full w-full object-cover opacity-60 grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80"
-            />
+            <div style={zoomStyle}>
+              <img
+                src={item.image_url!}
+                alt={title}
+                loading="lazy"
+                style={{ ...imgFillStyle, opacity: 0.6 }}
+                className="grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80"
+              />
+            </div>
             <div className="absolute inset-0 bg-gradient-to-t from-[hsl(222_45%_5%)] via-[hsl(222_45%_5%)]/60 to-transparent" />
           </>
         )}
@@ -166,14 +187,15 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
         </div>
         <div className="flex h-full flex-col p-6 sm:p-8">
           {hasImage && (
-            <div className="mb-6 h-40 overflow-hidden rounded-2xl transition-transform duration-500 group-hover:scale-[0.97]">
-              <img
-                src={item.image_url!}
-                alt={title}
-                style={{ objectPosition }}
-                className="h-full w-full object-cover"
-                loading="lazy"
-              />
+            <div className="relative mb-6 h-40 overflow-hidden rounded-2xl transition-transform duration-500 group-hover:scale-[0.97]">
+              <div style={zoomStyle}>
+                <img
+                  src={item.image_url!}
+                  alt={title}
+                  style={imgFillStyle}
+                  loading="lazy"
+                />
+              </div>
             </div>
           )}
           <div className="flex flex-1 flex-col justify-center">
@@ -239,14 +261,15 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
             </div>
           </div>
           {hasImage ? (
-            <div className="mb-3 flex-1 overflow-hidden rounded-xl opacity-80 transition-opacity group-hover:opacity-100">
-              <img
-                src={item.image_url!}
-                alt={title}
-                style={{ objectPosition }}
-                className="h-full w-full object-cover"
-                loading="lazy"
-              />
+            <div className="relative mb-3 flex-1 overflow-hidden rounded-xl opacity-80 transition-opacity group-hover:opacity-100">
+              <div style={zoomStyle}>
+                <img
+                  src={item.image_url!}
+                  alt={title}
+                  style={imgFillStyle}
+                  loading="lazy"
+                />
+              </div>
             </div>
           ) : subtitle ? (
             <p className="mb-3 flex-1 text-sm text-muted-foreground line-clamp-3">{subtitle}</p>
@@ -282,15 +305,15 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
     >
       <div className="flex h-full flex-col justify-between p-5">
         <div className="flex items-start gap-4">
-          <div className="h-20 w-20 flex-shrink-0 -rotate-3 overflow-hidden rounded-2xl bg-muted transition-transform duration-500 group-hover:rotate-0">
+          <div className="relative h-20 w-20 flex-shrink-0 -rotate-3 overflow-hidden rounded-2xl bg-muted transition-transform duration-500 group-hover:rotate-0">
             {hasImage ? (
-              <img
-                src={item.image_url!}
-                alt={title}
-                style={{ objectPosition }}
-                className="h-full w-full object-cover"
-                loading="lazy"
-              />
+              <div style={zoomStyle}>
+                <img
+                  src={item.image_url!}
+                  alt={title}
+                  style={imgFillStyle}
+                  loading="lazy"
+                /></div>
             ) : (
               <div className="flex h-full w-full items-center justify-center text-foreground/60">{meta.icon}</div>
             )}

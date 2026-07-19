@@ -307,6 +307,7 @@ const FeedPage: React.FC = () => {
         payment_link_url: event.payment_link_url,
         image_position_x: event.image_position_x,
         image_position_y: event.image_position_y,
+        image_zoom: event.image_zoom,
         creator_profile: profileMap.get(event.user_id)
       }));
     }
