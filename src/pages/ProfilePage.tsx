@@ -675,9 +675,10 @@ const ProfilePage: React.FC = () => {
   }, [resolvedUserId]);
 
   useEffect(() => {
-    if (!resolvedUserId || !sectionContent || sectionDefaultsProfileRef.current === resolvedUserId) return;
+    const sectionKey = `${resolvedUserId}:${isOwnProfile}`;
+    if (!resolvedUserId || !sectionContent || sectionDefaultsProfileRef.current === sectionKey) return;
 
-    sectionDefaultsProfileRef.current = resolvedUserId;
+    sectionDefaultsProfileRef.current = sectionKey;
 
     if (!manuallyChangedSectionsRef.current.materials) setMaterialsOpen(sectionContent.materials);
     if (!manuallyChangedSectionsRef.current.credits) setCreditsOpen(sectionContent.credits);
@@ -685,7 +686,7 @@ const ProfilePage: React.FC = () => {
     if (!manuallyChangedSectionsRef.current.projects) setProjectsOpen(sectionContent.projects);
     if (!manuallyChangedSectionsRef.current.posts) setPostsOpen(sectionContent.posts);
     if (!manuallyChangedSectionsRef.current.savedShows) setSavedShowsOpen(sectionContent.savedShows);
-  }, [resolvedUserId, sectionContent]);
+  }, [resolvedUserId, isOwnProfile, sectionContent]);
 
   const handleSectionOpenChange =
     (section: ProfileSectionKey, setOpen: React.Dispatch<React.SetStateAction<boolean>>) => (open: boolean) => {
