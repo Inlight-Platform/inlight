@@ -162,6 +162,8 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
                 style={{
                   objectFit: 'cover',
                   objectPosition: `${positionX}% ${positionY}%`,
+                  transform: `scale(${zoom / 100})`,
+                  transformOrigin: `${positionX}% ${positionY}%`,
                 }}
                 draggable={false}
               />
