@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO, isPast } from 'date-fns';
-import { BookmarkX, Clock, MapPin, Theater } from 'lucide-react';
+import { BookmarkX, Clock, Film, MapPin, Theater } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/card';
@@ -47,7 +47,7 @@ interface ShowGridProps {
   saves: WatchlistRow[];
   faded?: boolean;
   isOwnProfile: boolean;
-  onRemove: (showId: string) => void;
+  onRemove: (showId: string, isFilm: boolean) => void;
   removing: boolean;
 }
 
@@ -56,6 +56,7 @@ const ShowGrid: React.FC<ShowGridProps> = ({ saves, faded, isOwnProfile, onRemov
     {saves.map((save) => {
       const show = { ...save, id: save.show_id };
       const closing = closingLabel(save.run_end);
+      const isFilm = save.show_type === 'film';
       return (
         <Card
           key={save.id}
@@ -66,7 +67,7 @@ const ShowGrid: React.FC<ShowGridProps> = ({ saves, faded, isOwnProfile, onRemov
               variant="secondary"
               size="icon"
               className="absolute right-1.5 top-1.5 z-10 h-6 w-6 bg-background/90 text-muted-foreground shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => onRemove(save.show_id)}
+              onClick={() => onRemove(save.show_id, isFilm)}
               disabled={removing}
               title="Remove from watchlist"
             >
@@ -82,6 +83,8 @@ const ShowGrid: React.FC<ShowGridProps> = ({ saves, faded, isOwnProfile, onRemov
                 className="w-full h-full object-cover"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
+            ) : isFilm ? (
+              <Film className="h-8 w-8 text-muted-foreground/40" />
             ) : (
               <Theater className="h-8 w-8 text-muted-foreground/40" />
             )}
@@ -120,9 +123,9 @@ const ShowGrid: React.FC<ShowGridProps> = ({ saves, faded, isOwnProfile, onRemov
 );
 
 const emptyMessage = (history: boolean, isOwnProfile: boolean) => {
-  if (history) return 'No past shows yet.';
-  if (isOwnProfile) return 'Bookmark shows in Industry Now and they\'ll appear here.';
-  return 'No saved shows.';
+  if (history) return 'No past shows or films yet.';
+  if (isOwnProfile) return 'Bookmark shows and films in Industry Now and they\'ll appear here.';
+  return 'No saved shows or films.';
 };
 
 export const SavedShows: React.FC<SavedShowsProps> = ({
@@ -149,12 +152,21 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
   const historyShows = rawSaves.filter(s => s.run_end && isPast(parseISO(s.run_end)));
 
   const unsaveMutation = useMutation({
-    mutationFn: async (showId: string) => {
+    mutationFn: async ({ showId, isFilm }: { showId: string; isFilm: boolean }) => {
       if (!user?.id) throw new Error('Must be logged in');
-      const { error } = await (supabase.rpc as any)('remove_saved_show', { p_show_id: showId });
-      if (error) throw error;
+      if (isFilm) {
+        const { error } = await supabase
+          .from('saved_films')
+          .delete()
+          .eq('film_id', showId)
+          .eq('user_id', user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase.rpc as any)('remove_saved_show', { p_show_id: showId });
+        if (error) throw error;
+      }
     },
-    onMutate: async (showId) => {
+    onMutate: async ({ showId }) => {
       await queryClient.cancelQueries({ queryKey: ['saved-shows-profile', userId] });
       const previous = queryClient.getQueryData<WatchlistRow[]>(['saved-shows-profile', userId]);
       queryClient.setQueryData<WatchlistRow[]>(['saved-shows-profile', userId],
@@ -162,16 +174,20 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
       );
       return { previous };
     },
-    onSuccess: () => {
+    onSuccess: (_, { isFilm }) => {
       toast.success('Removed from watchlist');
       queryClient.invalidateQueries({ queryKey: ['saved-shows-profile', userId] });
-      queryClient.invalidateQueries({ queryKey: ['saved-show-ids', userId] });
+      if (isFilm) {
+        queryClient.invalidateQueries({ queryKey: ['saved-film-ids', userId] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['saved-show-ids', userId] });
+      }
     },
-    onError: (_err, _showId, context) => {
+    onError: (_err, _vars, context) => {
       if (context?.previous !== undefined) {
         queryClient.setQueryData(['saved-shows-profile', userId], context.previous);
       }
-      toast.error('Failed to remove show');
+      toast.error('Failed to remove');
     },
   });
 
@@ -240,7 +256,7 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
               : <ShowGrid
                   saves={activeShows}
                   isOwnProfile={isOwnProfile}
-                  onRemove={(id) => unsaveMutation.mutate(id)}
+                  onRemove={(id, isFilm) => unsaveMutation.mutate({ showId: id, isFilm })}
                   removing={unsaveMutation.isPending}
                 />
             }
@@ -253,7 +269,7 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
                   saves={historyShows}
                   faded
                   isOwnProfile={isOwnProfile}
-                  onRemove={(id) => unsaveMutation.mutate(id)}
+                  onRemove={(id, isFilm) => unsaveMutation.mutate({ showId: id, isFilm })}
                   removing={unsaveMutation.isPending}
                 />
             }
