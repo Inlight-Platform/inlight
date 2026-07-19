@@ -70,7 +70,6 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   };
 
   const handleSave = () => {
-    console.log('[ImagePositioner] saving position', positionX, positionY);
     onSave(Math.round(positionX), Math.round(positionY));
     setOpen(false);
   };
@@ -171,9 +170,7 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
 
             {/* Saved result — no zoom */}
             <div>
-              <p className="text-xs text-muted-foreground mb-1.5">
-                Saved result — position: {Math.round(positionX)}%, {Math.round(positionY)}%
-              </p>
+              <p className="text-xs text-muted-foreground mb-1.5">Saved result (what the post will show)</p>
               <div
                 className="relative w-full overflow-hidden rounded-lg border border-border bg-muted"
                 style={{ aspectRatio: String(aspectRatio) }}
