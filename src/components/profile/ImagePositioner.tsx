@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Move, Check, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { Move, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -33,7 +33,9 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   const [positionY, setPositionY] = useState(initialPositionY);
   const [zoom, setZoom] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
+  const dragRef = useRef<{
+    startX: number; startY: number; startPosX: number; startPosY: number;
+  } | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -79,6 +81,20 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
 
   const objectPosition = `${positionX}% ${positionY}%`;
 
+  // Zoom by expanding the image beyond the container and offsetting it
+  // so the current positionX/Y stays anchored inside the visible area
+  const imgStyle: React.CSSProperties = {
+    position: 'absolute',
+    width: `${zoom * 100}%`,
+    height: `${zoom * 100}%`,
+    left: `${positionX * (1 - zoom)}%`,
+    top: `${positionY * (1 - zoom)}%`,
+    objectFit: 'cover',
+    objectPosition,
+    pointerEvents: 'none',
+    userSelect: 'none',
+  };
+
   return (
     <>
       {trigger ? (
@@ -105,11 +121,11 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
           </DialogHeader>
 
           <div className="py-2 space-y-3">
-            {/* Drag area */}
+            {/* Drag + zoom area */}
             <div
               ref={containerRef}
               className="relative w-full overflow-hidden rounded-lg border border-border cursor-grab active:cursor-grabbing bg-muted select-none"
-              style={{ paddingBottom: `${100 / aspectRatio}%` }}
+              style={{ aspectRatio: String(aspectRatio) }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
@@ -118,55 +134,52 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
               <img
                 src={imageUrl}
                 alt="Positioning view"
-                className="absolute w-full h-full pointer-events-none"
-                style={{
-                  objectFit: 'cover',
-                  objectPosition,
-                  transform: `scale(${zoom})`,
-                  transformOrigin: objectPosition,
-                }}
+                style={imgStyle}
                 draggable={false}
               />
             </div>
 
             {/* Zoom controls */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Zoom</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setZoom((z) => Math.max(1, +(z - 0.25).toFixed(2)))}
-                disabled={zoom <= 1}
-              >
-                <ZoomOut className="w-3.5 h-3.5" />
-              </Button>
-              <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(zoom * 100)}%</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))}
-                disabled={zoom >= 3}
-              >
-                <ZoomIn className="w-3.5 h-3.5" />
-              </Button>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Zoom: {Math.round(zoom * 100)}%</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-3"
+                  disabled={zoom <= 1}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setZoom((z) => Math.max(1, parseFloat((z - 0.25).toFixed(2))))}
+                >
+                  − Zoom out
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-3"
+                  disabled={zoom >= 3}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setZoom((z) => Math.min(3, parseFloat((z + 0.25).toFixed(2))))}
+                >
+                  + Zoom in
+                </Button>
+              </div>
             </div>
 
-            {/* Saved result preview — no zoom */}
+            {/* Saved result — no zoom */}
             <div>
-              <p className="text-xs text-muted-foreground mb-1.5">Saved result</p>
+              <p className="text-xs text-muted-foreground mb-1.5">Saved result (what the post will show)</p>
               <div
                 className="relative w-full overflow-hidden rounded-lg border border-border bg-muted"
-                style={{ paddingBottom: `${100 / aspectRatio}%` }}
+                style={{ aspectRatio: String(aspectRatio) }}
               >
                 <img
                   src={imageUrl}
                   alt="Saved result preview"
-                  className="absolute w-full h-full pointer-events-none"
-                  style={{ objectFit: 'cover', objectPosition }}
+                  className="absolute inset-0 w-full h-full"
+                  style={{ objectFit: 'cover', objectPosition, pointerEvents: 'none' }}
                   draggable={false}
                 />
               </div>
