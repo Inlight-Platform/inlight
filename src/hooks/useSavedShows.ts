@@ -31,12 +31,21 @@ export const useSavedShows = () => {
         .insert({ user_id: user.id, show_id: showId });
       if (error) throw error;
     },
+    onMutate: async (showId) => {
+      await queryClient.cancelQueries({ queryKey: ['saved-show-ids', user?.id] });
+      const previous = queryClient.getQueryData<string[]>(['saved-show-ids', user?.id]);
+      queryClient.setQueryData<string[]>(['saved-show-ids', user?.id], (old = []) => [...old, showId]);
+      return { previous };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saved-show-ids'] });
       queryClient.invalidateQueries({ queryKey: ['my-saved-shows'] });
       toast.success('Added to your watchlist! 🎭');
     },
-    onError: () => {
+    onError: (_err, _showId, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(['saved-show-ids', user?.id], context.previous);
+      }
       toast.error('Could not save show');
     },
   });

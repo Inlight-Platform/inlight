@@ -591,7 +591,7 @@ const StageWhisperPage: React.FC = () => {
                     {archiveMode ? <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" /> : <Film className="w-12 h-12 text-muted-foreground mx-auto mb-4" />}
                     <p className="text-muted-foreground">{archiveMode ? 'No archived films.' : 'No films data available right now.'}</p>
                   </div> : <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {filmsToShow.map(film => <Card key={film.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer" onClick={() => setSelectedFilm(film)}>
+                    {filmsToShow.map(film => <Card key={film.id} className={`overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer${archiveMode ? ' opacity-60' : ''}`} onClick={() => setSelectedFilm(film)}>
                         <div className="aspect-[2/3] relative bg-muted">
                           {film.poster_url ? <img src={film.poster_url} alt={film.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
                               <Film className="w-12 h-12 text-muted-foreground" />
