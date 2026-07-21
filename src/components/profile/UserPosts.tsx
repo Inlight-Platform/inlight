@@ -10,6 +10,8 @@ interface UserPostsProps {
 }
 
 export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
+  const navigate = useNavigate();
+
   // Fetch all posts by this user
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['user-posts', userId],
@@ -140,8 +142,6 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
       </div>
     );
   }
-
-  const navigate = useNavigate();
 
   return (
     <div>
