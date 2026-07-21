@@ -82,7 +82,8 @@ const sizeClasses: Record<BentoSize, string> = {
 
 export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClick }) => {
   const meta = typeMeta(item);
-  const hasImage = !!item.image_url;
+  const imageUrls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
+  const hasImage = imageUrls.length > 0;
   const showAnonymous = item.type === 'show' && item.is_anonymous;
   const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
@@ -110,7 +111,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
         {hasImage && (
           <>
             <img
-              src={item.image_url!}
+              src={imageUrls[0]!}
               alt={title}
               loading="lazy"
               style={{ objectPosition }}
@@ -118,6 +119,12 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[hsl(222_45%_5%)] via-[hsl(222_45%_5%)]/60 to-transparent" />
           </>
+        )}
+        {imageUrls.length > 1 && (
+          <div className="absolute top-4 right-4 flex items-center gap-1 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full z-10">
+            <span>📷</span>
+            <span>{imageUrls.length}</span>
+          </div>
         )}
         <div className="relative flex h-full flex-col justify-end p-6 sm:p-10">
           <div className="mb-4 flex items-center gap-3">
@@ -168,7 +175,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
           {hasImage && (
             <div className="mb-6 h-40 overflow-hidden rounded-2xl transition-transform duration-500 group-hover:scale-[0.97]">
               <img
-                src={item.image_url!}
+                src={imageUrls[0]!}
                 alt={title}
                 style={{ objectPosition }}
                 className="h-full w-full object-cover"
@@ -241,7 +248,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
           {hasImage ? (
             <div className="mb-3 flex-1 overflow-hidden rounded-xl opacity-80 transition-opacity group-hover:opacity-100">
               <img
-                src={item.image_url!}
+                src={imageUrls[0]!}
                 alt={title}
                 style={{ objectPosition }}
                 className="h-full w-full object-cover"
@@ -285,7 +292,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
           <div className="h-20 w-20 flex-shrink-0 -rotate-3 overflow-hidden rounded-2xl bg-muted transition-transform duration-500 group-hover:rotate-0">
             {hasImage ? (
               <img
-                src={item.image_url!}
+                src={imageUrls[0]!}
                 alt={title}
                 style={{ objectPosition }}
                 className="h-full w-full object-cover"

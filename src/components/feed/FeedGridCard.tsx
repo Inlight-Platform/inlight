@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { FeedItemData } from './FeedItem';
+import { ImageCarousel } from './ImageCarousel';
 
 interface FeedGridCardProps {
   item: FeedItemData;
@@ -35,8 +36,8 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
     }
   };
 
-  // Show image area for ANY item that has an image (including update posts), plus projects/events/shows (which fall back to a placeholder icon)
-  const hasImage = !!item.image_url;
+  const imageUrls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
+  const hasImage = imageUrls.length > 0;
   const showImage = hasImage || item.type === 'project' || item.type === 'event' || item.type === 'show';
   const showAnonymous = item.type === 'show' && item.is_anonymous;
   const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
@@ -56,13 +57,15 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
       {showImage && (
         <div className="w-full h-32 overflow-hidden flex-shrink-0 bg-muted">
           {hasImage ? (
-            <img
-              src={item.image_url!}
-              alt={item.title || item.content?.slice(0, 40) || 'Feed image'}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              style={{ objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` }}
-              loading="lazy"
-            />
+            <div className="w-full h-full" onClick={(e) => e.stopPropagation()}>
+              <ImageCarousel
+                urls={imageUrls}
+                positionX={item.image_position_x ?? 50}
+                positionY={item.image_position_y ?? 50}
+                className="w-full h-32 rounded-none"
+                imageClassName="h-32 max-h-none object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+            </div>
           ) : (
             <div className="w-full h-full bg-muted/50 flex items-center justify-center">
               <div className="p-3 rounded-full bg-background/80">
