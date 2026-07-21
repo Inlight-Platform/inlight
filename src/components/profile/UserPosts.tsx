@@ -1,16 +1,13 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { FeedItemData } from '@/components/feed/FeedItem';
-import { FeedGridCard } from '@/components/feed/FeedGridCard';
+import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
 
 interface UserPostsProps {
   userId: string;
 }
 
 export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
-  const navigate = useNavigate();
 
   // Fetch all posts by this user
   const { data: posts = [], isLoading } = useQuery({
@@ -152,14 +149,11 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {posts.map((post) => (
-            <FeedGridCard
+            <FeedItem
               key={post.id}
               item={post}
-              onClick={() => {
-                if (post.type === 'project') navigate(`/projects/${post.id}`);
-                else if (post.type === 'event') navigate('/events');
-                else if (post.type === 'open_role' && post.project_id) navigate(`/projects/${post.project_id}`);
-              }}
+              networkDegree={null}
+              compactSquare
             />
           ))}
         </div>
