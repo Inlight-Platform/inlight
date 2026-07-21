@@ -451,6 +451,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 compactSquare && 'h-full max-h-none object-cover',
                 imageClassName
               )}
+              style={compactSquare ? { objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` } : undefined}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />
           </div>
         )}
@@ -503,8 +505,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
           </div>
         )}
 
-        {/* Event details */}
-        {item.type === 'event' && (
+        {/* Event details — hidden in compact thumbnail mode */}
+        {item.type === 'event' && !compactSquare && (
           <div className="space-y-3 mt-2">
             <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-muted/50">
               {item.event_date && (

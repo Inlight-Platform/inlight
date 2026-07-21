@@ -147,6 +147,7 @@ export const PublicMediaGallery: React.FC<PublicMediaGalleryProps> = ({
                     src={photo.url}
                     alt={photo.file_name}
                     className="w-full h-full object-cover rounded-lg transition-opacity group-hover:opacity-90"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                   />
                 </div>
               ))}

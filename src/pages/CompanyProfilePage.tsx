@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useCompanyFollows, Company } from '@/hooks/useCompanyFollows';
-import { Building2, Globe, MapPin, Users, ChevronLeft, Settings, UserPlus, ChevronDown, Plus, Camera, Loader2, Trash2, FolderKanban, Archive, Image, Sparkles, Palette, X, Copy } from 'lucide-react';
+import { Building2, Globe, MapPin, Users, ChevronLeft, Settings, UserPlus, ChevronDown, Plus, Camera, Loader2, Trash2, FolderKanban, Archive, Image, Sparkles, Palette, X, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -1118,7 +1118,7 @@ const CompanyProfilePage: React.FC = () => {
       <header className="relative">
         <div className="relative h-[200px] sm:h-[280px] md:h-[350px] lg:h-[450px] overflow-hidden">
           {company.cover_image_url ? (
-            <img src={company.cover_image_url} alt="" className="w-full h-full object-contain" style={{ background: `linear-gradient(135deg, ${brandPrimary}22, ${brandAccent}22)` }} />
+            <img src={company.cover_image_url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
           ) : (
             <div
               className="w-full h-full"
@@ -1137,7 +1137,7 @@ const CompanyProfilePage: React.FC = () => {
           <div className="absolute -top-16 sm:-top-20 left-4 sm:left-6 lg:left-8">
             <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-[120px] lg:h-[120px] rounded-full border-4 border-background bg-card flex items-center justify-center shadow-card overflow-hidden">
               {company.logo_url ? (
-                <img src={company.logo_url} alt={company.name} className="w-full h-full rounded-full object-cover" />
+                <img src={company.logo_url} alt={company.name} className="w-full h-full rounded-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
               ) : (
                 <Building2 className="w-10 h-10 text-primary" />
               )}
@@ -1179,31 +1179,19 @@ const CompanyProfilePage: React.FC = () => {
 
             {/* Action buttons */}
             <div className="flex gap-2 flex-wrap">
-              {companyId && (
-                <div className="inline-flex overflow-hidden rounded-full border border-input bg-background">
-                  <Button
-                    variant="ghost"
-                    className="rounded-none gap-2 px-4"
-                    onClick={() => navigate(`/c/${companyId}`)}
-                  >
-                    <Globe className="w-4 h-4" />
-                    View page
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-none border-l border-input"
-                    aria-label="Copy public company page link"
-                    title="Copy link"
-                    onClick={() => {
-                      const url = `${window.location.origin}/c/${companyId}`;
-                      navigator.clipboard.writeText(url);
-                      toast.success('Copied link');
-                    }}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
+              {canManageCompany && companyId && (
+                <Button
+                  variant="outline"
+                  className="rounded-full gap-2"
+                  onClick={() => {
+                    const url = `${window.location.origin}/c/${companyId}`;
+                    navigator.clipboard.writeText(url);
+                    toast.success('Public link copied');
+                  }}
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  Copy public link
+                </Button>
               )}
               {!canManageCompany && companyId && (
                 <Button

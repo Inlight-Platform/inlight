@@ -8,6 +8,7 @@ interface UserPostsProps {
 }
 
 export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
+
   // Fetch all posts by this user
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['user-posts', userId],
@@ -72,6 +73,8 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
         user_id: post.user_id,
         content: post.content,
         image_url: post.image_url,
+        image_position_x: post.image_position_x,
+        image_position_y: post.image_position_y,
         link_url: post.link_url,
         link_title: post.link_title,
         created_at: post.created_at,

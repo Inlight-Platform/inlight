@@ -43,7 +43,7 @@ interface MediaUploaderProps {
 }
 
 const acceptTypes: Record<MediaType, string> = {
-  photo: 'image/jpeg,image/png,image/gif,image/webp',
+  photo: 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/avif,image/heic,image/heif',
   video: 'video/mp4,video/webm,video/quicktime',
   audio: 'audio/mpeg,audio/wav,audio/mp3',
   document: 'application/pdf',

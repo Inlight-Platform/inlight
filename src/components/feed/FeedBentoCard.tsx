@@ -114,6 +114,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               alt={title}
               loading="lazy"
               style={{ objectPosition }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               className="absolute inset-0 h-full w-full object-cover opacity-60 grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[hsl(222_45%_5%)] via-[hsl(222_45%_5%)]/60 to-transparent" />
@@ -173,6 +174,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                 style={{ objectPosition }}
                 className="h-full w-full object-cover"
                 loading="lazy"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
             </div>
           )}
@@ -246,6 +248,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                 style={{ objectPosition }}
                 className="h-full w-full object-cover"
                 loading="lazy"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
             </div>
           ) : subtitle ? (
@@ -290,6 +293,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                 style={{ objectPosition }}
                 className="h-full w-full object-cover"
                 loading="lazy"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-foreground/60">{meta.icon}</div>
