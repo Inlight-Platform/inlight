@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ImageCarousel } from './ImageCarousel';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -438,38 +439,14 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         {item.type !== 'open_role' && (() => {
           const urls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
           if (!urls.length) return null;
-          const posStyle = { objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` };
           return (
             <div className={cn('mb-3', compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1', compactSquare && compactTextExpanded && 'aspect-square mb-0', imageContainerClassName)}>
-              {urls.length === 1 ? (
-                <div className="rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-                  <img
-                    src={urls[0]}
-                    alt={item.title || 'Post image'}
-                    className={cn('w-full max-h-[32rem] object-contain', compactSquare && 'h-full max-h-none object-cover', imageClassName)}
-                    style={posStyle}
-                  />
-                </div>
-              ) : urls.length === 2 ? (
-                <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
-                  {urls.map((u, i) => (
-                    <img key={i} src={u} alt={`Image ${i + 1}`} className="w-full h-48 object-cover" />
-                  ))}
-                </div>
-              ) : urls.length === 3 ? (
-                <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
-                  <img src={urls[0]} alt="Image 1" className="col-span-2 w-full h-48 object-cover" />
-                  {urls.slice(1).map((u, i) => (
-                    <img key={i} src={u} alt={`Image ${i + 2}`} className="w-full h-36 object-cover" />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
-                  {urls.slice(0, 4).map((u, i) => (
-                    <img key={i} src={u} alt={`Image ${i + 1}`} className="w-full h-36 object-cover" />
-                  ))}
-                </div>
-              )}
+              <ImageCarousel
+                urls={urls}
+                positionX={item.image_position_x ?? 50}
+                positionY={item.image_position_y ?? 50}
+                imageClassName={cn(compactSquare && 'h-full max-h-none object-cover', imageClassName)}
+              />
             </div>
           );
         })()}

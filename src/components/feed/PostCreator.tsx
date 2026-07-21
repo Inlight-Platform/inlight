@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import useEmblaCarousel from 'embla-carousel-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus } from 'lucide-react';
+import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -55,8 +56,26 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const { data: myGroups = [] } = useMyGroups();
   const [linkTitle, setLinkTitle] = useState('');
   const [customQuestion, setCustomQuestion] = useState('');
-  const [positionX, setPositionX] = useState(50);
-  const [positionY, setPositionY] = useState(50);
+  const [imagePositions, setImagePositions] = useState<{x: number; y: number}[]>([]);
+
+  // Composer carousel state
+  const [composerEmblaRef, composerEmblaApi] = useEmblaCarousel({ loop: false });
+  const [composerIndex, setComposerIndex] = useState(0);
+  const [composerCanPrev, setComposerCanPrev] = useState(false);
+  const [composerCanNext, setComposerCanNext] = useState(false);
+  const onComposerSelect = useCallback(() => {
+    if (!composerEmblaApi) return;
+    setComposerIndex(composerEmblaApi.selectedScrollSnap());
+    setComposerCanPrev(composerEmblaApi.canScrollPrev());
+    setComposerCanNext(composerEmblaApi.canScrollNext());
+  }, [composerEmblaApi]);
+  useEffect(() => {
+    if (!composerEmblaApi) return;
+    onComposerSelect();
+    composerEmblaApi.on('select', onComposerSelect);
+    composerEmblaApi.on('reInit', onComposerSelect);
+    return () => { composerEmblaApi.off('select', onComposerSelect); };
+  }, [composerEmblaApi, onComposerSelect]);
   const [isPaid, setIsPaid] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
   const [serviceCategory, setServiceCategory] = useState<string>('');
@@ -83,8 +102,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setPostType('update');
     setVisibility('public');
     setSelectedRecipients([]);
-    setPositionX(50);
-    setPositionY(50);
+    setImagePositions([]);
     setIsPaid(false);
     setTicketPrice('');
     setServiceCategory('');
@@ -106,8 +124,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             content: prefixedContent,
             image_url: imageUrls[0] || null,
             image_urls: imageUrls.length > 0 ? imageUrls : null,
-            image_position_x: positionX,
-            image_position_y: positionY,
+            image_position_x: imagePositions[0]?.x ?? 50,
+            image_position_y: imagePositions[0]?.y ?? 50,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -217,8 +235,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             content: `🎯 **${title.trim()}**\n\n${content.trim()}${location ? `\n\n📍 ${location}` : ''}`,
             image_url: imageUrls[0] || null,
             image_urls: imageUrls.length > 0 ? imageUrls : null,
-            image_position_x: positionX,
-            image_position_y: positionY,
+            image_position_x: imagePositions[0]?.x ?? 50,
+            image_position_y: imagePositions[0]?.y ?? 50,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -530,75 +548,101 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                     </div>
                   )}
                   
-                  {/* Multi-image preview — exact same layout as FeedItem */}
+                  {/* Image carousel preview with per-image crop + delete */}
                   {imageUrls.length > 0 && (
-                    <div>
-                      {imageUrls.length === 1 ? (
-                        <div className="relative rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-                          <img
-                            src={imageUrls[0]}
-                            alt="Image 1"
-                            className="w-full max-h-[32rem] object-contain"
-                            style={{ objectPosition: `${positionX}% ${positionY}%` }}
-                          />
-                          <div className="absolute top-1.5 right-1.5 flex gap-1">
-                            <ImagePositioner
-                              imageUrl={imageUrls[0]}
-                              initialPositionX={positionX}
-                              initialPositionY={positionY}
-                              aspectRatio={16 / 9}
-                              onSave={(x, y) => { setPositionX(x); setPositionY(y); }}
-                              trigger={
-                                <Button variant="secondary" size="icon" className="h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-background">
-                                  <Move className="h-3.5 w-3.5" />
-                                </Button>
-                              }
-                            />
-                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => setImageUrls([])}>
-                              <X className="h-3.5 w-3.5" />
-                            </Button>
+                    <div className="space-y-1.5">
+                      <div className="relative rounded-lg overflow-hidden">
+                        <div ref={composerEmblaRef} className="overflow-hidden">
+                          <div className="flex">
+                            {imageUrls.map((url, idx) => {
+                              const pos = imagePositions[idx] ?? { x: 50, y: 50 };
+                              return (
+                                <div key={url} className="flex-none w-full relative">
+                                  <img
+                                    src={url}
+                                    alt={`Image ${idx + 1}`}
+                                    className="w-full h-64 object-cover"
+                                    style={{ objectPosition: `${pos.x}% ${pos.y}%` }}
+                                  />
+                                  {/* Per-image controls */}
+                                  <div className="absolute top-1.5 right-1.5 flex gap-1">
+                                    <ImagePositioner
+                                      imageUrl={url}
+                                      initialPositionX={pos.x}
+                                      initialPositionY={pos.y}
+                                      aspectRatio={16 / 9}
+                                      onSave={(x, y) => setImagePositions((prev) => {
+                                        const next = [...prev];
+                                        next[idx] = { x, y };
+                                        return next;
+                                      })}
+                                      trigger={
+                                        <Button variant="secondary" size="icon" className="h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-background">
+                                          <Move className="h-3.5 w-3.5" />
+                                        </Button>
+                                      }
+                                    />
+                                    <Button
+                                      variant="destructive"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setImageUrls((p) => p.filter((_, i) => i !== idx));
+                                        setImagePositions((p) => p.filter((_, i) => i !== idx));
+                                      }}
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                  {/* Slide counter */}
+                                  <div className="absolute bottom-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                    {idx + 1} / {imageUrls.length}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                      ) : imageUrls.length === 2 ? (
-                        <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
-                          {imageUrls.map((url, idx) => (
-                            <div key={url} className="relative">
-                              <img src={url} alt={`Image ${idx + 1}`} className="w-full h-48 object-cover" />
-                              <Button variant="destructive" size="icon" className="absolute top-1.5 right-1.5 h-7 w-7" onClick={() => setImageUrls((p) => p.filter((_, i) => i !== idx))}>
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : imageUrls.length === 3 ? (
-                        <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
-                          {imageUrls.map((url, idx) => (
-                            <div key={url} className={`relative ${idx === 0 ? 'col-span-2' : ''}`}>
-                              <img src={url} alt={`Image ${idx + 1}`} className={`w-full object-cover ${idx === 0 ? 'h-48' : 'h-36'}`} />
-                              <Button variant="destructive" size="icon" className="absolute top-1.5 right-1.5 h-7 w-7" onClick={() => setImageUrls((p) => p.filter((_, i) => i !== idx))}>
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
-                          {imageUrls.map((url, idx) => (
-                            <div key={url} className="relative">
-                              <img src={url} alt={`Image ${idx + 1}`} className="w-full h-36 object-cover" />
-                              <Button variant="destructive" size="icon" className="absolute top-1.5 right-1.5 h-7 w-7" onClick={() => setImageUrls((p) => p.filter((_, i) => i !== idx))}>
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
+
+                        {composerCanPrev && (
+                          <button
+                            type="button"
+                            onClick={() => composerEmblaApi?.scrollPrev()}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {composerCanNext && (
+                          <button
+                            type="button"
+                            onClick={() => composerEmblaApi?.scrollNext()}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Dot indicators */}
+                      {imageUrls.length > 1 && (
+                        <div className="flex justify-center gap-1.5">
+                          {imageUrls.map((_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => composerEmblaApi?.scrollTo(i)}
+                              className={`h-1.5 rounded-full transition-all duration-200 ${i === composerIndex ? 'w-4 bg-foreground' : 'w-1.5 bg-muted-foreground/40'}`}
+                            />
                           ))}
                         </div>
                       )}
-                      {/* Add more button — outside the grid so it never disrupts the layout */}
+
                       {imageUrls.length < 4 && (
                         <button
                           type="button"
                           onClick={() => imageUploaderRef.current?.trigger()}
-                          className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                         >
                           <Plus className="h-3.5 w-3.5" />
                           Add photo ({4 - imageUrls.length} remaining)
@@ -636,7 +680,10 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                     <ImageUploader
                       ref={imageUploaderRef}
                       userId={user.id}
-                      onImageUploaded={(url) => setImageUrls((prev) => [...prev, url])}
+                      onImageUploaded={(url) => {
+                        setImageUrls((prev) => [...prev, url]);
+                        setImagePositions((prev) => [...prev, { x: 50, y: 50 }]);
+                      }}
                       compact
                       currentCount={imageUrls.length}
                     />
