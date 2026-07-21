@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Calendar,
@@ -8,6 +8,8 @@ import {
   Theater,
   UserPlus,
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -84,6 +86,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
   const meta = typeMeta(item);
   const imageUrls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
   const hasImage = imageUrls.length > 0;
+  const [heroIdx, setHeroIdx] = useState(0);
   const showAnonymous = item.type === 'show' && item.is_anonymous;
   const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
@@ -111,7 +114,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
         {hasImage && (
           <>
             <img
-              src={imageUrls[0]!}
+              src={imageUrls[heroIdx]}
               alt={title}
               loading="lazy"
               style={{ objectPosition }}
@@ -121,10 +124,29 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
           </>
         )}
         {imageUrls.length > 1 && (
-          <div className="absolute top-4 right-4 flex items-center gap-1 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full z-10">
-            <span>📷</span>
-            <span>{imageUrls.length}</span>
-          </div>
+          <>
+            <button
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setHeroIdx((i) => (i - 1 + imageUrls.length) % imageUrls.length); }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setHeroIdx((i) => (i + 1) % imageUrls.length); }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
+              {imageUrls.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.stopPropagation(); setHeroIdx(i); }}
+                  className={`h-1.5 rounded-full transition-all duration-200 ${i === heroIdx ? 'w-4 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/70'}`}
+                />
+              ))}
+            </div>
+          </>
         )}
         <div className="relative flex h-full flex-col justify-end p-6 sm:p-10">
           <div className="mb-4 flex items-center gap-3">
