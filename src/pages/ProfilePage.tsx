@@ -18,6 +18,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
@@ -267,6 +280,8 @@ const ProfilePage: React.FC = () => {
   const updateMaterialVisibility = useStore((s) => s.updateMaterialVisibility);
 
   const [newBadge, setNewBadge] = useState("");
+  const [affiliationPopoverOpen, setAffiliationPopoverOpen] = useState(false);
+  const [affiliationSearch, setAffiliationSearch] = useState("");
   const [affiliationRequestOpen, setAffiliationRequestOpen] = useState(false);
   const [affiliationRequestName, setAffiliationRequestName] = useState("");
   const [affiliationRequestContext, setAffiliationRequestContext] = useState("");
@@ -1006,6 +1021,17 @@ const ProfilePage: React.FC = () => {
   const submitAffiliationRequest = useMutation({
     mutationFn: async ({ name, context }: { name: string; context: string }) => {
       if (!authUser?.id) throw new Error("Not authenticated");
+
+      const { data: existing } = await supabase
+        .from("affiliation_requests")
+        .select("id")
+        .eq("user_id", authUser.id)
+        .eq("status", "pending")
+        .ilike("requested_name", name.trim())
+        .maybeSingle();
+
+      if (existing) throw new Error("duplicate");
+
       const { error } = await supabase.from("affiliation_requests").insert({
         user_id: authUser.id,
         requested_name: name.trim(),
@@ -1019,8 +1045,12 @@ const ProfilePage: React.FC = () => {
       setAffiliationRequestName("");
       setAffiliationRequestContext("");
     },
-    onError: () => {
-      toast.error("Failed to submit request. Please try again.");
+    onError: (err: Error) => {
+      if (err.message === "duplicate") {
+        toast.error("You already have a pending request for this affiliation.");
+      } else {
+        toast.error("Failed to submit request. Please try again.");
+      }
     },
   });
 
@@ -1548,8 +1578,8 @@ const ProfilePage: React.FC = () => {
                     </div>
                   ))}
                   {isOwnProfile && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                    <Popover open={affiliationPopoverOpen} onOpenChange={(open) => { setAffiliationPopoverOpen(open); if (!open) setAffiliationSearch(""); }}>
+                      <PopoverTrigger asChild>
                         <button
                           type="button"
                           className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary/80 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -1557,34 +1587,53 @@ const ProfilePage: React.FC = () => {
                           <Plus className="w-3 h-3" />
                           Affiliation
                         </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-56 bg-popover border border-border z-50 max-h-72 overflow-y-auto">
-                        {studioBadgeOptions
-                          .filter((option) => !displayBadges?.includes(option.tag.toLowerCase()))
-                          .map((option) => (
-                            <DropdownMenuItem
-                              key={option.tag}
-                              onClick={() => handleAddBadgeToDb(option.tag)}
-                              className="cursor-pointer"
-                            >
-                              <span className="text-primary font-medium">{option.tag}</span>
-                              <span className="ml-2 text-muted-foreground text-sm">{option.label}</span>
-                            </DropdownMenuItem>
-                          ))}
-                        {studioBadgeOptions.filter((option) => !displayBadges?.includes(option.tag.toLowerCase()))
-                          .length === 0 && (
-                          <DropdownMenuItem disabled className="text-muted-foreground">
-                            All affiliations added
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                          className="cursor-pointer text-muted-foreground text-xs border-t mt-1 pt-2"
-                          onClick={() => setAffiliationRequestOpen(true)}
-                        >
-                          Is your affiliation not listed? Request to add it.
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      </PopoverTrigger>
+                      <PopoverContent align="start" className="w-64 p-0 bg-popover border border-border z-50">
+                        <Command shouldFilter={false}>
+                          <CommandInput
+                            placeholder="Search affiliations..."
+                            value={affiliationSearch}
+                            onValueChange={setAffiliationSearch}
+                          />
+                          <CommandList className="max-h-52">
+                            {(() => {
+                              const filtered = studioBadgeOptions.filter(
+                                (option) =>
+                                  !displayBadges?.includes(option.tag.toLowerCase()) &&
+                                  (affiliationSearch === "" ||
+                                    option.label.toLowerCase().includes(affiliationSearch.toLowerCase()) ||
+                                    option.tag.toLowerCase().includes(affiliationSearch.toLowerCase()))
+                              );
+                              if (filtered.length === 0) {
+                                return <CommandEmpty className="text-muted-foreground py-3 text-center text-sm">No affiliations found.</CommandEmpty>;
+                              }
+                              return (
+                                <CommandGroup>
+                                  {filtered.map((option) => (
+                                    <CommandItem
+                                      key={option.tag}
+                                      onSelect={() => { handleAddBadgeToDb(option.tag); setAffiliationPopoverOpen(false); setAffiliationSearch(""); }}
+                                      className="cursor-pointer"
+                                    >
+                                      <span className="text-primary font-medium mr-2">{option.tag}</span>
+                                      <span className="text-muted-foreground text-sm truncate">{option.label}</span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              );
+                            })()}
+                          </CommandList>
+                        </Command>
+                        <div className="border-t px-3 py-2">
+                          <button
+                            className="w-full text-left text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={() => { setAffiliationPopoverOpen(false); setAffiliationSearch(""); setAffiliationRequestOpen(true); }}
+                          >
+                            Is your affiliation not listed? Request to add it.
+                          </button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   )}
                 </div>
 

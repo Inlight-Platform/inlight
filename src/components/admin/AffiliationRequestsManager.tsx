@@ -75,12 +75,14 @@ const AffiliationRequestsManager: React.FC = () => {
       notes,
       tag,
       name,
+      userId,
     }: {
       id: string;
       action: 'approve' | 'deny';
       notes: string;
       tag: string;
       name: string;
+      userId: string;
     }) => {
       if (action === 'approve') {
         if (!tag.trim()) throw new Error('Badge tag is required to approve');
@@ -103,6 +105,13 @@ const AffiliationRequestsManager: React.FC = () => {
         })
         .eq('id', id);
       if (error) throw error;
+
+      await (supabase.rpc as any)('notify_affiliation_reviewed', {
+        p_user_id: userId,
+        p_action: action === 'approve' ? 'approved' : 'denied',
+        p_name: name,
+        p_notes: notes || null,
+      });
     },
     onSuccess: (_, { action }) => {
       queryClient.invalidateQueries({ queryKey: ['affiliation-requests'] });
@@ -254,6 +263,7 @@ const AffiliationRequestsManager: React.FC = () => {
                   notes: adminNotes,
                   tag: badgeTag,
                   name: reviewingRequest.requested_name,
+                  userId: reviewingRequest.user_id,
                 });
               }}
             >
