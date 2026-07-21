@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Calendar,
@@ -8,6 +8,8 @@ import {
   Theater,
   UserPlus,
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -82,7 +84,9 @@ const sizeClasses: Record<BentoSize, string> = {
 
 export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClick }) => {
   const meta = typeMeta(item);
-  const hasImage = !!item.image_url;
+  const imageUrls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
+  const hasImage = imageUrls.length > 0;
+  const [heroIdx, setHeroIdx] = useState(0);
   const showAnonymous = item.type === 'show' && item.is_anonymous;
   const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
@@ -110,13 +114,38 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
         {hasImage && (
           <>
             <img
-              src={item.image_url!}
+              src={imageUrls[heroIdx]}
               alt={title}
               loading="lazy"
               style={{ objectPosition }}
               className="absolute inset-0 h-full w-full object-cover opacity-60 grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[hsl(222_45%_5%)] via-[hsl(222_45%_5%)]/60 to-transparent" />
+          </>
+        )}
+        {imageUrls.length > 1 && (
+          <>
+            <button
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setHeroIdx((i) => (i - 1 + imageUrls.length) % imageUrls.length); }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setHeroIdx((i) => (i + 1) % imageUrls.length); }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
+              {imageUrls.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.stopPropagation(); setHeroIdx(i); }}
+                  className={`h-1.5 rounded-full transition-all duration-200 ${i === heroIdx ? 'w-4 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/70'}`}
+                />
+              ))}
+            </div>
           </>
         )}
         <div className="relative flex h-full flex-col justify-end p-6 sm:p-10">
@@ -168,7 +197,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
           {hasImage && (
             <div className="mb-6 h-40 overflow-hidden rounded-2xl transition-transform duration-500 group-hover:scale-[0.97]">
               <img
-                src={item.image_url!}
+                src={imageUrls[0]!}
                 alt={title}
                 style={{ objectPosition }}
                 className="h-full w-full object-cover"
@@ -241,7 +270,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
           {hasImage ? (
             <div className="mb-3 flex-1 overflow-hidden rounded-xl opacity-80 transition-opacity group-hover:opacity-100">
               <img
-                src={item.image_url!}
+                src={imageUrls[0]!}
                 alt={title}
                 style={{ objectPosition }}
                 className="h-full w-full object-cover"
@@ -285,7 +314,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
           <div className="h-20 w-20 flex-shrink-0 -rotate-3 overflow-hidden rounded-2xl bg-muted transition-transform duration-500 group-hover:rotate-0">
             {hasImage ? (
               <img
-                src={item.image_url!}
+                src={imageUrls[0]!}
                 alt={title}
                 style={{ objectPosition }}
                 className="h-full w-full object-cover"
