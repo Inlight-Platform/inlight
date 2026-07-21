@@ -56,6 +56,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [customQuestion, setCustomQuestion] = useState('');
   const [positionX, setPositionX] = useState(50);
   const [positionY, setPositionY] = useState(50);
+  const [imageZoom, setImageZoom] = useState(100);
   const [isPaid, setIsPaid] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
   const [serviceCategory, setServiceCategory] = useState<string>('');
@@ -84,6 +85,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setSelectedRecipients([]);
     setPositionX(50);
     setPositionY(50);
+    setImageZoom(100);
     setIsPaid(false);
     setTicketPrice('');
     setServiceCategory('');
@@ -106,6 +108,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             image_url: imageUrl || null,
             image_position_x: positionX,
             image_position_y: positionY,
+            image_zoom: imageZoom,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -216,6 +219,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             image_url: imageUrl || null,
             image_position_x: positionX,
             image_position_y: positionY,
+            image_zoom: imageZoom,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -536,17 +540,23 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                         src={imageUrl}
                         alt="Preview"
                         className="w-full h-full object-cover"
-                        style={{ objectPosition: `${positionX}% ${positionY}%` }}
+                        style={{
+                          objectPosition: `${positionX}% ${positionY}%`,
+                          transform: `scale(${imageZoom / 100})`,
+                          transformOrigin: `${positionX}% ${positionY}%`,
+                        }}
                       />
                       <div className="absolute top-2 right-2 flex gap-2">
                         <ImagePositioner
                           imageUrl={imageUrl}
                           initialPositionX={positionX}
                           initialPositionY={positionY}
+                          initialZoom={imageZoom}
                           aspectRatio={16 / 9}
-                          onSave={(x, y) => {
+                          onSave={(x, y, z) => {
                             setPositionX(x);
                             setPositionY(y);
+                            setImageZoom(z ?? 100);
                           }}
                           trigger={
                             <Button variant="secondary" size="icon" className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background">

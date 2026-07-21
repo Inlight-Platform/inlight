@@ -92,6 +92,11 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
   const subtitle = item.description || item.content;
   const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
   const objectPosition = `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%`;
+  const imageStyle = {
+    objectPosition,
+    transform: `scale(${(item.image_zoom ?? 100) / 100})`,
+    transformOrigin: objectPosition,
+  };
 
   const baseShell =
     'group relative col-span-1 overflow-hidden rounded-3xl cursor-pointer transition-all duration-500 sm:col-span-12';
@@ -113,7 +118,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               src={item.image_url!}
               alt={title}
               loading="lazy"
-              style={{ objectPosition }}
+              style={imageStyle}
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               className="absolute inset-0 h-full w-full object-cover opacity-60 grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80"
             />
@@ -171,7 +176,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               <img
                 src={item.image_url!}
                 alt={title}
-                style={{ objectPosition }}
+                style={imageStyle}
                 className="h-full w-full object-cover"
                 loading="lazy"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
@@ -245,7 +250,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               <img
                 src={item.image_url!}
                 alt={title}
-                style={{ objectPosition }}
+                style={imageStyle}
                 className="h-full w-full object-cover"
                 loading="lazy"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
@@ -290,7 +295,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               <img
                 src={item.image_url!}
                 alt={title}
-                style={{ objectPosition }}
+                style={imageStyle}
                 className="h-full w-full object-cover"
                 loading="lazy"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}

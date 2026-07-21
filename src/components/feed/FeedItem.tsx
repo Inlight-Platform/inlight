@@ -40,6 +40,7 @@ export interface FeedItemData {
   image_url?: string | null;
   image_position_x?: number | null;
   image_position_y?: number | null;
+  image_zoom?: number | null;
   link_url?: string | null;
   link_title?: string | null;
   created_at: string;
@@ -451,7 +452,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 compactSquare && 'h-full max-h-none object-cover',
                 imageClassName
               )}
-              style={compactSquare ? { objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` } : undefined}
+              style={compactSquare ? {
+                objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%`,
+                transform: `scale(${(item.image_zoom ?? 100) / 100})`,
+                transformOrigin: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%`,
+              } : undefined}
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />
           </div>

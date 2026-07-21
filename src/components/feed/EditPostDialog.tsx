@@ -44,6 +44,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [positionX, setPositionX] = useState<number>(50);
   const [positionY, setPositionY] = useState<number>(50);
+  const [imageZoom, setImageZoom] = useState<number>(100);
   const [showImageUploader, setShowImageUploader] = useState(false);
 
   useEffect(() => {
@@ -54,9 +55,9 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
       setLinkTitle(item.link_title || '');
       setLocation(item.location || '');
       setImageUrl(item.image_url || null);
-      // We'll need to fetch position from the database for posts
       setPositionX(50);
       setPositionY(50);
+      setImageZoom(100);
       setShowImageUploader(false);
     }
   }, [open, item]);
@@ -67,13 +68,14 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
       if (open && (item.type === 'post' || item.type === 'job') && item.image_url) {
         const { data } = await supabase
           .from('posts')
-          .select('image_position_x, image_position_y')
+          .select('image_position_x, image_position_y, image_zoom')
           .eq('id', item.id)
           .single();
-        
+
         if (data) {
           setPositionX(data.image_position_x ?? 50);
           setPositionY(data.image_position_y ?? 50);
+          setImageZoom(data.image_zoom ?? 100);
         }
       }
     };
@@ -99,6 +101,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
             image_url: imageUrl,
             image_position_x: positionX,
             image_position_y: positionY,
+            image_zoom: imageZoom,
           })
           .eq('id', item.id));
       } else if (item.type === 'event') {
@@ -147,6 +150,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
     setImageUrl(url);
     setPositionX(50);
     setPositionY(50);
+    setImageZoom(100);
     setShowImageUploader(false);
   };
 
@@ -154,11 +158,13 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
     setImageUrl(null);
     setPositionX(50);
     setPositionY(50);
+    setImageZoom(100);
   };
 
-  const handlePositionSave = (x: number, y: number) => {
+  const handlePositionSave = (x: number, y: number, z?: number) => {
     setPositionX(x);
     setPositionY(y);
+    setImageZoom(z ?? 100);
   };
 
   const isEvent = item.type === 'event';
@@ -218,6 +224,8 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
                       className="w-full max-h-48 object-cover"
                       style={{
                         objectPosition: `${positionX}% ${positionY}%`,
+                        transform: `scale(${imageZoom / 100})`,
+                        transformOrigin: `${positionX}% ${positionY}%`,
                       }}
                     />
                     <div className="absolute top-2 right-2 flex gap-2">
@@ -225,6 +233,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
                         imageUrl={imageUrl}
                         initialPositionX={positionX}
                         initialPositionY={positionY}
+                        initialZoom={imageZoom}
                         aspectRatio={16 / 9}
                         onSave={handlePositionSave}
                         trigger={
