@@ -76,6 +76,7 @@ export const ProjectInvitationPrompt: React.FC<ProjectInvitationPromptProps> = (
       queryClient.invalidateQueries({ queryKey: ['project-role-invitations', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
       queryClient.invalidateQueries({ queryKey: ['my-invitations', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['credits'] });
       toast.success(`You've joined "${projectTitle}" as ${invitation?.roleName}!`);
     },
     onError: () => {
