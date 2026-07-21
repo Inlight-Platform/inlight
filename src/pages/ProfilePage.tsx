@@ -5,7 +5,7 @@ import { useStore, User, Visibility } from "../store/useStore";
 import { useTrackProfileView, useUpdateEngagement } from "@/hooks/useAnalytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useMediaUpload, useUserMedia } from "@/hooks/useMediaUpload";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   MoreHorizontal,
   Flag,
@@ -266,6 +280,11 @@ const ProfilePage: React.FC = () => {
   const updateMaterialVisibility = useStore((s) => s.updateMaterialVisibility);
 
   const [newBadge, setNewBadge] = useState("");
+  const [affiliationPopoverOpen, setAffiliationPopoverOpen] = useState(false);
+  const [affiliationSearch, setAffiliationSearch] = useState("");
+  const [affiliationRequestOpen, setAffiliationRequestOpen] = useState(false);
+  const [affiliationRequestName, setAffiliationRequestName] = useState("");
+  const [affiliationRequestContext, setAffiliationRequestContext] = useState("");
   const [newSkill, setNewSkill] = useState("");
   const [addCreditOpen, setAddCreditOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -958,7 +977,21 @@ const ProfilePage: React.FC = () => {
   };
 
   // Studio badge options for the dropdown
-  const studioBadgeOptions = [
+  const { data: studiosData } = useQuery({
+    queryKey: ["studios"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("studios")
+        .select("name, badge_tag")
+        .not("badge_tag", "is", null)
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const FALLBACK_BADGE_OPTIONS = [
     { tag: "etw", label: "Experimental Theatre Wing" },
     { tag: "nsb", label: "New Studio on Broadway" },
     { tag: "atlantic", label: "Atlantic" },
@@ -978,6 +1011,48 @@ const ProfilePage: React.FC = () => {
     { tag: "collabarts", label: "Collaborative Arts" },
     { tag: "dance", label: "Dance" },
   ];
+
+  const dbBadgeOptions = (studiosData ?? [])
+    .filter((s) => s.badge_tag)
+    .map((s) => ({ tag: s.badge_tag as string, label: s.name }));
+
+  const studioBadgeOptions = dbBadgeOptions.length > 0 ? dbBadgeOptions : FALLBACK_BADGE_OPTIONS;
+
+  const submitAffiliationRequest = useMutation({
+    mutationFn: async ({ name, context }: { name: string; context: string }) => {
+      if (!authUser?.id) throw new Error("Not authenticated");
+
+      const { data: existing } = await supabase
+        .from("affiliation_requests")
+        .select("id")
+        .eq("user_id", authUser.id)
+        .eq("status", "pending")
+        .ilike("requested_name", name.trim())
+        .maybeSingle();
+
+      if (existing) throw new Error("duplicate");
+
+      const { error } = await supabase.from("affiliation_requests").insert({
+        user_id: authUser.id,
+        requested_name: name.trim(),
+        description_or_context: context.trim() || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Affiliation request submitted! Admins will review it soon.");
+      setAffiliationRequestOpen(false);
+      setAffiliationRequestName("");
+      setAffiliationRequestContext("");
+    },
+    onError: (err: Error) => {
+      if (err.message === "duplicate") {
+        toast.error("You already have a pending request for this affiliation.");
+      } else {
+        toast.error("Failed to submit request. Please try again.");
+      }
+    },
+  });
 
   const handleAddBadgeToDb = async (badgeTag?: string) => {
     const tagToAdd = badgeTag || newBadge.trim();
@@ -1503,37 +1578,62 @@ const ProfilePage: React.FC = () => {
                     </div>
                   ))}
                   {isOwnProfile && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Badge
-                          variant="outline"
-                          className="text-sm font-medium cursor-pointer hover:bg-secondary/80 gap-1"
+                    <Popover open={affiliationPopoverOpen} onOpenChange={(open) => { setAffiliationPopoverOpen(open); if (!open) setAffiliationSearch(""); }}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary/80 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                         >
                           <Plus className="w-3 h-3" />
                           Affiliation
-                        </Badge>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-56 bg-popover border border-border z-50">
-                        {studioBadgeOptions
-                          .filter((option) => !displayBadges?.includes(option.tag.toLowerCase()))
-                          .map((option) => (
-                            <DropdownMenuItem
-                              key={option.tag}
-                              onClick={() => handleAddBadgeToDb(option.tag)}
-                              className="cursor-pointer"
-                            >
-                              <span className="text-primary font-medium">{option.tag}</span>
-                              <span className="ml-2 text-muted-foreground text-sm">{option.label}</span>
-                            </DropdownMenuItem>
-                          ))}
-                        {studioBadgeOptions.filter((option) => !displayBadges?.includes(option.tag.toLowerCase()))
-                          .length === 0 && (
-                          <DropdownMenuItem disabled className="text-muted-foreground">
-                            All affiliations added
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent align="start" className="w-64 p-0 bg-popover border border-border z-50">
+                        <Command shouldFilter={false}>
+                          <CommandInput
+                            placeholder="Search affiliations..."
+                            value={affiliationSearch}
+                            onValueChange={setAffiliationSearch}
+                          />
+                          <CommandList className="max-h-52">
+                            {(() => {
+                              const filtered = studioBadgeOptions.filter(
+                                (option) =>
+                                  !displayBadges?.includes(option.tag.toLowerCase()) &&
+                                  (affiliationSearch === "" ||
+                                    option.label.toLowerCase().includes(affiliationSearch.toLowerCase()) ||
+                                    option.tag.toLowerCase().includes(affiliationSearch.toLowerCase()))
+                              );
+                              if (filtered.length === 0) {
+                                return <CommandEmpty className="text-muted-foreground py-3 text-center text-sm">No affiliations found.</CommandEmpty>;
+                              }
+                              return (
+                                <CommandGroup>
+                                  {filtered.map((option) => (
+                                    <CommandItem
+                                      key={option.tag}
+                                      onSelect={() => { handleAddBadgeToDb(option.tag); setAffiliationPopoverOpen(false); setAffiliationSearch(""); }}
+                                      className="cursor-pointer"
+                                    >
+                                      <span className="text-primary font-medium mr-2">{option.tag}</span>
+                                      <span className="text-muted-foreground text-sm truncate">{option.label}</span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              );
+                            })()}
+                          </CommandList>
+                        </Command>
+                        <div className="border-t px-3 py-2">
+                          <button
+                            className="w-full text-left text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={() => { setAffiliationPopoverOpen(false); setAffiliationSearch(""); setAffiliationRequestOpen(true); }}
+                          >
+                            Is your affiliation not listed? Request to add it.
+                          </button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   )}
                 </div>
 
@@ -2246,6 +2346,62 @@ const ProfilePage: React.FC = () => {
             }
           />
         ) : null)}
+
+      {/* Affiliation request dialog — rendered at root to avoid portal interference */}
+      <Dialog open={affiliationRequestOpen} onOpenChange={setAffiliationRequestOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request a new affiliation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Don't see your school, studio, or organization? Request to add it as an official affiliation on Inlight. Admins will review your request.
+            </p>
+            <div className="space-y-1">
+              <Label htmlFor="affiliation-name">
+                Affiliation name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="affiliation-name"
+                value={affiliationRequestName}
+                onChange={(e) => setAffiliationRequestName(e.target.value)}
+                placeholder="e.g. Atlantic Theater Company"
+                maxLength={100}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="affiliation-context">Context (optional)</Label>
+              <Textarea
+                id="affiliation-context"
+                value={affiliationRequestContext}
+                onChange={(e) => setAffiliationRequestContext(e.target.value)}
+                placeholder="Tell us more about this affiliation and why it should be added…"
+                rows={3}
+                maxLength={500}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAffiliationRequestOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!affiliationRequestName.trim() || submitAffiliationRequest.isPending}
+              onClick={() =>
+                submitAffiliationRequest.mutate({
+                  name: affiliationRequestName,
+                  context: affiliationRequestContext,
+                })
+              }
+            >
+              {submitAffiliationRequest.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
