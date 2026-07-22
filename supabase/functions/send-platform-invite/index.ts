@@ -70,6 +70,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    // If the email already belongs to an Inlight account, skip the email and
+    // return immediately — no sense sending a "Create your account" link to
+    // someone who is already a member.
+    if (invite.accepted_at) {
+      return new Response(
+        JSON.stringify({ invite, alreadyMember: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const token = String(invite.token || "");
     const inviteUrl = `${getSiteUrl()}/auth?mode=signup&invite=${encodeURIComponent(token)}`;
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
@@ -93,7 +103,7 @@ Deno.serve(async (req) => {
       html: `
         <div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#171717;max-width:560px;margin:0 auto;padding:32px 20px;">
           <h1 style="font-size:28px;line-height:1.2;margin:0 0 12px;">You're invited to Inlight</h1>
-          <p style="margin:0 0 16px;">An Inlight account invited you to join the creative network.</p>
+          <p style="margin:0 0 16px;">An Inlight member invited you to join the creative network.</p>
           ${noteHtml}
           <p style="margin:24px 0;">
             <a href="${escapeHtml(inviteUrl)}" style="display:inline-block;background:#171717;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;">Create your account</a>
