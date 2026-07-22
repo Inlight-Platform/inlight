@@ -33,6 +33,8 @@ interface Profile {
   stage_name: string | null;
   avatar_url: string | null;
   headline: string | null;
+  role: string | null;
+  badges: string[] | null;
   website_url: string | null;
   instagram_url: string | null;
   message_privacy: string;
@@ -55,6 +57,8 @@ const PROFILE_SETTINGS_FIELDS = `
   stage_name,
   avatar_url,
   headline,
+  role,
+  badges,
   website_url,
   instagram_url,
   message_privacy,
@@ -65,6 +69,27 @@ const PROFILE_SETTINGS_FIELDS = `
   show_representation,
   show_gear_list
 `;
+
+const AFFILIATION_OPTIONS = [
+  { tag: "etw", label: "Experimental Theatre Wing" },
+  { tag: "nsb", label: "New Studio on Broadway" },
+  { tag: "atlantic", label: "Atlantic" },
+  { tag: "classical", label: "Classical" },
+  { tag: "stonestreet", label: "Stonestreet" },
+  { tag: "gradacting", label: "Graduate Acting" },
+  { tag: "playwrights", label: "Playwrights" },
+  { tag: "adler", label: "Stella Adler" },
+  { tag: "meisner", label: "Meisner" },
+  { tag: "innovation", label: "The Innovation Studio" },
+  { tag: "strasberg", label: "Strasberg" },
+  { tag: "UGFTV", label: "Film and TV" },
+  { tag: "p&d", label: "Production and Design" },
+  { tag: "cinemastudies", label: "Cinema Studies" },
+  { tag: "recordedmusic", label: "Clive Davis Institute" },
+  { tag: "photography", label: "Photography" },
+  { tag: "collabarts", label: "Collaborative Arts" },
+  { tag: "dance", label: "Dance" },
+];
 
 interface MediaItem {
   id: string;
@@ -229,6 +254,8 @@ const ProfileSettingsPage: React.FC = () => {
   const [cropperImageSrc, setCropperImageSrc] = useState('');
   
   // Professional details state
+  const [profileRole, setProfileRole] = useState('');
+  const [profileBadges, setProfileBadges] = useState<string[]>([]);
   const [unionStatus, setUnionStatus] = useState('');
   const [representation, setRepresentation] = useState('');
   const [gearList, setGearList] = useState<string[]>([]);
@@ -295,6 +322,8 @@ const ProfileSettingsPage: React.FC = () => {
       setStageName(profile.stage_name || '');
       setAvatarUrl(profile.avatar_url || '');
       setHeadline(profile.headline || '');
+      setProfileRole(profile.role || '');
+      setProfileBadges(profile.badges || []);
       setWebsiteUrl(((profile as unknown as { website_url?: string | null }).website_url) || '');
       setInstagramUrl(((profile as unknown as { instagram_url?: string | null }).instagram_url) || '');
       setMessagePrivacy(profile.message_privacy || 'mutuals_only');
@@ -411,10 +440,19 @@ const ProfileSettingsPage: React.FC = () => {
     const trimmedName = displayName.trim() || null;
     const trimmedStageName = stageName.trim() || null;
     const trimmedHeadline = headline.trim() || null;
-    
+    const trimmedRole = profileRole.trim() || null;
+
     if (trimmedName && !validateProfileField('display_name', trimmedName)) return;
     if (trimmedStageName && !validateProfileField('stage_name', trimmedStageName)) return;
     if (trimmedHeadline && !validateProfileField('headline', trimmedHeadline)) return;
+    if (trimmedRole) {
+      const roles = trimmedRole.split(',').map((r) => r.trim()).filter(Boolean);
+      if (roles.length > 4) {
+        toast.error('Maximum 4 roles allowed');
+        return;
+      }
+      if (!validateProfileField('role', trimmedRole)) return;
+    }
 
     // Validate website URL if provided
     const rawWebsite = websiteUrl.trim();
@@ -451,6 +489,8 @@ const ProfileSettingsPage: React.FC = () => {
       stage_name: trimmedStageName,
       avatar_url: avatarUrl.trim() || null,
       headline: trimmedHeadline,
+      role: trimmedRole,
+      badges: profileBadges.length > 0 ? profileBadges : null,
       message_privacy: messagePrivacy,
       website_url: normalizedWebsite,
       instagram_url: normalizedIg,
@@ -534,6 +574,67 @@ const ProfileSettingsPage: React.FC = () => {
                 <p className="text-xs text-muted-foreground">
                   If you have a stage name, it will display prominently on your profile
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="profileRole">Title</Label>
+                <Input
+                  id="profileRole"
+                  type="text"
+                  placeholder="Director, Actor, Cinematographer"
+                  value={profileRole}
+                  onChange={(e) => setProfileRole(e.target.value)}
+                  maxLength={100}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Up to 4 roles, comma-separated. Shown on your profile as your professional title.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Affiliation</Label>
+                {profileBadges.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {profileBadges.map((tag) => {
+                      const option = AFFILIATION_OPTIONS.find((o) => o.tag === tag);
+                      return (
+                        <div key={tag} className="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md">
+                          <span className="text-sm">{option?.label || tag}</span>
+                          <button
+                            type="button"
+                            onClick={() => setProfileBadges((prev) => prev.filter((b) => b !== tag))}
+                            className="text-muted-foreground hover:text-destructive"
+                            aria-label={`Remove ${option?.label || tag}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <Select
+                  onValueChange={(val) => {
+                    if (!profileBadges.includes(val)) {
+                      setProfileBadges((prev) => [...prev, val]);
+                    }
+                  }}
+                  value=""
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Add affiliation…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AFFILIATION_OPTIONS.filter((o) => !profileBadges.includes(o.tag)).map((o) => (
+                      <SelectItem key={o.tag} value={o.tag}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                    {AFFILIATION_OPTIONS.every((o) => profileBadges.includes(o.tag)) && (
+                      <SelectItem value="__none__" disabled>All affiliations added</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
