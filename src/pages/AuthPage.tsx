@@ -50,6 +50,53 @@ const isPasswordPolicyError = (message: string) => {
   return normalizedMessage.includes('password should contain') || normalizedMessage.includes('weak password');
 };
 
+const firstTimeSignupWelcomeStorageKey = 'inlight-first-time-signup-email-hash';
+const firstTimeSignupWelcomeCopy = 'Welcome to Inlight!';
+const returningUserWelcomeCopy = 'Welcome back!';
+
+type FacultyGroupLookup = { slug?: string | null };
+type FacultyGroupRpc = (fn: 'get_my_faculty_group') => Promise<{ data: FacultyGroupLookup | FacultyGroupLookup[] | null }>;
+
+const hashAuthEmail = async (email: string) => {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (!normalizedEmail || !globalThis.crypto?.subtle) {
+    return null;
+  }
+
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizedEmail));
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+};
+
+const markFirstTimeSignupWelcomePending = async (email: string) => {
+  try {
+    const emailHash = await hashAuthEmail(email);
+    if (emailHash) {
+      localStorage.setItem(firstTimeSignupWelcomeStorageKey, emailHash);
+    }
+  } catch {
+    /* Ignore storage/hash failures; auth should continue normally. */
+  }
+};
+
+const consumeFirstTimeSignupWelcomePending = async (email: string) => {
+  try {
+    const pendingEmailHash = localStorage.getItem(firstTimeSignupWelcomeStorageKey);
+    const emailHash = await hashAuthEmail(email);
+
+    if (pendingEmailHash && emailHash && pendingEmailHash === emailHash) {
+      localStorage.removeItem(firstTimeSignupWelcomeStorageKey);
+      return true;
+    }
+  } catch {
+    /* Ignore storage/hash failures; auth should continue normally. */
+  }
+
+  return false;
+};
+
 const PasswordChecklist: React.FC<{ password: string }> = ({ password }) => (
   <div className="rounded-2xl border border-border bg-secondary/25 p-3">
     <p className="mb-2 text-xs text-muted-foreground">Use a password with:</p>
@@ -240,9 +287,10 @@ const AuthPage: React.FC = () => {
       toast.error(formatSignInErrorMessage(error.message));
       setIsLoading(false);
     } else {
-      toast.success('Welcome back!');
+      const isFirstTimeSignupWelcomePending = await consumeFirstTimeSignupWelcomePending(email);
+      toast.success(isFirstTimeSignupWelcomePending ? firstTimeSignupWelcomeCopy : returningUserWelcomeCopy);
       try {
-        const { data: facultyGroup } = await (supabase.rpc as any)('get_my_faculty_group');
+        const { data: facultyGroup } = await (supabase.rpc as unknown as FacultyGroupRpc)('get_my_faculty_group');
         const first = Array.isArray(facultyGroup) ? facultyGroup[0] : facultyGroup;
         if (first?.slug) {
           navigate(`/groups/${first.slug}`, { replace: true });
@@ -296,6 +344,7 @@ const AuthPage: React.FC = () => {
           toast.error(error.message);
         }
       } else if (!data?.session) {
+        await markFirstTimeSignupWelcomePending(email);
         toast.success(
           isInviteSignup
             ? 'Account created. Check your email and confirm your account before signing in.'
