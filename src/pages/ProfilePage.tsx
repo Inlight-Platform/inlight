@@ -103,7 +103,7 @@ import inlightLogo from "@/assets/inlight-logo.jpeg";
 
 type MediaType = "photo" | "video" | "audio" | "document";
 type MediaVisibility = "public" | "connections" | "private";
-type ProfileSectionKey = "materials" | "credits" | "attended" | "projects" | "posts";
+type ProfileSectionKey = "materials" | "credits" | "attended" | "projects" | "posts" | "skills";
 
 interface MediaItem {
   id: string;
@@ -290,6 +290,7 @@ const ProfilePage: React.FC = () => {
   const [materialsOpen, setMaterialsOpen] = useState(false);
   const [postsOpen, setPostsOpen] = useState(false);
   const [attendedOpen, setAttendedOpen] = useState(false);
+  const [skillsOpen, setSkillsOpen] = useState(false);
   const sectionDefaultsProfileRef = useRef<string | null>(null);
   const manuallyChangedSectionsRef = useRef<Record<ProfileSectionKey, boolean>>({
     materials: false,
@@ -297,6 +298,7 @@ const ProfilePage: React.FC = () => {
     attended: false,
     projects: false,
     posts: false,
+    skills: false,
   });
 
   // Editing states
@@ -528,6 +530,12 @@ const ProfilePage: React.FC = () => {
         ? Object.values(whyAnswersRes.data).some((answer) => typeof answer === "string" && answer.trim())
         : false;
 
+      const profileRes = await supabase
+        .from("profiles")
+        .select("skills")
+        .eq("user_id", resolvedUserId)
+        .maybeSingle();
+
       return {
         materials: Boolean((mediaRes.data || []).length || whyAnswers),
         whyStarted: whyAnswers,
@@ -539,6 +547,7 @@ const ProfilePage: React.FC = () => {
         posts: Boolean(
           (postsRes.data || []).length || (eventsRes.data || []).length || (openRolesRes.data || []).length,
         ),
+        skills: Boolean((profileRes.data?.skills as string[] | null)?.length),
       };
     },
     enabled: !!resolvedUserId,
@@ -659,6 +668,7 @@ const ProfilePage: React.FC = () => {
     if (!manuallyChangedSectionsRef.current.attended) setAttendedOpen(sectionContent.attended);
     if (!manuallyChangedSectionsRef.current.projects) setProjectsOpen(sectionContent.projects);
     if (!manuallyChangedSectionsRef.current.posts) setPostsOpen(sectionContent.posts);
+    if (!manuallyChangedSectionsRef.current.skills) setSkillsOpen(sectionContent.skills);
   }, [resolvedUserId, sectionContent]);
 
   const handleSectionOpenChange =
@@ -2092,48 +2102,67 @@ const ProfilePage: React.FC = () => {
               </section>
             </Collapsible>
 
-            {/* Skills Section - moved below Posts */}
-            <section id="profile-skills" className="scroll-mt-24 px-4 sm:px-6 lg:px-8 py-4">
-              <h2 className="text-lg font-display font-semibold mb-3">
-                Skills{displaySkills.length > 0 && ` (${displaySkills.length})`}
-              </h2>
-              <div className="p-3 rounded-xl border border-border bg-card/40">
-                <div className="flex flex-wrap items-center gap-2">
-                  {displaySkills.map((skill) => (
-                    <div key={skill} className="relative group">
-                      <Badge variant="secondary" className="px-3 py-1">
-                        {skill}
-                        {isOwnProfile && (
-                          <button
-                            onClick={() => handleRemoveSkill(skill)}
-                            className="ml-1.5 hover:text-destructive transition-colors"
-                            aria-label={`Remove ${skill} skill`}
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        )}
+            {/* Skills Section - Collapsible */}
+            <Collapsible
+              id="profile-skills"
+              open={skillsOpen}
+              onOpenChange={handleSectionOpenChange("skills", setSkillsOpen)}
+              className="scroll-mt-24"
+            >
+              <section className="px-4 sm:px-6 lg:px-8 py-4">
+                <CollapsibleTrigger className="flex items-center justify-between w-full group">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-display font-semibold">Skills</h2>
+                    {displaySkills.length > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {displaySkills.length}
                       </Badge>
+                    )}
+                  </div>
+                  <ChevronDown
+                    className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${skillsOpen ? "rotate-180" : ""}`}
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-3">
+                  <div className="p-3 rounded-xl border border-border bg-card/40">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {displaySkills.map((skill) => (
+                        <div key={skill} className="relative group">
+                          <Badge variant="secondary" className="px-3 py-1">
+                            {skill}
+                            {isOwnProfile && (
+                              <button
+                                onClick={() => handleRemoveSkill(skill)}
+                                className="ml-1.5 hover:text-destructive transition-colors"
+                                aria-label={`Remove ${skill} skill`}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </Badge>
+                        </div>
+                      ))}
+                      {isOwnProfile && (
+                        <SkillsCombobox
+                          existingSkills={displaySkills}
+                          onAddSkill={async (skill) => {
+                            const currentSkills = displaySkills || [];
+                            if (currentSkills.some((s) => s.toLowerCase() === skill.toLowerCase())) {
+                              toast.error("Skill already exists");
+                              return;
+                            }
+                            await saveProfileField("skills", [...currentSkills, skill]);
+                          }}
+                        />
+                      )}
+                      {displaySkills.length === 0 && !isOwnProfile && (
+                        <span className="text-muted-foreground text-sm">No skills added</span>
+                      )}
                     </div>
-                  ))}
-                  {isOwnProfile && (
-                    <SkillsCombobox
-                      existingSkills={displaySkills}
-                      onAddSkill={async (skill) => {
-                        const currentSkills = displaySkills || [];
-                        if (currentSkills.some((s) => s.toLowerCase() === skill.toLowerCase())) {
-                          toast.error("Skill already exists");
-                          return;
-                        }
-                        await saveProfileField("skills", [...currentSkills, skill]);
-                      }}
-                    />
-                  )}
-                  {displaySkills.length === 0 && !isOwnProfile && (
-                    <span className="text-muted-foreground text-sm">No skills added</span>
-                  )}
-                </div>
-              </div>
-            </section>
+                  </div>
+                </CollapsibleContent>
+              </section>
+            </Collapsible>
 
             {/* Conditional Professional Details - shown at bottom if user opted in */}
             {showProfessionalDetails && (

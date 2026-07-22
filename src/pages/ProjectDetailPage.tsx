@@ -106,6 +106,8 @@ const ProjectDetailPage: React.FC = () => {
   const [memberRole, setMemberRole] = useState('');
   const [deleteProjectDialogOpen, setDeleteProjectDialogOpen] = useState(false);
   const [rolesOpen, setRolesOpen] = useState(true);
+  const [membersOpen, setMembersOpen] = useState(true);
+  const [photosOpen, setPhotosOpen] = useState(true);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState('');
   const [addRoleOpen, setAddRoleOpen] = useState(false);
@@ -1065,13 +1067,23 @@ const ProjectDetailPage: React.FC = () => {
           </Card>
         </Collapsible>
 
-        {/* Members Section */}
+        {/* Team Members Section - Collapsible */}
+        <Collapsible open={membersOpen} onOpenChange={setMembersOpen}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Team Members ({members.filter(m => m.user_id !== project.creator_id).length + 1})
-            </CardTitle>
+            <CollapsibleTrigger asChild>
+              <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Team Members ({members.filter(m => m.user_id !== project.creator_id).length + 1})
+                </CardTitle>
+                {membersOpen ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
             {canEditProject && (
               <div className="flex flex-wrap justify-end gap-2">
                 <InviteFriendDialog projectId={projectId} projectTitle={project.title}>
@@ -1115,6 +1127,7 @@ const ProjectDetailPage: React.FC = () => {
               </div>
             )}
           </CardHeader>
+          <CollapsibleContent>
           <CardContent>
             <div className="flex flex-wrap gap-4">
               {/* Creator */}
@@ -1176,15 +1189,27 @@ const ProjectDetailPage: React.FC = () => {
                 ))}
             </div>
           </CardContent>
+          </CollapsibleContent>
         </Card>
+        </Collapsible>
 
-        {/* Photos Section */}
+        {/* Photos Section - Collapsible */}
+        <Collapsible open={photosOpen} onOpenChange={setPhotosOpen}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Camera className="w-5 h-5" />
-              Project Photos ({photos.length})
-            </CardTitle>
+            <CollapsibleTrigger asChild>
+              <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <CardTitle className="flex items-center gap-2">
+                  <Camera className="w-5 h-5" />
+                  Project Photos ({photos.length})
+                </CardTitle>
+                {photosOpen ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
             {canManageProjectContent && (
               <Dialog open={addPhotoOpen} onOpenChange={setAddPhotoOpen}>
                 <DialogTrigger asChild>
@@ -1242,6 +1267,7 @@ const ProjectDetailPage: React.FC = () => {
               </Dialog>
             )}
           </CardHeader>
+          <CollapsibleContent>
           <CardContent>
             {photos.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">No photos yet</p>
@@ -1272,7 +1298,9 @@ const ProjectDetailPage: React.FC = () => {
               </div>
             )}
           </CardContent>
+          </CollapsibleContent>
         </Card>
+        </Collapsible>
 
         {/* Google Drive Link - Only visible to team members */}
         {isMember && (
