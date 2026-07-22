@@ -70,10 +70,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // If the email already belongs to an Inlight account, skip the email and
-    // return immediately — no sense sending a "Create your account" link to
-    // someone who is already a member.
-    if (invite.accepted_at) {
+    // Check directly in auth.users — more reliable than invite.accepted_at
+    // which may be null if the "claim for existing users" migration hasn't run.
+    const { data: emailExists } = await supabase.rpc("check_email_exists_for_signup", {
+      search_email: normalizedEmail,
+    });
+
+    if (emailExists || invite.accepted_at) {
       return new Response(
         JSON.stringify({ invite, alreadyMember: true }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
