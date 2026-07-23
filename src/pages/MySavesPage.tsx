@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -233,7 +233,8 @@ const MySavesPage: React.FC = () => {
   const isLoading = loadingProjects || loadingShows || loadingFilms;
 
   const totalSaves = savedProjects.length + savedShows.length + savedFilms.length + savedResources.length + savedJobs.length + savedPeople.length;
-  const routeState = location.state as { returnTo?: string } | null;
+  const routeStateRef = useRef((location.state as { returnTo?: string } | null) || null);
+  const routeState = routeStateRef.current;
   const initialTab = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(
     initialTab && ['projects', 'shows', 'films', 'people', 'resources', 'jobs'].includes(initialTab)
@@ -245,7 +246,7 @@ const MySavesPage: React.FC = () => {
     const params = new URLSearchParams(searchParams);
     if (tab === 'projects') params.delete('tab');
     else params.set('tab', tab);
-    setSearchParams(params, { replace: true });
+    setSearchParams(params, { replace: true, state: routeState || undefined });
   };
   const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
