@@ -43,7 +43,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ children }) => {
       <MainNav />
       {/* Main content - adapts to sidebar collapsed state */}
       <main className={cn(
-        "pb-20 md:pb-0 transition-all duration-300 w-full max-w-full min-w-0 overflow-x-hidden relative z-10",
+        "pb-24 md:pb-0 transition-all duration-300 w-full max-w-full min-w-0 overflow-x-hidden relative z-10",
         collapsed ? "md:pl-16" : "md:pl-64"
       )}>
         {children}

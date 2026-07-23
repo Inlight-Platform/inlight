@@ -430,7 +430,7 @@ export const MainNav: React.FC = () => {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative',
+                  'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative touch-manipulation select-none',
                   active ?
                   'text-white' :
                   item.accent ?
@@ -460,7 +460,7 @@ export const MainNav: React.FC = () => {
                 type="button"
                 aria-label="Open account menu"
                 className={cn(
-                  'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative',
+                  'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative touch-manipulation select-none',
                   isActive('/resources') || isActive('/pie-chart') || isActive(`/profile/${user.id}`) || isActive('/notifications') || isActive('/settings')
                     ? 'text-white'
                     : 'text-[hsl(220_15%_60%)]'
