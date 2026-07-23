@@ -1219,10 +1219,12 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const profileRouteState = location.state as { returnTo?: string; returnState?: { returnTo?: string } } | null;
+  const showProfileBackButton = !isOwnProfile || Boolean(profileRouteState?.returnTo);
+
   const handleBackToPeople = () => {
-    const state = location.state as { returnTo?: string } | null;
-    if (state?.returnTo === "/people") {
-      navigate("/people");
+    if (profileRouteState?.returnTo) {
+      navigate(profileRouteState.returnTo, profileRouteState.returnState ? { state: profileRouteState.returnState } : undefined);
       return;
     }
 
@@ -1278,18 +1280,19 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top bar — back button only */}
-      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center">
-          <button
-            onClick={handleBackToPeople}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/80 text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Back to People"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
+      {showProfileBackButton && (
+        <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center">
+            <button
+              onClick={handleBackToPeople}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/80 text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Back"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Centered profile frame */}
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pb-10">
@@ -1627,7 +1630,10 @@ const ProfilePage: React.FC = () => {
                 <div className="w-full max-w-md border-t border-border/70 pt-4">
                   <div className="flex items-center justify-center gap-2">
                     <button
-                      onClick={() => navigate(isOwnProfile ? "/network" : `/mutuals/${resolvedUserId}`)}
+                      onClick={() => navigate(
+                        isOwnProfile ? "/network" : `/mutuals/${resolvedUserId}`,
+                        isOwnProfile ? { state: { returnTo: location.pathname } } : undefined
+                      )}
                       className="text-sm text-muted-foreground transition-colors hover:text-primary hover:underline"
                     >
                       <span className="font-semibold text-foreground">{networkCounts?.networkCount || 0}</span>{" "}
@@ -1751,14 +1757,14 @@ const ProfilePage: React.FC = () => {
                   {isOwnProfile && authUser && (
                     <>
                       <button
-                        onClick={() => navigate("/saves")}
+                        onClick={() => navigate("/saves", { state: { returnTo: location.pathname } })}
                         className="flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-primary/15 dark:bg-white/10 hover:bg-primary/25 dark:hover:bg-white/20 text-sm font-medium text-primary dark:text-white/80 border border-primary/20 dark:border-white/20 transition-colors"
                       >
                         <Bookmark className="w-4 h-4" />
                         My Saves
                       </button>
                       <button
-                        onClick={() => navigate("/network")}
+                        onClick={() => navigate("/network", { state: { returnTo: location.pathname } })}
                         className="flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-primary/15 dark:bg-white/10 hover:bg-primary/25 dark:hover:bg-white/20 text-sm font-medium text-primary dark:text-white/80 border border-primary/20 dark:border-white/20 transition-colors"
                       >
                         <Users className="w-4 h-4" />

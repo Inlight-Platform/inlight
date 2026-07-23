@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -892,6 +892,7 @@ const AddProjectDialog: React.FC<{ companyId: string; status: 'active' | 'archiv
 const CompanyProfilePage: React.FC = () => {
   const { companyId: routeCompanyId, token: staffToken } = useParams<{ companyId?: string; token?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const queryClient = useQueryClient();
@@ -995,6 +996,15 @@ const CompanyProfilePage: React.FC = () => {
   const canManageProjects = isOwner || isAdmin;
   const canAddProjects = canManageProjects || hasStaffAccess;
   const following = companyId ? isFollowingCompany(companyId) : false;
+  const companyRouteState = location.state as { returnTo?: string } | null;
+  const handleBackToPeople = () => {
+    if (companyRouteState?.returnTo) {
+      navigate(companyRouteState.returnTo);
+      return;
+    }
+
+    safeBack(navigate, '/people');
+  };
 
   const normalizeStatus = (s: string | null): string => {
     const map: Record<string, string> = { 'pre-production': 'planning', 'in-production': 'active', 'post-production': 'wrapping', 'completed': 'archived' };
@@ -1089,7 +1099,7 @@ const CompanyProfilePage: React.FC = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <p className="text-muted-foreground">This company edit link is invalid or expired.</p>
-        <Button variant="ghost" onClick={() => navigate('/people')} className="mt-4">Back to People</Button>
+        <Button variant="ghost" onClick={handleBackToPeople} className="mt-4">Back to People</Button>
       </div>
     );
   }
@@ -1098,21 +1108,24 @@ const CompanyProfilePage: React.FC = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <p className="text-muted-foreground">Company not found.</p>
-        <Button variant="ghost" onClick={() => navigate('/people')} className="mt-4">Back to People</Button>
+        <Button variant="ghost" onClick={handleBackToPeople} className="mt-4">Back to People</Button>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Back button - matches personal profile */}
-      <button
-        onClick={() => safeBack(navigate, '/people')}
-        className="fixed top-4 left-4 z-50 p-2 rounded-full bg-card/80 backdrop-blur-sm shadow-card hover:bg-accent transition-colors"
-        aria-label="Go back"
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </button>
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center">
+          <button
+            onClick={handleBackToPeople}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/80 text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Back"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
 
       {/* Cover / Hero - matches personal profile sizing */}
       <header className="relative">

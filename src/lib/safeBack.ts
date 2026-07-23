@@ -27,7 +27,9 @@ export const isSidebarRoute = (path: string): boolean => {
   return SIDEBAR_ROUTES.some((r) => clean === r);
 };
 
-import type { NavigateFunction } from 'react-router-dom';
+const cleanRoute = (path?: string): string => (path || '').split('?')[0].split('#')[0];
+
+import type { Location, NavigateFunction } from 'react-router-dom';
 
 /**
  * Navigate back to the previous page IF it's a sidebar destination,
@@ -38,12 +40,19 @@ import type { NavigateFunction } from 'react-router-dom';
  */
 export const safeBack = (
   navigate: NavigateFunction,
-  fallback: string = '/feed'
+  fallback: string = '/feed',
+  current?: string
 ) => {
   try {
     const raw = sessionStorage.getItem('inlight_last_sidebar_route');
-    if (raw && isSidebarRoute(raw)) {
+    if (raw && isSidebarRoute(raw) && cleanRoute(raw) !== cleanRoute(current)) {
       navigate(raw);
+      return;
+    }
+
+    const previous = sessionStorage.getItem('inlight_previous_sidebar_route');
+    if (previous && isSidebarRoute(previous) && cleanRoute(previous) !== cleanRoute(current)) {
+      navigate(previous);
       return;
     }
   } catch {
@@ -52,6 +61,9 @@ export const safeBack = (
   navigate(fallback);
 };
 
+export const currentRoute = (location: Pick<Location, 'pathname' | 'search' | 'hash'>): string =>
+  `${location.pathname}${location.search}${location.hash}`;
+
 /**
  * Records the current path as the most-recent sidebar route, if it is one.
  * Call from PageLayout on every location change.
@@ -59,6 +71,10 @@ export const safeBack = (
 export const recordRoute = (path: string) => {
   try {
     if (isSidebarRoute(path)) {
+      const current = sessionStorage.getItem('inlight_last_sidebar_route');
+      if (current && current !== path) {
+        sessionStorage.setItem('inlight_previous_sidebar_route', current);
+      }
       sessionStorage.setItem('inlight_last_sidebar_route', path);
     }
   } catch {

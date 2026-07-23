@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,6 +44,7 @@ type ProjectCategory = typeof PROJECT_CATEGORIES[number]['value'];
 
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
@@ -66,8 +67,6 @@ const FeedPage: React.FC = () => {
     let changed = false;
     if (tab && ['all', 'you', 'events', 'projects', 'updates', 'group'].includes(tab)) {
       setContentFilter(tab as ContentFilter);
-      searchParams.delete('tab');
-      changed = true;
     }
     if (compose && ['update', 'event', 'job', 'project'].includes(compose)) {
       setComposePostType(compose as PostType);
@@ -78,6 +77,14 @@ const FeedPage: React.FC = () => {
     if (changed) setSearchParams(searchParams, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+  const setFeedTab = (tab: ContentFilter) => {
+    setContentFilter(tab);
+    const params = new URLSearchParams(searchParams);
+    if (tab === 'all') params.delete('tab');
+    else params.set('tab', tab);
+    setSearchParams(params, { replace: true });
+  };
+  const feedReturnTo = `${location.pathname}${location.search}${location.hash}`;
   const { firstDegree, secondDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
 
   // Groups the user belongs to (for the per-group tab)
@@ -482,7 +489,7 @@ const FeedPage: React.FC = () => {
             key={`project-${item.id}`}
             item={item}
             size={getBentoSize(idx)}
-            onClick={() => navigate(`/projects/${item.id}`)}
+            onClick={() => navigate(`/projects/${item.id}`, { state: { returnTo: feedReturnTo } })}
           />
         ))}
       </div>
@@ -576,7 +583,7 @@ const FeedPage: React.FC = () => {
     return (
       <Card
         className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border"
-        onClick={() => navigate(`/projects/${project.id}`)}
+        onClick={() => navigate(`/projects/${project.id}`, { state: { returnTo: feedReturnTo } })}
       >
         <div className="relative">
           <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1">
@@ -828,7 +835,7 @@ const FeedPage: React.FC = () => {
                     key={filter.value}
                     variant={contentFilter === filter.value ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setContentFilter(filter.value)}
+                    onClick={() => setFeedTab(filter.value)}
                     className={`flex-shrink-0 gap-1.5 ${
                       contentFilter === filter.value ? navVioletButtonClass : navVioletOutlineClass
                     }`}
@@ -969,17 +976,17 @@ const FeedPage: React.FC = () => {
                         size={getBentoSize(idx)}
                        onClick={() => {
                           if (item.type === 'project') {
-                            navigate(`/projects/${item.id}`);
+                            navigate(`/projects/${item.id}`, { state: { returnTo: feedReturnTo } });
                           } else if (item.type === 'event') {
                             setSelectedItem(item);
                           } else if (item.type === 'show') {
                             navigate('/stage-whisper');
                           } else if (item.type === 'open_role' && item.project_id) {
-                            navigate(`/projects/${item.project_id}`);
+                            navigate(`/projects/${item.project_id}`, { state: { returnTo: feedReturnTo } });
                           } else if (item.type === 'job') {
                             navigate('/opportunities');
                           } else if (item.user_id) {
-                            navigate(`/profile/${item.user_id}`);
+                            navigate(`/profile/${item.user_id}`, { state: { returnTo: feedReturnTo } });
                           }
                         }}
                       />

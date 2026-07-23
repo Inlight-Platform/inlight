@@ -30,6 +30,7 @@ interface PersonCardProps {
   onAccept?: (requestId: string) => void;
   onDecline?: (requestId: string) => void;
   onMessage?: () => void;
+  returnTo?: string;
 }
 
 const PersonCard: React.FC<PersonCardProps> = ({
@@ -43,7 +44,8 @@ const PersonCard: React.FC<PersonCardProps> = ({
   onCancel,
   onAccept,
   onDecline,
-  onMessage
+  onMessage,
+  returnTo = '/people'
 }) => {
   const navigate = useNavigate();
   const userId = user.user_id || user.id;
@@ -51,7 +53,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
   const avatarUrl = user.avatar_url || user.avatar;
 
   const handleClick = () => {
-    if (userId) navigate(`/profile/${userId}`, { state: { returnTo: '/people' } });
+    if (userId) navigate(`/profile/${userId}`, { state: { returnTo } });
   };
 
   const handleConnect = (e: React.MouseEvent) => {
@@ -221,7 +223,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
                   className="h-10 w-10 shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (userId) navigate(`/profile/${userId}`, { state: { returnTo: '/people' } });
+                    if (userId) navigate(`/profile/${userId}`, { state: { returnTo } });
                   }}
                 >
                   <ExternalLink className="h-4 w-4" />
