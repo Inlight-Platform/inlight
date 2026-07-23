@@ -91,7 +91,16 @@ const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const routeState = location.state as { returnTo?: string; returnState?: { returnTo?: string } } | null;
   const returnTo = `${location.pathname}${location.search}${location.hash}`;
+  const handleBack = () => {
+    if (routeState?.returnTo) {
+      navigate(routeState.returnTo, routeState.returnState ? { state: routeState.returnState } : undefined);
+      return;
+    }
+
+    safeBack(navigate, '/feed');
+  };
   const { isMinimized: chatMinimized, originRoute: chatOriginRoute, chatRoute, close: closeChat, expand: expandChat } = useMinimizedChat();
   const { user } = useAuth();
   const { canManageProjects } = useFeatureAccess();
@@ -469,9 +478,7 @@ const ProjectDetailPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['projects-feed'] });
       queryClient.invalidateQueries({ queryKey: ['feed-projects'] });
       toast.success('Project deleted');
-      const state = location.state as { returnTo?: string } | null;
-      if (state?.returnTo) navigate(state.returnTo);
-      else safeBack(navigate, '/feed');
+      handleBack();
     },
     onError: () => toast.error('Failed to delete project'),
   });
@@ -658,11 +665,7 @@ const ProjectDetailPage: React.FC = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Project not found</p>
-          <Button onClick={() => {
-            const state = location.state as { returnTo?: string } | null;
-            if (state?.returnTo) navigate(state.returnTo);
-            else safeBack(navigate, '/feed');
-          }}>Back to Home</Button>
+          <Button onClick={handleBack}>Back to Home</Button>
         </div>
       </div>
     );
@@ -674,11 +677,7 @@ const ProjectDetailPage: React.FC = () => {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => {
-                const state = location.state as { returnTo?: string } | null;
-                if (state?.returnTo) navigate(state.returnTo);
-                else safeBack(navigate, '/feed');
-              }}
+              onClick={handleBack}
               className="p-2 rounded-full hover:bg-accent transition-colors"
             >
               <ChevronLeft className="w-6 h-6" />
@@ -1131,7 +1130,7 @@ const ProjectDetailPage: React.FC = () => {
               {/* Creator */}
               <div 
                 className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors"
-                onClick={() => navigate(`/profile/${project.creator_id}`, { state: { returnTo } })}
+                onClick={() => navigate(`/profile/${project.creator_id}`, { state: { returnTo, returnState: routeState || undefined } })}
               >
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={project.creator_profile?.avatar_url || undefined} />
@@ -1155,7 +1154,7 @@ const ProjectDetailPage: React.FC = () => {
                   >
                     <div
                       className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors flex-1"
-                      onClick={() => navigate(`/profile/${member.user_id}`, { state: { returnTo } })}
+                      onClick={() => navigate(`/profile/${member.user_id}`, { state: { returnTo, returnState: routeState || undefined } })}
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={member.profile?.avatar_url || undefined} />

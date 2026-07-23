@@ -25,6 +25,7 @@ interface MyProjectsProps {
 export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const routeState = location.state as { returnTo?: string; returnState?: { returnTo?: string } } | null;
   const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
   // Fetch projects where user is creator or member
@@ -101,7 +102,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
   const ProjectCard = ({ project, showRole = false }: { project: Project; showRole?: boolean }) => (
     <Card 
       className="flex aspect-square cursor-pointer flex-col overflow-hidden bg-card border-border transition-shadow hover:shadow-lg"
-      onClick={() => navigate(`/projects/${project.id}`, { state: { returnTo } })}
+      onClick={() => navigate(`/projects/${project.id}`, { state: { returnTo, returnState: routeState || undefined } })}
     >
       {project.header_image_url || project.main_image_url ? (
         <img
