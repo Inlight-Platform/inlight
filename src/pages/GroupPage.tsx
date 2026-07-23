@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Users, Trash2, Globe, Lock, Send, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 const GroupPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data: group, isLoading: groupLoading } = useGroupBySlug(slug);
@@ -170,11 +171,20 @@ const GroupPage: React.FC = () => {
 
   const activeMembers = members.filter((m: any) => m.status === 'active');
   const pendingMembers = members.filter((m: any) => m.status === 'pending');
+  const routeState = location.state as { returnTo?: string } | null;
+  const handleBack = () => {
+    if (routeState?.returnTo) {
+      navigate(routeState.returnTo);
+      return;
+    }
+
+    navigate('/people?section=groups');
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="sm" onClick={handleBack}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </Button>
         {isFaculty && (

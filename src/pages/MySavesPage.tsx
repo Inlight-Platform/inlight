@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft, Film, User } from 'lucide-react';
@@ -141,6 +141,7 @@ const ShareDialog: React.FC<{
 
 const MySavesPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { savedShowIds, unsaveShow } = useSavedShows();
   const { savedFilmIds, unsaveFilm } = useSavedFilms();
@@ -246,7 +247,11 @@ const MySavesPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
-            <button onClick={() => safeBack(navigate, '/feed')} className="p-1 rounded-full hover:bg-accent">
+            <button onClick={() => {
+              const state = location.state as { returnTo?: string } | null;
+              if (state?.returnTo) navigate(state.returnTo);
+              else safeBack(navigate, '/feed');
+            }} className="p-1 rounded-full hover:bg-accent">
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-3">

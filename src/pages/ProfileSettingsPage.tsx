@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -212,6 +212,7 @@ const _ChangePasswordCardImpl = () => {
 const ProfileSettingsPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { startTour } = useTour();
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -487,7 +488,11 @@ const ProfileSettingsPage: React.FC = () => {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+          <Button variant="ghost" size="icon" onClick={() => {
+            const state = location.state as { returnTo?: string } | null;
+            if (state?.returnTo) navigate(state.returnTo);
+            else navigate('/');
+          }}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-2xl font-bold">Profile Settings</h1>

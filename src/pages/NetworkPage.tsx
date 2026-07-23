@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,6 +30,8 @@ interface NetworkProfile {
 
 const NetworkPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { firstDegree } = useNetworkConnections();
   const { 
@@ -43,7 +45,17 @@ const NetworkPage: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'name' | 'vouches'>('vouches');
-  const [activeTab, setActiveTab] = useState('connections');
+  const initialTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    initialTab && ['connections', 'incoming', 'sent'].includes(initialTab) ? initialTab : 'connections'
+  );
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams);
+    if (tab === 'connections') params.delete('tab');
+    else params.set('tab', tab);
+    setSearchParams(params, { replace: true });
+  };
 
   // Fetch profiles for 1st degree connections from database
   const { data: connectionProfiles = [], isLoading: connectionsLoading } = useQuery({
@@ -138,7 +150,7 @@ const NetworkPage: React.FC = () => {
   };
 
   const handleUserClick = (userId: string) => {
-    navigate(`/profile/${userId}`);
+    navigate(`/profile/${userId}`, { state: { returnTo: `${location.pathname}${location.search}${location.hash}` } });
   };
 
   const handleAcceptRequest = async (requestId: string, e: React.MouseEvent) => {
@@ -220,7 +232,11 @@ const NetworkPage: React.FC = () => {
           <div className="flex items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => safeBack(navigate, '/feed')}
+                onClick={() => {
+                  const state = location.state as { returnTo?: string } | null;
+                  if (state?.returnTo) navigate(state.returnTo);
+                  else safeBack(navigate, '/feed');
+                }}
                 className="p-2 rounded-full hover:bg-accent transition-colors"
                 aria-label="Go back"
               >
@@ -241,7 +257,7 @@ const NetworkPage: React.FC = () => {
           </div>
           
           {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="mx-auto flex justify-center mb-4">
               <TabsTrigger value="connections" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />

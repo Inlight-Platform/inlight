@@ -27,7 +27,7 @@ export const isSidebarRoute = (path: string): boolean => {
   return SIDEBAR_ROUTES.some((r) => clean === r);
 };
 
-import type { NavigateFunction } from 'react-router-dom';
+import type { Location, NavigateFunction } from 'react-router-dom';
 
 /**
  * Navigate back to the previous page IF it's a sidebar destination,
@@ -51,6 +51,9 @@ export const safeBack = (
   }
   navigate(fallback);
 };
+
+export const currentRoute = (location: Pick<Location, 'pathname' | 'search' | 'hash'>): string =>
+  `${location.pathname}${location.search}${location.hash}`;
 
 /**
  * Records the current path as the most-recent sidebar route, if it is one.
