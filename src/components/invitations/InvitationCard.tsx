@@ -51,6 +51,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
       queryClient.invalidateQueries({ queryKey: ['my-invitations'] });
       queryClient.invalidateQueries({ queryKey: ['open-roles', invitation.project_role.project.id] });
       queryClient.invalidateQueries({ queryKey: ['project-members', invitation.project_role.project.id] });
+      queryClient.invalidateQueries({ queryKey: ['credits'] });
       toast.success(`You've joined "${invitation.project_role.project.title}" as ${invitation.project_role.role_name}!`);
     },
     onError: () => {
