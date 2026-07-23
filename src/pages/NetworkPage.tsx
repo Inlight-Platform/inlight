@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
 import { useQuery } from '@tanstack/react-query';
@@ -32,6 +32,9 @@ const NetworkPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const routeStateRef = useRef((location.state as { returnTo?: string } | null) || null);
+  const routeState = routeStateRef.current;
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
   const { user } = useAuth();
   const { firstDegree } = useNetworkConnections();
   const { 
@@ -54,7 +57,7 @@ const NetworkPage: React.FC = () => {
     const params = new URLSearchParams(searchParams);
     if (tab === 'connections') params.delete('tab');
     else params.set('tab', tab);
-    setSearchParams(params, { replace: true });
+    setSearchParams(params, { replace: true, state: routeState || undefined });
   };
 
   // Fetch profiles for 1st degree connections from database
@@ -150,7 +153,7 @@ const NetworkPage: React.FC = () => {
   };
 
   const handleUserClick = (userId: string) => {
-    navigate(`/profile/${userId}`, { state: { returnTo: `${location.pathname}${location.search}${location.hash}` } });
+    navigate(`/profile/${userId}`, { state: { returnTo, returnState: routeState || undefined } });
   };
 
   const handleAcceptRequest = async (requestId: string, e: React.MouseEvent) => {
@@ -233,9 +236,8 @@ const NetworkPage: React.FC = () => {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => {
-                  const state = location.state as { returnTo?: string } | null;
-                  if (state?.returnTo) navigate(state.returnTo);
-                  else safeBack(navigate, '/feed');
+                  if (routeState?.returnTo) navigate(routeState.returnTo);
+                  else safeBack(navigate, '/feed', returnTo);
                 }}
                 className="p-2 rounded-full hover:bg-accent transition-colors"
                 aria-label="Go back"
