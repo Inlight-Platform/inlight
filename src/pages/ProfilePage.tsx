@@ -1219,12 +1219,12 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const profileRouteState = location.state as { returnTo?: string } | null;
+  const profileRouteState = location.state as { returnTo?: string; returnState?: { returnTo?: string } } | null;
   const showProfileBackButton = !isOwnProfile || Boolean(profileRouteState?.returnTo);
 
   const handleBackToPeople = () => {
     if (profileRouteState?.returnTo) {
-      navigate(profileRouteState.returnTo);
+      navigate(profileRouteState.returnTo, profileRouteState.returnState ? { state: profileRouteState.returnState } : undefined);
       return;
     }
 

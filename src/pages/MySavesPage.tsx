@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft, Film, User } from 'lucide-react';
@@ -142,6 +142,7 @@ const ShareDialog: React.FC<{
 const MySavesPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { savedShowIds, unsaveShow } = useSavedShows();
   const { savedFilmIds, unsaveFilm } = useSavedFilms();
@@ -232,6 +233,21 @@ const MySavesPage: React.FC = () => {
   const isLoading = loadingProjects || loadingShows || loadingFilms;
 
   const totalSaves = savedProjects.length + savedShows.length + savedFilms.length + savedResources.length + savedJobs.length + savedPeople.length;
+  const routeState = location.state as { returnTo?: string } | null;
+  const initialTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    initialTab && ['projects', 'shows', 'films', 'people', 'resources', 'jobs'].includes(initialTab)
+      ? initialTab
+      : 'projects'
+  );
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams);
+    if (tab === 'projects') params.delete('tab');
+    else params.set('tab', tab);
+    setSearchParams(params, { replace: true });
+  };
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
   if (!user) {
     return (
@@ -248,8 +264,7 @@ const MySavesPage: React.FC = () => {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <button onClick={() => {
-              const state = location.state as { returnTo?: string } | null;
-              if (state?.returnTo) navigate(state.returnTo);
+              if (routeState?.returnTo) navigate(routeState.returnTo);
               else safeBack(navigate, '/feed');
             }} className="p-1 rounded-full hover:bg-accent">
               <ChevronLeft className="w-5 h-5" />
@@ -277,7 +292,7 @@ const MySavesPage: React.FC = () => {
             <p className="text-muted-foreground">Browse projects, shows, resources, and jobs to start saving!</p>
           </div>
         ) : (
-          <Tabs defaultValue="projects" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
             <TabsList className="grid w-full max-w-3xl grid-cols-6 mx-auto">
               <TabsTrigger value="projects" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <FolderKanban className="w-4 h-4" />
@@ -427,7 +442,7 @@ const MySavesPage: React.FC = () => {
                       <Card
                         key={item.id}
                         className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                        onClick={() => item.item_url && navigate(item.item_url)}
+                        onClick={() => item.item_url && navigate(item.item_url, { state: { returnTo, returnState: routeState || undefined } })}
                       >
                         <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                           <Avatar className="h-14 w-14">
