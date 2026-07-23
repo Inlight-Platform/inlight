@@ -38,12 +38,19 @@ import type { Location, NavigateFunction } from 'react-router-dom';
  */
 export const safeBack = (
   navigate: NavigateFunction,
-  fallback: string = '/feed'
+  fallback: string = '/feed',
+  current?: string
 ) => {
   try {
     const raw = sessionStorage.getItem('inlight_last_sidebar_route');
-    if (raw && isSidebarRoute(raw)) {
+    if (raw && isSidebarRoute(raw) && raw !== current) {
       navigate(raw);
+      return;
+    }
+
+    const previous = sessionStorage.getItem('inlight_previous_sidebar_route');
+    if (previous && isSidebarRoute(previous) && previous !== current) {
+      navigate(previous);
       return;
     }
   } catch {
@@ -62,6 +69,10 @@ export const currentRoute = (location: Pick<Location, 'pathname' | 'search' | 'h
 export const recordRoute = (path: string) => {
   try {
     if (isSidebarRoute(path)) {
+      const current = sessionStorage.getItem('inlight_last_sidebar_route');
+      if (current && current !== path) {
+        sessionStorage.setItem('inlight_previous_sidebar_route', current);
+      }
       sessionStorage.setItem('inlight_last_sidebar_route', path);
     }
   } catch {

@@ -265,7 +265,7 @@ const MySavesPage: React.FC = () => {
           <div className="flex items-center gap-4">
             <button onClick={() => {
               if (routeState?.returnTo) navigate(routeState.returnTo);
-              else safeBack(navigate, '/feed');
+              else safeBack(navigate, '/feed', returnTo);
             }} className="p-1 rounded-full hover:bg-accent">
               <ChevronLeft className="w-5 h-5" />
             </button>
