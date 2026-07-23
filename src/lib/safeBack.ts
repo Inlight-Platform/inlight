@@ -27,6 +27,8 @@ export const isSidebarRoute = (path: string): boolean => {
   return SIDEBAR_ROUTES.some((r) => clean === r);
 };
 
+const cleanRoute = (path?: string): string => (path || '').split('?')[0].split('#')[0];
+
 import type { Location, NavigateFunction } from 'react-router-dom';
 
 /**
@@ -43,13 +45,13 @@ export const safeBack = (
 ) => {
   try {
     const raw = sessionStorage.getItem('inlight_last_sidebar_route');
-    if (raw && isSidebarRoute(raw) && raw !== current) {
+    if (raw && isSidebarRoute(raw) && cleanRoute(raw) !== cleanRoute(current)) {
       navigate(raw);
       return;
     }
 
     const previous = sessionStorage.getItem('inlight_previous_sidebar_route');
-    if (previous && isSidebarRoute(previous) && previous !== current) {
+    if (previous && isSidebarRoute(previous) && cleanRoute(previous) !== cleanRoute(current)) {
       navigate(previous);
       return;
     }
