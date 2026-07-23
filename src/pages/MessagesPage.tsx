@@ -245,7 +245,10 @@ const MessagesPage: React.FC = () => {
                         c.unread_count > 0 ? 'text-foreground' : 'text-muted-foreground'
                       )}>
                         {c.last_message.sender_id === user?.id && 'You: '}
-                        {c.last_message.content}
+                        {(() => {
+                          const shared = parseSharedItem(c.last_message.content);
+                          return shared ? `Shared a ${shared.type}` : c.last_message.content;
+                        })()}
                       </p>
                     )}
                   </div>

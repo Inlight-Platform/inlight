@@ -218,13 +218,20 @@ const MySavesPage: React.FC = () => {
   const savedJobs = savedItems.filter(i => i.item_type === 'job' || i.item_type === 'open_role');
   const savedPeople = savedItems.filter(i => i.item_type === 'person');
 
+  const queryClient = useQueryClient();
+
   const unsaveProject = async (projectId: string) => {
     if (!user?.id) return;
-    await supabase
+    const { error } = await supabase
       .from('saved_projects')
       .delete()
       .eq('user_id', user.id)
       .eq('project_id', projectId);
+    if (error) {
+      toast.error('Could not remove project');
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ['my-saves-projects', user.id] });
     toast.success('Project removed from saves');
   };
 

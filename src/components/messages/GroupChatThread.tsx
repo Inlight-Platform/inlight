@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Users } from 'lucide-react';
+import SharedItemCard, { parseSharedItem } from '@/components/messages/SharedItemCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -110,22 +111,40 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
                             {msg.sender?.display_name || 'Unknown'}
                           </p>
                         )}
-                        <div
-                          className={cn(
-                            'px-4 py-2 rounded-2xl',
-                            isOwn
-                              ? 'bg-primary text-primary-foreground rounded-br-sm'
-                              : 'bg-muted rounded-bl-sm'
-                          )}
-                        >
-                          <p className="text-sm break-words">{msg.content}</p>
-                          <p className={cn(
-                            'text-[10px] mt-1',
-                            isOwn ? 'text-primary-foreground/70 text-right' : 'text-muted-foreground'
-                          )}>
-                            {formatTime(msg.created_at)}
-                          </p>
-                        </div>
+                        {(() => {
+                          const sharedItem = parseSharedItem(msg.content);
+                          if (sharedItem) {
+                            return (
+                              <div>
+                                <SharedItemCard data={sharedItem} isOwn={isOwn} />
+                                <p className={cn(
+                                  'text-[10px] mt-1',
+                                  isOwn ? 'text-right text-muted-foreground' : 'text-muted-foreground'
+                                )}>
+                                  {formatTime(msg.created_at)}
+                                </p>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div
+                              className={cn(
+                                'px-4 py-2 rounded-2xl',
+                                isOwn
+                                  ? 'bg-primary text-primary-foreground rounded-br-sm'
+                                  : 'bg-muted rounded-bl-sm'
+                              )}
+                            >
+                              <p className="text-sm break-words">{msg.content}</p>
+                              <p className={cn(
+                                'text-[10px] mt-1',
+                                isOwn ? 'text-primary-foreground/70 text-right' : 'text-muted-foreground'
+                              )}>
+                                {formatTime(msg.created_at)}
+                              </p>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   );

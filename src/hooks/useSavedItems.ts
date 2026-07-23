@@ -53,7 +53,7 @@ export const useSavedItems = () => {
           item_type: input.item_type,
           item_id: input.item_id || null,
           item_title: input.item_title,
-          item_url: input.item_url || null,
+          item_url: input.item_url || '',
           item_metadata: input.item_metadata || {},
         });
       if (error) throw error;
