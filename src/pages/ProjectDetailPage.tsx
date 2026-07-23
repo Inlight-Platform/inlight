@@ -91,6 +91,7 @@ const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
   const { isMinimized: chatMinimized, originRoute: chatOriginRoute, chatRoute, close: closeChat, expand: expandChat } = useMinimizedChat();
   const { user } = useAuth();
   const { canManageProjects } = useFeatureAccess();
@@ -1130,7 +1131,7 @@ const ProjectDetailPage: React.FC = () => {
               {/* Creator */}
               <div 
                 className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors"
-                onClick={() => navigate(`/profile/${project.creator_id}`)}
+                onClick={() => navigate(`/profile/${project.creator_id}`, { state: { returnTo } })}
               >
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={project.creator_profile?.avatar_url || undefined} />
@@ -1154,7 +1155,7 @@ const ProjectDetailPage: React.FC = () => {
                   >
                     <div
                       className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors flex-1"
-                      onClick={() => navigate(`/profile/${member.user_id}`)}
+                      onClick={() => navigate(`/profile/${member.user_id}`, { state: { returnTo } })}
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={member.profile?.avatar_url || undefined} />
