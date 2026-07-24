@@ -88,7 +88,14 @@ Deno.serve(async (req) => {
     const projectTitle = project?.title || invite.project_title || "an Inlight project";
     const senderName = senderProfile?.display_name || "An Inlight collaborator";
     const token = String(invite.token || "");
-    const inviteUrl = `${getSiteUrl()}/auth?mode=signup&credit_invite=${encodeURIComponent(token)}`;
+
+    // Send existing Inlight users to sign-in so they can claim the credit
+    // immediately; send new recipients to sign-up.
+    const { data: emailExists } = await supabase.rpc("check_email_exists_for_signup", {
+      search_email: normalizedEmail,
+    });
+    const authMode = emailExists ? "signin" : "signup";
+    const inviteUrl = `${getSiteUrl()}/auth?mode=${authMode}&credit_invite=${encodeURIComponent(token)}`;
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
 
     if (!resendApiKey) {
@@ -110,10 +117,10 @@ Deno.serve(async (req) => {
       html: `
         <div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#171717;max-width:560px;margin:0 auto;padding:32px 20px;">
           <h1 style="font-size:28px;line-height:1.2;margin:0 0 12px;">Claim your project credit</h1>
-          <p style="margin:0 0 16px;">${escapeHtml(senderName)} invited you to join Inlight and claim your <strong>${escapeHtml(normalizedRole)}</strong> credit on <strong>${escapeHtml(projectTitle)}</strong>.</p>
+          <p style="margin:0 0 16px;">${escapeHtml(senderName)} invited you to claim your <strong>${escapeHtml(normalizedRole)}</strong> credit on <strong>${escapeHtml(projectTitle)}</strong>.</p>
           ${noteHtml}
           <p style="margin:24px 0;">
-            <a href="${escapeHtml(inviteUrl)}" style="display:inline-block;background:#171717;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;">Claim credit</a>
+            <a href="${escapeHtml(inviteUrl)}" style="display:inline-block;background:#171717;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;">${emailExists ? "Sign in to claim credit" : "Create your account"}</a>
           </p>
           <p style="font-size:13px;color:#666;margin:24px 0 0;">If the button does not work, paste this link into your browser:<br>${escapeHtml(inviteUrl)}</p>
         </div>
