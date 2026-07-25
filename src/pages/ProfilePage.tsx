@@ -59,6 +59,7 @@ import { CoverImageCropper } from "@/components/profile/CoverImageCropper";
 import { MyProjects } from "@/components/profile/MyProjects";
 import { UserPosts } from "@/components/profile/UserPosts";
 import { AttendedSection } from "@/components/profile/AttendedSection";
+import { SavedShows } from "@/components/profile/SavedShows";
 import { useMyFacultyGroup } from "@/hooks/useGroups";
 
 const ManageGroupButton: React.FC = () => {
@@ -104,7 +105,7 @@ import inlightLogo from "@/assets/inlight-logo.jpeg";
 
 type MediaType = "photo" | "video" | "audio" | "document";
 type MediaVisibility = "public" | "connections" | "private";
-type ProfileSectionKey = "materials" | "credits" | "attended" | "projects" | "posts";
+type ProfileSectionKey = "materials" | "credits" | "attended" | "projects" | "posts" | "savedShows";
 
 interface MediaItem {
   id: string;
@@ -148,6 +149,7 @@ interface ProfileData {
   show_union_status?: boolean;
   show_representation?: boolean;
   show_gear_list?: boolean;
+  watchlist_public?: boolean;
 }
 
 class ProfileSectionErrorBoundary extends React.Component<
@@ -290,6 +292,7 @@ const ProfilePage: React.FC = () => {
   const [materialsOpen, setMaterialsOpen] = useState(false);
   const [postsOpen, setPostsOpen] = useState(false);
   const [attendedOpen, setAttendedOpen] = useState(false);
+  const [savedShowsOpen, setSavedShowsOpen] = useState(false);
   const sectionDefaultsProfileRef = useRef<string | null>(null);
   const manuallyChangedSectionsRef = useRef<Record<ProfileSectionKey, boolean>>({
     materials: false,
@@ -297,6 +300,7 @@ const ProfilePage: React.FC = () => {
     attended: false,
     projects: false,
     posts: false,
+    savedShows: false,
   });
 
   // Editing states
@@ -404,7 +408,7 @@ const ProfilePage: React.FC = () => {
         const { data, error } = await supabase
           .from("profiles_public")
           .select(
-            "display_name, stage_name, avatar_url, cover_url, location, role, badges, bio, union_status, representation, gear_list:gear_list_display, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list",
+            "display_name, stage_name, avatar_url, cover_url, location, role, badges, bio, union_status, representation, gear_list:gear_list_display, headline, user_id, skills, instagram_url, website_url, graduation_status, graduation_year, show_union_status, show_representation, show_gear_list, watchlist_public",
           )
           .eq("user_id", resolvedUserId)
           .maybeSingle();
@@ -416,6 +420,35 @@ const ProfilePage: React.FC = () => {
       }
     },
     enabled: !!resolvedUserId,
+  });
+
+  // Own-profile: read from profiles_public (has watchlist_public via view migration).
+  // Other-user: already included in dbProfile via the profiles_public SELECT above.
+  const { data: ownWatchlistPublic = false } = useQuery({
+    queryKey: ["watchlist-public", resolvedUserId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles_public")
+        .select("watchlist_public")
+        .eq("user_id", resolvedUserId!)
+        .maybeSingle();
+      return (data as any)?.watchlist_public ?? false;
+    },
+    enabled: isOwnProfile && !!resolvedUserId && !!authUser?.id,
+  });
+  const watchlistPublic = isOwnProfile ? ownWatchlistPublic : (dbProfile?.watchlist_public ?? false);
+
+  // Fetch watchlist for section auto-expand. Uses the same key as SavedShows so
+  // the result is shared. Gated on auth being confirmed to avoid the RLS timing
+  // issue where the unauthenticated read returns empty and locks the section closed.
+  const { data: savedShowsForExpand = [] } = useQuery({
+    queryKey: ['saved-shows-profile', resolvedUserId],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('get_profile_watchlist', { p_user_id: resolvedUserId });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    enabled: (isOwnProfile && !!authUser?.id) || (!isOwnProfile && watchlistPublic && !!resolvedUserId),
   });
 
   // Fetch credits from database - for any user
@@ -485,6 +518,7 @@ const ProfilePage: React.FC = () => {
         postsRes,
         eventsRes,
         attendanceRes,
+        savedShowsRes,
       ] = await Promise.all([
         (() => {
           let query = supabase.from("user_media").select("id").eq("user_id", resolvedUserId).limit(1);
@@ -512,6 +546,7 @@ const ProfilePage: React.FC = () => {
         supabase.from("posts").select("id").eq("user_id", resolvedUserId).limit(1),
         supabase.from("events").select("id").eq("user_id", resolvedUserId).limit(1),
         supabase.rpc("get_profile_attendance", { _user_id: resolvedUserId }),
+        supabase.from("saved_shows").select("id").eq("user_id", resolvedUserId).limit(1),
       ]);
 
       const ownedProjectIds = (ownedProjectsRes.data || []).map((project) => project.id).filter(Boolean);
@@ -534,6 +569,7 @@ const ProfilePage: React.FC = () => {
         whyStarted: whyAnswers,
         credits: Boolean((creditsRes.data || []).length),
         attended: Boolean((attendanceRes.data || []).length),
+        savedShows: Boolean((savedShowsRes.data || []).length),
         projects: Boolean(
           ownedProjectIds.length || (memberProjectsRes.data || []).length || (savedProjectsRes.data || []).length,
         ),
@@ -642,12 +678,14 @@ const ProfilePage: React.FC = () => {
       attended: false,
       projects: false,
       posts: false,
+      savedShows: false,
     };
     setMaterialsOpen(false);
     setCreditsOpen(false);
     setAttendedOpen(false);
     setProjectsOpen(false);
     setPostsOpen(false);
+    setSavedShowsOpen(false);
   }, [resolvedUserId]);
 
   useEffect(() => {
@@ -661,6 +699,14 @@ const ProfilePage: React.FC = () => {
     if (!manuallyChangedSectionsRef.current.projects) setProjectsOpen(sectionContent.projects);
     if (!manuallyChangedSectionsRef.current.posts) setPostsOpen(sectionContent.posts);
   }, [resolvedUserId, sectionContent]);
+
+  // Watchlist expand: driven by the auth-gated RPC query, not sectionContent,
+  // so it only fires once auth.uid() is confirmed and the RLS read is accurate.
+  useEffect(() => {
+    if (savedShowsForExpand.length > 0 && !manuallyChangedSectionsRef.current.savedShows) {
+      setSavedShowsOpen(true);
+    }
+  }, [savedShowsForExpand.length]);
 
   const handleSectionOpenChange =
     (section: ProfileSectionKey, setOpen: React.Dispatch<React.SetStateAction<boolean>>) => (open: boolean) => {
@@ -1176,10 +1222,12 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const profileRouteState = location.state as { returnTo?: string; returnState?: { returnTo?: string } } | null;
+  const showProfileBackButton = !isOwnProfile || Boolean(profileRouteState?.returnTo);
+
   const handleBackToPeople = () => {
-    const state = location.state as { returnTo?: string } | null;
-    if (state?.returnTo === "/people") {
-      navigate("/people");
+    if (profileRouteState?.returnTo) {
+      navigate(profileRouteState.returnTo, profileRouteState.returnState ? { state: profileRouteState.returnState } : undefined);
       return;
     }
 
@@ -1235,18 +1283,19 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top bar — back button only */}
-      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center">
-          <button
-            onClick={handleBackToPeople}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/80 text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Back to People"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
+      {showProfileBackButton && (
+        <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center">
+            <button
+              onClick={handleBackToPeople}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/80 text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Back"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Centered profile frame */}
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pb-10">
@@ -1584,7 +1633,10 @@ const ProfilePage: React.FC = () => {
                 <div className="w-full max-w-md border-t border-border/70 pt-4">
                   <div className="flex items-center justify-center gap-2">
                     <button
-                      onClick={() => navigate(isOwnProfile ? "/network" : `/mutuals/${resolvedUserId}`)}
+                      onClick={() => navigate(
+                        isOwnProfile ? "/network" : `/mutuals/${resolvedUserId}`,
+                        isOwnProfile ? { state: { returnTo: location.pathname } } : undefined
+                      )}
                       className="text-sm text-muted-foreground transition-colors hover:text-primary hover:underline"
                     >
                       <span className="font-semibold text-foreground">{networkCounts?.networkCount || 0}</span>{" "}
@@ -1708,14 +1760,14 @@ const ProfilePage: React.FC = () => {
                   {isOwnProfile && authUser && (
                     <>
                       <button
-                        onClick={() => navigate("/saves")}
+                        onClick={() => navigate("/saves", { state: { returnTo: location.pathname } })}
                         className="flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-primary/15 dark:bg-white/10 hover:bg-primary/25 dark:hover:bg-white/20 text-sm font-medium text-primary dark:text-white/80 border border-primary/20 dark:border-white/20 transition-colors"
                       >
                         <Bookmark className="w-4 h-4" />
                         My Saves
                       </button>
                       <button
-                        onClick={() => navigate("/network")}
+                        onClick={() => navigate("/network", { state: { returnTo: location.pathname } })}
                         className="flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-primary/15 dark:bg-white/10 hover:bg-primary/25 dark:hover:bg-white/20 text-sm font-medium text-primary dark:text-white/80 border border-primary/20 dark:border-white/20 transition-colors"
                       >
                         <Users className="w-4 h-4" />
@@ -2069,6 +2121,34 @@ const ProfilePage: React.FC = () => {
                   <CollapsibleContent className="mt-4">
                     <ProfileSectionErrorBoundary title="Attended">
                       <AttendedSection userId={resolvedUserId} isOwnProfile={isOwnProfile} />
+                    </ProfileSectionErrorBoundary>
+                  </CollapsibleContent>
+                </section>
+              </Collapsible>
+            )}
+
+            {/* Saved Shows - own profile always; others only if watchlist_public */}
+            {resolvedUserId && (isOwnProfile || watchlistPublic) && (
+              <Collapsible
+                id="profile-saved-shows"
+                open={savedShowsOpen}
+                onOpenChange={handleSectionOpenChange("savedShows", setSavedShowsOpen)}
+                className="scroll-mt-24"
+              >
+                <section className="px-4 sm:px-6 lg:px-8 py-4">
+                  <CollapsibleTrigger className="flex items-center gap-2 group flex-1 min-w-0 text-left w-full">
+                    <h2 className="text-lg font-display font-semibold">Watchlist</h2>
+                    <ChevronDown
+                      className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${savedShowsOpen ? "rotate-180" : ""}`}
+                    />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-4">
+                    <ProfileSectionErrorBoundary title="Watchlist">
+                      <SavedShows
+                        userId={resolvedUserId}
+                        isOwnProfile={isOwnProfile}
+                        watchlistPublic={watchlistPublic}
+                      />
                     </ProfileSectionErrorBoundary>
                   </CollapsibleContent>
                 </section>

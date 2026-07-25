@@ -1253,6 +1253,7 @@ export type Database = {
           updated_at: string
           user_id: string
           vouch_count: number
+          watchlist_public: boolean
           website_url: string | null
           why_artist: string | null
         }
@@ -1268,6 +1269,7 @@ export type Database = {
           email_notifications?: boolean | null
           favorite_artist?: string | null
           favorite_movie?: string | null
+          watchlist_public?: boolean
           favorite_song?: string | null
           gear_list?: string[] | null
           goals?: string[]
@@ -1347,6 +1349,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           vouch_count?: number
+          watchlist_public?: boolean
           website_url?: string | null
           why_artist?: string | null
         }
@@ -2619,6 +2622,7 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
           vouch_count: number | null
+          watchlist_public: boolean | null
           website_url: string | null
           why_artist: string | null
         }

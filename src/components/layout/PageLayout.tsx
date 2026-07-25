@@ -4,7 +4,7 @@ import MainNav from './MainNav';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
 import OnboardingTour from '@/components/tour/OnboardingTour';
-import { recordRoute } from '@/lib/safeBack';
+import { currentRoute, recordRoute } from '@/lib/safeBack';
 import { useTheme } from '@/hooks/useTheme';
 
 interface PageLayoutProps {
@@ -19,8 +19,8 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ children }) => {
   // Track the most recently visited sidebar route so back-arrows can
   // safely return to it instead of landing on a non-sidebar URL.
   useEffect(() => {
-    recordRoute(location.pathname);
-  }, [location.pathname]);
+    recordRoute(currentRoute(location));
+  }, [location]);
 
   return (
     <div

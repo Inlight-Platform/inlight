@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Folder, Plus, Bookmark } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +24,9 @@ interface MyProjectsProps {
 
 export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const routeState = location.state as { returnTo?: string; returnState?: { returnTo?: string } } | null;
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
   // Fetch projects where user is creator or member
   const { data: projects = [], isLoading: loadingProjects } = useQuery({
@@ -99,7 +102,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
   const ProjectCard = ({ project, showRole = false }: { project: Project; showRole?: boolean }) => (
     <Card 
       className="flex aspect-square cursor-pointer flex-col overflow-hidden bg-card border-border transition-shadow hover:shadow-lg"
-      onClick={() => navigate(`/projects/${project.id}`)}
+      onClick={() => navigate(`/projects/${project.id}`, { state: { returnTo, returnState: routeState || undefined } })}
     >
       {project.header_image_url || project.main_image_url ? (
         <img

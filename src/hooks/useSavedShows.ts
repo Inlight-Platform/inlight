@@ -31,12 +31,21 @@ export const useSavedShows = () => {
         .upsert({ user_id: user.id, show_id: showId }, { onConflict: 'user_id,show_id', ignoreDuplicates: true });
       if (error) throw error;
     },
+    onMutate: async (showId) => {
+      await queryClient.cancelQueries({ queryKey: ['saved-show-ids', user?.id] });
+      const previous = queryClient.getQueryData<string[]>(['saved-show-ids', user?.id]);
+      queryClient.setQueryData<string[]>(['saved-show-ids', user?.id], (old = []) => [...old, showId]);
+      return { previous };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saved-show-ids'] });
       queryClient.invalidateQueries({ queryKey: ['my-saved-shows'] });
-      toast.success('Added to your show list! 🎭');
+      toast.success('Added to your watchlist! 🎭');
     },
-    onError: (error: any) => {
+    onError: (error: any, _showId, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(['saved-show-ids', user?.id], context.previous);
+      }
       console.error('Save show error:', error);
       toast.error(error?.message || 'Could not save show');
     },
@@ -46,19 +55,24 @@ export const useSavedShows = () => {
   const unsaveMutation = useMutation({
     mutationFn: async (showId: string) => {
       if (!user?.id) throw new Error('Must be logged in');
-      const { error } = await supabase
-        .from('saved_shows')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('show_id', showId);
+      const { error } = await (supabase.rpc as any)('remove_saved_show', { p_show_id: showId });
       if (error) throw error;
+    },
+    onMutate: async (showId) => {
+      await queryClient.cancelQueries({ queryKey: ['saved-show-ids', user?.id] });
+      const previous = queryClient.getQueryData<string[]>(['saved-show-ids', user?.id]);
+      queryClient.setQueryData<string[]>(['saved-show-ids', user?.id], (old = []) => old.filter(id => id !== showId));
+      return { previous };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saved-show-ids'] });
       queryClient.invalidateQueries({ queryKey: ['my-saved-shows'] });
       toast.success('Removed from your show list');
     },
-    onError: () => {
+    onError: (_err, _showId, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(['saved-show-ids', user?.id], context.previous);
+      }
       toast.error('Could not remove show');
     },
   });
