@@ -17,7 +17,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Loader2, Users, Calendar, Send, Check, Clock, X, Upload, Video, FileText } from 'lucide-react';
+import { Loader2, Users, Calendar, Send, Check, Clock, X, Upload, Video, FileText, Bookmark, BookmarkCheck } from 'lucide-react';
+import { useSavedItems } from '@/hooks/useSavedItems';
 import { format, addMonths } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -34,6 +35,7 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { isSaved, toggleSave } = useSavedItems();
   const hasPrependedItems = React.Children.count(prependItems) > 0;
 
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
@@ -257,23 +259,48 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
                     <Calendar className="w-3 h-3 flex-shrink-0" />
                     <span>Apply by {format(applyBy, 'MMM d, yyyy')}</span>
                   </div>
-                  {user && (
-                    applicationStatus ? (
-                      getStatusBadge(applicationStatus)
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 w-7 p-0 text-primary hover:bg-primary/10"
+                  <div className="flex items-center gap-1">
+                    {user && (
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          openApplicationDialog(role, applicationStatus);
+                          toggleSave({
+                            item_type: 'open_role',
+                            item_title: role.roleName,
+                            item_metadata: {
+                              projectTitle: role.projectTitle,
+                              projectId: role.projectId,
+                              deadline: role.projectDeadline,
+                            },
+                          });
                         }}
+                        className="p-1 rounded-full hover:bg-accent transition-colors"
                       >
-                        <Send className="w-4 h-4" />
-                      </Button>
-                    )
-                  )}
+                        {isSaved('open_role', role.roleName) ? (
+                          <BookmarkCheck className="w-3.5 h-3.5 text-primary" />
+                        ) : (
+                          <Bookmark className="w-3.5 h-3.5 text-muted-foreground" />
+                        )}
+                      </button>
+                    )}
+                    {user && (
+                      applicationStatus ? (
+                        getStatusBadge(applicationStatus)
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-primary hover:bg-primary/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openApplicationDialog(role, applicationStatus);
+                          }}
+                        >
+                          <Send className="w-4 h-4" />
+                        </Button>
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
             );

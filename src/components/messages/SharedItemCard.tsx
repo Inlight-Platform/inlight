@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ExternalLink, FolderKanban, Theater, BookOpen, Briefcase } from 'lucide-react';
+import { ExternalLink, FolderKanban, Theater, BookOpen, Briefcase, Film, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface SharedItemData {
@@ -33,6 +33,8 @@ const typeIcons: Record<string, React.ElementType> = {
   Show: Theater,
   Resource: BookOpen,
   Job: Briefcase,
+  Film: Film,
+  Profile: User,
 };
 
 interface SharedItemCardProps {
@@ -55,14 +57,24 @@ const SharedItemCard: React.FC<SharedItemCardProps> = ({ data, isOwn }) => {
     }
   };
 
+  const hasUrl = !!data.url;
+
   return (
     <button
       onClick={handleClick}
       className={cn(
-        'block w-full text-left rounded-xl overflow-hidden border transition-all hover:shadow-md',
-        isOwn
-          ? 'border-primary-foreground/20 hover:border-primary-foreground/40'
-          : 'border-border hover:border-primary/30'
+        'block w-full text-left rounded-xl overflow-hidden border transition-all',
+        hasUrl
+          ? cn(
+              'hover:shadow-md',
+              isOwn
+                ? 'border-primary-foreground/20 hover:border-primary-foreground/40'
+                : 'border-border hover:border-primary/30'
+            )
+          : cn(
+              'cursor-default',
+              isOwn ? 'border-primary-foreground/20' : 'border-border'
+            )
       )}
     >
       {data.image_url && (
@@ -91,7 +103,7 @@ const SharedItemCard: React.FC<SharedItemCardProps> = ({ data, isOwn }) => {
             'text-xs',
             isOwn ? 'text-primary-foreground/60' : 'text-muted-foreground'
           )}>
-            {data.type} · Tap to view
+            {hasUrl ? `${data.type} · Tap to view` : data.type}
           </p>
         </div>
       </div>

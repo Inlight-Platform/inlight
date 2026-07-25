@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
+import { isPast } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft, Film, User } from 'lucide-react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft, Film, User, Users } from 'lucide-react';
 import { buildSharedItemMessage } from '@/components/messages/SharedItemCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedShows } from '@/hooks/useSavedShows';
 import { useSavedFilms } from '@/hooks/useSavedFilms';
 import { useSavedItems, SavedItem } from '@/hooks/useSavedItems';
+import { useGroupChats } from '@/hooks/useGroupChats';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +40,8 @@ interface SavedShow {
   show_type: string;
   poster_url: string | null;
   description: string | null;
+  run_end: string | null;
+  is_active: boolean;
 }
 
 const ShareDialog: React.FC<{
@@ -51,6 +55,7 @@ const ShareDialog: React.FC<{
   const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [sending, setSending] = useState(false);
+  const { groupChats } = useGroupChats();
 
   const { data: connections = [] } = useQuery({
     queryKey: ['share-connections', user?.id],
@@ -69,30 +74,29 @@ const ShareDialog: React.FC<{
     enabled: !!user?.id && open,
   });
 
-  const filtered = connections.filter((c: any) =>
-    !search || c.display_name?.toLowerCase().includes(search.toLowerCase())
+  const q = search.toLowerCase();
+  const filteredConnections = connections.filter((c: any) =>
+    !search || c.display_name?.toLowerCase().includes(q)
   );
+  const filteredGroups = groupChats.filter(gc =>
+    !search || gc.name?.toLowerCase().includes(q)
+  );
+
+  const buildMessage = () => buildSharedItemMessage({
+    type: itemType,
+    title: itemTitle,
+    url: itemUrl,
+    image_url: imageUrl,
+  });
 
   const handleShare = async (receiverId: string, receiverName: string) => {
     if (!user?.id) return;
     setSending(true);
     try {
-      const shareMessage = buildSharedItemMessage({
-        type: itemType,
-        title: itemTitle,
-        url: itemUrl,
-        image_url: imageUrl,
-      });
-      
       const { error } = await supabase
         .from('messages')
-        .insert({
-          sender_id: user.id,
-          receiver_id: receiverId,
-          content: shareMessage,
-        });
+        .insert({ sender_id: user.id, receiver_id: receiverId, content: buildMessage() });
       if (error) throw error;
-
       toast.success(`Shared with ${receiverName}!`);
       onOpenChange(false);
     } catch {
@@ -102,6 +106,29 @@ const ShareDialog: React.FC<{
     }
   };
 
+  const handleShareToGroup = async (groupChatId: string, groupName: string) => {
+    if (!user?.id) return;
+    setSending(true);
+    try {
+      const { error } = await supabase
+        .from('group_chat_messages')
+        .insert({ group_chat_id: groupChatId, sender_id: user.id, content: buildMessage() });
+      if (error) throw error;
+      await supabase
+        .from('project_group_chats')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', groupChatId);
+      toast.success(`Shared to ${groupName}!`);
+      onOpenChange(false);
+    } catch {
+      toast.error('Failed to share');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const hasResults = filteredConnections.length > 0 || filteredGroups.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -109,29 +136,58 @@ const ShareDialog: React.FC<{
           <DialogTitle>Share "{itemTitle}"</DialogTitle>
         </DialogHeader>
         <Input
-          placeholder="Search connections..."
+          placeholder="Search connections or group chats..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="mb-3"
         />
-        <div className="max-h-60 overflow-y-auto space-y-2">
-          {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">No connections found</p>
+        <div className="max-h-60 overflow-y-auto space-y-1">
+          {!hasResults ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No connections or group chats found</p>
           ) : (
-            filtered.map((c: any) => (
-              <button
-                key={c.user_id}
-                onClick={() => handleShare(c.user_id, c.display_name || 'User')}
-                disabled={sending}
-                className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left"
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={c.avatar_url || undefined} />
-                  <AvatarFallback>{c.display_name?.[0] || 'U'}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium">{c.display_name || 'Unknown'}</span>
-              </button>
-            ))
+            <>
+              {filteredConnections.length > 0 && (
+                <>
+                  {filteredGroups.length > 0 && (
+                    <p className="text-xs font-medium text-muted-foreground px-2 pb-1">People</p>
+                  )}
+                  {filteredConnections.map((c: any) => (
+                    <button
+                      key={c.user_id}
+                      onClick={() => handleShare(c.user_id, c.display_name || 'User')}
+                      disabled={sending}
+                      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={c.avatar_url || undefined} />
+                        <AvatarFallback>{c.display_name?.[0] || 'U'}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">{c.display_name || 'Unknown'}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+              {filteredGroups.length > 0 && (
+                <>
+                  {filteredConnections.length > 0 && (
+                    <p className="text-xs font-medium text-muted-foreground px-2 pt-2 pb-1">Group Chats</p>
+                  )}
+                  {filteredGroups.map((gc) => (
+                    <button
+                      key={gc.id}
+                      onClick={() => handleShareToGroup(gc.id, gc.name)}
+                      disabled={sending}
+                      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left"
+                    >
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Users className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="text-sm font-medium">{gc.name}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+            </>
           )}
         </div>
       </DialogContent>
@@ -153,6 +209,10 @@ const MySavesPage: React.FC = () => {
     type: string;
     imageUrl?: string;
   }>({ open: false, title: '', type: '' });
+
+  const [showsFilter, setShowsFilter] = useState<'active' | 'history'>('active');
+  const [filmsFilter, setFilmsFilter] = useState<'active' | 'history'>('active');
+  const [jobsFilter, setJobsFilter] = useState<'active' | 'expired'>('active');
 
   // Fetch saved projects
   const { data: savedProjects = [], isLoading: loadingProjects } = useQuery({
@@ -187,16 +247,17 @@ const MySavesPage: React.FC = () => {
 
   // Fetch saved shows
   const { data: savedShows = [], isLoading: loadingShows } = useQuery({
-    queryKey: ['my-saves-shows', user?.id, savedShowIds],
+    queryKey: ['my-saved-shows', user?.id, savedShowIds],
     queryFn: async () => {
       if (!savedShowIds.length) return [];
       const { data } = await supabase
         .from('nyc_shows')
-        .select('id, title, venue, borough, category, show_type, poster_url, description')
+        .select('id, title, venue, borough, category, show_type, poster_url, description, run_end, is_active')
         .in('id', savedShowIds);
       return (data || []) as SavedShow[];
     },
     enabled: savedShowIds.length > 0,
+    placeholderData: keepPreviousData,
   });
 
   // Fetch saved films
@@ -206,17 +267,78 @@ const MySavesPage: React.FC = () => {
       if (!savedFilmIds.length) return [];
       const { data } = await supabase
         .from('film_metrics')
-        .select('id, title, studio, poster_url, rating, weekend_gross')
+        .select('id, title, studio, poster_url, rating, weekend_gross, date')
         .in('id', savedFilmIds);
-      return (data || []) as { id: string; title: string; studio: string; poster_url: string | null; rating: number; weekend_gross: number }[];
+      return (data || []) as { id: string; title: string; studio: string; poster_url: string | null; rating: number; weekend_gross: number; date: string }[];
     },
     enabled: savedFilmIds.length > 0,
+    placeholderData: keepPreviousData,
   });
 
   // Filter saved items by type
   const savedResources = savedItems.filter(i => i.item_type === 'resource');
   const savedJobs = savedItems.filter(i => i.item_type === 'job' || i.item_type === 'open_role');
   const savedPeople = savedItems.filter(i => i.item_type === 'person');
+
+  // Live-fetch current deadline/status for saved jobs from the opportunities table
+  const savedJobOpportunityIds = savedJobs.map(i => i.item_id).filter(Boolean) as string[];
+  const savedJobTitles = savedJobs.filter(i => !i.item_id).map(i => i.item_title);
+  const { data: liveOpportunityData = [] } = useQuery({
+    queryKey: ['saved-jobs-live', savedJobOpportunityIds, savedJobTitles],
+    queryFn: async () => {
+      let query = supabase.from('opportunities').select('id, title, deadline, status');
+      if (savedJobOpportunityIds.length && savedJobTitles.length) {
+        query = query.or(`id.in.(${savedJobOpportunityIds.join(',')}),title.in.(${savedJobTitles.map(t => `"${t}"`).join(',')})`);
+      } else if (savedJobOpportunityIds.length) {
+        query = query.in('id', savedJobOpportunityIds);
+      } else if (savedJobTitles.length) {
+        query = query.in('title', savedJobTitles);
+      } else {
+        return [];
+      }
+      const { data } = await query;
+      return data || [];
+    },
+    enabled: savedJobs.length > 0,
+  });
+
+  // Build lookup maps: id → live data, title → live data
+  const liveById = new Map(liveOpportunityData.map((o: any) => [o.id, o]));
+  const liveByTitle = new Map(liveOpportunityData.map((o: any) => [o.title, o]));
+
+  const getJobStatus = (item: SavedItem): { deadline: string | null; status: string | null } => {
+    const live = (item.item_id ? liveById.get(item.item_id) : null) ?? liveByTitle.get(item.item_title);
+    if (live) return { deadline: live.deadline, status: live.status };
+    return {
+      deadline: (item.item_metadata?.deadline as string | undefined) ?? null,
+      status: (item.item_metadata?.status as string | undefined) ?? null,
+    };
+  };
+
+  const isJobExpired = (item: SavedItem) => {
+    const { deadline, status } = getJobStatus(item);
+    if (status === 'closed') return true;
+    if (!deadline) return false;
+    return isPast(new Date(deadline));
+  };
+
+  const activeJobs = savedJobs.filter(i => !isJobExpired(i));
+  const expiredJobs = savedJobs.filter(i => isJobExpired(i));
+
+  // Immediate filter — removes unsaved items before the network refetch settles
+  const visibleShows = savedShows.filter(s => savedShowIds.includes(s.id));
+  const visibleFilms = savedFilms.filter(f => savedFilmIds.includes(f.id));
+
+  // Active/history splits for shows
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const activeShows = visibleShows.filter(s => s.is_active && (s.run_end === null || new Date(s.run_end) >= today));
+  const pastShows = visibleShows.filter(s => !s.is_active || (s.run_end !== null && new Date(s.run_end) < today));
+
+  // Active/history splits for films — box office date within 90 days = currently in theaters
+  const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const activeFilms = visibleFilms.filter(f => new Date(f.date) >= ninetyDaysAgo);
+  const pastFilms = visibleFilms.filter(f => new Date(f.date) < ninetyDaysAgo);
 
   const queryClient = useQueryClient();
 
@@ -237,7 +359,7 @@ const MySavesPage: React.FC = () => {
 
   const isLoading = loadingProjects || loadingShows || loadingFilms;
 
-  const totalSaves = savedProjects.length + savedShows.length + savedFilms.length + savedResources.length + savedJobs.length + savedPeople.length;
+  const totalSaves = savedProjects.length + visibleShows.length + visibleFilms.length + savedResources.length + savedJobs.length + savedPeople.length;
 
   if (!user) {
     return (
@@ -287,11 +409,11 @@ const MySavesPage: React.FC = () => {
               </TabsTrigger>
               <TabsTrigger value="shows" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <Theater className="w-4 h-4" />
-                <span className="hidden sm:inline">Shows</span> ({savedShows.length})
+                <span className="hidden sm:inline">Shows</span> ({visibleShows.length})
               </TabsTrigger>
               <TabsTrigger value="films" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <Film className="w-4 h-4" />
-                <span className="hidden sm:inline">Films</span> ({savedFilms.length})
+                <span className="hidden sm:inline">Films</span> ({visibleFilms.length})
               </TabsTrigger>
               <TabsTrigger value="people" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <User className="w-4 h-4" />
@@ -345,73 +467,133 @@ const MySavesPage: React.FC = () => {
 
             {/* Shows */}
             <TabsContent value="shows">
-              {savedShows.length === 0 ? (
+              {visibleShows.length === 0 ? (
                 <EmptyCategory icon={Theater} label="shows" />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {savedShows.map(show => (
-                    <Card key={show.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                      {show.poster_url ? (
-                        <img src={show.poster_url} alt={show.title} className="w-full h-36 object-cover" />
-                      ) : (
-                        <div className="w-full h-36 bg-muted flex items-center justify-center">
-                          <Theater className="w-8 h-8 text-muted-foreground opacity-30" />
-                        </div>
-                      )}
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold truncate mb-1">{show.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{show.venue} • {show.borough}</p>
-                        <div className="flex items-center justify-between">
-                          <Badge variant="secondary" className="text-xs">{show.category}</Badge>
-                          <div className="flex gap-1">
-                            <button onClick={() => setShareDialog({ open: true, title: show.title, type: 'Show', imageUrl: show.poster_url || undefined })} className="p-1.5 rounded-full hover:bg-accent">
-                              <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                            </button>
-                            <button onClick={() => unsaveShow(show.id)} className="p-1.5 rounded-full hover:bg-accent">
-                              <BookmarkCheck className="w-4 h-4 text-primary" />
-                            </button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <>
+                  <div className="flex gap-2 mb-4">
+                    <Button
+                      variant={showsFilter === 'active' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setShowsFilter('active')}
+                    >
+                      Now Playing ({activeShows.length})
+                    </Button>
+                    <Button
+                      variant={showsFilter === 'history' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setShowsFilter('history')}
+                    >
+                      Closed ({pastShows.length})
+                    </Button>
+                  </div>
+                  {(() => {
+                    const shows = showsFilter === 'active' ? activeShows : pastShows;
+                    return shows.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Theater className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+                        <p className="text-muted-foreground">
+                          {showsFilter === 'active' ? 'No currently running shows saved' : 'No closed shows saved'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {shows.map(show => (
+                          <Card key={show.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                            {show.poster_url ? (
+                              <img src={show.poster_url} alt={show.title} className="w-full h-36 object-cover" />
+                            ) : (
+                              <div className="w-full h-36 bg-muted flex items-center justify-center">
+                                <Theater className="w-8 h-8 text-muted-foreground opacity-30" />
+                              </div>
+                            )}
+                            <CardContent className="p-4">
+                              <h3 className="font-semibold truncate mb-1">{show.title}</h3>
+                              <p className="text-sm text-muted-foreground mb-2">{show.venue} • {show.borough}</p>
+                              <div className="flex items-center justify-between">
+                                <Badge variant="secondary" className="text-xs">{show.category}</Badge>
+                                <div className="flex gap-1">
+                                  <button onClick={() => setShareDialog({ open: true, title: show.title, type: 'Show', imageUrl: show.poster_url || undefined })} className="p-1.5 rounded-full hover:bg-accent">
+                                    <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                                  </button>
+                                  <button onClick={() => unsaveShow(show.id)} className="p-1.5 rounded-full hover:bg-accent">
+                                    <BookmarkCheck className="w-4 h-4 text-primary" />
+                                  </button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
               )}
             </TabsContent>
 
             {/* Films */}
             <TabsContent value="films">
-              {savedFilms.length === 0 ? (
+              {visibleFilms.length === 0 ? (
                 <EmptyCategory icon={Film} label="films" />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {savedFilms.map(film => (
-                    <Card key={film.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                      {film.poster_url ? (
-                        <img src={film.poster_url} alt={film.title} className="w-full h-36 object-cover" />
-                      ) : (
-                        <div className="w-full h-36 bg-muted flex items-center justify-center">
-                          <Film className="w-8 h-8 text-muted-foreground opacity-30" />
-                        </div>
-                      )}
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold truncate mb-1">{film.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{film.studio}</p>
-                        <div className="flex items-center justify-between">
-                          <Badge variant="secondary" className="text-xs">⭐ {film.rating?.toFixed(1)}</Badge>
-                          <div className="flex gap-1">
-                            <button onClick={() => setShareDialog({ open: true, title: film.title, type: 'Film', imageUrl: film.poster_url || undefined })} className="p-1.5 rounded-full hover:bg-accent">
-                              <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                            </button>
-                            <button onClick={() => unsaveFilm(film.id)} className="p-1.5 rounded-full hover:bg-accent">
-                              <BookmarkCheck className="w-4 h-4 text-primary" />
-                            </button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <>
+                  <div className="flex gap-2 mb-4">
+                    <Button
+                      variant={filmsFilter === 'active' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFilmsFilter('active')}
+                    >
+                      In Theaters ({activeFilms.length})
+                    </Button>
+                    <Button
+                      variant={filmsFilter === 'history' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFilmsFilter('history')}
+                    >
+                      Past ({pastFilms.length})
+                    </Button>
+                  </div>
+                  {(() => {
+                    const films = filmsFilter === 'active' ? activeFilms : pastFilms;
+                    return films.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Film className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+                        <p className="text-muted-foreground">
+                          {filmsFilter === 'active' ? 'No films currently in theaters saved' : 'No past films saved'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {films.map(film => (
+                          <Card key={film.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                            {film.poster_url ? (
+                              <img src={film.poster_url} alt={film.title} className="w-full h-36 object-cover" />
+                            ) : (
+                              <div className="w-full h-36 bg-muted flex items-center justify-center">
+                                <Film className="w-8 h-8 text-muted-foreground opacity-30" />
+                              </div>
+                            )}
+                            <CardContent className="p-4">
+                              <h3 className="font-semibold truncate mb-1">{film.title}</h3>
+                              <p className="text-sm text-muted-foreground mb-2">{film.studio}</p>
+                              <div className="flex items-center justify-between">
+                                <Badge variant="secondary" className="text-xs">⭐ {film.rating?.toFixed(1)}</Badge>
+                                <div className="flex gap-1">
+                                  <button onClick={() => setShareDialog({ open: true, title: film.title, type: 'Film', imageUrl: film.poster_url || undefined })} className="p-1.5 rounded-full hover:bg-accent">
+                                    <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                                  </button>
+                                  <button onClick={() => unsaveFilm(film.id)} className="p-1.5 rounded-full hover:bg-accent">
+                                    <BookmarkCheck className="w-4 h-4 text-primary" />
+                                  </button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
               )}
             </TabsContent>
 
@@ -504,33 +686,63 @@ const MySavesPage: React.FC = () => {
               {savedJobs.length === 0 ? (
                 <EmptyCategory icon={Briefcase} label="jobs" />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {savedJobs.map(item => (
-                    <Card key={item.id} className="hover:shadow-lg transition-shadow">
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold mb-1">{item.item_title}</h3>
-                        {item.item_metadata?.company && (
-                          <p className="text-sm text-muted-foreground mb-1">{item.item_metadata.company}</p>
-                        )}
-                        {item.item_metadata?.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{item.item_metadata.description}</p>
-                        )}
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {item.item_metadata?.type && <Badge variant="secondary" className="text-xs">{item.item_metadata.type}</Badge>}
-                          {item.item_metadata?.location && <Badge variant="outline" className="text-xs">{item.item_metadata.location}</Badge>}
-                        </div>
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => setShareDialog({ open: true, title: item.item_title, type: 'Job' })} className="p-1.5 rounded-full hover:bg-accent">
-                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                          </button>
-                          <button onClick={() => unsaveItem(item.id)} className="p-1.5 rounded-full hover:bg-accent">
-                            <BookmarkCheck className="w-4 h-4 text-primary" />
-                          </button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <>
+                  <div className="flex gap-2 mb-4">
+                    <Button
+                      variant={jobsFilter === 'active' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setJobsFilter('active')}
+                    >
+                      Active ({activeJobs.length})
+                    </Button>
+                    <Button
+                      variant={jobsFilter === 'expired' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setJobsFilter('expired')}
+                    >
+                      Expired ({expiredJobs.length})
+                    </Button>
+                  </div>
+                  {(() => {
+                    const jobs = jobsFilter === 'active' ? activeJobs : expiredJobs;
+                    return jobs.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Briefcase className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+                        <p className="text-muted-foreground">
+                          {jobsFilter === 'active' ? 'No active jobs saved' : 'No expired jobs saved'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {jobs.map(item => (
+                          <Card key={item.id} className="hover:shadow-lg transition-shadow">
+                            <CardContent className="p-4">
+                              <h3 className="font-semibold mb-1">{item.item_title}</h3>
+                              {item.item_metadata?.company && (
+                                <p className="text-sm text-muted-foreground mb-1">{item.item_metadata.company}</p>
+                              )}
+                              {item.item_metadata?.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{item.item_metadata.description}</p>
+                              )}
+                              <div className="flex flex-wrap gap-1 mb-2">
+                                {item.item_metadata?.type && <Badge variant="secondary" className="text-xs">{item.item_metadata.type}</Badge>}
+                                {item.item_metadata?.location && <Badge variant="outline" className="text-xs">{item.item_metadata.location}</Badge>}
+                              </div>
+                              <div className="flex items-center justify-end gap-1">
+                                <button onClick={() => setShareDialog({ open: true, title: item.item_title, type: 'Job' })} className="p-1.5 rounded-full hover:bg-accent">
+                                  <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                                </button>
+                                <button onClick={() => unsaveItem(item.id)} className="p-1.5 rounded-full hover:bg-accent">
+                                  <BookmarkCheck className="w-4 h-4 text-primary" />
+                                </button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
               )}
             </TabsContent>
           </Tabs>

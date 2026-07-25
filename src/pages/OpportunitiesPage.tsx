@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, addMonths, isPast } from 'date-fns';
-import { Plus, Briefcase, TrendingUp, Clock, Loader2, Calendar, Trash2, Users, ExternalLink, FileText, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Plus, Briefcase, TrendingUp, Clock, Loader2, Calendar, Trash2, Users, ExternalLink, FileText, ArrowLeft, ChevronRight, Bookmark, BookmarkCheck } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
+import { useSavedItems } from '@/hooks/useSavedItems';
 import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -73,6 +74,7 @@ const OpportunityCompactCard: React.FC<{
   const { isAdmin } = useAdmin();
   const { canManageJobs } = useFeatureAccess();
   const { deleteOpportunity } = useOpportunities();
+  const { isSaved, toggleSave } = useSavedItems();
   const queryClient = useQueryClient();
   const [showDetail, setShowDetail] = useState(false);
   const [showApply, setShowApply] = useState(false);
@@ -81,6 +83,7 @@ const OpportunityCompactCard: React.FC<{
 
   const canDelete = canManageJobs && !!user && (user.id === opportunity.postedBy || isAdmin);
   const hasApplied = hasAppliedPersisted || hasAppliedLocally;
+  const saved = user ? isSaved('job', opportunity.title) : false;
 
   const deadlineDate = opportunity.deadline ? new Date(opportunity.deadline) : null;
   const applyBy = deadlineDate && !isNaN(deadlineDate.getTime())
@@ -121,11 +124,41 @@ const OpportunityCompactCard: React.FC<{
             </p>
           )}
         </div>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-          <Calendar className="w-3 h-3 flex-shrink-0" />
-          <span>
-            {isPast(applyBy) ? 'Deadline passed' : `Apply by ${format(applyBy, 'MMM d, yyyy')}`}
-          </span>
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Calendar className="w-3 h-3 flex-shrink-0" />
+            <span>
+              {isPast(applyBy) ? 'Deadline passed' : `Apply by ${format(applyBy, 'MMM d, yyyy')}`}
+            </span>
+          </div>
+          {user && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleSave({
+                  item_type: 'job',
+                  item_id: opportunity.id,
+                  item_title: opportunity.title,
+                  item_metadata: {
+                    company: opportunity.company,
+                    type: opportunity.type,
+                    location: opportunity.isRemote ? 'Remote' : opportunity.location,
+                    description: opportunity.description?.slice(0, 200),
+                    compensation: opportunity.compensation,
+                    deadline: opportunity.deadline,
+                    status: opportunity.status,
+                  },
+                });
+              }}
+              className="p-1 rounded-full hover:bg-accent transition-colors"
+            >
+              {saved ? (
+                <BookmarkCheck className="w-3.5 h-3.5 text-primary" />
+              ) : (
+                <Bookmark className="w-3.5 h-3.5 text-muted-foreground" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 
