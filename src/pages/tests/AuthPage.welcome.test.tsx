@@ -77,7 +77,7 @@ describe('AuthPage welcome copy', () => {
     authMocks.signIn.mockResolvedValue({ data: { session: { user: { id: 'issue-69-test' } } }, error: null });
   });
 
-  it('welcomes a just-created account on first sign-in instead of saying welcome back', async () => {
+  it('shows a prominent confirmation screen after signup before first sign-in', async () => {
     await renderAuthPage();
 
     fireEvent.change(screen.getByLabelText(/full name/i), {
@@ -92,11 +92,18 @@ describe('AuthPage welcome copy', () => {
     fireEvent.click(screen.getByRole('button', { name: /create my account/i }));
 
     await waitFor(() => {
-      expect(authMocks.toastSuccess).toHaveBeenCalledWith(
-        'Account created. Check your .edu inbox and confirm your email before signing in.'
-      );
+      expect(screen.getByText('Check your email and confirm your account')).toBeInTheDocument();
     });
+    expect(screen.getByText(/issue69-welcome-test-20260718@nyu\.edu/i)).toBeInTheDocument();
+    expect(screen.getByText(/Open that email and click the confirmation link before signing in/i)).toBeInTheDocument();
+    expect(authMocks.toastSuccess).not.toHaveBeenCalledWith(
+      'Account created. Check your .edu inbox and confirm your email before signing in.'
+    );
 
+    fireEvent.click(screen.getByRole('button', { name: /i confirmed my email/i }));
+    fireEvent.change(screen.getByLabelText(/^password$/i), {
+      target: { value: 'Welcome1!' },
+    });
     const signInButtons = screen.getAllByRole('button', { name: /^sign in$/i });
     fireEvent.click(signInButtons[signInButtons.length - 1]);
 
