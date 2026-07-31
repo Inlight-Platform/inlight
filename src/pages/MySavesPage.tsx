@@ -356,11 +356,11 @@ const MySavesPage: React.FC = () => {
   const activeShows = visibleShows.filter(s => !s.run_end || !isPast(new Date(s.run_end)));
   const pastShows = visibleShows.filter(s => !!s.run_end && isPast(new Date(s.run_end)));
 
-  // Active/history splits for films — box office date within 90 days = currently in theaters
-  const today = new Date();
-  const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
-  const activeFilms = visibleFilms.filter(f => new Date(f.date) >= ninetyDaysAgo);
-  const pastFilms = visibleFilms.filter(f => new Date(f.date) < ninetyDaysAgo);
+  // Active/history splits for films — mirrors Industry Now: older than 30 days = history
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const activeFilms = visibleFilms.filter(f => new Date(f.date) >= thirtyDaysAgo);
+  const pastFilms = visibleFilms.filter(f => new Date(f.date) < thirtyDaysAgo);
 
   const queryClient = useQueryClient();
 
@@ -588,14 +588,14 @@ const MySavesPage: React.FC = () => {
                       size="sm"
                       onClick={() => setFilmsFilter('active')}
                     >
-                      In Theaters ({activeFilms.length})
+                      Active ({activeFilms.length})
                     </Button>
                     <Button
                       variant={filmsFilter === 'history' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setFilmsFilter('history')}
                     >
-                      Past ({pastFilms.length})
+                      History ({pastFilms.length})
                     </Button>
                   </div>
                   {(() => {
@@ -612,7 +612,7 @@ const MySavesPage: React.FC = () => {
                         {films.map(film => (
                           <Card
                             key={film.id}
-                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", new Date(film.date) < ninetyDaysAgo && "opacity-60")}
+                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", new Date(film.date) < thirtyDaysAgo && "opacity-60")}
                             onClick={() => navigate('/stage-whisper')}
                           >
                             {film.poster_url ? (
