@@ -352,9 +352,9 @@ const MySavesPage: React.FC = () => {
   const visibleShows = savedShows.filter(s => savedShowIds.includes(s.id));
   const visibleFilms = savedFilms.filter(f => savedFilmIds.includes(f.id));
 
-  // Active/history splits for shows — mirrors Industry Now's is_active flag
-  const activeShows = visibleShows.filter(s => s.is_active);
-  const pastShows = visibleShows.filter(s => !s.is_active);
+  // Active/history splits for shows — mirrors Industry Now: active = no run_end or run_end not yet past
+  const activeShows = visibleShows.filter(s => !s.run_end || !isPast(new Date(s.run_end)));
+  const pastShows = visibleShows.filter(s => !!s.run_end && isPast(new Date(s.run_end)));
 
   // Active/history splits for films — box office date within 90 days = currently in theaters
   const today = new Date();
@@ -542,7 +542,7 @@ const MySavesPage: React.FC = () => {
                         {shows.map(show => (
                           <Card
                             key={show.id}
-                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", !show.is_active && "opacity-60")}
+                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", !!show.run_end && isPast(new Date(show.run_end)) && "opacity-60")}
                             onClick={() => navigate('/stage-whisper')}
                           >
                             {show.poster_url ? (
