@@ -543,7 +543,7 @@ const MySavesPage: React.FC = () => {
                         {shows.map(show => (
                           <Card
                             key={show.id}
-                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", showsFilter === 'history' && "opacity-60")}
+                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", (!show.is_active || (show.run_end !== null && new Date(show.run_end) < today)) && "opacity-60")}
                             onClick={() => navigate('/stage-whisper')}
                           >
                             {show.poster_url ? (
@@ -613,7 +613,7 @@ const MySavesPage: React.FC = () => {
                         {films.map(film => (
                           <Card
                             key={film.id}
-                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", filmsFilter === 'history' && "opacity-60")}
+                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", new Date(film.date) < ninetyDaysAgo && "opacity-60")}
                             onClick={() => navigate('/stage-whisper')}
                           >
                             {film.poster_url ? (
