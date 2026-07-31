@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface SavedProject {
   id: string;
@@ -53,6 +54,7 @@ const ShareDialog: React.FC<{
   imageUrl?: string;
 }> = ({ open, onOpenChange, itemTitle, itemUrl, itemType, imageUrl }) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [sending, setSending] = useState(false);
   const { groupChats } = useGroupChats();
@@ -97,6 +99,7 @@ const ShareDialog: React.FC<{
         .from('messages')
         .insert({ sender_id: user.id, receiver_id: receiverId, content: buildMessage() });
       if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast.success(`Shared with ${receiverName}!`);
       onOpenChange(false);
     } catch {
@@ -118,6 +121,24 @@ const ShareDialog: React.FC<{
         .from('project_group_chats')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', groupChatId);
+      // Notify all other group members
+      const { data: members } = await supabase
+        .from('group_chat_members')
+        .select('user_id')
+        .eq('group_chat_id', groupChatId)
+        .neq('user_id', user.id);
+      if (members?.length) {
+        await supabase.from('notifications').insert(
+          members.map(m => ({
+            user_id: m.user_id,
+            type: 'message',
+            title: `New message in ${groupName}`,
+            body: `Shared a ${itemType}`,
+            data: { group_chat_id: groupChatId },
+          }))
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ['group-chats'] });
       toast.success(`Shared to ${groupName}!`);
       onOpenChange(false);
     } catch {
@@ -520,7 +541,11 @@ const MySavesPage: React.FC = () => {
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {shows.map(show => (
-                          <Card key={show.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                          <Card
+                            key={show.id}
+                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", showsFilter === 'history' && "opacity-60")}
+                            onClick={() => navigate('/stage-whisper')}
+                          >
                             {show.poster_url ? (
                               <img src={show.poster_url} alt={show.title} className="w-full h-36 object-cover" />
                             ) : (
@@ -534,10 +559,10 @@ const MySavesPage: React.FC = () => {
                               <div className="flex items-center justify-between">
                                 <Badge variant="secondary" className="text-xs">{show.category}</Badge>
                                 <div className="flex gap-1">
-                                  <button onClick={() => setShareDialog({ open: true, title: show.title, type: 'Show', imageUrl: show.poster_url || undefined })} className="p-1.5 rounded-full hover:bg-accent">
+                                  <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: show.title, type: 'Show', imageUrl: show.poster_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
                                     <MessageSquare className="w-4 h-4 text-muted-foreground" />
                                   </button>
-                                  <button onClick={() => unsaveShow(show.id)} className="p-1.5 rounded-full hover:bg-accent">
+                                  <button onClick={(e) => { e.stopPropagation(); unsaveShow(show.id); }} className="p-1.5 rounded-full hover:bg-accent">
                                     <BookmarkCheck className="w-4 h-4 text-primary" />
                                   </button>
                                 </div>
@@ -586,7 +611,11 @@ const MySavesPage: React.FC = () => {
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {films.map(film => (
-                          <Card key={film.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                          <Card
+                            key={film.id}
+                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", filmsFilter === 'history' && "opacity-60")}
+                            onClick={() => navigate('/stage-whisper')}
+                          >
                             {film.poster_url ? (
                               <img src={film.poster_url} alt={film.title} className="w-full h-36 object-cover" />
                             ) : (
@@ -600,10 +629,10 @@ const MySavesPage: React.FC = () => {
                               <div className="flex items-center justify-between">
                                 <Badge variant="secondary" className="text-xs">⭐ {film.rating?.toFixed(1)}</Badge>
                                 <div className="flex gap-1">
-                                  <button onClick={() => setShareDialog({ open: true, title: film.title, type: 'Film', imageUrl: film.poster_url || undefined })} className="p-1.5 rounded-full hover:bg-accent">
+                                  <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: film.title, type: 'Film', imageUrl: film.poster_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
                                     <MessageSquare className="w-4 h-4 text-muted-foreground" />
                                   </button>
-                                  <button onClick={() => unsaveFilm(film.id)} className="p-1.5 rounded-full hover:bg-accent">
+                                  <button onClick={(e) => { e.stopPropagation(); unsaveFilm(film.id); }} className="p-1.5 rounded-full hover:bg-accent">
                                     <BookmarkCheck className="w-4 h-4 text-primary" />
                                   </button>
                                 </div>
@@ -671,14 +700,16 @@ const MySavesPage: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {savedResources.map(item => (
-                    <Card key={item.id} className="hover:shadow-lg transition-shadow">
+                    <Card
+                      key={item.id}
+                      className={cn("hover:shadow-lg transition-shadow", item.item_url && "cursor-pointer")}
+                      onClick={() => item.item_url && window.open(item.item_url, '_blank', 'noopener,noreferrer')}
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <h3 className="font-semibold">{item.item_title}</h3>
                           {item.item_url && (
-                            <a href={item.item_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                              <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                            </a>
+                            <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                           )}
                         </div>
                         {item.item_metadata?.description && (
@@ -688,10 +719,10 @@ const MySavesPage: React.FC = () => {
                           <Badge variant="secondary" className="text-xs mb-2">{item.item_metadata.category}</Badge>
                         )}
                         <div className="flex items-center justify-end gap-1 mt-2">
-                          <button onClick={() => setShareDialog({ open: true, title: item.item_title, url: item.item_url || undefined, type: 'Resource' })} className="p-1.5 rounded-full hover:bg-accent">
+                          <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: item.item_title, url: item.item_url || undefined, type: 'Resource' }); }} className="p-1.5 rounded-full hover:bg-accent">
                             <MessageSquare className="w-4 h-4 text-muted-foreground" />
                           </button>
-                          <button onClick={() => unsaveItem(item.id)} className="p-1.5 rounded-full hover:bg-accent">
+                          <button onClick={(e) => { e.stopPropagation(); unsaveItem(item.id); }} className="p-1.5 rounded-full hover:bg-accent">
                             <BookmarkCheck className="w-4 h-4 text-primary" />
                           </button>
                         </div>
@@ -736,7 +767,11 @@ const MySavesPage: React.FC = () => {
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {jobs.map(item => (
-                          <Card key={item.id} className="hover:shadow-lg transition-shadow">
+                          <Card
+                            key={item.id}
+                            className="hover:shadow-lg transition-shadow cursor-pointer"
+                            onClick={() => navigate('/opportunities')}
+                          >
                             <CardContent className="p-4">
                               <h3 className="font-semibold mb-1">{item.item_title}</h3>
                               {item.item_metadata?.company && (
@@ -750,10 +785,10 @@ const MySavesPage: React.FC = () => {
                                 {item.item_metadata?.location && <Badge variant="outline" className="text-xs">{item.item_metadata.location}</Badge>}
                               </div>
                               <div className="flex items-center justify-end gap-1">
-                                <button onClick={() => setShareDialog({ open: true, title: item.item_title, type: 'Job' })} className="p-1.5 rounded-full hover:bg-accent">
+                                <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: item.item_title, type: 'Job' }); }} className="p-1.5 rounded-full hover:bg-accent">
                                   <MessageSquare className="w-4 h-4 text-muted-foreground" />
                                 </button>
-                                <button onClick={() => unsaveItem(item.id)} className="p-1.5 rounded-full hover:bg-accent">
+                                <button onClick={(e) => { e.stopPropagation(); unsaveItem(item.id); }} className="p-1.5 rounded-full hover:bg-accent">
                                   <BookmarkCheck className="w-4 h-4 text-primary" />
                                 </button>
                               </div>

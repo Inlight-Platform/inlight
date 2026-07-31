@@ -14,10 +14,14 @@ export interface SharedItemData {
 export const SHARED_ITEM_PREFIX = '__SHARED_ITEM__';
 export const SHARED_ITEM_SUFFIX = '__END__';
 
-export function parseSharedItem(content: string): SharedItemData | null {
-  if (!content.startsWith(SHARED_ITEM_PREFIX)) return null;
+export function parseSharedItem(content: string | null | undefined): SharedItemData | null {
+  if (!content) return null;
+  const trimmed = content.trim();
+  if (!trimmed.startsWith(SHARED_ITEM_PREFIX)) return null;
   try {
-    const jsonStr = content.slice(SHARED_ITEM_PREFIX.length, content.indexOf(SHARED_ITEM_SUFFIX));
+    const endIdx = trimmed.lastIndexOf(SHARED_ITEM_SUFFIX);
+    if (endIdx === -1) return null;
+    const jsonStr = trimmed.slice(SHARED_ITEM_PREFIX.length, endIdx);
     return JSON.parse(jsonStr);
   } catch {
     return null;

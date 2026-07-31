@@ -40,7 +40,7 @@ export const useSavedShows = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saved-show-ids'] });
       queryClient.invalidateQueries({ queryKey: ['my-saved-shows'] });
-      toast.success('Added to your watchlist! 🎭');
+      toast.success('Added to your show list');
     },
     onError: (error: any, _showId, context) => {
       if (context?.previous !== undefined) {
