@@ -352,13 +352,12 @@ const MySavesPage: React.FC = () => {
   const visibleShows = savedShows.filter(s => savedShowIds.includes(s.id));
   const visibleFilms = savedFilms.filter(f => savedFilmIds.includes(f.id));
 
-  // Active/history splits for shows
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const activeShows = visibleShows.filter(s => s.is_active && (s.run_end === null || new Date(s.run_end) >= today));
-  const pastShows = visibleShows.filter(s => !s.is_active || (s.run_end !== null && new Date(s.run_end) < today));
+  // Active/history splits for shows — mirrors Industry Now's is_active flag
+  const activeShows = visibleShows.filter(s => s.is_active);
+  const pastShows = visibleShows.filter(s => !s.is_active);
 
   // Active/history splits for films — box office date within 90 days = currently in theaters
+  const today = new Date();
   const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
   const activeFilms = visibleFilms.filter(f => new Date(f.date) >= ninetyDaysAgo);
   const pastFilms = visibleFilms.filter(f => new Date(f.date) < ninetyDaysAgo);
@@ -543,7 +542,7 @@ const MySavesPage: React.FC = () => {
                         {shows.map(show => (
                           <Card
                             key={show.id}
-                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", (!show.is_active || (show.run_end !== null && new Date(show.run_end) < today)) && "opacity-60")}
+                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", !show.is_active && "opacity-60")}
                             onClick={() => navigate('/stage-whisper')}
                           >
                             {show.poster_url ? (
