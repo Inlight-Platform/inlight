@@ -121,23 +121,6 @@ const ShareDialog: React.FC<{
         .from('project_group_chats')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', groupChatId);
-      // Notify all other group members
-      const { data: members } = await supabase
-        .from('group_chat_members')
-        .select('user_id')
-        .eq('group_chat_id', groupChatId)
-        .neq('user_id', user.id);
-      if (members?.length) {
-        await supabase.from('notifications').insert(
-          members.map(m => ({
-            user_id: m.user_id,
-            type: 'message',
-            title: `New message in ${groupName}`,
-            body: `Shared a ${itemType}`,
-            data: { group_chat_id: groupChatId },
-          }))
-        );
-      }
       queryClient.invalidateQueries({ queryKey: ['group-chats'] });
       toast.success(`Shared to ${groupName}!`);
       onOpenChange(false);
@@ -543,7 +526,7 @@ const MySavesPage: React.FC = () => {
                           <Card
                             key={show.id}
                             className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", !!show.run_end && isPast(new Date(show.run_end)) && "opacity-60")}
-                            onClick={() => navigate('/stage-whisper')}
+                            onClick={() => navigate('/stage-whisper', { state: { openShowId: show.id } })}
                           >
                             {show.poster_url ? (
                               <img src={show.poster_url} alt={show.title} className="w-full h-36 object-cover" />
@@ -558,7 +541,7 @@ const MySavesPage: React.FC = () => {
                               <div className="flex items-center justify-between">
                                 <Badge variant="secondary" className="text-xs">{show.category}</Badge>
                                 <div className="flex gap-1">
-                                  <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: show.title, type: 'Show', imageUrl: show.poster_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
+                                  <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: show.title, type: 'Show', url: '/stage-whisper', imageUrl: show.poster_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
                                     <MessageSquare className="w-4 h-4 text-muted-foreground" />
                                   </button>
                                   <button onClick={(e) => { e.stopPropagation(); unsaveShow(show.id); }} className="p-1.5 rounded-full hover:bg-accent">
@@ -613,7 +596,7 @@ const MySavesPage: React.FC = () => {
                           <Card
                             key={film.id}
                             className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", new Date(film.date) < thirtyDaysAgo && "opacity-60")}
-                            onClick={() => navigate('/stage-whisper')}
+                            onClick={() => navigate('/stage-whisper', { state: { openFilmId: film.id } })}
                           >
                             {film.poster_url ? (
                               <img src={film.poster_url} alt={film.title} className="w-full h-36 object-cover" />
@@ -628,7 +611,7 @@ const MySavesPage: React.FC = () => {
                               <div className="flex items-center justify-between">
                                 <Badge variant="secondary" className="text-xs">⭐ {film.rating?.toFixed(1)}</Badge>
                                 <div className="flex gap-1">
-                                  <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: film.title, type: 'Film', imageUrl: film.poster_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
+                                  <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: film.title, type: 'Film', url: '/stage-whisper', imageUrl: film.poster_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
                                     <MessageSquare className="w-4 h-4 text-muted-foreground" />
                                   </button>
                                   <button onClick={(e) => { e.stopPropagation(); unsaveFilm(film.id); }} className="p-1.5 rounded-full hover:bg-accent">
@@ -784,7 +767,7 @@ const MySavesPage: React.FC = () => {
                                 {item.item_metadata?.location && <Badge variant="outline" className="text-xs">{item.item_metadata.location}</Badge>}
                               </div>
                               <div className="flex items-center justify-end gap-1">
-                                <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: item.item_title, type: 'Job' }); }} className="p-1.5 rounded-full hover:bg-accent">
+                                <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: item.item_title, type: 'Job', url: '/opportunities' }); }} className="p-1.5 rounded-full hover:bg-accent">
                                   <MessageSquare className="w-4 h-4 text-muted-foreground" />
                                 </button>
                                 <button onClick={(e) => { e.stopPropagation(); unsaveItem(item.id); }} className="p-1.5 rounded-full hover:bg-accent">
