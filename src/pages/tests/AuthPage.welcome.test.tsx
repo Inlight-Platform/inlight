@@ -84,7 +84,7 @@ describe('AuthPage welcome copy', () => {
       target: { value: 'Issue 69 Welcome Test' },
     });
     fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: 'issue69-welcome-test-20260718@nyu.edu' },
+      target: { value: 'issue69-welcome-test-20260718@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/^password$/i), {
       target: { value: 'Welcome1!' },
@@ -94,11 +94,9 @@ describe('AuthPage welcome copy', () => {
     await waitFor(() => {
       expect(screen.getByText('Check your email and confirm your account')).toBeInTheDocument();
     });
-    expect(screen.getByText(/issue69-welcome-test-20260718@nyu\.edu/i)).toBeInTheDocument();
+    expect(screen.getByText(/issue69-welcome-test-20260718@example\.com/i)).toBeInTheDocument();
     expect(screen.getByText(/Open that email and click the confirmation link before signing in/i)).toBeInTheDocument();
-    expect(authMocks.toastSuccess).not.toHaveBeenCalledWith(
-      'Account created. Check your .edu inbox and confirm your email before signing in.'
-    );
+    expect(authMocks.toastSuccess).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: /i confirmed my email/i }));
     fireEvent.change(screen.getByLabelText(/^password$/i), {
