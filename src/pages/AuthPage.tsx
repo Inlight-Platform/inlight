@@ -220,7 +220,6 @@ const AuthPage: React.FC = () => {
   const mode = searchParams.get('mode');
   const inviteToken = searchParams.get('invite')?.trim() || null;
   const creditInviteToken = searchParams.get('credit_invite')?.trim() || null;
-  const isInviteSignup = Boolean(inviteToken || creditInviteToken);
   
   const getInitialView = (): AuthView => {
     if (routeState.mode) return routeState.mode;
@@ -585,10 +584,6 @@ const AuthPage: React.FC = () => {
             </AlertDescription>
           </Alert>
 
-          <div className="rounded-2xl border border-border bg-secondary/25 p-4 text-sm leading-6 text-muted-foreground">
-            If you try to sign in before confirming, Inlight will ask you to verify your email first.
-          </div>
-
           <div className="grid gap-3 sm:grid-cols-2">
             <Button
               type="button"
@@ -667,7 +662,7 @@ const AuthPage: React.FC = () => {
             <Input
               id="login-email"
               type="email"
-              placeholder="you@university.edu"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -731,18 +726,16 @@ const AuthPage: React.FC = () => {
             <Input
               id="signup-email"
               type="email"
-              placeholder={isInviteSignup ? 'you@example.com' : 'you@university.edu'}
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               className={fieldClass}
             />
-            {!isInviteSignup && (
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                <GraduationCap className="h-3 w-3" />
-                University emails are allowed automatically. Other emails need an invite.
-              </p>
-            )}
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <MailCheck className="h-3 w-3" />
+              Use an email you can confirm.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="signup-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
