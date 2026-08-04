@@ -8,7 +8,7 @@ How to set up Inlight locally, run the app, and validate changes.
 - npm.
 - GitHub access to `Inlight-Platform/inlight`.
 - Supabase access if you are changing migrations, RLS policies, storage, or edge functions.
-- Optional: Supabase CLI for local database/function work.
+- Optional: Supabase CLI and Docker Desktop for local database/function work.
 
 ## Clone and install
 
@@ -28,6 +28,8 @@ VITE_SUPABASE_PUBLISHABLE_KEY="sb_publishable_Np7ZYBlXrk0bOtzAGzYW5g_Rfr0xubM"
 ```
 
 The publishable key is safe for the browser. Do not add service role keys or private secrets to `.env`, `.env.example`, source files, or PR descriptions.
+
+For sandbox testing, do not edit `.env` to point at a different cloud project. Use [Local Supabase sandbox](local-supabase-sandbox.md), which creates `.env.sandbox.local` and runs Vite with `--mode sandbox`.
 
 ## Start the app
 
@@ -57,6 +59,11 @@ Both checks run `npm run verify:supabase` first. That script confirms the code s
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Start local Vite server. |
+| `npm run dev:sandbox` | Start local Vite server against local Supabase only. |
+| `npm run supabase:sandbox:start` | Start local Supabase and generate `.env.sandbox.local`. |
+| `npm run supabase:sandbox:reset` | Rebuild the local database from migrations and refresh sandbox env. |
+| `npm run supabase:sandbox:status` | Show local Supabase URLs, keys, and service status. |
+| `npm run supabase:sandbox:stop` | Stop local Supabase containers. |
 | `npm run verify:supabase` | Confirm required Supabase config is present. |
 | `npm run lint` | Run Supabase config verification and ESLint. |
 | `npm run build` | Run Supabase config verification and production build. |
