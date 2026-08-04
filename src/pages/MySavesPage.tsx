@@ -20,6 +20,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { Show } from '@/components/stage-whisper/ShowCard';
+import { ShowDetailSheet } from '@/components/stage-whisper/ShowDetailSheet';
+import { FilmDetailSheet } from '@/components/stage-whisper/FilmDetailSheet';
+import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
+import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
+import { OpportunityView } from '@/hooks/useOpportunities';
 
 interface SavedProject {
   id: string;
@@ -32,17 +38,18 @@ interface SavedProject {
   creator_profile?: { display_name: string | null; avatar_url: string | null };
 }
 
-interface SavedShow {
+interface FilmMetric {
   id: string;
   title: string;
-  venue: string;
-  borough: string;
-  category: string;
-  show_type: string;
-  poster_url: string | null;
-  description: string | null;
-  run_end: string | null;
-  is_active: boolean;
+  studio: string;
+  weekend_gross: number;
+  total_gross: number;
+  week_change: number;
+  rating: number;
+  weeks_in_release: number;
+  poster_url?: string;
+  ticket_url?: string;
+  date: string;
 }
 
 const ShareDialog: React.FC<{
@@ -204,8 +211,8 @@ const MySavesPage: React.FC = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
-  const { savedShowIds, unsaveShow } = useSavedShows();
-  const { savedFilmIds, unsaveFilm } = useSavedFilms();
+  const { savedShowIds, isSaved, saveShow, unsaveShow } = useSavedShows();
+  const { savedFilmIds, isFilmSaved, saveFilm, unsaveFilm } = useSavedFilms();
   const { savedItems, unsaveItem } = useSavedItems();
 
   const [shareDialog, setShareDialog] = useState<{
@@ -215,6 +222,11 @@ const MySavesPage: React.FC = () => {
     type: string;
     imageUrl?: string;
   }>({ open: false, title: '', type: '' });
+
+  const [detailShow, setDetailShow] = useState<Show | null>(null);
+  const [detailFilm, setDetailFilm] = useState<FilmMetric | null>(null);
+  const [detailJobView, setDetailJobView] = useState<OpportunityView | null>(null);
+  const [showApplyDialog, setShowApplyDialog] = useState(false);
 
   const [showsFilter, setShowsFilter] = useState<'active' | 'history'>('active');
   const [filmsFilter, setFilmsFilter] = useState<'active' | 'history'>('active');
@@ -258,9 +270,9 @@ const MySavesPage: React.FC = () => {
       if (!savedShowIds.length) return [];
       const { data } = await supabase
         .from('nyc_shows')
-        .select('id, title, venue, borough, category, show_type, poster_url, description, run_end, is_active')
+        .select('*')
         .in('id', savedShowIds);
-      return (data || []) as SavedShow[];
+      return (data || []) as Show[];
     },
     enabled: savedShowIds.length > 0,
     placeholderData: keepPreviousData,
@@ -273,9 +285,9 @@ const MySavesPage: React.FC = () => {
       if (!savedFilmIds.length) return [];
       const { data } = await supabase
         .from('film_metrics')
-        .select('id, title, studio, poster_url, rating, weekend_gross, date')
+        .select('*')
         .in('id', savedFilmIds);
-      return (data || []) as { id: string; title: string; studio: string; poster_url: string | null; rating: number; weekend_gross: number; date: string }[];
+      return (data || []) as FilmMetric[];
     },
     enabled: savedFilmIds.length > 0,
     placeholderData: keepPreviousData,
@@ -306,6 +318,31 @@ const MySavesPage: React.FC = () => {
       return data || [];
     },
     enabled: savedJobs.length > 0,
+  });
+
+  const makeJobView = (item: SavedItem): OpportunityView => ({
+    id: item.item_id || item.id,
+    title: item.item_title,
+    description: (item.item_metadata?.description as string) || '',
+    type: (item.item_metadata?.type as string) || 'job',
+    status: (item.item_metadata?.status as string) || 'open',
+    postedBy: '',
+    company: item.item_metadata?.company as string | undefined,
+    location: (item.item_metadata?.location as string) || '',
+    isRemote: false,
+    compensation: item.item_metadata?.compensation as string | undefined,
+    experienceLevel: (item.item_metadata?.experienceLevel as string) || '',
+    roles: [],
+    skills: [],
+    requirements: [],
+    deadline: (item.item_metadata?.deadline as string) || undefined,
+    tags: [],
+    createdAt: item.saved_at,
+    isFeatured: false,
+    actionType: item.item_url ? 'external' : 'apply',
+    linkUrl: item.item_url || undefined,
+    source: 'opportunity' as const,
+    applicants: [],
   });
 
   // Build lookup maps: id → live data, title → live data
@@ -526,7 +563,7 @@ const MySavesPage: React.FC = () => {
                           <Card
                             key={show.id}
                             className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", !!show.run_end && isPast(new Date(show.run_end)) && "opacity-60")}
-                            onClick={() => navigate('/stage-whisper', { state: { openShowId: show.id } })}
+                            onClick={() => setDetailShow(show)}
                           >
                             {show.poster_url ? (
                               <img src={show.poster_url} alt={show.title} className="w-full h-36 object-cover" />
@@ -541,7 +578,7 @@ const MySavesPage: React.FC = () => {
                               <div className="flex items-center justify-between">
                                 <Badge variant="secondary" className="text-xs">{show.category}</Badge>
                                 <div className="flex gap-1">
-                                  <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: show.title, type: 'Show', url: '/stage-whisper', imageUrl: show.poster_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
+                                  <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: show.title, type: 'Show', url: '/stage-whisper?showId=' + show.id, imageUrl: show.poster_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
                                     <MessageSquare className="w-4 h-4 text-muted-foreground" />
                                   </button>
                                   <button onClick={(e) => { e.stopPropagation(); unsaveShow(show.id); }} className="p-1.5 rounded-full hover:bg-accent">
@@ -596,7 +633,7 @@ const MySavesPage: React.FC = () => {
                           <Card
                             key={film.id}
                             className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", new Date(film.date) < thirtyDaysAgo && "opacity-60")}
-                            onClick={() => navigate('/stage-whisper', { state: { openFilmId: film.id } })}
+                            onClick={() => setDetailFilm(film as FilmMetric)}
                           >
                             {film.poster_url ? (
                               <img src={film.poster_url} alt={film.title} className="w-full h-36 object-cover" />
@@ -611,7 +648,7 @@ const MySavesPage: React.FC = () => {
                               <div className="flex items-center justify-between">
                                 <Badge variant="secondary" className="text-xs">⭐ {film.rating?.toFixed(1)}</Badge>
                                 <div className="flex gap-1">
-                                  <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: film.title, type: 'Film', url: '/stage-whisper', imageUrl: film.poster_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
+                                  <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: film.title, type: 'Film', url: '/stage-whisper?filmId=' + film.id, imageUrl: film.poster_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
                                     <MessageSquare className="w-4 h-4 text-muted-foreground" />
                                   </button>
                                   <button onClick={(e) => { e.stopPropagation(); unsaveFilm(film.id); }} className="p-1.5 rounded-full hover:bg-accent">
@@ -752,7 +789,7 @@ const MySavesPage: React.FC = () => {
                           <Card
                             key={item.id}
                             className="hover:shadow-lg transition-shadow cursor-pointer"
-                            onClick={() => navigate('/opportunities')}
+                            onClick={() => setDetailJobView(makeJobView(item))}
                           >
                             <CardContent className="p-4">
                               <h3 className="font-semibold mb-1">{item.item_title}</h3>
@@ -767,7 +804,7 @@ const MySavesPage: React.FC = () => {
                                 {item.item_metadata?.location && <Badge variant="outline" className="text-xs">{item.item_metadata.location}</Badge>}
                               </div>
                               <div className="flex items-center justify-end gap-1">
-                                <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: item.item_title, type: 'Job', url: '/opportunities' }); }} className="p-1.5 rounded-full hover:bg-accent">
+                                <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: item.item_title, type: 'Job', url: item.item_id ? `/opportunities?jobId=${item.item_id}` : undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
                                   <MessageSquare className="w-4 h-4 text-muted-foreground" />
                                 </button>
                                 <button onClick={(e) => { e.stopPropagation(); unsaveItem(item.id); }} className="p-1.5 rounded-full hover:bg-accent">
@@ -787,6 +824,47 @@ const MySavesPage: React.FC = () => {
         )}
       </div>
 
+      <ShowDetailSheet
+        show={detailShow}
+        isOpen={!!detailShow}
+        onClose={() => setDetailShow(null)}
+        isSaved={detailShow ? isSaved(detailShow.id) : false}
+        onSave={saveShow}
+        onUnsave={unsaveShow}
+      />
+      <FilmDetailSheet
+        film={detailFilm}
+        isOpen={!!detailFilm}
+        onClose={() => setDetailFilm(null)}
+        isSaved={detailFilm ? isFilmSaved(detailFilm.id) : false}
+        onSave={saveFilm}
+        onUnsave={unsaveFilm}
+      />
+      <OpportunityDetailSheet
+        opportunity={detailJobView}
+        open={!!detailJobView}
+        onOpenChange={(open) => { if (!open) setDetailJobView(null); }}
+        posterProfile={null}
+        hasApplied={false}
+        onApply={() => {
+          if (detailJobView && savedJobOpportunityIds.includes(detailJobView.id)) {
+            setShowApplyDialog(true);
+          } else {
+            setDetailJobView(null);
+            navigate('/opportunities');
+          }
+        }}
+      />
+      <ApplicationDialog
+        open={showApplyDialog}
+        onOpenChange={(open) => { if (!open) setShowApplyDialog(false); }}
+        opportunityId={detailJobView?.id || ''}
+        opportunityTitle={detailJobView?.title || ''}
+        onApplicationSubmitted={() => {
+          setShowApplyDialog(false);
+          setDetailJobView(null);
+        }}
+      />
       <ShareDialog
         open={shareDialog.open}
         onOpenChange={(open) => setShareDialog(prev => ({ ...prev, open }))}
