@@ -433,7 +433,7 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
                     </div>
                   ) : role.assigned_user_id ? (
                     <p className="text-sm text-muted-foreground">
-                      {roleInvitation?.status === 'accepted' && canSeeAssignedDetails ? 'Role filled' : 'Invitation pending'}
+                      {roleInvitation?.status === 'accepted' ? 'Role filled' : 'Invitation pending'}
                     </p>
                   ) : (
                     <p className="text-sm text-muted-foreground">Looking for candidates</p>
