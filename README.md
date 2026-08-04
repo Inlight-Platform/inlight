@@ -7,6 +7,7 @@ This repository is the main product codebase for the Inlight web app.
 ## Start here
 
 - [Developer guide](docs/dev-guide.md): local setup, environment variables, commands, and troubleshooting.
+- [Local Supabase sandbox](docs/local-supabase-sandbox.md): test product flows against disposable local data.
 - [Architecture](docs/architecture.md): tech stack, codebase layout, auth, data, and major product surfaces.
 - [Request flow](docs/request-flow.md): how browser requests, auth, Supabase, edge functions, and RLS interact.
 - [DevOps guide](docs/devops/README.md): deployment notes, Supabase operations, runbooks, and release checklist.
@@ -40,6 +41,15 @@ The dev server runs on http://localhost:8080.
 
 The app is currently locked to the shared Supabase project configured in `.env.example` and `src/integrations/supabase/config.ts`. See [docs/dev-guide.md](docs/dev-guide.md) before changing Supabase configuration.
 
+To test features without touching the shared Supabase project, use the local sandbox workflow:
+
+```sh
+npm run supabase:sandbox:start
+npm run dev:sandbox
+```
+
+See [docs/local-supabase-sandbox.md](docs/local-supabase-sandbox.md) for first-time setup, reset, and safety notes.
+
 ## Common commands
 
 ```sh
@@ -49,6 +59,7 @@ npm run build:dev        # Verify Supabase config and build in development mode
 npm run lint             # Verify Supabase config and run ESLint
 npm run preview          # Preview the built app locally
 npm run verify:supabase  # Check that required Supabase host values are present
+npm run dev:sandbox      # Run Vite against local Supabase only
 ```
 
 ## Local testing before pull requests

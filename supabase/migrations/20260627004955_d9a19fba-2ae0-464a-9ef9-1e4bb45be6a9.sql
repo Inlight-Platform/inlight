@@ -35,4 +35,7 @@ BEGIN
   INSERT INTO public.groups (slug, name, faculty_owner_id)
   VALUES ('strasberg', 'Strasberg', _uid)
   ON CONFLICT (slug) DO UPDATE SET faculty_owner_id = EXCLUDED.faculty_owner_id;
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE WARNING 'Skipping Strasberg demo faculty seed: %', SQLERRM;
 END $$;
