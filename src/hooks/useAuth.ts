@@ -36,6 +36,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const [claimedCreditProjectId, setClaimedCreditProjectId] = useState<string | null>(null);
 
   const maybeSendShowcaseWelcome = async (activeSession: Session | null) => {
     if (!activeSession?.user) return;
@@ -76,7 +77,7 @@ export function useAuth() {
         return;
       }
 
-      const { error } = await supabase.rpc('claim_invites_on_signup', {
+      const { data, error } = await supabase.rpc('claim_invites_on_signup', {
         _platform_token: platformToken || undefined,
         _credit_token: creditToken || undefined,
       });
@@ -88,6 +89,11 @@ export function useAuth() {
 
       localStorage.removeItem('inlight_platform_invite_token');
       localStorage.removeItem('inlight_project_credit_invite_token');
+
+      const projectId = (data as any)?.credit_invite?.project_id;
+      if (projectId) {
+        setClaimedCreditProjectId(projectId);
+      }
     } catch (error) {
       console.error('Invite claim failed:', error);
     }
@@ -333,6 +339,7 @@ export function useAuth() {
     loading,
     isPasswordRecovery,
     recoveryError,
+    claimedCreditProjectId,
     signUp,
     signIn,
     signOut,
