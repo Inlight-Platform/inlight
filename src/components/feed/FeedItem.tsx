@@ -114,10 +114,25 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const userRsvp = user?.id ? rsvps.find((rsvp) => rsvp.user_id === user.id) : undefined;
   const alreadyRsvpd = !!userRsvp || rsvpSubmitted;
   const alreadyGoing = rsvpSubmitted || userRsvp?.status === 'going';
+  const userEmail = user?.email ?? '';
 
   const attendeeUserIds = goingRsvps
     .map((r) => r.user_id)
     .filter((id): id is string => !!id);
+  const { data: currentUserProfile } = useQuery({
+    queryKey: ['current-user-rsvp-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('display_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isEventItem && !!user?.id,
+  });
   const { data: attendeeProfiles = [] } = useQuery({
     queryKey: ['attendee-profiles', item.id, attendeeUserIds],
     queryFn: async () => {
@@ -144,7 +159,21 @@ export const FeedItem: React.FC<FeedItemProps> = ({
 
   useEffect(() => {
     setRsvpSubmitted(false);
+    setRsvpName('');
+    setRsvpEmail('');
   }, [item.id, user?.id]);
+
+  const userDisplayName =
+    currentUserProfile?.display_name ||
+    user?.user_metadata?.display_name ||
+    user?.user_metadata?.full_name ||
+    (userEmail ? userEmail.split('@')[0] : '');
+
+  useEffect(() => {
+    if (!rsvpDialogOpen) return;
+    setRsvpName((currentName) => currentName.trim() || userDisplayName);
+    setRsvpEmail(userEmail);
+  }, [rsvpDialogOpen, userDisplayName, userEmail]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -283,8 +312,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       if (!data?.url) throw new Error('Checkout link unavailable');
 
       window.location.href = data.url;
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to start checkout');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to start checkout');
       setBuyingTicket(false);
     }
   };
@@ -735,9 +764,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                       id={`rsvp-email-${item.id}`}
                       type="email"
                       value={rsvpEmail}
-                      onChange={(e) => setRsvpEmail(e.target.value)}
-                      placeholder="you@example.com"
+                      readOnly
+                      aria-readonly="true"
+                      placeholder="Account email"
                       required
+                      className="bg-muted/50"
                     />
                   </div>
                 </div>
