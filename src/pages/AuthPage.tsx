@@ -199,7 +199,6 @@ const AuthPage: React.FC = () => {
     checkEmailExists,
     isPasswordRecovery,
     recoveryError,
-    claimedCreditProjectId,
   } = useAuth();
   const navigate = useNavigate();
 
@@ -216,12 +215,6 @@ const AuthPage: React.FC = () => {
       navigate(redirectPath, { replace: true });
     }
   }, [user, loading, isLoading, navigate, view, isPasswordRecovery, redirectPath]);
-
-  useEffect(() => {
-    if (claimedCreditProjectId) {
-      navigate(`/projects/${claimedCreditProjectId}`, { replace: true });
-    }
-  }, [claimedCreditProjectId, navigate]);
 
   useEffect(() => {
     if (mode === 'reset') {
