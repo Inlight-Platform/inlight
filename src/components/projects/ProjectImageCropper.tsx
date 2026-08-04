@@ -46,8 +46,9 @@ async function getCroppedImageBlob(
     throw new Error('No 2d context');
   }
 
-  const scaleX = image.naturalWidth / image.width;
-  const scaleY = image.naturalHeight / image.height;
+  const rect = image.getBoundingClientRect();
+  const scaleX = image.naturalWidth / rect.width;
+  const scaleY = image.naturalHeight / rect.height;
 
   canvas.width = outputWidth;
   canvas.height = outputHeight;
