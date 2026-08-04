@@ -68,6 +68,15 @@ To wipe local data and rebuild from migrations:
 npm run supabase:sandbox:reset
 ```
 
+To update this long-lived sandbox branch with the latest `main` code:
+
+```sh
+git checkout local-supabase-sandbox
+npm run sandbox:sync-main
+```
+
+The sync script fetches `origin/main`, rebases `local-supabase-sandbox` on top of it, and pushes the updated sandbox branch with `--force-with-lease`. If Git reports conflicts, resolve them, run `git rebase --continue`, then push with `git push --force-with-lease origin local-supabase-sandbox`.
+
 ## Safety Rules
 
 - Use `npm run dev:sandbox` for destructive or noisy tests, such as creating test events, RSVPing, sending invites, or testing delete flows.

@@ -11,6 +11,7 @@
     "supabase:sandbox:status": "node scripts/supabase-local-cli.mjs status",
     "supabase:sandbox:reset": "node scripts/supabase-local-cli.mjs db reset && npm run supabase:sandbox:env",
     "supabase:sandbox:env": "node scripts/write-sandbox-env.mjs",
+    "sandbox:sync-main": "node scripts/sync-sandbox-main.mjs",
     "prebuild": "npm run verify:supabase",
     "build": "vite build",
     "prebuild:dev": "npm run verify:supabase",
