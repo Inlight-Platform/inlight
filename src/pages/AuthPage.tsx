@@ -289,12 +289,8 @@ const AuthPage: React.FC = () => {
       toast.error(formatSignInErrorMessage(error.message));
       setIsLoading(false);
     } else {
-<<<<<<< HEAD
       const isFirstTimeSignupWelcomePending = await consumeFirstTimeSignupWelcomePending(email);
       toast.success(isFirstTimeSignupWelcomePending ? firstTimeSignupWelcomeCopy : returningUserWelcomeCopy);
-=======
-      toast.success('Welcome back!');
->>>>>>> 2eef33d (Fix credit invite redirect: store claimed project_id in useAuth state, navigate from effect)
       try {
         const { data: facultyGroup } = await (supabase.rpc as unknown as FacultyGroupRpc)('get_my_faculty_group');
         const first = Array.isArray(facultyGroup) ? facultyGroup[0] : facultyGroup;

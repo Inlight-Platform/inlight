@@ -52,7 +52,6 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
-  const [claimedCreditProjectId, setClaimedCreditProjectId] = useState<string | null>(null);
 
   const maybeSendShowcaseWelcome = async (activeSession: Session | null) => {
     if (!activeSession?.user) return;
@@ -108,7 +107,7 @@ export function useAuth() {
 
       const projectId = (data as any)?.credit_invite?.project_id;
       if (projectId) {
-        setClaimedCreditProjectId(projectId);
+        window.location.replace(`/projects/${projectId}`);
       }
     } catch (error) {
       console.error('Invite claim failed:', error);
@@ -394,7 +393,6 @@ export function useAuth() {
     loading,
     isPasswordRecovery,
     recoveryError,
-    claimedCreditProjectId,
     signUp,
     signIn,
     signOut,
