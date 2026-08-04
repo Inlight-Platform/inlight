@@ -174,40 +174,6 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
               </div>
             </div>
 
-            {/* Saved result */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-1.5">Saved result (what the post will show)</p>
-              <div
-                className="relative w-full overflow-hidden rounded-lg border border-border bg-muted"
-                style={{ aspectRatio: String(aspectRatio) }}
-              >
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: `${positionX * (1 - zoom)}%`,
-                    top: `${positionY * (1 - zoom)}%`,
-                    right: `${(100 - positionX) * (1 - zoom)}%`,
-                    bottom: `${(100 - positionY) * (1 - zoom)}%`,
-                  }}
-                >
-                  <img
-                    src={imageUrl}
-                    alt="Saved result preview"
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      objectPosition,
-                      pointerEvents: 'none',
-                    }}
-                    draggable={false}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
 
           <DialogFooter>
