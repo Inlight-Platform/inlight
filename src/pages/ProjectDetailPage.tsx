@@ -106,7 +106,6 @@ const ProjectDetailPage: React.FC = () => {
   const [memberRole, setMemberRole] = useState('');
   const [deleteProjectDialogOpen, setDeleteProjectDialogOpen] = useState(false);
   const [rolesOpen, setRolesOpen] = useState(true);
-  const [membersOpen, setMembersOpen] = useState(true);
   const [photosOpen, setPhotosOpen] = useState(true);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState('');
@@ -1067,23 +1066,13 @@ const ProjectDetailPage: React.FC = () => {
           </Card>
         </Collapsible>
 
-        {/* Team Members Section - Collapsible */}
-        <Collapsible open={membersOpen} onOpenChange={setMembersOpen}>
+        {/* Members Section */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CollapsibleTrigger asChild>
-              <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Team Members ({members.filter(m => m.user_id !== project.creator_id).length + 1})
-                </CardTitle>
-                {membersOpen ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                )}
-              </button>
-            </CollapsibleTrigger>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Team Members ({members.filter(m => m.user_id !== project.creator_id).length + 1})
+            </CardTitle>
             {canEditProject && (
               <div className="flex flex-wrap justify-end gap-2">
                 <InviteFriendDialog projectId={projectId} projectTitle={project.title}>
@@ -1127,11 +1116,10 @@ const ProjectDetailPage: React.FC = () => {
               </div>
             )}
           </CardHeader>
-          <CollapsibleContent>
           <CardContent>
             <div className="flex flex-wrap gap-4">
               {/* Creator */}
-              <div 
+              <div
                 className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors"
                 onClick={() => navigate(`/profile/${project.creator_id}`)}
               >
@@ -1151,7 +1139,7 @@ const ProjectDetailPage: React.FC = () => {
               {members
                 .filter(member => member.user_id !== project.creator_id)
                 .map(member => (
-                  <div 
+                  <div
                     key={member.id}
                     className="flex items-center gap-2 group"
                   >
@@ -1189,9 +1177,7 @@ const ProjectDetailPage: React.FC = () => {
                 ))}
             </div>
           </CardContent>
-          </CollapsibleContent>
         </Card>
-        </Collapsible>
 
         {/* Photos Section - Collapsible */}
         <Collapsible open={photosOpen} onOpenChange={setPhotosOpen}>
