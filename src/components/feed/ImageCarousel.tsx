@@ -7,6 +7,7 @@ interface ImageCarouselProps {
   urls: string[];
   positionX?: number;
   positionY?: number;
+  positionZoom?: number;
   className?: string;
   imageClassName?: string;
 }
@@ -15,6 +16,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
   urls,
   positionX = 50,
   positionY = 50,
+  positionZoom = 1,
   className,
   imageClassName,
 }) => {
@@ -39,28 +41,54 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
   }, [emblaApi, onSelect]);
 
   if (urls.length === 1) {
+    const zoom = positionZoom ?? 1;
     return (
-      <div className={cn('rounded-lg overflow-hidden bg-muted flex items-center justify-center', className)}>
-        <img
-          src={urls[0]}
-          alt="Post image"
-          className={cn('w-full max-h-[32rem] object-contain', imageClassName)}
-          style={{ objectPosition: `${positionX}% ${positionY}%` }}
-        />
+      <div className={cn('rounded-lg overflow-hidden bg-muted relative', className)}>
+        {zoom > 1 ? (
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <div
+              style={{
+                position: 'absolute',
+                left: `${positionX * (1 - zoom)}%`,
+                top: `${positionY * (1 - zoom)}%`,
+                right: `${(100 - positionX) * (1 - zoom)}%`,
+                bottom: `${(100 - positionY) * (1 - zoom)}%`,
+              }}
+            >
+              <img
+                src={urls[0]}
+                alt="Post image"
+                style={{
+                  position: 'absolute',
+                  top: 0, left: 0, width: '100%', height: '100%',
+                  objectFit: 'cover',
+                  objectPosition: `${positionX}% ${positionY}%`,
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <img
+            src={urls[0]}
+            alt="Post image"
+            className={cn('w-full max-h-[32rem] object-contain', imageClassName)}
+            style={{ objectPosition: `${positionX}% ${positionY}%` }}
+          />
+        )}
       </div>
     );
   }
 
   return (
     <div className={cn('relative rounded-lg overflow-hidden', className)}>
-      <div ref={emblaRef} className="overflow-hidden">
-        <div className="flex">
+      <div ref={emblaRef} className={cn('overflow-hidden', className && 'h-full')}>
+        <div className={cn('flex', className && 'h-full')}>
           {urls.map((url, i) => (
-            <div key={i} className="flex-none w-full">
+            <div key={i} className={cn('flex-none w-full', className && 'h-full')}>
               <img
                 src={url}
                 alt={`Image ${i + 1} of ${urls.length}`}
-                className="w-full h-72 object-cover"
+                className={cn('w-full h-72 object-cover', imageClassName)}
               />
             </div>
           ))}

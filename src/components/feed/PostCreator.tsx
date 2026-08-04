@@ -56,7 +56,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const { data: myGroups = [] } = useMyGroups();
   const [linkTitle, setLinkTitle] = useState('');
   const [customQuestion, setCustomQuestion] = useState('');
-  const [imagePositions, setImagePositions] = useState<{x: number; y: number}[]>([]);
+  const [imagePositions, setImagePositions] = useState<{x: number; y: number; zoom: number}[]>([]);
 
   // Composer carousel state
   const [composerEmblaRef, composerEmblaApi] = useEmblaCarousel({ loop: false });
@@ -126,6 +126,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             image_urls: imageUrls.length > 0 ? imageUrls : null,
             image_position_x: imagePositions[0]?.x ?? 50,
             image_position_y: imagePositions[0]?.y ?? 50,
+            image_position_zoom: imagePositions[0]?.zoom ?? 1,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -196,6 +197,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             location: location.trim() || null,
             event_type: eventType.trim() || 'general',
             image_url: imageUrls[0] || null,
+            image_urls: imageUrls.length > 0 ? imageUrls : null,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             custom_question: customQuestion.trim() || null,
@@ -237,6 +239,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             image_urls: imageUrls.length > 0 ? imageUrls : null,
             image_position_x: imagePositions[0]?.x ?? 50,
             image_position_y: imagePositions[0]?.y ?? 50,
+            image_position_zoom: imagePositions[0]?.zoom ?? 1,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -555,25 +558,45 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                         <div ref={composerEmblaRef} className="overflow-hidden">
                           <div className="flex">
                             {imageUrls.map((url, idx) => {
-                              const pos = imagePositions[idx] ?? { x: 50, y: 50 };
+                              const pos = imagePositions[idx] ?? { x: 50, y: 50, zoom: 1 };
+                              const zoom = pos.zoom ?? 1;
                               return (
-                                <div key={url} className="flex-none w-full relative">
-                                  <img
-                                    src={url}
-                                    alt={`Image ${idx + 1}`}
-                                    className="w-full h-64 object-cover"
-                                    style={{ objectPosition: `${pos.x}% ${pos.y}%` }}
-                                  />
+                                <div key={url} className="flex-none w-full relative h-64">
+                                  {zoom > 1 ? (
+                                    <div style={{ position: 'absolute', inset: 0 }}>
+                                      <div style={{
+                                        position: 'absolute',
+                                        left: `${pos.x * (1 - zoom)}%`,
+                                        top: `${pos.y * (1 - zoom)}%`,
+                                        right: `${(100 - pos.x) * (1 - zoom)}%`,
+                                        bottom: `${(100 - pos.y) * (1 - zoom)}%`,
+                                      }}>
+                                        <img
+                                          src={url}
+                                          alt={`Image ${idx + 1}`}
+                                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${pos.x}% ${pos.y}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <img
+                                      src={url}
+                                      alt={`Image ${idx + 1}`}
+                                      className="w-full h-64 object-cover"
+                                      style={{ objectPosition: `${pos.x}% ${pos.y}%` }}
+                                    />
+                                  )}
                                   {/* Per-image controls */}
                                   <div className="absolute top-1.5 right-1.5 flex gap-1">
                                     <ImagePositioner
                                       imageUrl={url}
                                       initialPositionX={pos.x}
                                       initialPositionY={pos.y}
+                                      initialZoom={(pos.zoom ?? 1) * 100}
                                       aspectRatio={16 / 9}
-                                      onSave={(x, y) => setImagePositions((prev) => {
+                                      onSave={(x, y, zoomPct) => setImagePositions((prev) => {
                                         const next = [...prev];
-                                        next[idx] = { x, y };
+                                        next[idx] = { x, y, zoom: (zoomPct ?? 100) / 100 };
                                         return next;
                                       })}
                                       trigger={

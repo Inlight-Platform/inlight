@@ -91,6 +91,7 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
         description: event.description,
         content: event.description,
         image_url: event.image_url,
+        image_urls: (event as any).image_urls ?? (event.image_url ? [event.image_url] : undefined),
         link_url: event.link_url,
         link_title: event.link_title,
         event_date: event.event_date,
