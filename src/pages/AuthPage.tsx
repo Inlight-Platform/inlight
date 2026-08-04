@@ -289,8 +289,12 @@ const AuthPage: React.FC = () => {
       toast.error(formatSignInErrorMessage(error.message));
       setIsLoading(false);
     } else {
+<<<<<<< HEAD
       const isFirstTimeSignupWelcomePending = await consumeFirstTimeSignupWelcomePending(email);
       toast.success(isFirstTimeSignupWelcomePending ? firstTimeSignupWelcomeCopy : returningUserWelcomeCopy);
+=======
+      toast.success('Welcome back!');
+>>>>>>> 2eef33d (Fix credit invite redirect: store claimed project_id in useAuth state, navigate from effect)
       try {
         const { data: facultyGroup } = await (supabase.rpc as unknown as FacultyGroupRpc)('get_my_faculty_group');
         const first = Array.isArray(facultyGroup) ? facultyGroup[0] : facultyGroup;
@@ -353,21 +357,6 @@ const AuthPage: React.FC = () => {
         setView('confirm');
       } else {
         toast.success('Account created! Welcome to Inlight.');
-        if (creditInviteToken) {
-          try {
-            const { data: claimData } = await supabase.rpc('claim_invites_on_signup', {
-              _credit_token: creditInviteToken,
-              _platform_token: inviteToken || undefined,
-            } as any);
-            const projectId = (claimData as any)?.credit_invite?.project_id;
-            if (projectId) {
-              navigate(`/projects/${projectId}`, { replace: true });
-              return;
-            }
-          } catch {
-            // fall through to default redirect
-          }
-        }
         navigate(redirectPath, { replace: true });
       }
     } catch (error) {
