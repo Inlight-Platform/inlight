@@ -228,7 +228,6 @@ const FeedPage: React.FC = () => {
       const { data, error } = await supabase
         .from('posts')
         .select('*')
-        .not('content', 'like', '🎯%')
         .order('created_at', { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -245,6 +244,7 @@ const FeedPage: React.FC = () => {
         ...post,
         type: 'post' as const,
         visibility: post.visibility,
+        image_position_zoom: post.image_position_zoom ?? 1,
         creator_profile: profileMap.get(post.user_id)
       }));
     }
@@ -301,6 +301,7 @@ const FeedPage: React.FC = () => {
         title: event.title,
         description: event.description,
         image_url: event.image_url,
+        image_urls: event.image_urls ?? (event.image_url ? [event.image_url] : undefined),
         link_url: event.link_url,
         link_title: event.link_title,
         created_at: event.created_at,
@@ -522,7 +523,7 @@ const FeedPage: React.FC = () => {
       allItems = allItems.filter((item) => {
         if (contentFilter === 'events') return item.type === 'event';
         if (contentFilter === 'projects') return item.type === 'project';
-        if (contentFilter === 'updates') return item.type === 'post';
+        if (contentFilter === 'updates') return item.type === 'post' && !item.content?.startsWith('🎯');
         return true;
       });
     }

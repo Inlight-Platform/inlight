@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ImageCarousel } from './ImageCarousel';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -38,8 +39,10 @@ export interface FeedItemData {
   title?: string;
   description?: string;
   image_url?: string | null;
+  image_urls?: string[] | null;
   image_position_x?: number | null;
   image_position_y?: number | null;
+  image_position_zoom?: number | null;
   link_url?: string | null;
   link_title?: string | null;
   created_at: string;
@@ -434,26 +437,22 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Image - skip for open roles */}
-        {item.image_url && item.type !== 'open_role' && (
-          <div
-            className={cn(
-              'rounded-lg overflow-hidden mb-3 bg-muted flex items-center justify-center',
-              compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1',
-              compactSquare && compactTextExpanded && 'aspect-square mb-0',
-              imageContainerClassName
-            )}
-          >
-            <img
-              src={item.image_url}
-              alt={item.title || 'Post image'}
-              className={cn(
-                'w-full max-h-[32rem] object-contain',
-                compactSquare && 'h-full max-h-none object-cover',
-                imageClassName
-              )}
-            />
-          </div>
-        )}
+        {item.type !== 'open_role' && (() => {
+          const urls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
+          if (!urls.length) return null;
+          return (
+            <div className={cn('mb-3', compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1', compactSquare && compactTextExpanded && 'aspect-square mb-0', imageContainerClassName)}>
+              <ImageCarousel
+                urls={urls}
+                positionX={item.image_position_x ?? 50}
+                positionY={item.image_position_y ?? 50}
+                positionZoom={item.image_position_zoom ?? 1}
+                className={compactCollapsed ? 'h-full' : undefined}
+                imageClassName={cn(compactSquare && 'h-full max-h-none object-cover', imageClassName)}
+              />
+            </div>
+          );
+        })()}
 
         {/* Link display for posts */}
         {item.link_url && !eventLinkClosed && (
