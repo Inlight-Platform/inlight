@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Compass, Users, GraduationCap, Clock, Building2, ChevronDown, Inbox, UserRound, UserPlus } from 'lucide-react';
@@ -91,6 +91,8 @@ const GroupsSection: React.FC<{
 
 const PeoplePage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const fallbackCurrentUserId = useStore((s) => s.currentUserId);
   const { user: authUser } = useAuth();
   const currentUserId = authUser?.id || fallbackCurrentUserId;
@@ -116,15 +118,35 @@ const PeoplePage: React.FC = () => {
     [pendingRequests]
   );
   
-  const [activeTab, setActiveTab] = useState('explore');
+  const initialSection = searchParams.get('section');
+  const initialTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    initialTab && ['explore', 'network', 'incoming', 'pending'].includes(initialTab) ? initialTab : 'explore'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [openSections, setOpenSections] = useState<Record<'people' | 'groups' | 'companies', boolean>>({
-    people: false,
-    groups: false,
-    companies: false,
+    people: initialSection === 'people',
+    groups: initialSection === 'groups',
+    companies: initialSection === 'companies',
   });
+  const setPeopleRouteState = (next: { section?: 'people' | 'groups' | 'companies' | null; tab?: string }) => {
+    const params = new URLSearchParams(searchParams);
+    if (next.section) params.set('section', next.section);
+    else if (next.section === null) params.delete('section');
+    if (next.tab) params.set('tab', next.tab);
+    setSearchParams(params, { replace: true });
+  };
   const toggleSection = (key: 'people' | 'groups' | 'companies') =>
-    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+    setOpenSections((prev) => {
+      const isOpening = !prev[key];
+      setPeopleRouteState({ section: isOpening ? key : null, tab: key === 'people' ? activeTab : undefined });
+      return { ...prev, [key]: isOpening };
+    });
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setPeopleRouteState({ section: 'people', tab });
+  };
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
   
   // Fetch all users from the database
   const { data: allUsers = [], isLoading, error: allUsersError } = useQuery({
@@ -257,7 +279,7 @@ const PeoplePage: React.FC = () => {
 
   const handleStudioClick = (badgeTag: string | null) => {
     if (badgeTag) {
-      navigate(`/group?badge=${badgeTag}`);
+      navigate(`/group?badge=${badgeTag}`, { state: { returnTo } });
     }
   };
 
@@ -307,7 +329,7 @@ const PeoplePage: React.FC = () => {
           </button>
           {openSections.people && (
             <div className="p-4 border-t border-border">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex sm:justify-center">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 mb-6">
               <TabsTrigger value="explore" className="data-[state=active]:bg-primary/20 flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
@@ -396,6 +418,7 @@ const PeoplePage: React.FC = () => {
                         onCancel={handleCancelRequest}
                         onAccept={handleAcceptRequest}
                         onDecline={handleDeclineRequest}
+                        returnTo={returnTo}
                         
                       />
                     );
@@ -422,6 +445,7 @@ const PeoplePage: React.FC = () => {
                   key={user.id}
                   user={user}
                   connectionStatus="connected"
+                  returnTo={returnTo}
                   
                 />
               ))}
@@ -450,6 +474,7 @@ const PeoplePage: React.FC = () => {
                     requestId={request?.id}
                     onAccept={handleAcceptRequest}
                     onDecline={handleDeclineRequest}
+                    returnTo={returnTo}
                   />
                 );
               })}
@@ -478,6 +503,7 @@ const PeoplePage: React.FC = () => {
                     showCancelButton
                     requestId={request?.id}
                     onCancel={(id) => cancelRequest.mutate(id)}
+                    returnTo={returnTo}
                   />
                 );
               })}
@@ -546,6 +572,7 @@ const PeoplePage: React.FC = () => {
                       isFollowing={isFollowingCompany(company.id)}
                       onFollow={(id) => followCompany.mutate(id)}
                       onUnfollow={(id) => unfollowCompany.mutate(id)}
+                      returnTo={returnTo}
                     />
                   ))}
                 </div>

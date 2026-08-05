@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2, MessageSquare, Loader2 } from 'lucide-react';
+import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2, MessageSquare, Loader2, GraduationCap } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
@@ -48,6 +48,7 @@ const NotificationsPage: React.FC = () => {
       case 'follow': return <Users className="w-4 h-4" />;
       case 'connection_request': return <Link2 className="w-4 h-4" />;
       case 'connection_request_accepted': return <Check className="w-4 h-4" />;
+      case 'affiliation_request': return <GraduationCap className="w-4 h-4" />;
       default: return <Bell className="w-4 h-4" />;
     }
   };
