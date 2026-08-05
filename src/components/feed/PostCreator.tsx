@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign } from 'lucide-react';
+import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, ImagePlus, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ImageUploader } from './ImageUploader';
 import { AudienceSelector, PostVisibility } from './AudienceSelector';
+import { ProjectImageCropper } from '@/components/projects/ProjectImageCropper';
 import { ImagePositioner } from '@/components/profile/ImagePositioner';
 import { useMyGroups } from '@/hooks/useGroups';
 import { SERVICE_CATEGORIES } from '@/data/services';
@@ -57,6 +57,11 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [positionX, setPositionX] = useState(50);
   const [positionY, setPositionY] = useState(50);
   const [imageZoom, setImageZoom] = useState(100);
+  const [cropSrc, setCropSrc] = useState('');
+  const [cropOpen, setCropOpen] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
+
   const [isPaid, setIsPaid] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
   const [serviceCategory, setServiceCategory] = useState<string>('');
@@ -89,6 +94,64 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setIsPaid(false);
     setTicketPrice('');
     setServiceCategory('');
+  };
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (imageFileInputRef.current) imageFileInputRef.current.value = '';
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (JPG, PNG, GIF, WebP, etc.)');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const dataUrl = evt.target?.result as string;
+      if (!dataUrl) {
+        toast.error('Failed to read image file.');
+        return;
+      }
+      const testImg = new Image();
+      testImg.onload = () => {
+        if (testImg.naturalWidth === 0 || testImg.naturalHeight === 0) {
+          toast.error('This image could not be loaded. Please try JPEG or PNG format.');
+          return;
+        }
+        setCropSrc(dataUrl);
+        setCropOpen(true);
+      };
+      testImg.onerror = () => {
+        toast.error('This image format is not supported by your browser. Please use JPEG or PNG.');
+      };
+      testImg.src = dataUrl;
+    };
+    reader.onerror = () => {
+      toast.error('Failed to read image file.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePostImageCropComplete = async (blob: Blob) => {
+    if (!user?.id) return;
+    setImageUploading(true);
+    try {
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 9);
+      const filePath = `${user.id}/posts/${timestamp}-${randomId}.jpg`;
+      const { error } = await supabase.storage.from('profile-media').upload(filePath, blob, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: 'image/jpeg',
+      });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('profile-media').getPublicUrl(filePath);
+      setImageUrl(urlData.publicUrl);
+      toast.success('Image uploaded!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to upload image');
+    } finally {
+      setImageUploading(false);
+    }
   };
 
   const createPostMutation = useMutation({
@@ -541,9 +604,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                         alt="Preview"
                         className="w-full h-full object-cover"
                         style={{
-                          objectPosition: `${positionX}% ${positionY}%`,
-                          transform: `scale(${imageZoom / 100})`,
-                          transformOrigin: `${positionX}% ${positionY}%`,
+                          transform: `translate(${(50 - positionX) * (imageZoom / 100 - 1)}%, ${(50 - positionY) * (imageZoom / 100 - 1)}%) scale(${imageZoom / 100})`,
+                          transformOrigin: 'center center',
                         }}
                       />
                       <div className="absolute top-2 right-2 flex gap-2">
@@ -606,10 +668,38 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   )}
 
                   <div className="flex items-center justify-between">
-                    <ImageUploader
-                      userId={user.id}
-                      onImageUploaded={setImageUrl}
-                      compact
+                    <input
+                      ref={imageFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      className="hidden"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => imageFileInputRef.current?.click()}
+                      disabled={imageUploading}
+                    >
+                      {imageUploading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <ImagePlus className="h-4 w-4 mr-2" />
+                      )}
+                      {imageUploading ? 'Uploading...' : 'Image'}
+                    </Button>
+                    <ProjectImageCropper
+                      open={cropOpen}
+                      onClose={() => {
+                        setCropOpen(false);
+                        setCropSrc('');
+                      }}
+                      imageSrc={cropSrc}
+                      onCropComplete={handlePostImageCropComplete}
+                      title="Crop post image"
+                      aspect={16 / 9}
+                      outputWidth={1200}
+                      outputHeight={675}
                     />
                     <div className="flex items-center gap-2">
                       {onClose && (

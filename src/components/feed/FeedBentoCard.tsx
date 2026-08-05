@@ -91,11 +91,12 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
     (item.content ? item.content.slice(0, 80) + (item.content.length > 80 ? '…' : '') : 'Untitled');
   const subtitle = item.description || item.content;
   const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
-  const objectPosition = `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%`;
+  const _iz = (item.image_zoom ?? 100) / 100;
+  const _ix = item.image_position_x ?? 50;
+  const _iy = item.image_position_y ?? 50;
   const imageStyle = {
-    objectPosition,
-    transform: `scale(${(item.image_zoom ?? 100) / 100})`,
-    transformOrigin: objectPosition,
+    transform: `translate(${(50 - _ix) * (_iz - 1)}%, ${(50 - _iy) * (_iz - 1)}%) scale(${_iz})`,
+    transformOrigin: 'center center',
   };
 
   const baseShell =

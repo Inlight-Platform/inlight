@@ -22,8 +22,7 @@ import { ProjectHeaderImageUploader } from '@/components/projects/ProjectHeaderI
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { compressImage, isCompressibleImage } from '@/lib/imageCompression';
-import { CoverImageCropper } from '@/components/profile/CoverImageCropper';
-import { AvatarCropper } from '@/components/profile/AvatarCropper';
+import { ProjectImageCropper } from '@/components/projects/ProjectImageCropper';
 
 const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
   jpg: 'image/jpeg',
@@ -561,10 +560,17 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void; acces
         </DialogContent>
       </Dialog>
 
-      <CoverImageCropper
+      <ProjectImageCropper
         open={coverCropperOpen}
         imageSrc={coverCropperImageSrc}
-        onClose={() => setCoverCropperOpen(false)}
+        onClose={() => {
+          setCoverCropperOpen(false);
+          setCoverCropperImageSrc('');
+        }}
+        title="Crop Cover Banner"
+        aspect={3}
+        outputWidth={1920}
+        outputHeight={640}
         onCropComplete={async (blob) => {
           setCoverUploading(true);
           try {
@@ -577,12 +583,17 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void; acces
           }
         }}
       />
-      <AvatarCropper
+      <ProjectImageCropper
         open={logoCropperOpen}
         imageSrc={logoCropperImageSrc}
-        onClose={() => setLogoCropperOpen(false)}
+        onClose={() => {
+          setLogoCropperOpen(false);
+          setLogoCropperImageSrc('');
+        }}
         title="Crop Company Logo"
-        saveLabel="Save Logo"
+        aspect={1}
+        outputWidth={400}
+        outputHeight={400}
         onCropComplete={async (blob) => {
           setLogoUploading(true);
           try {

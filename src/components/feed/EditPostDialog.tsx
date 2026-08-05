@@ -223,9 +223,8 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
                       alt="Post image"
                       className="w-full max-h-48 object-cover"
                       style={{
-                        objectPosition: `${positionX}% ${positionY}%`,
-                        transform: `scale(${imageZoom / 100})`,
-                        transformOrigin: `${positionX}% ${positionY}%`,
+                        transform: `translate(${(50 - positionX) * (imageZoom / 100 - 1)}%, ${(50 - positionY) * (imageZoom / 100 - 1)}%) scale(${imageZoom / 100})`,
+                        transformOrigin: 'center center',
                       }}
                     />
                     <div className="absolute top-2 right-2 flex gap-2">

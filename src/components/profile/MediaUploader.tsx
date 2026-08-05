@@ -119,10 +119,13 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    // Snapshot into array BEFORE clearing the input — clearing input.value
+    // invalidates the FileList in most browsers.
+    const fileArray = Array.from(files);
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     if (mediaType !== 'photo') {
-      const uploadPromises = Array.from(files).map(file => uploadFile(file, userId, 'public'));
+      const uploadPromises = fileArray.map(file => uploadFile(file, userId, 'public'));
       await Promise.all(uploadPromises);
       await queryClient.invalidateQueries({ queryKey: ['user-media', userId] });
       onUploadComplete();
@@ -130,7 +133,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     }
 
     // Photos: crop each file one by one
-    pendingCropFilesRef.current = Array.from(files);
+    pendingCropFilesRef.current = fileArray;
     await startNextCrop();
   };
 

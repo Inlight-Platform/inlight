@@ -452,11 +452,15 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 compactSquare && 'h-full max-h-none object-cover',
                 imageClassName
               )}
-              style={compactSquare ? {
-                objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%`,
-                transform: `scale(${(item.image_zoom ?? 100) / 100})`,
-                transformOrigin: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%`,
-              } : undefined}
+              style={compactSquare ? (() => {
+                const iz = (item.image_zoom ?? 100) / 100;
+                const ix = item.image_position_x ?? 50;
+                const iy = item.image_position_y ?? 50;
+                return {
+                  transform: `translate(${(50 - ix) * (iz - 1)}%, ${(50 - iy) * (iz - 1)}%) scale(${iz})`,
+                  transformOrigin: 'center center',
+                };
+              })() : undefined}
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />
           </div>
