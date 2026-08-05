@@ -245,24 +245,31 @@ const PlatformInvitesManager: React.FC = () => {
   const createInviteMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('send-platform-invite', {
-        body: {
-          email,
-          note: note || undefined,
-        },
+        body: { email, note: note || undefined },
       });
-
-      if (error) throw error;
-      return data as { invite: { email: string; token: string }; inviteUrl: string };
+      if (error) {
+        let message: string | undefined;
+        try {
+          const responseBody = await (error.context as Response)?.json();
+          message = responseBody?.error;
+        } catch {}
+        throw new Error(message || error.message || 'Failed to send invite');
+      }
+      return data as { invite: { email: string; token: string }; inviteUrl?: string; alreadyMember?: boolean };
     },
-    onSuccess: ({ invite, inviteUrl }) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['platform-invites'] });
-      setLatestInviteUrl(inviteUrl);
       setEmail('');
       setNote('');
-      toast.success(`Invite sent to ${invite.email}`);
+      if (data.alreadyMember) {
+        toast.success(`${data.invite.email} is already on Inlight!`);
+      } else {
+        setLatestInviteUrl(data.inviteUrl || '');
+        toast.success(`Invite sent to ${data.invite.email}`);
+      }
     },
     onError: (error) => {
-      toast.error('Failed to create invite: ' + error.message);
+      toast.error('Failed to create invite: ' + (error instanceof Error ? error.message : 'Unknown error'));
     },
   });
 
