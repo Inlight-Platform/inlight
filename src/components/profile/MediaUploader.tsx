@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Plus, Upload, X, Loader2, Image, Video, Music, FileText, Eye, EyeOff, Users, Trash2, ImagePlus, Play, ExternalLink } from 'lucide-react';
+import { ProjectImageCropper } from '@/components/projects/ProjectImageCropper';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -43,7 +44,7 @@ interface MediaUploaderProps {
 }
 
 const acceptTypes: Record<MediaType, string> = {
-  photo: 'image/jpeg,image/png,image/gif,image/webp',
+  photo: 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/avif,image/heic,image/heif',
   video: 'video/mp4,video/webm,video/quicktime',
   audio: 'audio/mpeg,audio/wav,audio/mp3',
   document: 'application/pdf',
@@ -80,26 +81,60 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   const [lightboxItem, setLightboxItem] = useState<MediaItem | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
+  // Photo crop queue
+  const pendingCropFilesRef = useRef<File[]>([]);
+  const cropCompletedRef = useRef(false);
+  const [cropperImageSrc, setCropperImageSrc] = useState('');
+  const [cropperOpen, setCropperOpen] = useState(false);
+
+  const loadFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    });
+
+  const startNextCrop = async () => {
+    if (pendingCropFilesRef.current.length === 0) {
+      setCropperOpen(false);
+      setCropperImageSrc('');
+      await queryClient.invalidateQueries({ queryKey: ['user-media', userId] });
+      onUploadComplete();
+      return;
+    }
+    const nextFile = pendingCropFilesRef.current[0];
+    const dataUrl = await loadFileAsDataUrl(nextFile);
+    setCropperImageSrc(dataUrl);
+    setCropperOpen(true);
+  };
+
+  const handlePhotoCropComplete = async (blob: Blob) => {
+    cropCompletedRef.current = true;
+    const croppedFile = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+    await uploadFile(croppedFile, userId, 'public');
+    pendingCropFilesRef.current = pendingCropFilesRef.current.slice(1);
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Upload all files
-    const uploadPromises = Array.from(files).map(file => 
-      uploadFile(file, userId, 'public')
-    );
-    
-    await Promise.all(uploadPromises);
-    
-    // Invalidate query to force refetch and show new uploads immediately
-    await queryClient.invalidateQueries({ queryKey: ['user-media', userId] });
-    
-    onUploadComplete();
-    
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    // Snapshot into array BEFORE clearing the input — clearing input.value
+    // invalidates the FileList in most browsers.
+    const fileArray = Array.from(files);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    if (mediaType !== 'photo') {
+      const uploadPromises = fileArray.map(file => uploadFile(file, userId, 'public'));
+      await Promise.all(uploadPromises);
+      await queryClient.invalidateQueries({ queryKey: ['user-media', userId] });
+      onUploadComplete();
+      return;
     }
+
+    // Photos: crop each file one by one
+    pendingCropFilesRef.current = fileArray;
+    await startNextCrop();
   };
 
   const handleDelete = async (item: MediaItem) => {
@@ -389,6 +424,27 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
           {renderUploadButton()}
         </div>
       )}
+
+      {/* Photo crop dialog */}
+      <ProjectImageCropper
+        open={cropperOpen}
+        onClose={() => {
+          if (cropCompletedRef.current) {
+            cropCompletedRef.current = false;
+            startNextCrop();
+          } else {
+            pendingCropFilesRef.current = [];
+            setCropperOpen(false);
+            setCropperImageSrc('');
+          }
+        }}
+        imageSrc={cropperImageSrc}
+        onCropComplete={handlePhotoCropComplete}
+        title="Crop photo"
+        aspect={1}
+        outputWidth={1000}
+        outputHeight={1000}
+      />
 
       {/* Lightbox */}
       <Dialog open={!!lightboxItem} onOpenChange={() => setLightboxItem(null)}>

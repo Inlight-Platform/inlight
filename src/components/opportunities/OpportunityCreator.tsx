@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { useOpportunities } from '@/hooks/useOpportunities';
-import { ImageUploader } from '@/components/feed/ImageUploader';
+import { ProjectHeaderImageUploader } from '@/components/projects/ProjectHeaderImageUploader';
 import { createOpportunityDateTimeIso } from '@/lib/opportunityCalendar';
 import { toast } from 'sonner';
 
@@ -378,11 +378,18 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
             <div>
               <Label>Image (optional)</Label>
               <div className="mt-2">
-                <ImageUploader
+                <ProjectHeaderImageUploader
                   userId={user.id}
                   onImageUploaded={setImageUrl}
                   currentImageUrl={imageUrl || undefined}
                   onRemoveImage={() => setImageUrl('')}
+                  imageKind="main"
+                  cropTitle="Crop opportunity image"
+                  helperText="Drag and drop or click to upload image"
+                  recommendedDimensions="Recommended: 16:9 format"
+                  aspect={16 / 9}
+                  outputWidth={1200}
+                  outputHeight={675}
                 />
               </div>
             </div>

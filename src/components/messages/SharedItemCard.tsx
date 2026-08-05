@@ -28,6 +28,11 @@ export function buildSharedItemMessage(data: SharedItemData): string {
   return `${SHARED_ITEM_PREFIX}${JSON.stringify(data)}${SHARED_ITEM_SUFFIX}`;
 }
 
+export function formatMessagePreview(content: string): string {
+  const shared = parseSharedItem(content);
+  return shared ? `Shared: ${shared.title}` : content;
+}
+
 const typeIcons: Record<string, React.ElementType> = {
   Project: FolderKanban,
   Show: Theater,
@@ -38,15 +43,19 @@ const typeIcons: Record<string, React.ElementType> = {
 interface SharedItemCardProps {
   data: SharedItemData;
   isOwn: boolean;
+  onCardClick?: (data: SharedItemData) => void;
 }
 
-const SharedItemCard: React.FC<SharedItemCardProps> = ({ data, isOwn }) => {
+const SharedItemCard: React.FC<SharedItemCardProps> = ({ data, isOwn, onCardClick }) => {
   const navigate = useNavigate();
   const Icon = typeIcons[data.type] || ExternalLink;
 
   const handleClick = () => {
+    if (onCardClick && data.type !== 'Project') {
+      onCardClick(data);
+      return;
+    }
     if (!data.url) return;
-    // Internal links navigate, external links open in new tab
     if (data.url.startsWith('/') || data.url.startsWith(window.location.origin)) {
       const path = data.url.startsWith('http') ? new URL(data.url).pathname : data.url;
       navigate(path);

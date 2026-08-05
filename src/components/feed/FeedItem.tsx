@@ -40,6 +40,7 @@ export interface FeedItemData {
   image_url?: string | null;
   image_position_x?: number | null;
   image_position_y?: number | null;
+  image_zoom?: number | null;
   link_url?: string | null;
   link_title?: string | null;
   created_at: string;
@@ -487,6 +488,16 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 compactSquare && 'h-full max-h-none object-cover',
                 imageClassName
               )}
+              style={compactSquare ? (() => {
+                const iz = (item.image_zoom ?? 100) / 100;
+                const ix = item.image_position_x ?? 50;
+                const iy = item.image_position_y ?? 50;
+                return {
+                  transform: `translate(${(50 - ix) * (iz - 1)}%, ${(50 - iy) * (iz - 1)}%) scale(${iz})`,
+                  transformOrigin: 'center center',
+                };
+              })() : undefined}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />
           </div>
         )}
@@ -539,8 +550,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
           </div>
         )}
 
-        {/* Event details */}
-        {item.type === 'event' && (
+        {/* Event details — hidden in compact thumbnail mode */}
+        {item.type === 'event' && !compactSquare && (
           <div className="space-y-3 mt-2">
             <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-muted/50">
               {item.event_date && (

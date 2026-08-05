@@ -91,7 +91,13 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
     (item.content ? item.content.slice(0, 80) + (item.content.length > 80 ? '…' : '') : 'Untitled');
   const subtitle = item.description || item.content;
   const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
-  const objectPosition = `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%`;
+  const _iz = (item.image_zoom ?? 100) / 100;
+  const _ix = item.image_position_x ?? 50;
+  const _iy = item.image_position_y ?? 50;
+  const imageStyle = {
+    transform: `translate(${(50 - _ix) * (_iz - 1)}%, ${(50 - _iy) * (_iz - 1)}%) scale(${_iz})`,
+    transformOrigin: 'center center',
+  };
 
   const baseShell =
     'group relative col-span-1 overflow-hidden rounded-3xl cursor-pointer transition-all duration-500 sm:col-span-12';
@@ -113,7 +119,8 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               src={item.image_url!}
               alt={title}
               loading="lazy"
-              style={{ objectPosition }}
+              style={imageStyle}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               className="absolute inset-0 h-full w-full object-cover opacity-60 grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[hsl(222_45%_5%)] via-[hsl(222_45%_5%)]/60 to-transparent" />
@@ -170,9 +177,10 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               <img
                 src={item.image_url!}
                 alt={title}
-                style={{ objectPosition }}
+                style={imageStyle}
                 className="h-full w-full object-cover"
                 loading="lazy"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
             </div>
           )}
@@ -243,9 +251,10 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               <img
                 src={item.image_url!}
                 alt={title}
-                style={{ objectPosition }}
+                style={imageStyle}
                 className="h-full w-full object-cover"
                 loading="lazy"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
             </div>
           ) : subtitle ? (
@@ -287,9 +296,10 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               <img
                 src={item.image_url!}
                 alt={title}
-                style={{ objectPosition }}
+                style={imageStyle}
                 className="h-full w-full object-cover"
                 loading="lazy"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-foreground/60">{meta.icon}</div>
