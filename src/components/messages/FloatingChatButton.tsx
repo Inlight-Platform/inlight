@@ -11,7 +11,7 @@ const FloatingChatButton: React.FC<FloatingChatButtonProps> = ({ onClick }) => {
     <Button
       onClick={onClick}
       size="icon"
-      className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all"
+      className="fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all md:bottom-6 md:right-6"
     >
       <Mail className="w-6 h-6" />
     </Button>

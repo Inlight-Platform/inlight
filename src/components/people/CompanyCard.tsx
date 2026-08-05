@@ -10,15 +10,16 @@ interface CompanyCardProps {
   isFollowing: boolean;
   onFollow: (companyId: string) => void;
   onUnfollow: (companyId: string) => void;
+  returnTo?: string;
 }
 
-const CompanyCard: React.FC<CompanyCardProps> = ({ company, isFollowing, onFollow, onUnfollow }) => {
+const CompanyCard: React.FC<CompanyCardProps> = ({ company, isFollowing, onFollow, onUnfollow, returnTo = '/people' }) => {
   const navigate = useNavigate();
 
   return (
     <Card
       className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-      onClick={() => navigate(`/company/${company.id}`)}
+      onClick={() => navigate(`/company/${company.id}`, { state: { returnTo } })}
     >
       {/* Header gradient */}
       <div 

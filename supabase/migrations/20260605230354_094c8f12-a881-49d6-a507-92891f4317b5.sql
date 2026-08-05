@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS public.analytics_events (
   duration_ms INTEGER,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
+ALTER TABLE public.analytics_events
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now();
 GRANT ALL ON public.analytics_events TO service_role;
 ALTER TABLE public.analytics_events ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admins can view analytics" ON public.analytics_events FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
