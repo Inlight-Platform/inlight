@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
-import { isAllowedSignupEmail, signupEmailPolicyMessage } from '@/lib/authPolicy';
 
 export const accountAlreadyExistsMessage =
   'Your account already exists. Try signing in or resetting your password.';
@@ -16,10 +15,6 @@ type SignupRpcResult<T> = {
 };
 
 type SignupRpc = {
-  (
-    fn: 'is_signup_email_allowed',
-    args: { _email: string; _platform_token?: string | null; _credit_token?: string | null }
-  ): Promise<SignupRpcResult<boolean>>;
   (
     fn: 'check_email_exists_for_signup',
     args: { search_email: string }
@@ -248,18 +243,6 @@ export function useAuth() {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedInviteToken = platformInviteToken?.trim() || null;
     const normalizedCreditInviteToken = projectCreditInviteToken?.trim() || null;
-
-    if (!isAllowedSignupEmail(normalizedEmail)) {
-      const { data: isSignupAllowed, error: policyError } = await signupRpc('is_signup_email_allowed', {
-        _email: normalizedEmail,
-        _platform_token: normalizedInviteToken,
-        _credit_token: normalizedCreditInviteToken,
-      });
-
-      if (policyError || !isSignupAllowed) {
-        return { data: null, error: { message: signupEmailPolicyMessage } };
-      }
-    }
 
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,

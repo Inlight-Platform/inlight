@@ -6,17 +6,18 @@ export interface MyGroup {
   id: string;
   slug: string;
   name: string;
+  /** Backward-compatible name for scoped group-admin access. */
   is_faculty: boolean;
 }
 
-/** Groups the current user belongs to or owns as faculty. */
+/** Groups the current user belongs to or can administer. */
 export const useMyGroups = () => {
   const { user } = useAuth();
   return useQuery({
     queryKey: ['my-groups', user?.id],
     enabled: !!user?.id,
     queryFn: async (): Promise<MyGroup[]> => {
-      const { data, error } = await (supabase.rpc as any)('get_my_groups');
+      const { data, error } = await supabase.rpc('get_my_groups');
       if (error) {
         console.error('get_my_groups failed', error);
         return [];
@@ -26,7 +27,7 @@ export const useMyGroups = () => {
   });
 };
 
-/** First group where the user is the faculty owner (used for the "Manage Group" button). */
+/** First group where the user is a scoped group admin (used for the "Manage Group" button). */
 export const useMyFacultyGroup = () => {
   const { data: groups } = useMyGroups();
   return groups?.find((g) => g.is_faculty) ?? null;
@@ -38,7 +39,8 @@ export const useGroupBySlug = (slug?: string) => {
     queryKey: ['group-by-slug', slug],
     enabled: !!slug,
     queryFn: async () => {
-      const { data, error } = await (supabase.from as any)('groups')
+      const { data, error } = await supabase
+        .from('groups')
         .select('*')
         .eq('slug', slug!)
         .maybeSingle();

@@ -108,7 +108,7 @@ const InlineAuth: React.FC<{ programSlug: string; programName: string }> = ({ pr
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@school.edu"
+              placeholder="you@example.com"
               className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
             />
           </div>

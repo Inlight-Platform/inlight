@@ -59,6 +59,7 @@ const mobileNavItems: NavItem[] = [
 
 export const MainNav: React.FC = () => {
   const location = useLocation();
+  const settingsReturnTo = `${location.pathname}${location.search}${location.hash}`;
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
   const { collapsed, toggleCollapsed } = useSidebarState();
@@ -286,6 +287,7 @@ export const MainNav: React.FC = () => {
                     <TooltipTrigger asChild>
                       <Link
                     to="/settings"
+                    state={{ returnTo: settingsReturnTo }}
                     className="flex items-center justify-center py-3 rounded-xl text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-white transition-colors">
 
                         <Settings className="w-5 h-5" />
@@ -349,6 +351,7 @@ export const MainNav: React.FC = () => {
                   </Link>
                   <Link
                 to="/settings"
+                state={{ returnTo: settingsReturnTo }}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-white transition-colors">
 
                     <Settings className="w-5 h-5" />
@@ -430,7 +433,7 @@ export const MainNav: React.FC = () => {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative',
+                  'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative touch-manipulation select-none',
                   active ?
                   'text-white' :
                   item.accent ?
@@ -460,7 +463,7 @@ export const MainNav: React.FC = () => {
                 type="button"
                 aria-label="Open account menu"
                 className={cn(
-                  'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative',
+                  'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative touch-manipulation select-none',
                   isActive('/resources') || isActive('/pie-chart') || isActive(`/profile/${user.id}`) || isActive('/notifications') || isActive('/settings')
                     ? 'text-white'
                     : 'text-[hsl(220_15%_60%)]'
@@ -517,7 +520,7 @@ export const MainNav: React.FC = () => {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
-                <Link to="/settings">
+                <Link to="/settings" state={{ returnTo: settingsReturnTo }}>
                   <Settings className="w-4 h-4" />
                   <span>Settings</span>
                 </Link>
