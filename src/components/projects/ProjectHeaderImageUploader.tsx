@@ -256,11 +256,14 @@ export const ProjectHeaderImageUploader: React.FC<ProjectHeaderImageUploaderProp
 
   if (currentImageUrl) {
     return (
-      <div className={cn("relative rounded-lg overflow-hidden", className)}>
+      <div
+        className={cn("relative rounded-lg overflow-hidden", className)}
+        style={{ aspectRatio: `${outputWidth} / ${outputHeight}` }}
+      >
         <img
           src={currentImageUrl}
           alt="Header preview"
-          className="w-full h-48 object-cover"
+          className="w-full h-full object-cover"
         />
         {onRemoveImage && (
           <Button
