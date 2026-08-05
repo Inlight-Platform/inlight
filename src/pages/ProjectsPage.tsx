@@ -358,7 +358,12 @@ const ProjectsPage: React.FC = () => {
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-display font-bold">Projects</h1>
           </div>
-
+          {user && (
+            <Button onClick={openProjectCreator} size="sm" className="gap-1">
+              <Plus className="w-4 h-4" />
+              New Project
+            </Button>
+          )}
         </div>
       </header>
 
