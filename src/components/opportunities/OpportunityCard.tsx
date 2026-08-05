@@ -293,6 +293,11 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
                     compensation: opportunity.compensation,
                     deadline: opportunity.deadline,
                     status: opportunity.status,
+                    image_url: opportunity.imageUrl || null,
+                    link_url: opportunity.linkUrl || null,
+                    link_title: opportunity.linkTitle || null,
+                    action_type: opportunity.actionType,
+                    created_at: opportunity.createdAt,
                   },
                 });
               }}

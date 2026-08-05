@@ -300,7 +300,7 @@ const MySavesPage: React.FC = () => {
 
   // Live-fetch current deadline/status for saved jobs from the opportunities table
   const savedJobOpportunityIds = savedJobs.map(i => i.item_id).filter(Boolean) as string[];
-  const savedJobTitles = savedJobs.filter(i => !i.item_id).map(i => i.item_title);
+  const savedJobTitles = savedJobs.map(i => i.item_title).filter(Boolean) as string[];
   const { data: liveOpportunityData = [] } = useQuery({
     queryKey: ['saved-jobs-live', savedJobOpportunityIds, savedJobTitles],
     queryFn: async () => {
@@ -376,9 +376,12 @@ const MySavesPage: React.FC = () => {
       requirements: [],
       deadline: (item.item_metadata?.deadline as string) || undefined,
       tags: [],
-      createdAt: item.saved_at,
+      createdAt: (item.item_metadata?.created_at as string) || item.saved_at,
       isFeatured: false,
-      actionType: 'apply',
+      actionType: (item.item_metadata?.action_type as string) || 'apply',
+      imageUrl: (item.item_metadata?.image_url as string) || undefined,
+      linkUrl: (item.item_metadata?.link_url as string) || undefined,
+      linkTitle: (item.item_metadata?.link_title as string) || undefined,
       source: 'opportunity' as const,
       applicants: [],
     };
@@ -824,7 +827,36 @@ const MySavesPage: React.FC = () => {
                           <Card
                             key={item.id}
                             className="hover:shadow-lg transition-shadow cursor-pointer"
-                            onClick={() => setDetailJobView(makeJobView(item))}
+                            onClick={async () => {
+                              const live = getLiveRow(item);
+                              if (live) { setDetailJobView(buildViewFromLive(live)); return; }
+                              let freshRow: any = null;
+                              if (item.item_id) {
+                                const { data } = await supabase.from('opportunities').select('*').eq('id', item.item_id).maybeSingle();
+                                freshRow = data;
+                              }
+                              if (!freshRow) {
+                                const { data } = await supabase.from('opportunities').select('*').eq('title', item.item_title).maybeSingle();
+                                freshRow = data;
+                              }
+                              if (!freshRow && item.item_id) {
+                                const { data: post } = await supabase.from('posts').select('id, content, image_url, link_url, link_title, created_at').eq('id', item.item_id).maybeSingle();
+                                if (post) {
+                                  const urlMatch = post.link_url || post.content?.match(/https?:\/\/[^\s)]+/)?.[0] || undefined;
+                                  setDetailJobView({
+                                    ...makeJobView(item),
+                                    id: post.id,
+                                    createdAt: post.created_at,
+                                    imageUrl: post.image_url || undefined,
+                                    linkUrl: urlMatch,
+                                    linkTitle: post.link_title || undefined,
+                                    actionType: urlMatch ? 'external' : 'apply',
+                                  });
+                                  return;
+                                }
+                              }
+                              setDetailJobView(freshRow ? buildViewFromLive(freshRow) : makeJobView(item));
+                            }}
                           >
                             <CardContent className="p-4">
                               <h3 className="font-semibold mb-1">{item.item_title}</h3>

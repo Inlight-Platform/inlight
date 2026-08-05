@@ -41,6 +41,7 @@ const MessagesPage: React.FC = () => {
   const [detailShowId, setDetailShowId] = useState<string | null>(null);
   const [detailFilmId, setDetailFilmId] = useState<string | null>(null);
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
+  const [detailJobShared, setDetailJobShared] = useState<SharedItemData | null>(null);
   const [showApplyDialog, setShowApplyDialog] = useState(false);
 
   const { isSaved: isShowSaved, saveShow, unsaveShow } = useSavedShows();
@@ -70,22 +71,41 @@ const MessagesPage: React.FC = () => {
     queryKey: ['msg-detail-job', detailJobId],
     queryFn: async () => {
       if (!detailJobId) return null;
-      const { data } = await supabase.from('opportunities').select('*').eq('id', detailJobId).single();
-      if (!data) return null;
-      return {
-        id: data.id, title: data.title, description: data.description,
-        type: data.type, status: data.status, postedBy: data.posted_by,
-        company: data.company || undefined, location: data.location || 'Remote',
-        isRemote: data.is_remote, compensation: data.compensation || undefined,
-        experienceLevel: data.experience_level, roles: data.roles || [],
-        skills: (data as any).skills || [], requirements: data.requirements || [],
-        deadline: data.deadline || undefined, startDate: data.start_date || undefined,
-        duration: data.duration || undefined, tags: data.tags || [],
-        createdAt: data.created_at, isFeatured: data.is_featured,
-        actionType: data.action_type || 'apply', imageUrl: data.image_url || undefined,
-        linkUrl: data.link_url || undefined, linkTitle: data.link_title || undefined,
-        source: 'opportunity' as const, applicants: [],
-      } as OpportunityView;
+      const { data } = await supabase.from('opportunities').select('*').eq('id', detailJobId).maybeSingle();
+      if (data) {
+        return {
+          id: data.id, title: data.title, description: data.description,
+          type: data.type, status: data.status, postedBy: data.posted_by,
+          company: data.company || undefined, location: data.location || 'Remote',
+          isRemote: data.is_remote, compensation: data.compensation || undefined,
+          experienceLevel: data.experience_level, roles: data.roles || [],
+          skills: (data as any).skills || [], requirements: data.requirements || [],
+          deadline: data.deadline || undefined, startDate: data.start_date || undefined,
+          duration: data.duration || undefined, tags: data.tags || [],
+          createdAt: data.created_at, isFeatured: data.is_featured,
+          actionType: data.action_type || 'apply', imageUrl: data.image_url || undefined,
+          linkUrl: data.link_url || undefined, linkTitle: data.link_title || undefined,
+          source: 'opportunity' as const, applicants: [],
+        } as OpportunityView;
+      }
+      const { data: post } = await supabase.from('posts').select('id, content, image_url, link_url, link_title, created_at').eq('id', detailJobId).maybeSingle();
+      if (post) {
+        const titleMatch = post.content?.match(/^🎯\s+\*\*(.+?)\*\*/);
+        const title = titleMatch?.[1]?.trim() || detailJobShared?.title || 'Job Opportunity';
+        const linkUrl = post.link_url || post.content?.match(/https?:\/\/[^\s)]+/)?.[0] || undefined;
+        return {
+          id: post.id, title, type: 'job', status: 'open', postedBy: '',
+          description: post.content?.split('\n').slice(1).join('\n').replace(/https?:\/\/[^\s)]+/g, '').trim() || '',
+          location: 'Remote', isRemote: true, experienceLevel: 'any',
+          roles: [], skills: [], requirements: [], tags: [],
+          createdAt: post.created_at, isFeatured: false,
+          actionType: linkUrl ? 'external' : 'apply',
+          imageUrl: post.image_url || detailJobShared?.image_url || undefined,
+          linkUrl, linkTitle: post.link_title || undefined,
+          source: 'opportunity' as const, applicants: [],
+        } as OpportunityView;
+      }
+      return null;
     },
     enabled: !!detailJobId,
   });
@@ -97,7 +117,7 @@ const MessagesPage: React.FC = () => {
     const jobMatch = item.url.match(/jobId=([^&]+)/);
     if (showMatch) { setDetailShowId(showMatch[1]); return; }
     if (filmMatch) { setDetailFilmId(filmMatch[1]); return; }
-    if (jobMatch) { setDetailJobId(jobMatch[1]); return; }
+    if (jobMatch) { setDetailJobShared(item); setDetailJobId(jobMatch[1]); return; }
   };
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
