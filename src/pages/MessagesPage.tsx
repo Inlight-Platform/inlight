@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import GroupChatThread from '@/components/messages/GroupChatThread';
 import NewGroupMessageDialog from '@/components/messages/NewGroupMessageDialog';
-import SharedItemCard, { parseSharedItem } from '@/components/messages/SharedItemCard';
+import SharedItemCard, { parseSharedItem, formatMessagePreview } from '@/components/messages/SharedItemCard';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useMinimizedChat } from '@/hooks/useMinimizedChat';
@@ -245,7 +245,7 @@ const MessagesPage: React.FC = () => {
                         c.unread_count > 0 ? 'text-foreground' : 'text-muted-foreground'
                       )}>
                         {c.last_message.sender_id === user?.id && 'You: '}
-                        {c.last_message.content}
+                        {formatMessagePreview(c.last_message.content)}
                       </p>
                     )}
                   </div>

@@ -28,6 +28,11 @@ export function buildSharedItemMessage(data: SharedItemData): string {
   return `${SHARED_ITEM_PREFIX}${JSON.stringify(data)}${SHARED_ITEM_SUFFIX}`;
 }
 
+export function formatMessagePreview(content: string): string {
+  const shared = parseSharedItem(content);
+  return shared ? `Shared: ${shared.title}` : content;
+}
+
 const typeIcons: Record<string, React.ElementType> = {
   Project: FolderKanban,
   Show: Theater,
