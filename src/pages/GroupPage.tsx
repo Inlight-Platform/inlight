@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Users, Trash2, Globe, Lock, Send, Shield } from 'lucide-react';
+import { ArrowLeft, Users, Trash2, Globe, Lock, Send, Shield, MailPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useGroupBySlug } from '@/hooks/useGroups';
+import { useGroupBySlug, useMyGroups } from '@/hooks/useGroups';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,7 +12,53 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 import { toast } from 'sonner';
+
+interface GroupAdmin {
+  id: string;
+  group_id: string;
+  user_id: string | null;
+  email: string | null;
+  status: string;
+  created_at: string;
+  profile?: {
+    user_id: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+}
+
+interface ProfilePreview {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+interface GroupMember {
+  id: string;
+  user_id: string;
+  status: 'active' | 'pending';
+  joined_at: string;
+  profile?: ProfilePreview;
+}
+
+interface GroupPost {
+  id: string;
+  user_id: string;
+  content: string;
+  visibility: string | null;
+  created_at: string;
+  creator?: ProfilePreview;
+}
+
+interface PostGroupLink {
+  post_id: string;
+  posts: GroupPost | null;
+}
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 const GroupPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -21,40 +67,96 @@ const GroupPage: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data: group, isLoading: groupLoading } = useGroupBySlug(slug);
+  const { data: myGroups = [] } = useMyGroups();
 
-  const isFaculty = !!user && !!group && group.faculty_owner_id === user.id;
+  const isFaculty = !!user && !!group && (
+    group.faculty_owner_id === user.id ||
+    myGroups.some((g) => g.id === group.id && g.is_faculty)
+  );
+  const canViewPrivateGroup = !!user && !!group && (
+    isFaculty ||
+    myGroups.some((g) => g.id === group.id)
+  );
 
-  // Members
-  const { data: members = [] } = useQuery({
-    queryKey: ['group-members', group?.id],
+  const { data: groupMemberCount } = useQuery({
+    queryKey: ['group-active-member-count', group?.id],
     enabled: !!group?.id,
     queryFn: async () => {
-      const { data, error } = await (supabase.from as any)('group_members')
+      const { data, error } = await supabase.rpc('get_group_active_member_count', {
+        _group_id: group!.id,
+      });
+      if (error) throw error;
+      return data ?? 0;
+    },
+  });
+
+  // Scoped group admins
+  const { data: groupAdmins = [] } = useQuery<GroupAdmin[]>({
+    queryKey: ['group-admins', group?.id],
+    enabled: !!group?.id && isFaculty,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('group_admins')
+        .select('id, group_id, user_id, email, status, created_at')
+        .eq('group_id', group!.id)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+
+      const ids = [...new Set((data || []).map((admin) => admin.user_id).filter(Boolean))] as string[];
+      if (!ids.length) return (data || []) as GroupAdmin[];
+
+      const { data: profiles } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', ids);
+      const map = new Map((profiles || []).map((profile) => [profile.user_id, profile]));
+
+      return ((data || []) as GroupAdmin[]).map((admin) => ({
+        ...admin,
+        profile: admin.user_id ? map.get(admin.user_id) : undefined,
+      }));
+    },
+  });
+
+  // Members
+  const { data: members = [] } = useQuery<GroupMember[]>({
+    queryKey: ['group-members', group?.id],
+    enabled: !!group?.id && canViewPrivateGroup,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('group_members')
         .select('id, user_id, status, joined_at')
         .eq('group_id', group!.id);
       if (error) throw error;
-      const ids = (data || []).map((m: any) => m.user_id);
+      const ids = (data || []).map((m) => m.user_id);
       if (!ids.length) return [];
       const { data: profiles } = await supabase
         .from('profiles_public')
         .select('user_id, display_name, avatar_url')
         .in('user_id', ids);
       const map = new Map((profiles || []).map((p) => [p.user_id, p]));
-      return (data as any[]).map((m) => ({ ...m, profile: map.get(m.user_id) }));
+      return (data || []).map((member) => ({
+        ...member,
+        status: member.status as GroupMember['status'],
+        profile: map.get(member.user_id),
+      }));
     },
   });
 
   // Group posts (visible to members + faculty thanks to RLS)
-  const { data: posts = [] } = useQuery({
+  const { data: posts = [] } = useQuery<GroupPost[]>({
     queryKey: ['group-posts', group?.id],
-    enabled: !!group?.id,
+    enabled: !!group?.id && canViewPrivateGroup,
     queryFn: async () => {
-      const { data: links, error } = await (supabase.from as any)('post_groups')
+      const { data: links, error } = await supabase
+        .from('post_groups')
         .select('post_id, posts(*)')
         .eq('group_id', group!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      const rows = (links as any[]).map((l) => l.posts).filter(Boolean);
+      const rows = ((links || []) as unknown as PostGroupLink[])
+        .map((link) => link.posts)
+        .filter((post): post is GroupPost => Boolean(post));
       const uids = [...new Set(rows.map((p) => p.user_id))];
       if (!uids.length) return [];
       const { data: profiles } = await supabase
@@ -62,7 +164,7 @@ const GroupPage: React.FC = () => {
         .select('user_id, display_name, avatar_url')
         .in('user_id', uids);
       const map = new Map((profiles || []).map((p) => [p.user_id, p]));
-      return rows.map((p) => ({ ...p, creator: map.get(p.user_id) }));
+      return rows.map((post) => ({ ...post, creator: map.get(post.user_id) }));
     },
   });
 
@@ -79,7 +181,8 @@ const GroupPage: React.FC = () => {
         .select('id')
         .single();
       if (error) throw error;
-      const { error: linkErr } = await (supabase.from as any)('post_groups')
+      const { error: linkErr } = await supabase
+        .from('post_groups')
         .insert({ post_id: post.id, group_id: group.id });
       if (linkErr) throw linkErr;
     },
@@ -89,7 +192,7 @@ const GroupPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['feed-posts'] });
       toast.success('Posted to ' + (group?.name ?? 'group'));
     },
-    onError: (e: any) => toast.error(e?.message || 'Failed to post'),
+    onError: (error) => toast.error(getErrorMessage(error, 'Failed to post')),
   });
 
   const togglePostVisibility = useMutation({
@@ -98,7 +201,7 @@ const GroupPage: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['group-posts', group?.id] }),
-    onError: (e: any) => toast.error(e?.message || 'Failed to update visibility'),
+    onError: (error) => toast.error(getErrorMessage(error, 'Failed to update visibility')),
   });
 
   const deletePost = useMutation({
@@ -110,28 +213,28 @@ const GroupPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['group-posts', group?.id] });
       toast.success('Post removed');
     },
-    onError: (e: any) => toast.error(e?.message || 'Failed to remove'),
+    onError: (error) => toast.error(getErrorMessage(error, 'Failed to remove')),
   });
 
   const setMemberStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: 'active' | 'pending' }) => {
-      const { error } = await (supabase.from as any)('group_members').update({ status }).eq('id', id);
+      const { error } = await supabase.from('group_members').update({ status }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['group-members', group?.id] }),
-    onError: (e: any) => toast.error(e?.message || 'Failed to update member'),
+    onError: (error) => toast.error(getErrorMessage(error, 'Failed to update member')),
   });
 
   const removeMember = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase.from as any)('group_members').delete().eq('id', id);
+      const { error } = await supabase.from('group_members').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-members', group?.id] });
       toast.success('Member removed');
     },
-    onError: (e: any) => toast.error(e?.message || 'Failed to remove'),
+    onError: (error) => toast.error(getErrorMessage(error, 'Failed to remove')),
   });
 
   // Add member by email/name search
@@ -150,7 +253,8 @@ const GroupPage: React.FC = () => {
   });
   const addMember = useMutation({
     mutationFn: async (uid: string) => {
-      const { error } = await (supabase.from as any)('group_members')
+      const { error } = await supabase
+        .from('group_members')
         .insert({ group_id: group!.id, user_id: uid, status: 'active' });
       if (error) throw error;
     },
@@ -159,7 +263,43 @@ const GroupPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['group-members', group?.id] });
       toast.success('Member added');
     },
-    onError: (e: any) => toast.error(e?.message || 'Failed to add'),
+    onError: (error) => toast.error(getErrorMessage(error, 'Failed to add')),
+  });
+
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPendingRemoval, setAdminPendingRemoval] = useState<GroupAdmin | null>(null);
+  const addAdmin = useMutation({
+    mutationFn: async () => {
+      if (!group) throw new Error('Group not ready');
+      const { error } = await supabase.rpc('add_group_admin_by_email', {
+        _group_id: group.id,
+        _email: adminEmail,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setAdminEmail('');
+      queryClient.invalidateQueries({ queryKey: ['group-admins', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      toast.success('Group admin added');
+    },
+    onError: (error) => toast.error(getErrorMessage(error, 'Failed to add admin')),
+  });
+
+  const removeAdmin = useMutation({
+    mutationFn: async (adminId: string) => {
+      const { error } = await supabase.rpc('remove_group_admin', {
+        _admin_id: adminId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setAdminPendingRemoval(null);
+      queryClient.invalidateQueries({ queryKey: ['group-admins', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      toast.success('Group admin removed');
+    },
+    onError: (error) => toast.error(getErrorMessage(error, 'Failed to remove admin')),
   });
 
   if (groupLoading) {
@@ -169,8 +309,9 @@ const GroupPage: React.FC = () => {
     return <div className="p-12 text-center text-muted-foreground">Group not found.</div>;
   }
 
-  const activeMembers = members.filter((m: any) => m.status === 'active');
-  const pendingMembers = members.filter((m: any) => m.status === 'pending');
+  const activeMembers = members.filter((member) => member.status === 'active');
+  const pendingMembers = members.filter((member) => member.status === 'pending');
+  const visibleMemberCount = groupMemberCount ?? activeMembers.length;
   const routeState = location.state as { returnTo?: string } | null;
   const handleBack = () => {
     if (routeState?.returnTo) {
@@ -188,7 +329,7 @@ const GroupPage: React.FC = () => {
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </Button>
         {isFaculty && (
-          <Badge variant="secondary" className="gap-1"><Shield className="h-3 w-3" /> Faculty</Badge>
+          <Badge variant="secondary" className="gap-1"><Shield className="h-3 w-3" /> Group admin</Badge>
         )}
       </div>
 
@@ -198,10 +339,12 @@ const GroupPage: React.FC = () => {
           <p className="text-muted-foreground">{group.description}</p>
         )}
         <p className="text-xs text-muted-foreground flex items-center gap-1">
-          <Users className="h-3 w-3" /> {activeMembers.length} member{activeMembers.length === 1 ? '' : 's'}
+          <Users className="h-3 w-3" /> {visibleMemberCount} member{visibleMemberCount === 1 ? '' : 's'}
         </p>
       </header>
 
+      {canViewPrivateGroup && (
+        <>
       {/* Composer */}
       <Card>
         <CardContent className="p-4 space-y-3">
@@ -251,7 +394,7 @@ const GroupPage: React.FC = () => {
           {posts.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No posts yet.</p>
           ) : (
-            posts.map((p: any) => (
+            posts.map((p) => (
               <Card key={p.id}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
@@ -310,6 +453,76 @@ const GroupPage: React.FC = () => {
         <TabsContent value="members" className="space-y-3 mt-4">
           {isFaculty && (
             <Card>
+              <CardContent className="p-4 space-y-4">
+                <div>
+                  <p className="text-sm font-medium">Group admins</p>
+                  <p className="text-xs text-muted-foreground">
+                    Admins can manage this group without receiving global Inlight admin access.
+                  </p>
+                </div>
+
+                <form
+                  className="flex flex-col sm:flex-row gap-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (!adminEmail.trim()) return;
+                    addAdmin.mutate();
+                  }}
+                >
+                  <Input
+                    type="email"
+                    placeholder="admin@example.edu"
+                    value={adminEmail}
+                    onChange={(event) => setAdminEmail(event.target.value)}
+                  />
+                  <Button type="submit" disabled={addAdmin.isPending || !adminEmail.trim()}>
+                    <MailPlus className="h-4 w-4 mr-1" /> Add admin
+                  </Button>
+                </form>
+
+                <div className="space-y-2">
+                  {groupAdmins.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No admins found.</p>
+                  ) : (
+                    groupAdmins.map((admin) => {
+                      const displayName = admin.profile?.display_name || admin.email || 'Pending admin';
+                      const canRemove = groupAdmins.length > 1;
+
+                      return (
+                        <div key={admin.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={admin.profile?.avatar_url || undefined} />
+                              <AvatarFallback>{displayName[0]?.toUpperCase() || 'A'}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">{displayName}</p>
+                              {admin.email && (
+                                <p className="truncate text-xs text-muted-foreground">{admin.email}</p>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive"
+                            disabled={!canRemove || removeAdmin.isPending}
+                            title={canRemove ? 'Remove admin' : 'A group must have at least one admin'}
+                            onClick={() => setAdminPendingRemoval(admin)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {isFaculty && (
+            <Card>
               <CardContent className="p-4 space-y-2">
                 <p className="text-sm font-medium">Add a student</p>
                 <Input
@@ -342,7 +555,7 @@ const GroupPage: React.FC = () => {
             <div>
               <h3 className="text-sm font-semibold mb-2">Pending requests</h3>
               <div className="space-y-2">
-                {pendingMembers.map((m: any) => (
+                {pendingMembers.map((m) => (
                   <Card key={m.id}>
                     <CardContent className="p-3 flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -372,7 +585,7 @@ const GroupPage: React.FC = () => {
           <div>
             <h3 className="text-sm font-semibold mb-2">Active members</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {activeMembers.map((m: any) => (
+              {activeMembers.map((m) => (
                 <Card key={m.id}>
                   <CardContent className="p-3 flex items-center justify-between">
                     <button
@@ -404,6 +617,25 @@ const GroupPage: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      <DeleteConfirmDialog
+        open={!!adminPendingRemoval}
+        onOpenChange={(open) => {
+          if (!open) setAdminPendingRemoval(null);
+        }}
+        onConfirm={() => {
+          if (adminPendingRemoval) {
+            removeAdmin.mutate(adminPendingRemoval.id);
+          }
+        }}
+        title="Remove group admin?"
+        description={`This will remove ${
+          adminPendingRemoval?.profile?.display_name || adminPendingRemoval?.email || 'this person'
+        } as an admin for ${group.name}. They will no longer be able to manage this group.`}
+        isPending={removeAdmin.isPending}
+      />
+        </>
+      )}
     </div>
   );
 };

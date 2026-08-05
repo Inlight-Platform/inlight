@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliation_requests: {
+        Row: {
+          id: string
+          user_id: string
+          requested_name: string
+          description_or_context: string | null
+          status: 'pending' | 'approved' | 'denied'
+          admin_notes: string | null
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          requested_name: string
+          description_or_context?: string | null
+          status?: 'pending' | 'approved' | 'denied'
+          admin_notes?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          requested_name?: string
+          description_or_context?: string | null
+          status?: 'pending' | 'approved' | 'denied'
+          admin_notes?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliation_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -648,6 +695,50 @@ export type Database = {
             columns: ["group_chat_id"]
             isOneToOne: false
             referencedRelation: "project_group_chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_admins: {
+        Row: {
+          created_at: string
+          email: string | null
+          group_id: string
+          id: string
+          invited_by: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          group_id: string
+          id?: string
+          invited_by?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          group_id?: string
+          id?: string
+          invited_by?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_admins_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
         ]
@@ -2772,6 +2863,10 @@ export type Database = {
           slug: string
         }[]
       }
+      get_group_active_member_count: {
+        Args: { _group_id: string }
+        Returns: number
+      }
       get_my_groups: {
         Args: never
         Returns: {
@@ -2780,6 +2875,10 @@ export type Database = {
           name: string
           slug: string
         }[]
+      }
+      add_group_admin_by_email: {
+        Args: { _email: string; _group_id: string }
+        Returns: Database["public"]["Tables"]["group_admins"]["Row"]
       }
       get_profile_attendance: {
         Args: { _user_id: string }
@@ -2850,6 +2949,7 @@ export type Database = {
         Args: { _group: string; _user: string }
         Returns: boolean
       }
+      remove_group_admin: { Args: { _admin_id: string }; Returns: undefined }
       mark_show_attended: { Args: { _show_id: string }; Returns: undefined }
       update_profile_pronouns_settings: {
         Args: { _pronouns: string; _show_pronouns: boolean }

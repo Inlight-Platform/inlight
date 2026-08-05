@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { ArrowLeft, CheckCircle2, Circle, Eye, EyeOff, GraduationCap, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Circle, Eye, EyeOff, GraduationCap, Loader2, MailCheck } from 'lucide-react';
 import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { Sparkle } from '@/components/Sparkle';
 import { Starfield } from '@/components/Starfield';
@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { formatSignInErrorMessage } from '@/lib/authPolicy';
 import { supabase } from '@/integrations/supabase/client';
 
-type AuthView = 'login' | 'signup' | 'forgot' | 'reset';
+type AuthView = 'login' | 'signup' | 'forgot' | 'reset' | 'confirm';
 
 interface AuthRouteState {
   email?: string;
@@ -53,6 +53,7 @@ const isPasswordPolicyError = (message: string) => {
 const firstTimeSignupWelcomeStorageKey = 'inlight-first-time-signup-email-hash';
 const firstTimeSignupWelcomeCopy = 'Welcome to Inlight!';
 const returningUserWelcomeCopy = 'Welcome back!';
+const confirmationRequiredCopy = 'Check your email and confirm your account';
 
 type FacultyGroupLookup = { slug?: string | null };
 type FacultyGroupRpc = (fn: 'get_my_faculty_group') => Promise<{ data: FacultyGroupLookup | FacultyGroupLookup[] | null }>;
@@ -219,7 +220,6 @@ const AuthPage: React.FC = () => {
   const mode = searchParams.get('mode');
   const inviteToken = searchParams.get('invite')?.trim() || null;
   const creditInviteToken = searchParams.get('credit_invite')?.trim() || null;
-  const isInviteSignup = Boolean(inviteToken || creditInviteToken);
   
   const getInitialView = (): AuthView => {
     if (routeState.mode) return routeState.mode;
@@ -233,6 +233,7 @@ const AuthPage: React.FC = () => {
   const [password, setPassword] = useState(routeState.password || '');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState(routeState.displayName || '');
+  const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSignupPasswordChecklist, setShowSignupPasswordChecklist] = useState(false);
   
@@ -345,12 +346,10 @@ const AuthPage: React.FC = () => {
         }
       } else if (!data?.session) {
         await markFirstTimeSignupWelcomePending(email);
-        toast.success(
-          isInviteSignup
-            ? 'Account created. Check your email and confirm your account before signing in.'
-            : 'Account created. Check your .edu inbox and confirm your email before signing in.'
-        );
-        setView('login');
+        setPendingConfirmationEmail(email.trim().toLowerCase());
+        setPassword('');
+        setConfirmPassword('');
+        setView('confirm');
       } else {
         toast.success('Account created! Welcome to Inlight.');
         navigate(redirectPath, { replace: true });
@@ -558,6 +557,58 @@ const AuthPage: React.FC = () => {
     );
   }
 
+  if (view === 'confirm') {
+    return (
+      <AuthFrame
+        eyebrow="Account created"
+        title={<>Check your <em className="italic text-accent-blue font-normal">email</em>.</>}
+        caption="You are one step away from joining Inlight."
+      >
+        <div className="space-y-5 text-center sm:text-left">
+          <Alert className="border-glow/40 bg-glow/10 text-white">
+            <MailCheck className="h-5 w-5 text-glow" />
+            <AlertTitle className="text-lg leading-7 text-white">
+              {confirmationRequiredCopy}
+            </AlertTitle>
+            <AlertDescription className="mt-3 space-y-3 text-sm leading-6 text-muted-foreground">
+              <p>
+                We sent a verification link to{' '}
+                <span className="break-all font-medium text-white">
+                  {pendingConfirmationEmail || email.trim().toLowerCase()}
+                </span>
+                .
+              </p>
+              <p>
+                Open that email and click the confirmation link before signing in.
+              </p>
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button
+              type="button"
+              className={cn('w-full', primaryButtonClass)}
+              onClick={() => setView('login')}
+            >
+              I confirmed my email
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className={cn('w-full', secondaryButtonClass)}
+              onClick={() => {
+                setPendingConfirmationEmail('');
+                setView('signup');
+              }}
+            >
+              Use a different email
+            </Button>
+          </div>
+        </div>
+      </AuthFrame>
+    );
+  }
+
   // Login/Signup view
   return (
     <AuthFrame
@@ -611,7 +662,7 @@ const AuthPage: React.FC = () => {
             <Input
               id="login-email"
               type="email"
-              placeholder="you@university.edu"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -675,18 +726,16 @@ const AuthPage: React.FC = () => {
             <Input
               id="signup-email"
               type="email"
-              placeholder={isInviteSignup ? 'you@example.com' : 'you@university.edu'}
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               className={fieldClass}
             />
-            {!isInviteSignup && (
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                <GraduationCap className="h-3 w-3" />
-                University emails are allowed automatically. Other emails need an invite.
-              </p>
-            )}
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <MailCheck className="h-3 w-3" />
+              Use an email you can confirm.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="signup-password" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
