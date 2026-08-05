@@ -304,7 +304,7 @@ const MySavesPage: React.FC = () => {
   const { data: liveOpportunityData = [] } = useQuery({
     queryKey: ['saved-jobs-live', savedJobOpportunityIds, savedJobTitles],
     queryFn: async () => {
-      let query = supabase.from('opportunities').select('id, title, deadline, status');
+      let query = supabase.from('opportunities').select('*');
       if (savedJobOpportunityIds.length && savedJobTitles.length) {
         query = query.or(`id.in.(${savedJobOpportunityIds.join(',')}),title.in.(${savedJobTitles.map(t => `"${t}"`).join(',')})`);
       } else if (savedJobOpportunityIds.length) {
@@ -320,34 +320,69 @@ const MySavesPage: React.FC = () => {
     enabled: savedJobs.length > 0,
   });
 
-  const makeJobView = (item: SavedItem): OpportunityView => ({
-    id: item.item_id || item.id,
-    title: item.item_title,
-    description: (item.item_metadata?.description as string) || '',
-    type: (item.item_metadata?.type as string) || 'job',
-    status: (item.item_metadata?.status as string) || 'open',
-    postedBy: '',
-    company: item.item_metadata?.company as string | undefined,
-    location: (item.item_metadata?.location as string) || '',
-    isRemote: false,
-    compensation: item.item_metadata?.compensation as string | undefined,
-    experienceLevel: (item.item_metadata?.experienceLevel as string) || '',
-    roles: [],
-    skills: [],
-    requirements: [],
-    deadline: (item.item_metadata?.deadline as string) || undefined,
-    tags: [],
-    createdAt: item.saved_at,
-    isFeatured: false,
-    actionType: item.item_url ? 'external' : 'apply',
-    linkUrl: item.item_url || undefined,
+  // Build lookup maps: id → live data, title → live data
+  const liveById = new Map(liveOpportunityData.map((o: any) => [o.id, o]));
+  const liveByTitle = new Map(liveOpportunityData.map((o: any) => [o.title, o]));
+
+  const getLiveRow = (item: SavedItem) =>
+    (item.item_id ? liveById.get(item.item_id) : null) ?? liveByTitle.get(item.item_title) ?? null;
+
+  const buildViewFromLive = (row: any): OpportunityView => ({
+    id: row.id,
+    title: row.title,
+    description: row.description || '',
+    type: row.type || 'job',
+    status: row.status || 'open',
+    postedBy: row.posted_by || '',
+    company: row.company || undefined,
+    location: row.location || 'Remote',
+    isRemote: row.is_remote ?? false,
+    compensation: row.compensation || undefined,
+    experienceLevel: row.experience_level || 'any',
+    roles: row.roles || [],
+    skills: (row as any).skills || [],
+    requirements: row.requirements || [],
+    deadline: row.deadline || undefined,
+    startDate: row.start_date || undefined,
+    duration: row.duration || undefined,
+    tags: row.tags || [],
+    createdAt: row.created_at,
+    isFeatured: row.is_featured ?? false,
+    actionType: row.action_type || 'apply',
+    imageUrl: row.image_url || undefined,
+    linkUrl: row.link_url || undefined,
+    linkTitle: row.link_title || undefined,
     source: 'opportunity' as const,
     applicants: [],
   });
 
-  // Build lookup maps: id → live data, title → live data
-  const liveById = new Map(liveOpportunityData.map((o: any) => [o.id, o]));
-  const liveByTitle = new Map(liveOpportunityData.map((o: any) => [o.title, o]));
+  const makeJobView = (item: SavedItem): OpportunityView => {
+    const live = getLiveRow(item);
+    if (live) return buildViewFromLive(live);
+    return {
+      id: item.item_id || item.id,
+      title: item.item_title,
+      description: (item.item_metadata?.description as string) || '',
+      type: (item.item_metadata?.type as string) || 'job',
+      status: (item.item_metadata?.status as string) || 'open',
+      postedBy: '',
+      company: item.item_metadata?.company as string | undefined,
+      location: (item.item_metadata?.location as string) || '',
+      isRemote: false,
+      compensation: item.item_metadata?.compensation as string | undefined,
+      experienceLevel: (item.item_metadata?.experienceLevel as string) || '',
+      roles: [],
+      skills: [],
+      requirements: [],
+      deadline: (item.item_metadata?.deadline as string) || undefined,
+      tags: [],
+      createdAt: item.saved_at,
+      isFeatured: false,
+      actionType: 'apply',
+      source: 'opportunity' as const,
+      applicants: [],
+    };
+  };
 
   const getJobStatus = (item: SavedItem): { deadline: string | null; status: string | null } => {
     const live = (item.item_id ? liveById.get(item.item_id) : null) ?? liveByTitle.get(item.item_title);
@@ -804,7 +839,7 @@ const MySavesPage: React.FC = () => {
                                 {item.item_metadata?.location && <Badge variant="outline" className="text-xs">{item.item_metadata.location}</Badge>}
                               </div>
                               <div className="flex items-center justify-end gap-1">
-                                <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: item.item_title, type: 'Job', url: item.item_id ? `/opportunities?jobId=${item.item_id}` : undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
+                                <button onClick={(e) => { e.stopPropagation(); const live = getLiveRow(item); const jobId = live?.id || item.item_id; setShareDialog({ open: true, title: item.item_title, type: 'Job', url: jobId ? `/opportunities?jobId=${jobId}` : undefined, imageUrl: live?.image_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
                                   <MessageSquare className="w-4 h-4 text-muted-foreground" />
                                 </button>
                                 <button onClick={(e) => { e.stopPropagation(); unsaveItem(item.id); }} className="p-1.5 rounded-full hover:bg-accent">
