@@ -59,45 +59,53 @@ on public.project_roles
 for select
 using (public.can_access_project(project_id));
 
-alter table realtime.messages enable row level security;
+do $$
+begin
+  alter table realtime.messages enable row level security;
 
-create policy "Authenticated users can subscribe to their own message channels"
-on realtime.messages
-for select
-to authenticated
-using (
-  split_part(realtime.topic(), ':', 1) = 'messages'
-  and split_part(realtime.topic(), ':', 2) = auth.uid()::text
-);
+  create policy "Authenticated users can subscribe to their own message channels"
+  on realtime.messages
+  for select
+  to authenticated
+  using (
+    split_part(realtime.topic(), ':', 1) = 'messages'
+    and split_part(realtime.topic(), ':', 2) = auth.uid()::text
+  );
 
-create policy "Authenticated users can subscribe to their own notification channels"
-on realtime.messages
-for select
-to authenticated
-using (
-  split_part(realtime.topic(), ':', 1) = 'notifications'
-  and split_part(realtime.topic(), ':', 2) = auth.uid()::text
-);
+  create policy "Authenticated users can subscribe to their own notification channels"
+  on realtime.messages
+  for select
+  to authenticated
+  using (
+    split_part(realtime.topic(), ':', 1) = 'notifications'
+    and split_part(realtime.topic(), ':', 2) = auth.uid()::text
+  );
 
-create policy "Authenticated users can subscribe to their own job credit channels"
-on realtime.messages
-for select
-to authenticated
-using (
-  split_part(realtime.topic(), ':', 1) = 'job-credits'
-  and split_part(realtime.topic(), ':', 2) = auth.uid()::text
-);
+  create policy "Authenticated users can subscribe to their own job credit channels"
+  on realtime.messages
+  for select
+  to authenticated
+  using (
+    split_part(realtime.topic(), ':', 1) = 'job-credits'
+    and split_part(realtime.topic(), ':', 2) = auth.uid()::text
+  );
 
-create policy "Authenticated users can subscribe to their group chat channels"
-on realtime.messages
-for select
-to authenticated
-using (
-  split_part(realtime.topic(), ':', 1) = 'group-chat'
-  and exists (
-    select 1
-    from public.group_chat_members gcm
-    where gcm.group_chat_id::text = split_part(realtime.topic(), ':', 2)
-      and gcm.user_id = auth.uid()
-  )
-);
+  create policy "Authenticated users can subscribe to their group chat channels"
+  on realtime.messages
+  for select
+  to authenticated
+  using (
+    split_part(realtime.topic(), ':', 1) = 'group-chat'
+    and exists (
+      select 1
+      from public.group_chat_members gcm
+      where gcm.group_chat_id::text = split_part(realtime.topic(), ':', 2)
+        and gcm.user_id = auth.uid()
+    )
+  );
+exception
+  when insufficient_privilege then
+    raise warning 'Skipping realtime.messages RLS policies because the migration role does not own realtime.messages.';
+  when duplicate_object then
+    raise warning 'Skipping realtime.messages RLS policies because one or more policies already exist.';
+end $$;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -111,11 +111,29 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const isPaidEvent = isEventItem && !!item.is_paid;
   const eventHasPassed = isEventPast(item.event_date);
   const eventLinkClosed = isEventItem && eventHasPassed;
-  const { goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
+  const { rsvps, goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
+  const userRsvp = user?.id ? rsvps.find((rsvp) => rsvp.user_id === user.id) : undefined;
+  const alreadyRsvpd = !!userRsvp || rsvpSubmitted;
+  const alreadyGoing = rsvpSubmitted || userRsvp?.status === 'going';
+  const userEmail = user?.email ?? '';
 
   const attendeeUserIds = goingRsvps
     .map((r) => r.user_id)
     .filter((id): id is string => !!id);
+  const { data: currentUserProfile } = useQuery({
+    queryKey: ['current-user-rsvp-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('display_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isEventItem && !!user?.id,
+  });
   const { data: attendeeProfiles = [] } = useQuery({
     queryKey: ['attendee-profiles', item.id, attendeeUserIds],
     queryFn: async () => {
@@ -139,6 +157,24 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const canDelete = (isOwner || isAdmin) && canManageFeedItem;
   const supportsInlineEdit = item.type !== 'show' && item.type !== 'open_role' && item.source !== 'opportunity';
   const canEdit = (isOwner || isAdmin) && supportsInlineEdit && canManageFeedItem; // Shows have their own edit flow
+
+  useEffect(() => {
+    setRsvpSubmitted(false);
+    setRsvpName('');
+    setRsvpEmail('');
+  }, [item.id, user?.id]);
+
+  const userDisplayName =
+    currentUserProfile?.display_name ||
+    user?.user_metadata?.display_name ||
+    user?.user_metadata?.full_name ||
+    (userEmail ? userEmail.split('@')[0] : '');
+
+  useEffect(() => {
+    if (!rsvpDialogOpen) return;
+    setRsvpName((currentName) => currentName.trim() || userDisplayName);
+    setRsvpEmail(userEmail);
+  }, [rsvpDialogOpen, userDisplayName, userEmail]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -277,8 +313,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       if (!data?.url) throw new Error('Checkout link unavailable');
 
       window.location.href = data.url;
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to start checkout');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to start checkout');
       setBuyingTicket(false);
     }
   };
@@ -584,7 +620,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                   <Ticket className="h-4 w-4 mr-2" />
                   {eventHasPassed ? 'Tickets Closed' : buyingTicket ? 'Redirecting...' : 'Buy Ticket'}
                 </Button>
-              ) : !rsvpSubmitted ? (
+              ) : !alreadyRsvpd ? (
                 <Button
                   size="sm"
                   className="flex-1"
@@ -600,7 +636,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
               ) : (
                 <div className="flex-1 flex items-center justify-center gap-2 text-sm text-primary font-medium py-1">
                   <Check className="h-4 w-4" />
-                  You're on the list!
+                  {alreadyGoing ? "You're on the list!" : 'Response received'}
                 </div>
               )}
               {item.event_date && (
@@ -694,6 +730,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                     toast.error('Please fill in all fields');
                     return;
                   }
+                  if (alreadyRsvpd) {
+                    toast.error("You've already RSVP'd to this event.");
+                    setRsvpDialogOpen(false);
+                    return;
+                  }
                   submitRsvp.mutate(
                     {
                       event_id: item.id,
@@ -715,7 +756,16 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                           });
                         }
                       },
-                      onError: (error) => toast.error(error?.message || 'Something went wrong. Try again.'),
+                      onError: (error: { message?: string; code?: string }) => {
+                        if (error?.code === '23505' || error?.message?.toLowerCase().includes('duplicate')) {
+                          toast.error("You've already RSVP'd to this event.");
+                          setRsvpSubmitted(true);
+                          setRsvpDialogOpen(false);
+                          return;
+                        }
+
+                        toast.error(error?.message || 'Something went wrong. Try again.');
+                      },
                     }
                   );
                 }}
@@ -738,9 +788,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                       id={`rsvp-email-${item.id}`}
                       type="email"
                       value={rsvpEmail}
-                      onChange={(e) => setRsvpEmail(e.target.value)}
-                      placeholder="you@example.com"
+                      readOnly
+                      aria-readonly="true"
+                      placeholder="Account email"
                       required
+                      className="bg-muted/50"
                     />
                   </div>
                 </div>

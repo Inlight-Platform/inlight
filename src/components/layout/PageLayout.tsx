@@ -4,7 +4,7 @@ import MainNav from './MainNav';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
 import OnboardingTour from '@/components/tour/OnboardingTour';
-import { recordRoute } from '@/lib/safeBack';
+import { currentRoute, recordRoute } from '@/lib/safeBack';
 import { useTheme } from '@/hooks/useTheme';
 
 interface PageLayoutProps {
@@ -19,8 +19,8 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ children }) => {
   // Track the most recently visited sidebar route so back-arrows can
   // safely return to it instead of landing on a non-sidebar URL.
   useEffect(() => {
-    recordRoute(location.pathname);
-  }, [location.pathname]);
+    recordRoute(currentRoute(location));
+  }, [location]);
 
   return (
     <div
@@ -43,7 +43,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ children }) => {
       <MainNav />
       {/* Main content - adapts to sidebar collapsed state */}
       <main className={cn(
-        "pb-20 md:pb-0 transition-all duration-300 w-full max-w-full min-w-0 overflow-x-hidden relative z-10",
+        "pb-24 md:pb-0 transition-all duration-300 w-full max-w-full min-w-0 overflow-x-hidden relative z-10",
         collapsed ? "md:pl-16" : "md:pl-64"
       )}>
         {children}

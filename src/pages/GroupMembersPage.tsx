@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, Users, GraduationCap, UserCheck } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,9 +21,19 @@ interface GroupMember {
 
 const GroupMembersPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const badgeTag = searchParams.get('badge') || '';
   const [activeTab, setActiveTab] = useState('all');
+  const routeState = location.state as { returnTo?: string } | null;
+  const handleBack = () => {
+    if (routeState?.returnTo) {
+      navigate(routeState.returnTo);
+      return;
+    }
+
+    navigate('/people?section=groups');
+  };
   
   // Fetch studio info
   const { data: studio, isLoading: studioLoading } = useQuery({
@@ -130,8 +140,9 @@ const GroupMembersPage: React.FC = () => {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/people')}
+              onClick={handleBack}
               className="p-2 rounded-full hover:bg-accent transition-colors"
+              aria-label="Back"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>

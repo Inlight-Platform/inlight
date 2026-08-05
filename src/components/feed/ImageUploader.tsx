@@ -37,6 +37,7 @@ interface ImageUploaderProps {
   onRemoveImage?: () => void;
   className?: string;
   compact?: boolean;
+  compactLabel?: React.ReactNode;
 }
 
 /**
@@ -153,6 +154,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   onRemoveImage,
   className,
   compact = false,
+  compactLabel = 'Image',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -229,9 +231,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
       onImageUploaded(urlData.publicUrl);
       toast.success('Image uploaded!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Upload failed:', error);
-      toast.error(error.message || 'Failed to upload image');
+      toast.error(error instanceof Error ? error.message : 'Failed to upload image');
     } finally {
       setUploading(false);
       setUploadStatus('');
@@ -317,7 +319,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           ) : (
             <ImagePlus className="h-4 w-4 mr-2" />
           )}
-          {uploading ? uploadStatus || 'Uploading...' : 'Image'}
+          {uploading ? uploadStatus || 'Uploading...' : compactLabel}
         </Button>
       </>
     );

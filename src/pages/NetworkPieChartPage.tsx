@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight, Users } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { capitalizeName } from '@/lib/utils';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import PersonCard from '@/components/people/PersonCard';
@@ -38,7 +38,9 @@ const NetworkPieChartPage: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const location = useLocation();
   const { firstDegree } = useNetworkConnections();
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
   const { data: communityProfiles = [] } = useQuery({
     queryKey: ['network-community-profiles', firstDegree],
@@ -458,7 +460,7 @@ const NetworkPieChartPage: React.FC = () => {
         {communityProfiles.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {communityProfiles.map((u) => (
-              <PersonCard key={u.id} user={u} connectionStatus="connected" />
+              <PersonCard key={u.id} user={u} connectionStatus="connected" returnTo={returnTo} />
             ))}
           </div>
         ) : (

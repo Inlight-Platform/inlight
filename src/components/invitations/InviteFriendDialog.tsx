@@ -48,11 +48,22 @@ export const InviteFriendDialog: React.FC<InviteFriendDialogProps> = ({
           };
 
       const { data, error } = await supabase.functions.invoke(functionName, { body });
-      if (error) throw error;
-      return data as { invite?: { email?: string }; inviteUrl?: string };
+      if (error) {
+        let message: string | undefined;
+        try {
+          const responseBody = await (error.context as Response)?.json();
+          message = responseBody?.error;
+        } catch {}
+        throw new Error(message || error.message || 'Failed to send invite');
+      }
+      return data as { invite?: { email?: string }; inviteUrl?: string; alreadyMember?: boolean };
     },
     onSuccess: (data) => {
-      toast.success(`Invite sent to ${data.invite?.email || email}`);
+      toast.success(
+        data.alreadyMember
+          ? `${data.invite?.email || email} is already on Inlight!`
+          : `Invite sent to ${data.invite?.email || email}`
+      );
       setEmail('');
       setRoleName('');
       setNote('');

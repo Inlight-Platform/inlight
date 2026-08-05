@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles, UserPlus, Clock, Check, MapPin, Briefcase, ArrowRight, Heart, Compass, BookOpen, Calendar, FolderPlus, Users, Bookmark, BookmarkCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -115,10 +115,12 @@ const getSchoolKeywords = (school?: string | null) => {
 
 export const YouTab: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { following, isMutual } = useNetworkConnections();
   const { sendRequest, hasSentRequestTo } = useConnectionRequests();
   const { isSaved, getSavedItem, toggleSave } = useSavedItems();
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
   const dailySeed = getDailySeed();
   const peopleSeed = getUserDailySeed(user?.id, dailySeed, 'people');
@@ -388,7 +390,7 @@ export const YouTab: React.FC = () => {
             <Card
               key={p.user_id}
               className="relative cursor-pointer hover:shadow-xl transition-shadow"
-              onClick={() => navigate(`/profile/${p.user_id}`)}
+              onClick={() => navigate(`/profile/${p.user_id}`, { state: { returnTo } })}
             >
               <SaveIcon
                 data={{
@@ -485,7 +487,7 @@ export const YouTab: React.FC = () => {
           </div>
           <Card
             className="relative max-w-md mx-auto cursor-pointer hover:shadow-2xl transition-shadow overflow-hidden"
-            onClick={() => navigate(`/profile/${dailyMatch.user_id}`)}
+            onClick={() => navigate(`/profile/${dailyMatch.user_id}`, { state: { returnTo } })}
           >
             <SaveIcon
               data={{
@@ -545,7 +547,7 @@ export const YouTab: React.FC = () => {
                 variant="outline"
                 size="sm"
                 className="w-full"
-                onClick={(e) => { e.stopPropagation(); navigate(`/profile/${dailyMatch.user_id}`); }}
+                onClick={(e) => { e.stopPropagation(); navigate(`/profile/${dailyMatch.user_id}`, { state: { returnTo } }); }}
               >
                 View profile
               </Button>

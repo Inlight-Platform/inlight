@@ -152,7 +152,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
         // Tag to a group for group visibility
         if (visibility === 'group' && selectedGroupId && postData) {
-          const { error: gErr } = await (supabase.from as any)('post_groups')
+          const { error: gErr } = await supabase
+            .from('post_groups' as never)
             .insert({ post_id: postData.id, group_id: selectedGroupId });
           if (gErr) console.error('Failed to tag post group:', gErr);
         }
@@ -246,7 +247,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
         // Tag to a group for group visibility
         if (visibility === 'group' && selectedGroupId && jobData) {
-          const { error: gErr } = await (supabase.from as any)('post_groups')
+          const { error: gErr } = await supabase
+            .from('post_groups' as never)
             .insert({ post_id: jobData.id, group_id: selectedGroupId });
           if (gErr) console.error('Failed to tag post group:', gErr);
         }
@@ -275,10 +277,11 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       console.log('Update validation failed');
       return;
     }
-    if (postType === 'event' && (!title.trim() || !eventDate || !imageUrl)) {
+    if (postType === 'event' && (!title.trim() || !eventDate.trim() || !imageUrl)) {
       console.log('Event validation failed', { title: title.trim(), eventDate, imageUrl });
-      if (!imageUrl) toast.error('Please add an image for your event');
-      else toast.error('Please fill in the event title and date');
+      if (!title.trim()) toast.error('Please add an event title');
+      else if (!eventDate.trim()) toast.error('Please select a date and time');
+      else toast.error('Please add an image for your event');
       return;
     }
     if (postType === 'job' && (!title.trim() || !content.trim() || !imageUrl)) {
@@ -293,9 +296,18 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const isValid = () => {
     if (visibility === 'specific' && selectedRecipients.length === 0 && (postType === 'update' || postType === 'job')) return false;
     if (postType === 'update') return content.trim().length > 0;
-    if (postType === 'event') return title.trim().length > 0 && eventDate.length > 0 && imageUrl.length > 0;
+    if (postType === 'event') return title.trim().length > 0 && eventDate.trim().length > 0 && imageUrl.length > 0;
     if (postType === 'job') return title.trim().length > 0 && content.trim().length > 0 && imageUrl.length > 0;
     return false;
+  };
+
+  const getEventValidationMessage = () => {
+    if (postType !== 'event' || isValid() || (!title.trim() && !eventDate.trim() && !imageUrl)) return null;
+    if (!title.trim() && !eventDate.trim()) return 'Please add a title and date';
+    if (!title.trim()) return 'Please add an event title';
+    if (!eventDate.trim()) return 'Please select a date and time';
+    if (!imageUrl) return 'Please add an event image';
+    return null;
   };
 
   const handlePostTypeChange = (value: string) => {
@@ -308,6 +320,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   };
 
   if (!user) return null;
+
+  const eventValidationMessage = getEventValidationMessage();
 
   return (
     <>
@@ -597,13 +611,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   ) : null}
 
                   {/* Validation helper */}
-                  {postType === 'event' && !isValid() && (title.trim() || eventDate) && (
+                  {eventValidationMessage && (
                     <p className="text-sm text-amber-500">
-                      {!title.trim() && !eventDate 
-                        ? 'Please add a title and date' 
-                        : !title.trim() 
-                          ? 'Please add an event title' 
-                          : 'Please select a date and time'}
+                      {eventValidationMessage}
                     </p>
                   )}
 
@@ -626,6 +636,15 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                       userId={user.id}
                       onImageUploaded={setImageUrl}
                       compact
+                      compactLabel={
+                        postType === 'event' || postType === 'job' ? (
+                          <>
+                            Image <span className="text-destructive">*</span>
+                          </>
+                        ) : (
+                          'Image'
+                        )
+                      }
                     />
                     <div className="flex items-center gap-2">
                       {onClose && (
