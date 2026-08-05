@@ -2,7 +2,9 @@
 
 Use this workflow when you need to test product behavior without creating, updating, or deleting rows in the shared Supabase project.
 
-The normal local app (`npm run dev`) is intentionally locked to the shared Supabase project. The sandbox workflow is explicit: it runs Vite in `sandbox` mode and only accepts a local Supabase URL.
+The normal local app (`npm run dev`) is intentionally locked to the shared Supabase project. The local sandbox workflow is explicit: it runs Vite in `sandbox` mode and only accepts a local Supabase URL.
+
+Automated pull request previews use a separate hosted sandbox Supabase project through GitHub Actions. They do not use the local Docker database on your laptop.
 
 ## First-Time Setup
 
@@ -83,7 +85,8 @@ The sync script fetches `origin/main`, rebases `local-supabase-sandbox` on top o
 - Do not use `npm run dev` for tests that write data unless you intentionally want to touch the shared Supabase project.
 - Do not commit `.env.sandbox.local`; it is generated locally and ignored by the repo.
 - Do not add service role keys or private secrets to `.env`, `.env.example`, `.env.sandbox.example`, source files, docs, or PR descriptions.
-- The sandbox config only accepts `http://127.0.0.1:54321` or `http://localhost:54321`, so it cannot accidentally point at another cloud database.
+- The local sandbox config only accepts `http://127.0.0.1:54321` or `http://localhost:54321`, so it cannot accidentally point at another cloud database.
+- Hosted PR previews must set `VITE_SUPABASE_ALLOW_REMOTE_SANDBOX=true` in CI and must never use the production Supabase URL.
 
 ## Creating Test Data
 
