@@ -56,6 +56,7 @@ See [docs/local-supabase-sandbox.md](docs/local-supabase-sandbox.md) for first-t
 npm run dev              # Start Vite on port 8080
 npm run build            # Verify Supabase config and build production assets
 npm run build:dev        # Verify Supabase config and build in development mode
+npm run build:sandbox    # Build against an explicit sandbox Supabase environment
 npm run lint             # Verify Supabase config and run ESLint
 npm run preview          # Preview the built app locally
 npm run verify:supabase  # Check that required Supabase host values are present
@@ -86,6 +87,14 @@ npm run test:ci
 ```
 
 `npm run test` starts Vitest in interactive watch mode, so use `npm run test:run` or `npm run test:ci` when you want a command that exits.
+
+## Pull request previews
+
+GitHub Actions creates a Cloudflare Pages sandbox preview for pull requests only after confirming the PR branch contains the latest `main`.
+
+If the preview check fails with an out-of-date branch message, update the PR branch with latest `main`, resolve conflicts, push again, and the preview workflow will retry automatically.
+
+The preview build uses the hosted sandbox Supabase project configured in GitHub secrets, not the production Supabase project.
 
 ## Product areas
 

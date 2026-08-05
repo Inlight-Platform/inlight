@@ -68,6 +68,7 @@ Both checks run `npm run verify:supabase` first. That script confirms the code s
 | `npm run lint` | Run Supabase config verification and ESLint. |
 | `npm run build` | Run Supabase config verification and production build. |
 | `npm run build:dev` | Build with Vite development mode. |
+| `npm run build:sandbox` | Build with sandbox Supabase env vars. Used by PR sandbox previews. |
 | `npm run preview` | Preview the latest build locally. |
 
 ## Project structure
@@ -110,6 +111,27 @@ Most application behavior is controlled by Supabase tables, RLS policies, storag
 5. Document the test account, route, and data conditions in the PR.
 
 Edge functions configured in `supabase/config.toml` include notification email, Stripe checkout/webhooks, password reset, platform/project-credit invites, company account approval/denial, analytics, and ticket checkout.
+
+## Automated PR sandbox previews
+
+Pull requests run `.github/workflows/pr-sandbox-preview.yml`.
+
+The workflow has two gates:
+
+1. `main-freshness` checks that latest `origin/main` is an ancestor of the PR head. If this fails, update the PR branch with latest `main` before reviewing the preview.
+2. `sandbox-preview` typechecks, runs tests, builds with `npm run build:sandbox`, deploys the `dist` folder to Cloudflare Pages, and comments the preview URL on the PR.
+
+Repository configuration required:
+
+| Name | Type | Purpose |
+| --- | --- | --- |
+| `CLOUDFLARE_API_TOKEN` | GitHub secret | Cloudflare token with permission to deploy the Pages project. |
+| `CLOUDFLARE_ACCOUNT_ID` | GitHub secret | Cloudflare account that owns the Pages project. |
+| `VITE_SANDBOX_SUPABASE_URL` | GitHub secret | Hosted sandbox Supabase URL for PR previews. Must not be the production Supabase URL. |
+| `VITE_SANDBOX_SUPABASE_PUBLISHABLE_KEY` | GitHub secret | Hosted sandbox Supabase publishable/anon key for PR previews. |
+| `CLOUDFLARE_PAGES_PROJECT_NAME` | GitHub variable | Optional. Defaults to `inlight` when unset. |
+
+The application still locks normal production and local development builds to the production Supabase URL. Hosted PR previews must set `VITE_SUPABASE_ENV=sandbox` and `VITE_SUPABASE_ALLOW_REMOTE_SANDBOX=true`, which the workflow does automatically.
 
 ## Troubleshooting
 

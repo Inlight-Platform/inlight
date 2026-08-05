@@ -5,6 +5,7 @@ const LOCKED_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Np7ZYBlXrk0bOtzAGzYW5g_R
 const envSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const envPublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const envSupabaseMode = import.meta.env.VITE_SUPABASE_ENV;
+const envAllowRemoteSandbox = import.meta.env.VITE_SUPABASE_ALLOW_REMOTE_SANDBOX;
 const isSandboxMode = envSupabaseMode === 'sandbox' || import.meta.env.MODE === 'sandbox';
 
 const normalizeUrl = (value: string | undefined) => value?.replace(/\/+$/, '');
@@ -23,14 +24,24 @@ const getSupabaseHost = (value: string | undefined) => {
 const isLocalSupabaseHost = (host: string | undefined) =>
   host === '127.0.0.1:54321' || host === 'localhost:54321';
 
+const isRemoteSandboxAllowed = envAllowRemoteSandbox === 'true';
+
 const resolveLockedSupabaseUrl = (value: string | undefined) => {
   const normalized = normalizeUrl(value);
   const host = getSupabaseHost(normalized);
 
   if (isSandboxMode) {
-    if (!normalized || !isLocalSupabaseHost(host)) {
+    if (!normalized) {
+      throw new Error('Sandbox mode requires VITE_SUPABASE_URL.');
+    }
+
+    if (host === LOCKED_SUPABASE_HOST) {
+      throw new Error('Sandbox mode cannot point at the locked production Supabase project.');
+    }
+
+    if (!isLocalSupabaseHost(host) && !isRemoteSandboxAllowed) {
       throw new Error(
-        'Sandbox mode requires VITE_SUPABASE_URL to be http://127.0.0.1:54321 or http://localhost:54321.',
+        'Sandbox mode only accepts local Supabase unless VITE_SUPABASE_ALLOW_REMOTE_SANDBOX=true is set for hosted PR previews.',
       );
     }
 
