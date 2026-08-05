@@ -116,6 +116,7 @@ const ProjectDetailPage: React.FC = () => {
   const [memberRole, setMemberRole] = useState('');
   const [deleteProjectDialogOpen, setDeleteProjectDialogOpen] = useState(false);
   const [rolesOpen, setRolesOpen] = useState(true);
+  const [photosOpen, setPhotosOpen] = useState(true);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState('');
   const [addRoleOpen, setAddRoleOpen] = useState(false);
@@ -1128,7 +1129,7 @@ const ProjectDetailPage: React.FC = () => {
           <CardContent>
             <div className="flex flex-wrap gap-4">
               {/* Creator */}
-              <div 
+              <div
                 className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors"
                 onClick={() => navigate(`/profile/${project.creator_id}`, { state: { returnTo, returnState: routeState || undefined } })}
               >
@@ -1148,7 +1149,7 @@ const ProjectDetailPage: React.FC = () => {
               {members
                 .filter(member => member.user_id !== project.creator_id)
                 .map(member => (
-                  <div 
+                  <div
                     key={member.id}
                     className="flex items-center gap-2 group"
                   >
@@ -1188,13 +1189,23 @@ const ProjectDetailPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Photos Section */}
+        {/* Photos Section - Collapsible */}
+        <Collapsible open={photosOpen} onOpenChange={setPhotosOpen}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Camera className="w-5 h-5" />
-              Project Photos ({photos.length})
-            </CardTitle>
+            <CollapsibleTrigger asChild>
+              <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <CardTitle className="flex items-center gap-2">
+                  <Camera className="w-5 h-5" />
+                  Project Photos ({photos.length})
+                </CardTitle>
+                {photosOpen ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
             {canManageProjectContent && (
               <Dialog open={addPhotoOpen} onOpenChange={setAddPhotoOpen}>
                 <DialogTrigger asChild>
@@ -1252,6 +1263,7 @@ const ProjectDetailPage: React.FC = () => {
               </Dialog>
             )}
           </CardHeader>
+          <CollapsibleContent>
           <CardContent>
             {photos.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">No photos yet</p>
@@ -1282,7 +1294,9 @@ const ProjectDetailPage: React.FC = () => {
               </div>
             )}
           </CardContent>
+          </CollapsibleContent>
         </Card>
+        </Collapsible>
 
         {/* Google Drive Link - Only visible to team members */}
         {isMember && (
