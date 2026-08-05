@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Plus, Upload, X, Loader2, Image, Video, Music, FileText, Eye, EyeOff, Users, Trash2, ImagePlus, Play, ExternalLink } from 'lucide-react';
+import { ProjectImageCropper } from '@/components/projects/ProjectImageCropper';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -79,27 +80,40 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   const { uploadFile, uploading, progress } = useMediaUpload();
   const [lightboxItem, setLightboxItem] = useState<MediaItem | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [photoCropperOpen, setPhotoCropperOpen] = useState(false);
+  const [photoCropperSrc, setPhotoCropperSrc] = useState('');
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Upload all files
-    const uploadPromises = Array.from(files).map(file => 
+    if (mediaType === 'photo' && files.length === 1) {
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPhotoCropperSrc(reader.result as string);
+        setPhotoCropperOpen(true);
+      };
+      reader.readAsDataURL(file);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const uploadPromises = Array.from(files).map(file =>
       uploadFile(file, userId, 'public')
     );
-    
     await Promise.all(uploadPromises);
-    
-    // Invalidate query to force refetch and show new uploads immediately
     await queryClient.invalidateQueries({ queryKey: ['user-media', userId] });
-    
     onUploadComplete();
-    
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handlePhotoCropComplete = async (blob: Blob) => {
+    const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+    await uploadFile(file, userId, 'public');
+    await queryClient.invalidateQueries({ queryKey: ['user-media', userId] });
+    onUploadComplete();
+    setPhotoCropperSrc('');
   };
 
   const handleDelete = async (item: MediaItem) => {
@@ -454,6 +468,19 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {mediaType === 'photo' && (
+        <ProjectImageCropper
+          open={photoCropperOpen}
+          onClose={() => { setPhotoCropperOpen(false); setPhotoCropperSrc(''); }}
+          imageSrc={photoCropperSrc}
+          onCropComplete={handlePhotoCropComplete}
+          title="Crop photo"
+          aspect={1}
+          outputWidth={800}
+          outputHeight={800}
+        />
+      )}
     </>
   );
 };

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Briefcase } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Briefcase, ImagePlus, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,8 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { useOpportunities } from '@/hooks/useOpportunities';
-import { ImageUploader } from '@/components/feed/ImageUploader';
+import { ProjectImageCropper } from '@/components/projects/ProjectImageCropper';
+import { supabase } from '@/integrations/supabase/client';
 import { createOpportunityDateTimeIso } from '@/lib/opportunityCalendar';
 import { toast } from 'sonner';
 
@@ -55,8 +56,40 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
   const [linkTitle, setLinkTitle] = useState('');
   const [externalUrl, setExternalUrl] = useState('');
   const [externalLabel, setExternalLabel] = useState('Apply Externally');
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [cropperSrc, setCropperSrc] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const allRoles: UserRole[] = ['Actor', 'Director', 'Producer', 'Musician', 'Gaffer', 'Grip', 'DP', 'AD', 'Extras', 'Singer', 'Dancer', 'Designer', 'Technical'];
+
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropperSrc(reader.result as string);
+      setCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+    if (imageInputRef.current) imageInputRef.current.value = '';
+  };
+
+  const handleImageCropComplete = async (blob: Blob) => {
+    if (!user) return;
+    setImageUploading(true);
+    try {
+      const fileName = `${user.id}/opportunities/${Date.now()}.jpg`;
+      const { error } = await supabase.storage.from('profile-media').upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from('profile-media').getPublicUrl(fileName);
+      setImageUrl(data.publicUrl);
+    } catch {
+      toast.error('Failed to upload image');
+    } finally {
+      setImageUploading(false);
+    }
+  };
 
   const toggleRole = (role: UserRole) => {
     if (selectedRoles.includes(role)) {
@@ -378,11 +411,46 @@ const OpportunityCreator: React.FC<OpportunityCreatorProps> = ({ open, onOpenCha
             <div>
               <Label>Image (optional)</Label>
               <div className="mt-2">
-                <ImageUploader
-                  userId={user.id}
-                  onImageUploaded={setImageUrl}
-                  currentImageUrl={imageUrl || undefined}
-                  onRemoveImage={() => setImageUrl('')}
+                {imageUrl ? (
+                  <div className="relative rounded-lg overflow-hidden">
+                    <img src={imageUrl} alt="Preview" className="w-full aspect-[4/3] object-cover" />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7"
+                      onClick={() => setImageUrl('')}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={imageUploading}
+                    className="w-full border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center gap-2 text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
+                  >
+                    <ImagePlus className="h-6 w-6" />
+                    <span className="text-sm">{imageUploading ? 'Uploading…' : 'Add image'}</span>
+                  </button>
+                )}
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  className="hidden"
+                  onChange={handleImageFileSelect}
+                />
+                <ProjectImageCropper
+                  open={cropperOpen}
+                  onClose={() => { setCropperOpen(false); setCropperSrc(''); }}
+                  imageSrc={cropperSrc}
+                  onCropComplete={handleImageCropComplete}
+                  title="Crop image"
+                  aspect={4 / 3}
+                  outputWidth={1200}
+                  outputHeight={900}
                 />
               </div>
             </div>

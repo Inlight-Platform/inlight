@@ -64,9 +64,10 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   // Fetch current image position for posts
   useEffect(() => {
     const fetchPosition = async () => {
-      if (open && (item.type === 'post' || item.type === 'job') && item.image_url) {
+      if (open && (item.type === 'post' || item.type === 'job' || item.type === 'event') && item.image_url) {
+        const table = item.type === 'event' ? 'events' : 'posts';
         const { data } = await supabase
-          .from('posts')
+          .from(table)
           .select('image_position_x, image_position_y')
           .eq('id', item.id)
           .single();
@@ -111,6 +112,8 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
             link_title: linkTitle || null,
             location: location || null,
             image_url: imageUrl,
+            image_position_x: positionX,
+            image_position_y: positionY,
           })
           .eq('id', item.id));
       } else if (item.type === 'project') {
