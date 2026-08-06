@@ -22,9 +22,20 @@ BEGIN
   FROM public.profiles_public
   WHERE user_id = NEW.sender_id;
 
-  preview_text := LEFT(NEW.content, 60);
-  IF LENGTH(NEW.content) > 60 THEN
-    preview_text := preview_text || '…';
+  IF NEW.content LIKE '__SHARED_ITEM__%' THEN
+    BEGIN
+      preview_text := 'Shared: ' || COALESCE(
+        (substring(NEW.content from '__SHARED_ITEM__(.*)__END__')::jsonb)->>'title',
+        'an item'
+      );
+    EXCEPTION WHEN OTHERS THEN
+      preview_text := 'Shared an item';
+    END;
+  ELSE
+    preview_text := LEFT(NEW.content, 60);
+    IF LENGTH(NEW.content) > 60 THEN
+      preview_text := preview_text || '…';
+    END IF;
   END IF;
 
   FOR member_record IN
