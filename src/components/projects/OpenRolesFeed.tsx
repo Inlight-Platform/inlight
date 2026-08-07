@@ -266,7 +266,9 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
                           e.stopPropagation();
                           toggleSave({
                             item_type: 'open_role',
+                            item_id: role.roleId,
                             item_title: role.roleName,
+                            item_url: role.roleId,
                             item_metadata: {
                               projectTitle: role.projectTitle,
                               projectId: role.projectId,
@@ -276,7 +278,7 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
                         }}
                         className="p-1 rounded-full hover:bg-accent transition-colors"
                       >
-                        {isSaved('open_role', role.roleName) ? (
+                        {isSaved('open_role', role.roleName, role.roleId) ? (
                           <BookmarkCheck className="w-3.5 h-3.5 text-primary" />
                         ) : (
                           <Bookmark className="w-3.5 h-3.5 text-muted-foreground" />
