@@ -291,7 +291,18 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    return supabase.auth.signOut({ scope: 'local' });
+    const result = await supabase.auth.signOut({ scope: 'local' });
+    if (result.error) {
+      // The Supabase client won't clear the local session when the server
+      // returns a non-404/401/403 error. Clear auth keys from storage
+      // ourselves so a subsequent page load starts unauthenticated.
+      try {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith('sb-') && k.includes('auth'))
+          .forEach((k) => localStorage.removeItem(k));
+      } catch { /* storage unavailable */ }
+    }
+    return result;
   };
 
   const resetPassword = async (email: string) => {

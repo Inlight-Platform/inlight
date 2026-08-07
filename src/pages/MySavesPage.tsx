@@ -1,14 +1,16 @@
 import React, { useRef, useState } from 'react';
+import { isPast } from 'date-fns';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft, Film, User } from 'lucide-react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft, Film, User, Users } from 'lucide-react';
 import { buildSharedItemMessage } from '@/components/messages/SharedItemCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedShows } from '@/hooks/useSavedShows';
 import { useSavedFilms } from '@/hooks/useSavedFilms';
 import { useSavedItems, SavedItem } from '@/hooks/useSavedItems';
+import { useGroupChats } from '@/hooks/useGroupChats';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +19,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { Show } from '@/components/stage-whisper/ShowCard';
+import { ShowDetailSheet } from '@/components/stage-whisper/ShowDetailSheet';
+import { FilmDetailSheet } from '@/components/stage-whisper/FilmDetailSheet';
+import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
+import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
+import { OpportunityView } from '@/hooks/useOpportunities';
 
 interface SavedProject {
   id: string;
@@ -29,15 +38,18 @@ interface SavedProject {
   creator_profile?: { display_name: string | null; avatar_url: string | null };
 }
 
-interface SavedShow {
+interface FilmMetric {
   id: string;
   title: string;
-  venue: string;
-  borough: string;
-  category: string;
-  show_type: string;
-  poster_url: string | null;
-  description: string | null;
+  studio: string;
+  weekend_gross: number;
+  total_gross: number;
+  week_change: number;
+  rating: number;
+  weeks_in_release: number;
+  poster_url?: string;
+  ticket_url?: string;
+  date: string;
 }
 
 const ShareDialog: React.FC<{
@@ -49,8 +61,10 @@ const ShareDialog: React.FC<{
   imageUrl?: string;
 }> = ({ open, onOpenChange, itemTitle, itemUrl, itemType, imageUrl }) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [sending, setSending] = useState(false);
+  const { groupChats } = useGroupChats();
 
   const { data: connections = [] } = useQuery({
     queryKey: ['share-connections', user?.id],
@@ -69,30 +83,30 @@ const ShareDialog: React.FC<{
     enabled: !!user?.id && open,
   });
 
-  const filtered = connections.filter((c: any) =>
-    !search || c.display_name?.toLowerCase().includes(search.toLowerCase())
+  const q = search.toLowerCase();
+  const filteredConnections = connections.filter((c: any) =>
+    !search || c.display_name?.toLowerCase().includes(q)
   );
+  const filteredGroups = groupChats.filter(gc =>
+    !search || gc.name?.toLowerCase().includes(q)
+  );
+
+  const buildMessage = () => buildSharedItemMessage({
+    type: itemType,
+    title: itemTitle,
+    url: itemUrl,
+    image_url: imageUrl,
+  });
 
   const handleShare = async (receiverId: string, receiverName: string) => {
     if (!user?.id) return;
     setSending(true);
     try {
-      const shareMessage = buildSharedItemMessage({
-        type: itemType,
-        title: itemTitle,
-        url: itemUrl,
-        image_url: imageUrl,
-      });
-      
       const { error } = await supabase
         .from('messages')
-        .insert({
-          sender_id: user.id,
-          receiver_id: receiverId,
-          content: shareMessage,
-        });
+        .insert({ sender_id: user.id, receiver_id: receiverId, content: buildMessage() });
       if (error) throw error;
-
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast.success(`Shared with ${receiverName}!`);
       onOpenChange(false);
     } catch {
@@ -102,6 +116,30 @@ const ShareDialog: React.FC<{
     }
   };
 
+  const handleShareToGroup = async (groupChatId: string, groupName: string) => {
+    if (!user?.id) return;
+    setSending(true);
+    try {
+      const { error } = await supabase
+        .from('group_chat_messages')
+        .insert({ group_chat_id: groupChatId, sender_id: user.id, content: buildMessage() });
+      if (error) throw error;
+      await supabase
+        .from('project_group_chats')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', groupChatId);
+      queryClient.invalidateQueries({ queryKey: ['group-chats'] });
+      toast.success(`Shared to ${groupName}!`);
+      onOpenChange(false);
+    } catch {
+      toast.error('Failed to share');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const hasResults = filteredConnections.length > 0 || filteredGroups.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -109,29 +147,58 @@ const ShareDialog: React.FC<{
           <DialogTitle>Share "{itemTitle}"</DialogTitle>
         </DialogHeader>
         <Input
-          placeholder="Search connections..."
+          placeholder="Search connections or group chats..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="mb-3"
         />
-        <div className="max-h-60 overflow-y-auto space-y-2">
-          {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">No connections found</p>
+        <div className="max-h-60 overflow-y-auto space-y-1">
+          {!hasResults ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No connections or group chats found</p>
           ) : (
-            filtered.map((c: any) => (
-              <button
-                key={c.user_id}
-                onClick={() => handleShare(c.user_id, c.display_name || 'User')}
-                disabled={sending}
-                className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left"
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={c.avatar_url || undefined} />
-                  <AvatarFallback>{c.display_name?.[0] || 'U'}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium">{c.display_name || 'Unknown'}</span>
-              </button>
-            ))
+            <>
+              {filteredConnections.length > 0 && (
+                <>
+                  {filteredGroups.length > 0 && (
+                    <p className="text-xs font-medium text-muted-foreground px-2 pb-1">People</p>
+                  )}
+                  {filteredConnections.map((c: any) => (
+                    <button
+                      key={c.user_id}
+                      onClick={() => handleShare(c.user_id, c.display_name || 'User')}
+                      disabled={sending}
+                      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={c.avatar_url || undefined} />
+                        <AvatarFallback>{c.display_name?.[0] || 'U'}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">{c.display_name || 'Unknown'}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+              {filteredGroups.length > 0 && (
+                <>
+                  {filteredConnections.length > 0 && (
+                    <p className="text-xs font-medium text-muted-foreground px-2 pt-2 pb-1">Group Chats</p>
+                  )}
+                  {filteredGroups.map((gc) => (
+                    <button
+                      key={gc.id}
+                      onClick={() => handleShareToGroup(gc.id, gc.name)}
+                      disabled={sending}
+                      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left"
+                    >
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Users className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="text-sm font-medium">{gc.name}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+            </>
           )}
         </div>
       </DialogContent>
@@ -144,8 +211,8 @@ const MySavesPage: React.FC = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
-  const { savedShowIds, unsaveShow } = useSavedShows();
-  const { savedFilmIds, unsaveFilm } = useSavedFilms();
+  const { savedShowIds, isSaved, saveShow, unsaveShow } = useSavedShows();
+  const { savedFilmIds, isFilmSaved, saveFilm, unsaveFilm } = useSavedFilms();
   const { savedItems, unsaveItem } = useSavedItems();
 
   const [shareDialog, setShareDialog] = useState<{
@@ -155,6 +222,15 @@ const MySavesPage: React.FC = () => {
     type: string;
     imageUrl?: string;
   }>({ open: false, title: '', type: '' });
+
+  const [detailShow, setDetailShow] = useState<Show | null>(null);
+  const [detailFilm, setDetailFilm] = useState<FilmMetric | null>(null);
+  const [detailJobView, setDetailJobView] = useState<OpportunityView | null>(null);
+  const [showApplyDialog, setShowApplyDialog] = useState(false);
+
+  const [showsFilter, setShowsFilter] = useState<'active' | 'history'>('active');
+  const [filmsFilter, setFilmsFilter] = useState<'active' | 'history'>('active');
+  const [jobsFilter, setJobsFilter] = useState<'active' | 'expired'>('active');
 
   // Fetch saved projects
   const { data: savedProjects = [], isLoading: loadingProjects } = useQuery({
@@ -189,16 +265,17 @@ const MySavesPage: React.FC = () => {
 
   // Fetch saved shows
   const { data: savedShows = [], isLoading: loadingShows } = useQuery({
-    queryKey: ['my-saves-shows', user?.id, savedShowIds],
+    queryKey: ['my-saved-shows', user?.id, savedShowIds],
     queryFn: async () => {
       if (!savedShowIds.length) return [];
       const { data } = await supabase
         .from('nyc_shows')
-        .select('id, title, venue, borough, category, show_type, poster_url, description')
+        .select('*')
         .in('id', savedShowIds);
-      return (data || []) as SavedShow[];
+      return (data || []) as Show[];
     },
     enabled: savedShowIds.length > 0,
+    placeholderData: keepPreviousData,
   });
 
   // Fetch saved films
@@ -208,11 +285,12 @@ const MySavesPage: React.FC = () => {
       if (!savedFilmIds.length) return [];
       const { data } = await supabase
         .from('film_metrics')
-        .select('id, title, studio, poster_url, rating, weekend_gross')
+        .select('*')
         .in('id', savedFilmIds);
-      return (data || []) as { id: string; title: string; studio: string; poster_url: string | null; rating: number; weekend_gross: number }[];
+      return (data || []) as FilmMetric[];
     },
     enabled: savedFilmIds.length > 0,
+    placeholderData: keepPreviousData,
   });
 
   // Filter saved items by type
@@ -220,19 +298,148 @@ const MySavesPage: React.FC = () => {
   const savedJobs = savedItems.filter(i => i.item_type === 'job' || i.item_type === 'open_role');
   const savedPeople = savedItems.filter(i => i.item_type === 'person');
 
+  // Live-fetch current deadline/status for saved jobs from the opportunities table
+  const savedJobOpportunityIds = savedJobs.map(i => i.item_id).filter(Boolean) as string[];
+  const savedJobTitles = savedJobs.map(i => i.item_title).filter(Boolean) as string[];
+  const { data: liveOpportunityData = [] } = useQuery({
+    queryKey: ['saved-jobs-live', savedJobOpportunityIds, savedJobTitles],
+    queryFn: async () => {
+      let query = supabase.from('opportunities').select('*');
+      if (savedJobOpportunityIds.length && savedJobTitles.length) {
+        query = query.or(`id.in.(${savedJobOpportunityIds.join(',')}),title.in.(${savedJobTitles.map(t => `"${t}"`).join(',')})`);
+      } else if (savedJobOpportunityIds.length) {
+        query = query.in('id', savedJobOpportunityIds);
+      } else if (savedJobTitles.length) {
+        query = query.in('title', savedJobTitles);
+      } else {
+        return [];
+      }
+      const { data } = await query;
+      return data || [];
+    },
+    enabled: savedJobs.length > 0,
+  });
+
+  // Build lookup maps: id → live data, title → live data
+  const liveById = new Map(liveOpportunityData.map((o: any) => [o.id, o]));
+  const liveByTitle = new Map(liveOpportunityData.map((o: any) => [o.title, o]));
+
+  const getLiveRow = (item: SavedItem) =>
+    (item.item_id ? liveById.get(item.item_id) : null) ?? liveByTitle.get(item.item_title) ?? null;
+
+  const buildViewFromLive = (row: any): OpportunityView => ({
+    id: row.id,
+    title: row.title,
+    description: row.description || '',
+    type: row.type || 'job',
+    status: row.status || 'open',
+    postedBy: row.posted_by || '',
+    company: row.company || undefined,
+    location: row.location || 'Remote',
+    isRemote: row.is_remote ?? false,
+    compensation: row.compensation || undefined,
+    experienceLevel: row.experience_level || 'any',
+    roles: row.roles || [],
+    skills: (row as any).skills || [],
+    requirements: row.requirements || [],
+    deadline: row.deadline || undefined,
+    startDate: row.start_date || undefined,
+    duration: row.duration || undefined,
+    tags: row.tags || [],
+    createdAt: row.created_at,
+    isFeatured: row.is_featured ?? false,
+    actionType: row.action_type || 'apply',
+    imageUrl: row.image_url || undefined,
+    linkUrl: row.link_url || undefined,
+    linkTitle: row.link_title || undefined,
+    source: 'opportunity' as const,
+    applicants: [],
+  });
+
+  const makeJobView = (item: SavedItem): OpportunityView => {
+    const live = getLiveRow(item);
+    if (live) return buildViewFromLive(live);
+    return {
+      id: item.item_id || item.id,
+      title: item.item_title,
+      description: (item.item_metadata?.description as string) || '',
+      type: (item.item_metadata?.type as string) || 'job',
+      status: (item.item_metadata?.status as string) || 'open',
+      postedBy: '',
+      company: item.item_metadata?.company as string | undefined,
+      location: (item.item_metadata?.location as string) || '',
+      isRemote: false,
+      compensation: item.item_metadata?.compensation as string | undefined,
+      experienceLevel: (item.item_metadata?.experienceLevel as string) || '',
+      roles: [],
+      skills: [],
+      requirements: [],
+      deadline: (item.item_metadata?.deadline as string) || undefined,
+      tags: [],
+      createdAt: (item.item_metadata?.created_at as string) || item.saved_at,
+      isFeatured: false,
+      actionType: (item.item_metadata?.action_type as string) || 'apply',
+      imageUrl: (item.item_metadata?.image_url as string) || undefined,
+      linkUrl: (item.item_metadata?.link_url as string) || undefined,
+      linkTitle: (item.item_metadata?.link_title as string) || undefined,
+      source: 'opportunity' as const,
+      applicants: [],
+    };
+  };
+
+  const getJobStatus = (item: SavedItem): { deadline: string | null; status: string | null } => {
+    const live = (item.item_id ? liveById.get(item.item_id) : null) ?? liveByTitle.get(item.item_title);
+    if (live) return { deadline: live.deadline, status: live.status };
+    return {
+      deadline: (item.item_metadata?.deadline as string | undefined) ?? null,
+      status: (item.item_metadata?.status as string | undefined) ?? null,
+    };
+  };
+
+  const isJobExpired = (item: SavedItem) => {
+    const { deadline, status } = getJobStatus(item);
+    if (status === 'closed') return true;
+    if (!deadline) return false;
+    return isPast(new Date(deadline));
+  };
+
+  const activeJobs = savedJobs.filter(i => !isJobExpired(i));
+  const expiredJobs = savedJobs.filter(i => isJobExpired(i));
+
+  // Immediate filter — removes unsaved items before the network refetch settles
+  const visibleShows = savedShows.filter(s => savedShowIds.includes(s.id));
+  const visibleFilms = savedFilms.filter(f => savedFilmIds.includes(f.id));
+
+  // Active/history splits for shows — mirrors Industry Now: active = no run_end or run_end not yet past
+  const activeShows = visibleShows.filter(s => !s.run_end || !isPast(new Date(s.run_end)));
+  const pastShows = visibleShows.filter(s => !!s.run_end && isPast(new Date(s.run_end)));
+
+  // Active/history splits for films — mirrors Industry Now: older than 30 days = history
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const activeFilms = visibleFilms.filter(f => new Date(f.date) >= thirtyDaysAgo);
+  const pastFilms = visibleFilms.filter(f => new Date(f.date) < thirtyDaysAgo);
+
+  const queryClient = useQueryClient();
+
   const unsaveProject = async (projectId: string) => {
     if (!user?.id) return;
-    await supabase
+    const { error } = await supabase
       .from('saved_projects')
       .delete()
       .eq('user_id', user.id)
       .eq('project_id', projectId);
+    if (error) {
+      toast.error('Could not remove project');
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ['my-saves-projects', user.id] });
     toast.success('Project removed from saves');
   };
 
   const isLoading = loadingProjects || loadingShows || loadingFilms;
 
-  const totalSaves = savedProjects.length + savedShows.length + savedFilms.length + savedResources.length + savedJobs.length + savedPeople.length;
+  const totalSaves = savedProjects.length + visibleShows.length + visibleFilms.length + savedResources.length + savedJobs.length + savedPeople.length;
   const routeStateRef = useRef((location.state as { returnTo?: string } | null) || null);
   const routeState = routeStateRef.current;
   const initialTab = searchParams.get('tab');
@@ -301,11 +508,11 @@ const MySavesPage: React.FC = () => {
               </TabsTrigger>
               <TabsTrigger value="shows" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <Theater className="w-4 h-4" />
-                <span className="hidden sm:inline">Shows</span> ({savedShows.length})
+                <span className="hidden sm:inline">Shows</span> ({visibleShows.length})
               </TabsTrigger>
               <TabsTrigger value="films" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <Film className="w-4 h-4" />
-                <span className="hidden sm:inline">Films</span> ({savedFilms.length})
+                <span className="hidden sm:inline">Films</span> ({visibleFilms.length})
               </TabsTrigger>
               <TabsTrigger value="people" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <User className="w-4 h-4" />
@@ -359,73 +566,141 @@ const MySavesPage: React.FC = () => {
 
             {/* Shows */}
             <TabsContent value="shows">
-              {savedShows.length === 0 ? (
+              {visibleShows.length === 0 ? (
                 <EmptyCategory icon={Theater} label="shows" />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {savedShows.map(show => (
-                    <Card key={show.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                      {show.poster_url ? (
-                        <img src={show.poster_url} alt={show.title} className="w-full h-36 object-cover" />
-                      ) : (
-                        <div className="w-full h-36 bg-muted flex items-center justify-center">
-                          <Theater className="w-8 h-8 text-muted-foreground opacity-30" />
-                        </div>
-                      )}
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold truncate mb-1">{show.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{show.venue} • {show.borough}</p>
-                        <div className="flex items-center justify-between">
-                          <Badge variant="secondary" className="text-xs">{show.category}</Badge>
-                          <div className="flex gap-1">
-                            <button onClick={() => setShareDialog({ open: true, title: show.title, type: 'Show', imageUrl: show.poster_url || undefined })} className="p-1.5 rounded-full hover:bg-accent">
-                              <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                            </button>
-                            <button onClick={() => unsaveShow(show.id)} className="p-1.5 rounded-full hover:bg-accent">
-                              <BookmarkCheck className="w-4 h-4 text-primary" />
-                            </button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <>
+                  <div className="flex gap-2 mb-4">
+                    <Button
+                      variant={showsFilter === 'active' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setShowsFilter('active')}
+                    >
+                      Now Playing ({activeShows.length})
+                    </Button>
+                    <Button
+                      variant={showsFilter === 'history' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setShowsFilter('history')}
+                    >
+                      Closed ({pastShows.length})
+                    </Button>
+                  </div>
+                  {(() => {
+                    const shows = showsFilter === 'active' ? activeShows : pastShows;
+                    return shows.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Theater className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+                        <p className="text-muted-foreground">
+                          {showsFilter === 'active' ? 'No currently running shows saved' : 'No closed shows saved'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {shows.map(show => (
+                          <Card
+                            key={show.id}
+                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", !!show.run_end && isPast(new Date(show.run_end)) && "opacity-60")}
+                            onClick={() => setDetailShow(show)}
+                          >
+                            {show.poster_url ? (
+                              <img src={show.poster_url} alt={show.title} className="w-full h-36 object-cover" />
+                            ) : (
+                              <div className="w-full h-36 bg-muted flex items-center justify-center">
+                                <Theater className="w-8 h-8 text-muted-foreground opacity-30" />
+                              </div>
+                            )}
+                            <CardContent className="p-4">
+                              <h3 className="font-semibold truncate mb-1">{show.title}</h3>
+                              <p className="text-sm text-muted-foreground mb-2">{show.venue} • {show.borough}</p>
+                              <div className="flex items-center justify-between">
+                                <Badge variant="secondary" className="text-xs">{show.category}</Badge>
+                                <div className="flex gap-1">
+                                  <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: show.title, type: 'Show', url: '/stage-whisper?showId=' + show.id, imageUrl: show.poster_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
+                                    <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); unsaveShow(show.id); }} className="p-1.5 rounded-full hover:bg-accent">
+                                    <BookmarkCheck className="w-4 h-4 text-primary" />
+                                  </button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
               )}
             </TabsContent>
 
             {/* Films */}
             <TabsContent value="films">
-              {savedFilms.length === 0 ? (
+              {visibleFilms.length === 0 ? (
                 <EmptyCategory icon={Film} label="films" />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {savedFilms.map(film => (
-                    <Card key={film.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                      {film.poster_url ? (
-                        <img src={film.poster_url} alt={film.title} className="w-full h-36 object-cover" />
-                      ) : (
-                        <div className="w-full h-36 bg-muted flex items-center justify-center">
-                          <Film className="w-8 h-8 text-muted-foreground opacity-30" />
-                        </div>
-                      )}
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold truncate mb-1">{film.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{film.studio}</p>
-                        <div className="flex items-center justify-between">
-                          <Badge variant="secondary" className="text-xs">⭐ {film.rating?.toFixed(1)}</Badge>
-                          <div className="flex gap-1">
-                            <button onClick={() => setShareDialog({ open: true, title: film.title, type: 'Film', imageUrl: film.poster_url || undefined })} className="p-1.5 rounded-full hover:bg-accent">
-                              <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                            </button>
-                            <button onClick={() => unsaveFilm(film.id)} className="p-1.5 rounded-full hover:bg-accent">
-                              <BookmarkCheck className="w-4 h-4 text-primary" />
-                            </button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <>
+                  <div className="flex gap-2 mb-4">
+                    <Button
+                      variant={filmsFilter === 'active' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFilmsFilter('active')}
+                    >
+                      Active ({activeFilms.length})
+                    </Button>
+                    <Button
+                      variant={filmsFilter === 'history' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFilmsFilter('history')}
+                    >
+                      History ({pastFilms.length})
+                    </Button>
+                  </div>
+                  {(() => {
+                    const films = filmsFilter === 'active' ? activeFilms : pastFilms;
+                    return films.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Film className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+                        <p className="text-muted-foreground">
+                          {filmsFilter === 'active' ? 'No films currently in theaters saved' : 'No past films saved'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {films.map(film => (
+                          <Card
+                            key={film.id}
+                            className={cn("overflow-hidden hover:shadow-lg transition-shadow cursor-pointer", new Date(film.date) < thirtyDaysAgo && "opacity-60")}
+                            onClick={() => setDetailFilm(film as FilmMetric)}
+                          >
+                            {film.poster_url ? (
+                              <img src={film.poster_url} alt={film.title} className="w-full h-36 object-cover" />
+                            ) : (
+                              <div className="w-full h-36 bg-muted flex items-center justify-center">
+                                <Film className="w-8 h-8 text-muted-foreground opacity-30" />
+                              </div>
+                            )}
+                            <CardContent className="p-4">
+                              <h3 className="font-semibold truncate mb-1">{film.title}</h3>
+                              <p className="text-sm text-muted-foreground mb-2">{film.studio}</p>
+                              <div className="flex items-center justify-between">
+                                <Badge variant="secondary" className="text-xs">⭐ {film.rating?.toFixed(1)}</Badge>
+                                <div className="flex gap-1">
+                                  <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: film.title, type: 'Film', url: '/stage-whisper?filmId=' + film.id, imageUrl: film.poster_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
+                                    <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); unsaveFilm(film.id); }} className="p-1.5 rounded-full hover:bg-accent">
+                                    <BookmarkCheck className="w-4 h-4 text-primary" />
+                                  </button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
               )}
             </TabsContent>
 
@@ -482,14 +757,16 @@ const MySavesPage: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {savedResources.map(item => (
-                    <Card key={item.id} className="hover:shadow-lg transition-shadow">
+                    <Card
+                      key={item.id}
+                      className={cn("hover:shadow-lg transition-shadow", item.item_url && "cursor-pointer")}
+                      onClick={() => item.item_url && window.open(item.item_url, '_blank', 'noopener,noreferrer')}
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <h3 className="font-semibold">{item.item_title}</h3>
                           {item.item_url && (
-                            <a href={item.item_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                              <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                            </a>
+                            <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                           )}
                         </div>
                         {item.item_metadata?.description && (
@@ -499,10 +776,10 @@ const MySavesPage: React.FC = () => {
                           <Badge variant="secondary" className="text-xs mb-2">{item.item_metadata.category}</Badge>
                         )}
                         <div className="flex items-center justify-end gap-1 mt-2">
-                          <button onClick={() => setShareDialog({ open: true, title: item.item_title, url: item.item_url || undefined, type: 'Resource' })} className="p-1.5 rounded-full hover:bg-accent">
+                          <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: item.item_title, url: item.item_url || undefined, type: 'Resource' }); }} className="p-1.5 rounded-full hover:bg-accent">
                             <MessageSquare className="w-4 h-4 text-muted-foreground" />
                           </button>
-                          <button onClick={() => unsaveItem(item.id)} className="p-1.5 rounded-full hover:bg-accent">
+                          <button onClick={(e) => { e.stopPropagation(); unsaveItem(item.id); }} className="p-1.5 rounded-full hover:bg-accent">
                             <BookmarkCheck className="w-4 h-4 text-primary" />
                           </button>
                         </div>
@@ -518,39 +795,143 @@ const MySavesPage: React.FC = () => {
               {savedJobs.length === 0 ? (
                 <EmptyCategory icon={Briefcase} label="jobs" />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {savedJobs.map(item => (
-                    <Card key={item.id} className="hover:shadow-lg transition-shadow">
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold mb-1">{item.item_title}</h3>
-                        {item.item_metadata?.company && (
-                          <p className="text-sm text-muted-foreground mb-1">{item.item_metadata.company}</p>
-                        )}
-                        {item.item_metadata?.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{item.item_metadata.description}</p>
-                        )}
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {item.item_metadata?.type && <Badge variant="secondary" className="text-xs">{item.item_metadata.type}</Badge>}
-                          {item.item_metadata?.location && <Badge variant="outline" className="text-xs">{item.item_metadata.location}</Badge>}
-                        </div>
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => setShareDialog({ open: true, title: item.item_title, type: 'Job' })} className="p-1.5 rounded-full hover:bg-accent">
-                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                          </button>
-                          <button onClick={() => unsaveItem(item.id)} className="p-1.5 rounded-full hover:bg-accent">
-                            <BookmarkCheck className="w-4 h-4 text-primary" />
-                          </button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <>
+                  <div className="flex gap-2 mb-4">
+                    <Button
+                      variant={jobsFilter === 'active' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setJobsFilter('active')}
+                    >
+                      Active ({activeJobs.length})
+                    </Button>
+                    <Button
+                      variant={jobsFilter === 'expired' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setJobsFilter('expired')}
+                    >
+                      Expired ({expiredJobs.length})
+                    </Button>
+                  </div>
+                  {(() => {
+                    const jobs = jobsFilter === 'active' ? activeJobs : expiredJobs;
+                    return jobs.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Briefcase className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+                        <p className="text-muted-foreground">
+                          {jobsFilter === 'active' ? 'No active jobs saved' : 'No expired jobs saved'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {jobs.map(item => (
+                          <Card
+                            key={item.id}
+                            className="hover:shadow-lg transition-shadow cursor-pointer"
+                            onClick={async () => {
+                              const live = getLiveRow(item);
+                              if (live) { setDetailJobView(buildViewFromLive(live)); return; }
+                              let freshRow: any = null;
+                              if (item.item_id) {
+                                const { data } = await supabase.from('opportunities').select('*').eq('id', item.item_id).maybeSingle();
+                                freshRow = data;
+                              }
+                              if (!freshRow) {
+                                const { data } = await supabase.from('opportunities').select('*').eq('title', item.item_title).maybeSingle();
+                                freshRow = data;
+                              }
+                              if (!freshRow && item.item_id) {
+                                const { data: post } = await supabase.from('posts').select('id, content, image_url, link_url, link_title, created_at').eq('id', item.item_id).maybeSingle();
+                                if (post) {
+                                  const urlMatch = post.link_url || post.content?.match(/https?:\/\/[^\s)]+/)?.[0] || undefined;
+                                  setDetailJobView({
+                                    ...makeJobView(item),
+                                    id: post.id,
+                                    createdAt: post.created_at,
+                                    imageUrl: post.image_url || undefined,
+                                    linkUrl: urlMatch,
+                                    linkTitle: post.link_title || undefined,
+                                    actionType: urlMatch ? 'external' : 'apply',
+                                  });
+                                  return;
+                                }
+                              }
+                              setDetailJobView(freshRow ? buildViewFromLive(freshRow) : makeJobView(item));
+                            }}
+                          >
+                            <CardContent className="p-4">
+                              <h3 className="font-semibold mb-1">{item.item_title}</h3>
+                              {item.item_metadata?.company && (
+                                <p className="text-sm text-muted-foreground mb-1">{item.item_metadata.company}</p>
+                              )}
+                              {item.item_metadata?.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{item.item_metadata.description}</p>
+                              )}
+                              <div className="flex flex-wrap gap-1 mb-2">
+                                {item.item_metadata?.type && <Badge variant="secondary" className="text-xs">{item.item_metadata.type}</Badge>}
+                                {item.item_metadata?.location && <Badge variant="outline" className="text-xs">{item.item_metadata.location}</Badge>}
+                              </div>
+                              <div className="flex items-center justify-end gap-1">
+                                <button onClick={(e) => { e.stopPropagation(); const live = getLiveRow(item); const jobId = live?.id || item.item_id; setShareDialog({ open: true, title: item.item_title, type: 'Job', url: jobId ? `/opportunities?jobId=${jobId}` : undefined, imageUrl: live?.image_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
+                                  <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); unsaveItem(item.id); }} className="p-1.5 rounded-full hover:bg-accent">
+                                  <BookmarkCheck className="w-4 h-4 text-primary" />
+                                </button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
               )}
             </TabsContent>
           </Tabs>
         )}
       </div>
 
+      <ShowDetailSheet
+        show={detailShow}
+        isOpen={!!detailShow}
+        onClose={() => setDetailShow(null)}
+        isSaved={detailShow ? isSaved(detailShow.id) : false}
+        onSave={saveShow}
+        onUnsave={unsaveShow}
+      />
+      <FilmDetailSheet
+        film={detailFilm}
+        isOpen={!!detailFilm}
+        onClose={() => setDetailFilm(null)}
+        isSaved={detailFilm ? isFilmSaved(detailFilm.id) : false}
+        onSave={saveFilm}
+        onUnsave={unsaveFilm}
+      />
+      <OpportunityDetailSheet
+        opportunity={detailJobView}
+        open={!!detailJobView}
+        onOpenChange={(open) => { if (!open) setDetailJobView(null); }}
+        posterProfile={null}
+        hasApplied={false}
+        onApply={() => {
+          if (detailJobView && savedJobOpportunityIds.includes(detailJobView.id)) {
+            setShowApplyDialog(true);
+          } else {
+            setDetailJobView(null);
+            navigate('/opportunities');
+          }
+        }}
+      />
+      <ApplicationDialog
+        open={showApplyDialog}
+        onOpenChange={(open) => { if (!open) setShowApplyDialog(false); }}
+        opportunityId={detailJobView?.id || ''}
+        opportunityTitle={detailJobView?.title || ''}
+        onApplicationSubmitted={() => {
+          setShowApplyDialog(false);
+          setDetailJobView(null);
+        }}
+      />
       <ShareDialog
         open={shareDialog.open}
         onOpenChange={(open) => setShareDialog(prev => ({ ...prev, open }))}

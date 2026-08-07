@@ -2,6 +2,7 @@ import React from 'react';
 import { useStore } from '@/store/useStore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { parseSharedItem } from '@/components/messages/SharedItemCard';
 
 interface ThreadListProps {
   selectedThreadId?: string;
@@ -100,7 +101,9 @@ const ThreadList: React.FC<ThreadListProps> = ({ selectedThreadId, onSelectThrea
                     ) : lastMessage ? (
                       <>
                         {lastMessage.senderId === currentUserId && 'You: '}
-                        {lastMessage.content}
+                        {parseSharedItem(lastMessage.content)
+                          ? `Shared a ${parseSharedItem(lastMessage.content)!.type}`
+                          : lastMessage.content}
                       </>
                     ) : (
                       'No messages yet'
