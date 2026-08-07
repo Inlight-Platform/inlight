@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { useEventRsvps } from '@/hooks/useEventRsvps';
 import { cn, capitalizeName } from '@/lib/utils';
 import { isEventPast } from '@/lib/eventDates';
+import { getFeedItemDestination } from '@/lib/feedDestinations';
 
 export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show' | 'open_role';
 
@@ -80,6 +81,7 @@ interface FeedItemProps {
   imageContainerClassName?: string;
   imageClassName?: string;
   compactSquare?: boolean;
+  onOpenDetails?: (item: FeedItemData) => void;
 }
 
 export const FeedItem: React.FC<FeedItemProps> = ({
@@ -90,6 +92,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   imageContainerClassName,
   imageClassName,
   compactSquare = false,
+  onOpenDetails,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -245,14 +248,27 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   };
 
   const handleClick = () => {
-    if (item.type === 'project') {
-      navigate(`/projects/${item.id}`);
-    } else if (item.type === 'event') {
+    if (item.type === 'event') {
       navigate('/events');
-    } else if (item.type === 'show') {
-      navigate('/stage-whisper');
-    } else if (item.type === 'open_role' && item.project_id) {
-      navigate(`/projects/${item.project_id}`);
+      return;
+    }
+
+    if (item.type === 'post') {
+      if (onOpenDetails) {
+        onOpenDetails(item);
+      }
+      return;
+    }
+
+    const destination = getFeedItemDestination(item);
+    if (destination?.kind === 'internal') {
+      navigate(destination.to);
+      return;
+    }
+
+    if (destination?.kind === 'external') {
+      window.open(destination.url, '_blank', 'noopener,noreferrer');
+      return;
     }
   };
 
@@ -329,7 +345,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     }
   };
 
-  const isClickable = item.type === 'project' || item.type === 'event' || item.type === 'show' || item.type === 'open_role';
+  const isClickable =
+    item.type === 'event' ||
+    item.type === 'post' ||
+    Boolean(getFeedItemDestination(item));
   
   // For anonymous shows, hide the creator info
   const showAnonymous = item.type === 'show' && item.is_anonymous;
