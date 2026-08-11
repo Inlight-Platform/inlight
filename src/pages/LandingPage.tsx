@@ -74,12 +74,10 @@ export default function LandingPage() {
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/feed"
-            className="group inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2 text-xs font-medium uppercase tracking-[0.18em] text-background shadow-glow transition-transform hover:scale-[1.03] sm:px-7 sm:tracking-[0.22em]"
+            className="inline-flex w-[8.75rem] items-center justify-center rounded-full bg-foreground px-5 py-2 text-xs font-medium uppercase tracking-[0.18em] text-background shadow-glow transition-transform hover:scale-[1.03] sm:w-[13.75rem] sm:px-7 sm:tracking-[0.22em]"
           >
-            <Sparkle size={12} />
             <span className="sm:hidden">Explore</span>
             <span className="hidden sm:inline">Explore Inlight</span>
-            <span className="hidden transition-transform group-hover:translate-x-0.5 sm:inline">→</span>
           </Link>
           <AuthSegmentedButton size="sm" />
         </div>
