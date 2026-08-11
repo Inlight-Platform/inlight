@@ -277,7 +277,7 @@ const FeedPage: React.FC = () => {
         query = query.eq('is_public', true);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query.limit(100);
       if (error) throw error;
 
       const userIds = [...new Set(data.map((p) => p.creator_id))].filter(Boolean);
