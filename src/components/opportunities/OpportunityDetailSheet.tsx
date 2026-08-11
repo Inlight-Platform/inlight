@@ -394,7 +394,7 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
               variant="ghost"
               size="icon"
               className="absolute right-4 top-4 rounded-full bg-card/90 text-foreground shadow-lg hover:bg-card"
-              onClick={() => setShowVisitorAuthPrompt(false)}
+              onClick={() => handleOpenChange(false)}
               aria-label="Close sign in prompt"
             >
               <X className="h-4 w-4" />
