@@ -44,7 +44,8 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
   const [opportunityApplicationOpen, setOpportunityApplicationOpen] = useState(false);
   const [opportunityDetailOpen, setOpportunityDetailOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<OpenRole | null>(null);
-  const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityView | null>(null);
+  const [selectedDetailOpportunity, setSelectedDetailOpportunity] = useState<OpportunityView | null>(null);
+  const [selectedApplicationOpportunity, setSelectedApplicationOpportunity] = useState<OpportunityView | null>(null);
   const [applicationMessage, setApplicationMessage] = useState('');
   const [reelUrl, setReelUrl] = useState('');
   const [resumeFile, setResumeFile] = useState<{ name: string; url: string } | null>(null);
@@ -210,17 +211,18 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
   };
 
   const openOpportunity = (opportunity: OpportunityView) => {
-    setSelectedOpportunity(opportunity);
+    setSelectedDetailOpportunity(opportunity);
     setOpportunityDetailOpen(true);
   };
 
   const openSelectedOpportunityApplication = () => {
-    if (!selectedOpportunity) return;
+    if (!selectedDetailOpportunity) return;
     if (!user) {
       setShowVisitorAuthPrompt(true);
       return;
     }
 
+    setSelectedApplicationOpportunity(selectedDetailOpportunity);
     setOpportunityDetailOpen(false);
     setOpportunityApplicationOpen(true);
   };
@@ -544,22 +546,22 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
         open={opportunityApplicationOpen}
         onOpenChange={(open) => {
           setOpportunityApplicationOpen(open);
-          if (!open) setSelectedOpportunity(null);
+          if (!open) setSelectedApplicationOpportunity(null);
         }}
-        opportunityId={selectedOpportunity?.id || ''}
-        opportunityTitle={selectedOpportunity?.title || 'Opportunity'}
+        opportunityId={selectedApplicationOpportunity?.id || ''}
+        opportunityTitle={selectedApplicationOpportunity?.title || 'Opportunity'}
         onApplicationSubmitted={() => {
           setOpportunityApplicationOpen(false);
-          setSelectedOpportunity(null);
+          setSelectedApplicationOpportunity(null);
         }}
       />
 
       <OpportunityDetailSheet
-        opportunity={selectedOpportunity}
+        opportunity={selectedDetailOpportunity}
         open={opportunityDetailOpen}
         onOpenChange={(open) => {
           setOpportunityDetailOpen(open);
-          if (!open && !opportunityApplicationOpen) setSelectedOpportunity(null);
+          if (!open) setSelectedDetailOpportunity(null);
         }}
         posterProfile={null}
         hasApplied={false}
