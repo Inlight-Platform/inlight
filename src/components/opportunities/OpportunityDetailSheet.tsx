@@ -404,6 +404,7 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
               title="Apply on Inlight"
               description="Sign in or create an account to apply."
               features={['Internal application', 'Creator profile', 'Application tracking']}
+              restore={{ type: 'opportunity', id: opportunity.id }}
             />
           </div>
         )}

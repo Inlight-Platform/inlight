@@ -2,6 +2,7 @@ import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AuthSegmentedButton } from '@/components/auth/AuthSegmentedButton';
+import { AuthRestoreState } from '@/lib/authRestore';
 
 interface VisitorAuthPromptProps {
   title: string;
@@ -9,6 +10,7 @@ interface VisitorAuthPromptProps {
   features?: string[];
   className?: string;
   compact?: boolean;
+  restore?: AuthRestoreState;
 }
 
 interface VisitorAuthOverlayProps extends VisitorAuthPromptProps {
@@ -21,6 +23,7 @@ export const VisitorAuthPrompt: React.FC<VisitorAuthPromptProps> = ({
   features = [],
   className,
   compact = false,
+  restore,
 }) => {
   return (
     <div
@@ -56,7 +59,7 @@ export const VisitorAuthPrompt: React.FC<VisitorAuthPromptProps> = ({
             </div>
           )}
 
-          <AuthSegmentedButton size={compact ? 'md' : 'lg'} fullWidth className="max-w-sm" showIcons />
+          <AuthSegmentedButton size={compact ? 'md' : 'lg'} fullWidth className="max-w-sm" showIcons restore={restore} />
         </div>
       </div>
     </div>

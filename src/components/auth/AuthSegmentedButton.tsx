@@ -2,12 +2,14 @@ import React from 'react';
 import { LogIn, UserPlus } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { AuthRestoreState, saveAuthRestore } from '@/lib/authRestore';
 
 interface AuthSegmentedButtonProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
   showIcons?: boolean;
+  restore?: AuthRestoreState;
 }
 
 const sizeClasses = {
@@ -33,13 +35,17 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
   size = 'md',
   fullWidth = false,
   showIcons = false,
+  restore,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const styles = sizeClasses[size];
 
   const goToAuth = (mode: 'signin' | 'signup') => {
-    navigate(mode === 'signup' ? '/auth?mode=signup' : '/auth', { state: { from: location } });
+    saveAuthRestore(restore);
+    navigate(mode === 'signup' ? '/auth?mode=signup' : '/auth', {
+      state: { from: location, restore },
+    });
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { Location } from 'react-router-dom';
 import { accountAlreadyExistsMessage, useAuth } from '@/hooks/useAuth';
@@ -15,6 +15,7 @@ import { useForceTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 import { formatSignInErrorMessage } from '@/lib/authPolicy';
 import { supabase } from '@/integrations/supabase/client';
+import { AuthRestoreState, readAuthRestore } from '@/lib/authRestore';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset' | 'confirm';
 
@@ -24,6 +25,7 @@ interface AuthRouteState {
   displayName?: string;
   mode?: AuthView;
   from?: Location;
+  restore?: AuthRestoreState;
 }
 
 const fieldClass =
@@ -214,9 +216,15 @@ const AuthPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const routeState = (location.state || {}) as AuthRouteState;
+  const restoreState = useMemo(() => routeState.restore || readAuthRestore(), [routeState.restore]);
   const redirectPath = routeState.from
     ? `${routeState.from.pathname}${routeState.from.search}${routeState.from.hash}`
+    : restoreState?.type === 'opportunity'
+      ? '/opportunities'
     : '/feed';
+  const redirectOptions = useMemo(() => restoreState
+    ? { replace: true, state: { restore: restoreState } }
+    : { replace: true }, [restoreState]);
   const mode = searchParams.get('mode');
   const inviteToken = searchParams.get('invite')?.trim() || null;
   const creditInviteToken = searchParams.get('credit_invite')?.trim() || null;
@@ -260,9 +268,9 @@ const AuthPage: React.FC = () => {
   useEffect(() => {
     // Don't redirect if in password recovery mode
     if (!loading && !isLoading && user && view !== 'reset' && !isPasswordRecovery) {
-      navigate(redirectPath, { replace: true });
+      navigate(redirectPath, redirectOptions);
     }
-  }, [user, loading, isLoading, navigate, view, isPasswordRecovery, redirectPath]);
+  }, [user, loading, isLoading, navigate, view, isPasswordRecovery, redirectPath, redirectOptions]);
 
   useEffect(() => {
     if (mode === 'reset') {
@@ -290,16 +298,20 @@ const AuthPage: React.FC = () => {
     } else {
       const isFirstTimeSignupWelcomePending = await consumeFirstTimeSignupWelcomePending(email);
       toast.success(isFirstTimeSignupWelcomePending ? firstTimeSignupWelcomeCopy : returningUserWelcomeCopy);
+      if (restoreState) {
+        navigate(redirectPath, redirectOptions);
+        return;
+      }
       try {
         const { data: facultyGroup } = await (supabase.rpc as unknown as FacultyGroupRpc)('get_my_faculty_group');
         const first = Array.isArray(facultyGroup) ? facultyGroup[0] : facultyGroup;
         if (first?.slug) {
           navigate(`/groups/${first.slug}`, { replace: true });
         } else {
-          navigate(redirectPath, { replace: true });
+          navigate(redirectPath, redirectOptions);
         }
       } catch {
-        navigate(redirectPath, { replace: true });
+        navigate(redirectPath, redirectOptions);
       }
     }
   };
@@ -352,7 +364,7 @@ const AuthPage: React.FC = () => {
         setView('confirm');
       } else {
         toast.success('Account created! Welcome to Inlight.');
-        navigate(redirectPath, { replace: true });
+        navigate(redirectPath, redirectOptions);
       }
     } catch (error) {
       console.error('Signup failed:', error);
@@ -405,7 +417,7 @@ const AuthPage: React.FC = () => {
       toast.error(error.message);
     } else {
       toast.success('Password updated successfully!');
-      navigate(redirectPath, { replace: true });
+      navigate(redirectPath, redirectOptions);
     }
 
     setIsLoading(false);

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,6 +25,7 @@ import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 import { OpportunityView } from '@/hooks/useOpportunities';
 import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
 import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
+import { AuthRestoreState, clearAuthRestore, readAuthRestore } from '@/lib/authRestore';
 
 interface OpenRole {
   roleId: string;
@@ -35,6 +37,8 @@ interface OpenRole {
 }
 
 export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] }> = ({ prependOpportunities = [] }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { isSaved, toggleSave } = useSavedItems();
@@ -46,6 +50,7 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
   const [selectedRole, setSelectedRole] = useState<OpenRole | null>(null);
   const [selectedDetailOpportunity, setSelectedDetailOpportunity] = useState<OpportunityView | null>(null);
   const [selectedApplicationOpportunity, setSelectedApplicationOpportunity] = useState<OpportunityView | null>(null);
+  const restoredOpportunityIdRef = useRef<string | null>(null);
   const [applicationMessage, setApplicationMessage] = useState('');
   const [reelUrl, setReelUrl] = useState('');
   const [resumeFile, setResumeFile] = useState<{ name: string; url: string } | null>(null);
@@ -53,6 +58,27 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
   const [includeProfile, setIncludeProfile] = useState(true);
   const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null; headline: string | null; role: string | null } | null>(null);
   const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
+
+  useEffect(() => {
+    const routeState = location.state as { restore?: AuthRestoreState } | null;
+    const restore = routeState?.restore || readAuthRestore();
+    if (restore?.type !== 'opportunity') return;
+    if (restoredOpportunityIdRef.current === restore.id) return;
+
+    const restoredOpportunity = prependOpportunities.find((opportunity) => opportunity.id === restore.id);
+    if (!restoredOpportunity) return;
+
+    restoredOpportunityIdRef.current = restore.id;
+    setSelectedDetailOpportunity(restoredOpportunity);
+    setOpportunityDetailOpen(true);
+    clearAuthRestore();
+    const nextRouteState = { ...(routeState || {}) };
+    delete nextRouteState.restore;
+    navigate(`${location.pathname}${location.search}${location.hash}`, {
+      replace: true,
+      state: Object.keys(nextRouteState).length > 0 ? nextRouteState : undefined,
+    });
+  }, [prependOpportunities, location, navigate]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -448,6 +474,11 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
             title="Apply on Inlight"
             description="Sign in or create an account to apply."
             features={['Internal application', 'Creator profile', 'Application tracking']}
+            restore={
+              selectedDetailOpportunity
+                ? { type: 'opportunity', id: selectedDetailOpportunity.id }
+                : undefined
+            }
           />
         </div>
       )}
