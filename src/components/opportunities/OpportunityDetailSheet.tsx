@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import {
@@ -63,6 +64,10 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
   const handleOverlayClose = (event: React.SyntheticEvent) => {
     event.preventDefault();
     event.stopPropagation();
+    handleOpenChange(false);
+  };
+
+  const closeVisitorAuthPromptAndDrawer = () => {
     handleOpenChange(false);
   };
 
@@ -131,6 +136,45 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
       return false;
     }
   })();
+
+  const visitorAuthOverlay = showVisitorAuthPrompt
+    ? createPortal(
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeVisitorAuthPromptAndDrawer();
+          }}
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) closeVisitorAuthPromptAndDrawer();
+          }}
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeVisitorAuthPromptAndDrawer();
+          }}
+          onTouchStart={(e) => {
+            if (e.target === e.currentTarget) closeVisitorAuthPromptAndDrawer();
+          }}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full bg-card/90 text-foreground shadow-lg hover:bg-card"
+            onClick={closeVisitorAuthPromptAndDrawer}
+            aria-label="Close sign in prompt"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <VisitorAuthPrompt
+            compact
+            title="Apply on Inlight"
+            description="Sign in or create an account to apply."
+            features={['Internal application', 'Creator profile', 'Application tracking']}
+            restore={{ type: 'opportunity', id: opportunity.id }}
+          />
+        </div>,
+        document.body,
+      )
+    : null;
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -376,39 +420,8 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
           )}
         </div>
 
-        {showVisitorAuthPrompt && (
-          <div
-            className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
-            onMouseDown={(e) => {
-              if (e.target === e.currentTarget) handleOpenChange(false);
-            }}
-            onPointerDown={(e) => {
-              if (e.target === e.currentTarget) handleOpenChange(false);
-            }}
-            onTouchStart={(e) => {
-              if (e.target === e.currentTarget) handleOpenChange(false);
-            }}
-          >
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute right-4 top-4 rounded-full bg-card/90 text-foreground shadow-lg hover:bg-card"
-              onClick={() => handleOpenChange(false)}
-              aria-label="Close sign in prompt"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            <VisitorAuthPrompt
-              compact
-              title="Apply on Inlight"
-              description="Sign in or create an account to apply."
-              features={['Internal application', 'Creator profile', 'Application tracking']}
-              restore={{ type: 'opportunity', id: opportunity.id }}
-            />
-          </div>
-        )}
       </SheetContent>
+      {visitorAuthOverlay}
     </Sheet>
   );
 };
