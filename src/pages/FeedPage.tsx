@@ -47,6 +47,7 @@ type ProjectCategory = typeof PROJECT_CATEGORIES[number]['value'];
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const routeState = location.state as { scrollToTop?: boolean } | null;
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
@@ -62,6 +63,16 @@ const FeedPage: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const showVisitorFeedGate = (contentFilter === 'you' || contentFilter === 'updates') && !user;
+
+  useEffect(() => {
+    if (!routeState?.scrollToTop) return;
+
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    navigate(`${location.pathname}${location.search}${location.hash}`, {
+      replace: true,
+      state: undefined,
+    });
+  }, [routeState?.scrollToTop, navigate, location.pathname, location.search, location.hash]);
 
   // Honor ?tab=you and ?compose=update|event|job|project URL params
   useEffect(() => {

@@ -853,7 +853,7 @@ export function CTAStop() {
             <Button
               type="button"
               className="group !h-14 w-full !rounded-full !bg-none !bg-foreground px-8 !text-background font-medium tracking-wide shadow-glow transition-transform hover:!bg-none hover:!bg-foreground/90 hover:scale-[1.02]"
-              onClick={() => navigate("/feed")}
+              onClick={() => navigate("/feed", { state: { scrollToTop: true } })}
             >
               <Sparkle size={14} />
               Explore Inlight
