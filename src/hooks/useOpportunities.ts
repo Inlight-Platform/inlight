@@ -129,7 +129,13 @@ function normalizeExternalUrl(value?: string | null) {
 
 function postToView(row: DBJobPost): OpportunityView {
   const titleMatch = row.content.match(/^🎯\s+\*\*(.+?)\*\*/);
-  const title = titleMatch?.[1]?.trim() || 'Job Opportunity';
+  const firstLine = row.content
+    .replace(/^🎯\s*/u, '')
+    .split('\n')
+    .find((line) => line.trim().length > 0)
+    ?.replace(/^\*\*(.+?)\*\*$/, '$1')
+    .trim();
+  const title = titleMatch?.[1]?.trim() || firstLine || row.link_title || 'Job Opportunity';
   const descriptionWithTitle = row.content.replace(/^🎯\s+\*\*.+?\*\*\s*/s, '').trim();
   const locationMatch = descriptionWithTitle.match(/\n\n📍\s*(.+)\s*$/);
   const description = locationMatch
@@ -224,31 +230,56 @@ export function useOpportunities() {
         console.warn('Canonical opportunities failed to load; showing public feed jobs only.', opportunitiesError);
       }
 
-      let jobPostQuery = supabase
-        .from('posts')
-        .select('id, user_id, content, image_url, link_url, link_title, created_at')
-        .like('content', '🎯%')
-        .order('created_at', { ascending: false });
+      const buildPublicPostQuery = () => {
+        let query = supabase
+          .from('posts')
+          .select('id, user_id, content, image_url, link_url, link_title, created_at')
+          .order('created_at', { ascending: false });
 
-      if (!user) {
-        jobPostQuery = jobPostQuery.eq('visibility', 'public');
-      }
+        if (!user) {
+          query = query.eq('visibility', 'public');
+        }
 
-      const { data: jobPostRows, error: jobPostsError } = await withTimeout(
-        jobPostQuery,
-        'Loading feed jobs'
-      ).catch((error) => {
-        console.warn('Feed job posts failed to load; showing canonical opportunities only.', error);
-        return { data: [], error: null };
-      });
+        return query;
+      };
 
-      if (jobPostsError) {
-        console.warn('Feed job posts failed to load; showing canonical opportunities only.', jobPostsError);
-      }
+      const loadFeedJobPosts = async () => {
+        const [markedJobs, linkedPosts] = await Promise.all([
+          withTimeout(
+            buildPublicPostQuery().like('content', '🎯%'),
+            'Loading marked feed jobs'
+          ).catch((error) => {
+            console.warn('Marked feed job posts failed to load.', error);
+            return { data: [], error: null };
+          }),
+          withTimeout(
+            buildPublicPostQuery().not('link_url', 'is', null),
+            'Loading linked feed opportunities'
+          ).catch((error) => {
+            console.warn('Linked public posts failed to load.', error);
+            return { data: [], error: null };
+          }),
+        ]);
+
+        if (markedJobs.error) {
+          console.warn('Marked feed job posts failed to load.', markedJobs.error);
+        }
+        if (linkedPosts.error) {
+          console.warn('Linked public posts failed to load.', linkedPosts.error);
+        }
+
+        const rowsById = new Map<string, DBJobPost>();
+        [...((markedJobs.data || []) as DBJobPost[]), ...((linkedPosts.data || []) as DBJobPost[])]
+          .forEach((row) => rowsById.set(row.id, row));
+
+        return Array.from(rowsById.values());
+      };
+
+      const jobPostRows = await loadFeedJobPosts();
 
       const canonicalOpportunities = ((opportunityRows || []) as DBOpportunity[]).map(toView);
       const canonicalTitles = new Set(canonicalOpportunities.map((row) => normalizeOpportunityTitle(row.title)));
-      const feedOnlyJobs = ((jobPostRows || []) as DBJobPost[])
+      const feedOnlyJobs = jobPostRows
         .map(postToView)
         .filter((row) => !canonicalTitles.has(normalizeOpportunityTitle(row.title)))
         .filter((row) => isUsableExternalUrl(row.linkUrl));
