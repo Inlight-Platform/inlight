@@ -849,7 +849,7 @@ export function CTAStop() {
           Claim your place in the network built by — and for — the next generation of entertainment.
         </p>
 
-        <div className="mx-auto mt-12 flex w-full max-w-sm flex-col items-center gap-4">
+        <div className="mx-auto mt-14 flex w-full max-w-sm flex-col items-center gap-5">
             <Button
               type="button"
               className="group !h-14 w-full !rounded-full !bg-none !bg-foreground px-8 !text-background font-medium tracking-wide shadow-glow transition-transform hover:!bg-none hover:!bg-foreground/90 hover:scale-[1.02]"
