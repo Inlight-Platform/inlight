@@ -43,8 +43,26 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
 
   const goToAuth = (mode: 'signin' | 'signup') => {
     saveAuthRestore(restore);
-    navigate(mode === 'signup' ? '/auth?mode=signup' : '/auth', {
-      state: { from: location, restore },
+    const returnParams = new URLSearchParams(location.search);
+    if (restore?.type === 'opportunity') {
+      returnParams.set('job', restore.id);
+    }
+
+    const returnSearch = returnParams.toString();
+    const returnTo = `${location.pathname}${returnSearch ? `?${returnSearch}` : ''}${location.hash}`;
+    const authParams = new URLSearchParams();
+    if (mode === 'signup') authParams.set('mode', 'signup');
+    authParams.set('returnTo', returnTo);
+    if (restore?.type === 'opportunity') authParams.set('restoreOpportunityId', restore.id);
+
+    navigate(`/auth?${authParams.toString()}`, {
+      state: {
+        from: {
+          ...location,
+          search: returnSearch ? `?${returnSearch}` : '',
+        },
+        restore,
+      },
     });
   };
 

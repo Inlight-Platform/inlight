@@ -216,9 +216,17 @@ const AuthPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const routeState = (location.state || {}) as AuthRouteState;
-  const restoreState = useMemo(() => routeState.restore || readAuthRestore(), [routeState.restore]);
+  const returnToParam = searchParams.get('returnTo');
+  const restoreOpportunityId = searchParams.get('restoreOpportunityId');
+  const restoreState = useMemo(() => {
+    if (routeState.restore) return routeState.restore;
+    if (restoreOpportunityId) return { type: 'opportunity', id: restoreOpportunityId } satisfies AuthRestoreState;
+    return readAuthRestore();
+  }, [routeState.restore, restoreOpportunityId]);
   const redirectPath = routeState.from
     ? `${routeState.from.pathname}${routeState.from.search}${routeState.from.hash}`
+    : returnToParam || restoreOpportunityId
+      ? returnToParam || `/opportunities?job=${encodeURIComponent(restoreOpportunityId || '')}`
     : restoreState?.type === 'opportunity'
       ? '/opportunities'
     : '/feed';
