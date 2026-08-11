@@ -74,7 +74,7 @@ export default function LandingPage() {
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/feed"
-            className="group inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-background shadow-glow transition-transform hover:scale-[1.03] sm:px-5 sm:tracking-[0.22em]"
+            className="group inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2 text-xs font-medium uppercase tracking-[0.18em] text-background shadow-glow transition-transform hover:scale-[1.03] sm:px-7 sm:tracking-[0.22em]"
           >
             <Sparkle size={12} />
             <span className="sm:hidden">Explore</span>
