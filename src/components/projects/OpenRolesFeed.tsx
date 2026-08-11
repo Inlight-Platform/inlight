@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 import { OpportunityView } from '@/hooks/useOpportunities';
 import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
+import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
 
 interface OpenRole {
   roleId: string;
@@ -41,6 +42,7 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
 
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [opportunityApplicationOpen, setOpportunityApplicationOpen] = useState(false);
+  const [opportunityDetailOpen, setOpportunityDetailOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<OpenRole | null>(null);
   const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityView | null>(null);
   const [applicationMessage, setApplicationMessage] = useState('');
@@ -208,18 +210,18 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
   };
 
   const openOpportunity = (opportunity: OpportunityView) => {
-    if (opportunity.actionType === 'external' && opportunity.linkUrl) {
-      window.open(opportunity.linkUrl, '_blank', 'noopener,noreferrer');
-      return;
-    }
+    setSelectedOpportunity(opportunity);
+    setOpportunityDetailOpen(true);
+  };
 
+  const openSelectedOpportunityApplication = () => {
+    if (!selectedOpportunity) return;
     if (!user) {
-      setSelectedOpportunity(opportunity);
       setShowVisitorAuthPrompt(true);
       return;
     }
 
-    setSelectedOpportunity(opportunity);
+    setOpportunityDetailOpen(false);
     setOpportunityApplicationOpen(true);
   };
 
@@ -315,7 +317,7 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
                       className="h-7 w-7 p-0 text-primary hover:bg-primary/10"
                       onClick={(e) => {
                         e.stopPropagation();
-                        window.open(opportunity.linkUrl, '_blank', 'noopener,noreferrer');
+                        openOpportunity(opportunity);
                       }}
                     >
                       <ExternalLink className="h-4 w-4" />
@@ -550,6 +552,18 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
           setOpportunityApplicationOpen(false);
           setSelectedOpportunity(null);
         }}
+      />
+
+      <OpportunityDetailSheet
+        opportunity={selectedOpportunity}
+        open={opportunityDetailOpen}
+        onOpenChange={(open) => {
+          setOpportunityDetailOpen(open);
+          if (!open && !opportunityApplicationOpen) setSelectedOpportunity(null);
+        }}
+        posterProfile={null}
+        hasApplied={false}
+        onApply={openSelectedOpportunityApplication}
       />
     </>
   );

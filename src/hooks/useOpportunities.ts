@@ -171,6 +171,11 @@ function normalizeOpportunityTitle(title: string) {
   return title.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+function normalizeOpportunityDedupeKey(opportunity: OpportunityView) {
+  const normalizedLink = normalizeExternalUrl(opportunity.linkUrl)?.toLowerCase();
+  return normalizedLink || normalizeOpportunityTitle(opportunity.title);
+}
+
 function isUsableExternalUrl(value?: string | null) {
   const normalized = normalizeExternalUrl(value);
   if (!normalized) return false;
@@ -278,11 +283,16 @@ export function useOpportunities() {
       const jobPostRows = await loadFeedJobPosts();
 
       const canonicalOpportunities = ((opportunityRows || []) as DBOpportunity[]).map(toView);
-      const canonicalTitles = new Set(canonicalOpportunities.map((row) => normalizeOpportunityTitle(row.title)));
+      const seenOpportunityKeys = new Set(canonicalOpportunities.map(normalizeOpportunityDedupeKey));
       const feedOnlyJobs = jobPostRows
         .map(postToView)
-        .filter((row) => !canonicalTitles.has(normalizeOpportunityTitle(row.title)))
-        .filter((row) => isUsableExternalUrl(row.linkUrl));
+        .filter((row) => isUsableExternalUrl(row.linkUrl))
+        .filter((row) => {
+          const key = normalizeOpportunityDedupeKey(row);
+          if (seenOpportunityKeys.has(key)) return false;
+          seenOpportunityKeys.add(key);
+          return true;
+        });
 
       return [
         ...canonicalOpportunities,
