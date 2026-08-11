@@ -969,12 +969,6 @@ const OpportunitiesPage: React.FC = () => {
 
           {/* Discover Tab */}
           <TabsContent value="discover" className="space-y-3">
-            {isError && (
-              <div className="rounded-lg border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-muted-foreground">
-                Jobs could not load from the local sandbox right now. Check that Supabase is running, then refresh this page.
-              </div>
-            )}
-
             {isLoading && (
               <div className="flex items-center justify-center rounded-lg border border-border bg-card/60 py-10">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
