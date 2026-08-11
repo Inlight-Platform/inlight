@@ -849,7 +849,7 @@ export function CTAStop() {
           Claim your place in the network built by — and for — the next generation of entertainment.
         </p>
 
-        <div className="mx-auto mt-14 flex w-full max-w-sm flex-col items-center gap-5">
+        <div className="mx-auto mt-14 flex w-full max-w-sm flex-col items-center">
             <Button
               type="button"
               className="group !h-14 w-full !rounded-full !bg-none !bg-foreground px-8 !text-background font-medium tracking-wide shadow-glow transition-transform hover:!bg-none hover:!bg-foreground/90 hover:scale-[1.02]"
@@ -860,9 +860,9 @@ export function CTAStop() {
               <span className="transition-transform group-hover:translate-x-1">→</span>
             </Button>
 
-          <AuthSegmentedButton size="md" fullWidth className="max-w-xs" />
+          <AuthSegmentedButton size="md" fullWidth className="mt-6 max-w-xs" />
 
-          <p className="max-w-xs text-center text-[11px] leading-5 text-muted-foreground">
+          <p className="mt-3 max-w-xs text-center text-[11px] leading-5 text-muted-foreground">
             By continuing you agree to Inlight's Terms & Privacy.
           </p>
         </div>
