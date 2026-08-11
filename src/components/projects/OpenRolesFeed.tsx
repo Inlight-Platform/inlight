@@ -59,16 +59,34 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
   const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null; headline: string | null; role: string | null } | null>(null);
   const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
 
+  const updateJobSearchParam = (jobId?: string) => {
+    const params = new URLSearchParams(location.search);
+    if (jobId) {
+      params.set('job', jobId);
+    } else {
+      params.delete('job');
+    }
+
+    const nextSearch = params.toString();
+    navigate(`${location.pathname}${nextSearch ? `?${nextSearch}` : ''}${location.hash}`, {
+      replace: true,
+      state: location.state,
+    });
+  };
+
   useEffect(() => {
     const routeState = location.state as { restore?: AuthRestoreState } | null;
-    const restore = routeState?.restore || readAuthRestore();
-    if (restore?.type !== 'opportunity') return;
-    if (restoredOpportunityIdRef.current === restore.id) return;
+    const storedRestore = routeState?.restore || readAuthRestore();
+    const jobId = storedRestore?.type === 'opportunity'
+      ? storedRestore.id
+      : new URLSearchParams(location.search).get('job');
+    if (!jobId) return;
+    if (restoredOpportunityIdRef.current === jobId) return;
 
-    const restoredOpportunity = prependOpportunities.find((opportunity) => opportunity.id === restore.id);
+    const restoredOpportunity = prependOpportunities.find((opportunity) => opportunity.id === jobId);
     if (!restoredOpportunity) return;
 
-    restoredOpportunityIdRef.current = restore.id;
+    restoredOpportunityIdRef.current = jobId;
     setSelectedDetailOpportunity(restoredOpportunity);
     setOpportunityDetailOpen(true);
     clearAuthRestore();
@@ -237,8 +255,10 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
   };
 
   const openOpportunity = (opportunity: OpportunityView) => {
+    restoredOpportunityIdRef.current = opportunity.id;
     setSelectedDetailOpportunity(opportunity);
     setOpportunityDetailOpen(true);
+    updateJobSearchParam(opportunity.id);
   };
 
   const openSelectedOpportunityApplication = () => {
@@ -592,7 +612,11 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
         open={opportunityDetailOpen}
         onOpenChange={(open) => {
           setOpportunityDetailOpen(open);
-          if (!open) setSelectedDetailOpportunity(null);
+          if (!open) {
+            setSelectedDetailOpportunity(null);
+            restoredOpportunityIdRef.current = null;
+            updateJobSearchParam();
+          }
         }}
         posterProfile={null}
         hasApplied={false}
