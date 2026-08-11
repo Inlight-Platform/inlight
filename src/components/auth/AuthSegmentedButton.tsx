@@ -2,7 +2,7 @@ import React from 'react';
 import { LogIn, UserPlus } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { AuthRestoreState, saveAuthRestore } from '@/lib/authRestore';
+import { AuthRestoreState, saveAuthRestore, saveAuthReturnTo } from '@/lib/authRestore';
 
 interface AuthSegmentedButtonProps {
   className?: string;
@@ -42,7 +42,6 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
   const styles = sizeClasses[size];
 
   const goToAuth = (mode: 'signin' | 'signup') => {
-    saveAuthRestore(restore);
     const returnParams = new URLSearchParams(location.search);
     if (restore?.type === 'opportunity') {
       returnParams.set('job', restore.id);
@@ -50,6 +49,8 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
 
     const returnSearch = returnParams.toString();
     const returnTo = `${location.pathname}${returnSearch ? `?${returnSearch}` : ''}${location.hash}`;
+    saveAuthRestore(restore);
+    saveAuthReturnTo(returnTo);
     const authParams = new URLSearchParams();
     if (mode === 'signup') authParams.set('mode', 'signup');
     authParams.set('returnTo', returnTo);

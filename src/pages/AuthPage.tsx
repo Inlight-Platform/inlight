@@ -15,7 +15,7 @@ import { useForceTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 import { formatSignInErrorMessage } from '@/lib/authPolicy';
 import { supabase } from '@/integrations/supabase/client';
-import { AuthRestoreState, readAuthRestore } from '@/lib/authRestore';
+import { AuthRestoreState, readAuthRestore, readAuthReturnTo, saveAuthReturnTo } from '@/lib/authRestore';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset' | 'confirm';
 
@@ -218,6 +218,7 @@ const AuthPage: React.FC = () => {
   const routeState = (location.state || {}) as AuthRouteState;
   const returnToParam = searchParams.get('returnTo');
   const restoreOpportunityId = searchParams.get('restoreOpportunityId');
+  const storedReturnTo = useMemo(() => readAuthReturnTo(), []);
   const restoreState = useMemo(() => {
     if (routeState.restore) return routeState.restore;
     if (restoreOpportunityId) return { type: 'opportunity', id: restoreOpportunityId } satisfies AuthRestoreState;
@@ -225,8 +226,8 @@ const AuthPage: React.FC = () => {
   }, [routeState.restore, restoreOpportunityId]);
   const redirectPath = routeState.from
     ? `${routeState.from.pathname}${routeState.from.search}${routeState.from.hash}`
-    : returnToParam || restoreOpportunityId
-      ? returnToParam || `/opportunities?job=${encodeURIComponent(restoreOpportunityId || '')}`
+    : returnToParam || storedReturnTo || restoreOpportunityId
+      ? returnToParam || storedReturnTo || `/opportunities?job=${encodeURIComponent(restoreOpportunityId || '')}`
     : restoreState?.type === 'opportunity'
       ? '/opportunities'
     : '/feed';
@@ -236,6 +237,14 @@ const AuthPage: React.FC = () => {
   const mode = searchParams.get('mode');
   const inviteToken = searchParams.get('invite')?.trim() || null;
   const creditInviteToken = searchParams.get('credit_invite')?.trim() || null;
+  const authRedirectTo = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set('returnTo', redirectPath);
+    if (restoreState?.type === 'opportunity') {
+      params.set('restoreOpportunityId', restoreState.id);
+    }
+    return `${window.location.origin}/auth?${params.toString()}`;
+  }, [redirectPath, restoreState]);
   
   const getInitialView = (): AuthView => {
     if (routeState.mode) return routeState.mode;
@@ -297,6 +306,7 @@ const AuthPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    saveAuthReturnTo(redirectPath);
 
     const { error } = await signIn(email, password);
 
@@ -351,7 +361,8 @@ const AuthPage: React.FC = () => {
         return;
       }
 
-      const { data, error } = await signUp(email, password, displayName, inviteToken, creditInviteToken);
+      saveAuthReturnTo(redirectPath);
+      const { data, error } = await signUp(email, password, displayName, inviteToken, creditInviteToken, authRedirectTo);
 
       if (error) {
         if (isPasswordPolicyError(error.message)) {
