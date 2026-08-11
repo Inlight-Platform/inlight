@@ -53,30 +53,6 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
   const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
   const sheetContentRef = useRef<HTMLDivElement>(null);
 
-  if (!opportunity) return null;
-
-  const deadlineDate = parseOpportunityDate(opportunity.deadline);
-  const isDeadlinePast = deadlineDate ? isPast(deadlineDate) : false;
-  const calendarUrl = opportunity.actionType === 'calendar'
-    ? buildOpportunityCalendarUrl(opportunity)
-    : null;
-  const hasUsableExternalLink = (() => {
-    if (!opportunity.linkUrl) return false;
-
-    try {
-      const parsed = new URL(opportunity.linkUrl);
-      const host = parsed.hostname.toLowerCase();
-      return (
-        (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
-        !host.includes('inlight') &&
-        host !== 'localhost' &&
-        host !== '127.0.0.1'
-      );
-    } catch {
-      return false;
-    }
-  })();
-
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       setShowVisitorAuthPrompt(false);
@@ -91,7 +67,7 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
   };
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !opportunity) return;
 
     const getClientPoint = (event: PointerEvent | MouseEvent | TouchEvent) => {
       if ('touches' in event) {
@@ -130,7 +106,31 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
       document.removeEventListener('mousedown', handleOutsidePress, true);
       document.removeEventListener('touchstart', handleOutsidePress, true);
     };
-  }, [open, onOpenChange]);
+  }, [open, opportunity, onOpenChange]);
+
+  if (!opportunity) return null;
+
+  const deadlineDate = parseOpportunityDate(opportunity.deadline);
+  const isDeadlinePast = deadlineDate ? isPast(deadlineDate) : false;
+  const calendarUrl = opportunity.actionType === 'calendar'
+    ? buildOpportunityCalendarUrl(opportunity)
+    : null;
+  const hasUsableExternalLink = (() => {
+    if (!opportunity.linkUrl) return false;
+
+    try {
+      const parsed = new URL(opportunity.linkUrl);
+      const host = parsed.hostname.toLowerCase();
+      return (
+        (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+        !host.includes('inlight') &&
+        host !== 'localhost' &&
+        host !== '127.0.0.1'
+      );
+    } catch {
+      return false;
+    }
+  })();
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
