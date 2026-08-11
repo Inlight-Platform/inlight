@@ -59,7 +59,7 @@ export const VisitorAuthPrompt: React.FC<VisitorAuthPromptProps> = ({
             </div>
           )}
 
-          <AuthSegmentedButton size={compact ? 'md' : 'lg'} fullWidth className="max-w-sm" showIcons restore={restore} />
+          <AuthSegmentedButton size={compact ? 'md' : 'lg'} fullWidth className="max-w-sm" restore={restore} />
         </div>
       </div>
     </div>
