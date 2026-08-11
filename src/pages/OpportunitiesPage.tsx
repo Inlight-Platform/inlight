@@ -975,18 +975,12 @@ const OpportunitiesPage: React.FC = () => {
               </div>
             )}
 
-            {/* Posted jobs open in the right detail drawer. */}
-            {!isLoading && openOpportunities.length > 0 && (
-              <div className="grid gap-4 md:grid-cols-2">
-                {openOpportunities.map((opportunity) => (
-                  <OpportunityCard key={opportunity.id} opportunity={opportunity} />
-                ))}
-              </div>
-            )}
-
-            {/* Project open roles keep their lightweight apply flow. */}
             {!isLoading && (
-              <OpenRolesFeed />
+              <OpenRolesFeed
+                prependItems={openOpportunities.map((opportunity) => (
+                  <OpportunityCard key={opportunity.id} opportunity={opportunity} compact />
+                ))}
+              />
             )}
           </TabsContent>
 

@@ -139,35 +139,37 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
   };
 
   if (compact) {
+    const compactApplyBy = opportunity.deadline ? parseOpportunityDate(opportunity.deadline) : null;
+
     return (
-      <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer border-border/50 hover:border-primary/30">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <div className={`p-2 rounded-lg ${opportunityTypeColors[opportunity.type]}`}>
-              <Briefcase className="w-4 h-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground truncate">{opportunity.title}</h3>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                {opportunity.company && (
-                  <span className="flex items-center gap-1">
-                    <Building2 className="w-3 h-3" />{opportunity.company}
-                  </span>
-                )}
-                <span className="flex items-center gap-1">
-                  {opportunity.isRemote ? <Globe className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
-                  {opportunity.isRemote ? 'Remote' : opportunity.location}
-                </span>
-              </div>
-              {opportunity.compensation && (
-                <div className="flex items-center gap-1 text-sm text-primary mt-1">
-                  <DollarSign className="w-3 h-3" />{opportunity.compensation}
-                </div>
+      <Card
+        className="flex min-h-[140px] cursor-pointer flex-col justify-between border-border bg-card transition-all hover:border-primary/40 hover:shadow-md"
+        onClick={handleApply}
+      >
+        <CardContent className="flex h-full flex-col justify-between gap-2 p-4">
+          <div className="space-y-1">
+            <h3 className="line-clamp-3 text-sm font-semibold leading-tight text-foreground">{opportunity.title}</h3>
+            <p className="truncate text-xs text-muted-foreground">
+              {opportunity.company || (opportunity.source === 'post' ? 'External opportunity' : 'Inlight')}
+            </p>
+          </div>
+          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+            <div className="flex min-w-0 items-center gap-1">
+              {compactApplyBy ? (
+                <>
+                  <CalendarPlus className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">Apply by {format(compactApplyBy, 'MMM d, yyyy')}</span>
+                </>
+              ) : (
+                <>
+                  {opportunity.isRemote ? <Globe className="h-3 w-3 flex-shrink-0" /> : <MapPin className="h-3 w-3 flex-shrink-0" />}
+                  <span className="truncate">{opportunity.isRemote ? 'Remote' : opportunity.location}</span>
+                </>
               )}
             </div>
-            <Badge variant="outline" className={opportunityTypeColors[opportunity.type]}>
-              {opportunity.type}
-            </Badge>
+            {opportunity.actionType === 'external' && hasUsableExternalLink && (
+              <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+            )}
           </div>
         </CardContent>
       </Card>
