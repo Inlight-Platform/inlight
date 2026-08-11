@@ -16,11 +16,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Loader2, Users, Calendar, Send, Check, Clock, X, Upload, Video, FileText, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Loader2, Users, Calendar, Send, Check, Clock, X, Upload, Video, FileText, Bookmark, BookmarkCheck, ExternalLink } from 'lucide-react';
 import { useSavedItems } from '@/hooks/useSavedItems';
-import { format, addMonths } from 'date-fns';
+import { format, addMonths, isPast } from 'date-fns';
 import { toast } from 'sonner';
 import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
+import { OpportunityView } from '@/hooks/useOpportunities';
+import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
 
 interface OpenRole {
   roleId: string;
@@ -31,14 +33,16 @@ interface OpenRole {
   createdAt: string;
 }
 
-export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ prependItems }) => {
+export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] }> = ({ prependOpportunities = [] }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { isSaved, toggleSave } = useSavedItems();
-  const hasPrependedItems = React.Children.count(prependItems) > 0;
+  const hasPrependedItems = prependOpportunities.length > 0;
 
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+  const [opportunityApplicationOpen, setOpportunityApplicationOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<OpenRole | null>(null);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityView | null>(null);
   const [applicationMessage, setApplicationMessage] = useState('');
   const [reelUrl, setReelUrl] = useState('');
   const [resumeFile, setResumeFile] = useState<{ name: string; url: string } | null>(null);
@@ -193,6 +197,32 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
     setApplyDialogOpen(true);
   };
 
+  const getOpportunityApplyLabel = (opportunity: OpportunityView) => {
+    const deadlineDate = opportunity.deadline ? new Date(opportunity.deadline) : null;
+    if (!deadlineDate || isNaN(deadlineDate.getTime())) {
+      return 'Deadline TBD';
+    }
+    return isPast(deadlineDate)
+      ? 'Deadline passed'
+      : `Apply by ${format(deadlineDate, 'MMM d, yyyy')}`;
+  };
+
+  const openOpportunity = (opportunity: OpportunityView) => {
+    if (opportunity.actionType === 'external' && opportunity.linkUrl) {
+      window.open(opportunity.linkUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (!user) {
+      setSelectedOpportunity(opportunity);
+      setShowVisitorAuthPrompt(true);
+      return;
+    }
+
+    setSelectedOpportunity(opportunity);
+    setOpportunityApplicationOpen(true);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -228,7 +258,87 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
     <>
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {prependItems}
+          {prependOpportunities.map((opportunity) => (
+            <div
+              key={opportunity.id}
+              className="flex min-h-[112px] cursor-pointer flex-col justify-between gap-2 rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md"
+              onClick={() => openOpportunity(opportunity)}
+            >
+              <div className="space-y-1">
+                <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-foreground">
+                  {opportunity.title}
+                </h3>
+                {opportunity.company && (
+                  <p className="truncate text-xs text-muted-foreground">
+                    {opportunity.company}
+                  </p>
+                )}
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{getOpportunityApplyLabel(opportunity)}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {user && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSave({
+                          item_type: 'job',
+                          item_id: opportunity.id,
+                          item_title: opportunity.title,
+                          item_url: opportunity.linkUrl || opportunity.id,
+                          item_metadata: {
+                            company: opportunity.company,
+                            type: opportunity.type,
+                            location: opportunity.isRemote ? 'Remote' : opportunity.location,
+                            description: opportunity.description?.slice(0, 200),
+                            deadline: opportunity.deadline,
+                            source: opportunity.source,
+                          },
+                        });
+                      }}
+                      className="rounded-full p-1 transition-colors hover:bg-accent"
+                    >
+                      {isSaved('job', opportunity.title, opportunity.linkUrl || opportunity.id) ? (
+                        <BookmarkCheck className="h-3.5 w-3.5 text-primary" />
+                      ) : (
+                        <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+                      )}
+                    </button>
+                  )}
+                  {opportunity.actionType === 'external' && opportunity.linkUrl ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0 text-primary hover:bg-primary/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(opportunity.linkUrl, '_blank', 'noopener,noreferrer');
+                      }}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    user && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 text-primary hover:bg-primary/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openOpportunity(opportunity);
+                        }}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
           {isLoading && (
             <div className="flex items-center justify-center p-4 rounded-lg border border-border bg-card">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -427,6 +537,20 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
           </div>
         </DialogContent>
       </Dialog>
+
+      <ApplicationDialog
+        open={opportunityApplicationOpen}
+        onOpenChange={(open) => {
+          setOpportunityApplicationOpen(open);
+          if (!open) setSelectedOpportunity(null);
+        }}
+        opportunityId={selectedOpportunity?.id || ''}
+        opportunityTitle={selectedOpportunity?.title || 'Opportunity'}
+        onApplicationSubmitted={() => {
+          setOpportunityApplicationOpen(false);
+          setSelectedOpportunity(null);
+        }}
+      />
     </>
   );
 };

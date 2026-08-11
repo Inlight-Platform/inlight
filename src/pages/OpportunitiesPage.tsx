@@ -976,11 +976,7 @@ const OpportunitiesPage: React.FC = () => {
             )}
 
             {!isLoading && (
-              <OpenRolesFeed
-                prependItems={openOpportunities.map((opportunity) => (
-                  <OpportunityCard key={opportunity.id} opportunity={opportunity} compact />
-                ))}
-              />
+              <OpenRolesFeed prependOpportunities={openOpportunities} />
             )}
           </TabsContent>
 
