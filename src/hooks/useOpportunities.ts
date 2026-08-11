@@ -76,6 +76,10 @@ export interface OpportunityView {
 }
 
 function toView(row: DBOpportunity): OpportunityView {
+  const externalLinkUrl = row.action_type === 'external'
+    ? normalizeExternalUrl(row.link_url)
+    : row.link_url;
+
   return {
     id: row.id,
     title: row.title,
@@ -99,7 +103,7 @@ function toView(row: DBOpportunity): OpportunityView {
     isFeatured: row.is_featured,
     actionType: row.action_type || 'apply',
     imageUrl: row.image_url || undefined,
-    linkUrl: row.link_url || undefined,
+    linkUrl: externalLinkUrl || undefined,
     linkTitle: row.link_title || undefined,
     source: 'opportunity',
     applicants: [],
@@ -108,6 +112,19 @@ function toView(row: DBOpportunity): OpportunityView {
 
 function extractFirstUrl(value: string) {
   return value.match(/https?:\/\/[^\s)]+/)?.[0]?.trim();
+}
+
+function normalizeExternalUrl(value?: string | null) {
+  const trimmed = value?.trim().replace(/[),.;]+$/g, '');
+  if (!trimmed) return null;
+
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  if (/^(www\.|[a-z0-9-]+\.[a-z]{2,})(\/.*)?$/i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  return trimmed;
 }
 
 function postToView(row: DBJobPost): OpportunityView {
@@ -137,7 +154,7 @@ function postToView(row: DBJobPost): OpportunityView {
     isFeatured: false,
     actionType: 'external',
     imageUrl: row.image_url || undefined,
-    linkUrl: row.link_url || extractFirstUrl(row.content) || undefined,
+    linkUrl: normalizeExternalUrl(row.link_url || extractFirstUrl(row.content)) || undefined,
     linkTitle: row.link_title || 'Apply Externally',
     source: 'post',
     applicants: [],
@@ -149,10 +166,11 @@ function normalizeOpportunityTitle(title: string) {
 }
 
 function isUsableExternalUrl(value?: string | null) {
-  if (!value) return false;
+  const normalized = normalizeExternalUrl(value);
+  if (!normalized) return false;
 
   try {
-    const parsed = new URL(value);
+    const parsed = new URL(normalized);
     const host = parsed.hostname.toLowerCase();
     return (
       (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
@@ -197,9 +215,14 @@ export function useOpportunities() {
       const { data: opportunityRows, error: opportunitiesError } = await withTimeout(
         opportunityQuery,
         'Loading opportunities'
-      );
+      ).catch((error) => {
+        console.warn('Canonical opportunities failed to load; showing public feed jobs only.', error);
+        return { data: [], error: null };
+      });
 
-      if (opportunitiesError) throw opportunitiesError;
+      if (opportunitiesError) {
+        console.warn('Canonical opportunities failed to load; showing public feed jobs only.', opportunitiesError);
+      }
 
       let jobPostQuery = supabase
         .from('posts')
@@ -223,7 +246,7 @@ export function useOpportunities() {
         console.warn('Feed job posts failed to load; showing canonical opportunities only.', jobPostsError);
       }
 
-      const canonicalOpportunities = (opportunityRows as DBOpportunity[]).map(toView);
+      const canonicalOpportunities = ((opportunityRows || []) as DBOpportunity[]).map(toView);
       const canonicalTitles = new Set(canonicalOpportunities.map((row) => normalizeOpportunityTitle(row.title)));
       const feedOnlyJobs = ((jobPostRows || []) as DBJobPost[])
         .map(postToView)
