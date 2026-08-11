@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +20,7 @@ import { Loader2, Users, Calendar, Send, Check, Clock, X, Upload, Video, FileTex
 import { useSavedItems } from '@/hooks/useSavedItems';
 import { format, addMonths } from 'date-fns';
 import { toast } from 'sonner';
+import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 
 interface OpenRole {
   roleId: string;
@@ -32,7 +32,6 @@ interface OpenRole {
 }
 
 export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ prependItems }) => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { isSaved, toggleSave } = useSavedItems();
@@ -46,6 +45,7 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [includeProfile, setIncludeProfile] = useState(true);
   const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null; headline: string | null; role: string | null } | null>(null);
+  const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -185,7 +185,8 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
   const openApplicationDialog = (role: OpenRole, applicationStatus?: string) => {
     if (applicationStatus) return;
     if (!user) {
-      navigate('/auth');
+      setSelectedRole(role);
+      setShowVisitorAuthPrompt(true);
       return;
     }
     setSelectedRole(role);
@@ -309,6 +310,33 @@ export const OpenRolesFeed: React.FC<{ prependItems?: React.ReactNode }> = ({ pr
           })}
         </div>
       </div>
+
+      {showVisitorAuthPrompt && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full bg-card/90 text-foreground shadow-lg hover:bg-card"
+            onClick={() => {
+              setShowVisitorAuthPrompt(false);
+              setSelectedRole(null);
+            }}
+            aria-label="Close sign in prompt"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <VisitorAuthPrompt
+            compact
+            title="Apply on Inlight"
+            description="Sign in or create an account to apply."
+            features={['Internal application', 'Creator profile', 'Application tracking']}
+          />
+        </div>
+      )}
 
       {/* Apply Dialog */}
       <Dialog open={applyDialogOpen} onOpenChange={(open) => { setApplyDialogOpen(open); if (!open) resetForm(); }}>
