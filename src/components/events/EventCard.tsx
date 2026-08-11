@@ -1,12 +1,14 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Event, useStore } from '@/store/useStore';
+import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Users, Video, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isEventPast } from '@/lib/eventDates';
+import inlightLogo from '@/assets/inlight-logo.jpeg';
 
 interface EventCardProps {
   event: Event;
@@ -24,13 +26,18 @@ const eventTypeColors: Record<string, string> = {
 
 const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
   const { getUser, currentUserId, rsvpToEvent, get1stDegree } = useStore();
   
   const host = getUser(event.hostId);
-  const myRsvp = event.attendees.find(a => a.userId === currentUserId);
+  const hostName = host?.name || 'Inlight creator';
+  const hostInitial = hostName[0] || 'I';
+  const coverImage = event.coverImage || inlightLogo;
+  const myRsvp = user ? event.attendees.find(a => a.userId === currentUserId) : undefined;
   const goingCount = event.attendees.filter(a => a.status === 'going').length;
   const eventHasPassed = isEventPast(event.date);
-  const connections = get1stDegree(currentUserId);
+  const connections = user ? get1stDegree(currentUserId) : [];
   const connectionsGoing = event.attendees.filter(
     a => a.status === 'going' && connections.some(c => c.id === a.userId)
   );
@@ -55,6 +62,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
 
   const handleRsvp = (status: 'going' | 'interested') => {
     if (eventHasPassed) return;
+    if (!user) {
+      navigate('/auth', { state: { from: location } });
+      return;
+    }
     rsvpToEvent(event.id, currentUserId, status);
   };
 
@@ -89,7 +100,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
       {/* Cover Image */}
       <div className="relative h-40 overflow-hidden">
         <img 
-          src={event.coverImage} 
+          src={coverImage} 
           alt={event.title}
           className="w-full h-full object-cover"
         />
@@ -139,10 +150,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
         <div className="flex items-center gap-2">
           <Avatar className="w-6 h-6">
             <AvatarImage src={host?.avatar} />
-            <AvatarFallback>{host?.name?.[0]}</AvatarFallback>
+            <AvatarFallback>{hostInitial}</AvatarFallback>
           </Avatar>
           <span className="text-sm text-muted-foreground">
-            Hosted by <span className="text-foreground">{host?.name}</span>
+            Hosted by <span className="text-foreground">{hostName}</span>
           </span>
         </div>
 
@@ -188,7 +199,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
             onClick={() => handleRsvp('going')}
             disabled={eventHasPassed}
           >
-            {eventHasPassed ? 'RSVP Closed' : myRsvp?.status === 'going' ? '✓ Going' : 'RSVP'}
+            {!user && !eventHasPassed ? 'Sign in to RSVP' : eventHasPassed ? 'RSVP Closed' : myRsvp?.status === 'going' ? '✓ Going' : 'RSVP'}
           </Button>
           <Button
             size="sm"

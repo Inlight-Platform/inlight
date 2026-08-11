@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { VisitorAuthOverlay } from '@/components/auth/VisitorAuthPrompt';
 import { toast } from 'sonner';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
 
@@ -60,6 +61,7 @@ const FeedPage: React.FC = () => {
   const [composePostType, setComposePostType] = useState<PostType>('update');
   const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const showVisitorFeedGate = (contentFilter === 'you' || contentFilter === 'updates') && !user;
 
   // Honor ?tab=you and ?compose=update|event|job|project URL params
   useEffect(() => {
@@ -224,21 +226,28 @@ const FeedPage: React.FC = () => {
 
   // Fetch posts
   const { data: posts = [], isLoading: postsLoading } = useQuery({
-    queryKey: ['feed-posts'],
+    queryKey: ['feed-posts', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('posts')
         .select('*')
         .not('content', 'like', '🎯%')
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .order('created_at', { ascending: false });
+
+      if (!user) {
+        query = query.eq('visibility', 'public');
+      }
+
+      const { data, error } = await query.limit(100);
       if (error) throw error;
 
-      const userIds = [...new Set(data.map((p) => p.user_id))];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
+      const userIds = [...new Set(data.map((p) => p.user_id))].filter(Boolean);
+      const { data: profiles } = userIds.length
+        ? await supabase
+            .from('profiles_public')
+            .select('user_id, display_name, avatar_url')
+            .in('user_id', userIds)
+        : { data: [] };
 
       const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
 
@@ -248,24 +257,36 @@ const FeedPage: React.FC = () => {
         visibility: post.visibility,
         creator_profile: profileMap.get(post.user_id)
       }));
-    }
+    },
+    placeholderData: keepPreviousData,
+    retry: 1,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch projects (all, including archived for the archive tab)
   const { data: allProjects = [], isLoading: projectsLoading } = useQuery({
-    queryKey: ['feed-projects-all'],
+    queryKey: ['feed-projects-all', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('projects')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (!user) {
+        query = query.eq('is_public', true);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
-      const userIds = [...new Set(data.map((p) => p.creator_id))];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
+      const userIds = [...new Set(data.map((p) => p.creator_id))].filter(Boolean);
+      const { data: profiles } = userIds.length
+        ? await supabase
+            .from('profiles_public')
+            .select('user_id, display_name, avatar_url')
+            .in('user_id', userIds)
+        : { data: [] };
 
       const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
 
@@ -273,7 +294,11 @@ const FeedPage: React.FC = () => {
         ...project,
         creator_profile: profileMap.get(project.creator_id)
       }));
-    }
+    },
+    placeholderData: keepPreviousData,
+    retry: 1,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch events
@@ -287,11 +312,13 @@ const FeedPage: React.FC = () => {
         .limit(100);
       if (error) throw error;
 
-      const userIds = [...new Set(data.map((e) => e.user_id))];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
+      const userIds = [...new Set(data.map((e) => e.user_id))].filter(Boolean);
+      const { data: profiles } = userIds.length
+        ? await supabase
+            .from('profiles_public')
+            .select('user_id, display_name, avatar_url')
+            .in('user_id', userIds)
+        : { data: [] };
 
       const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
 
@@ -315,7 +342,11 @@ const FeedPage: React.FC = () => {
         payment_link_url: event.payment_link_url,
         creator_profile: profileMap.get(event.user_id)
       }));
-    }
+    },
+    placeholderData: keepPreviousData,
+    retry: 1,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch saved projects
@@ -429,9 +460,10 @@ const FeedPage: React.FC = () => {
   }, [firstDegree, secondDegree, user?.id]);
 
   const hasVisibleCreator = useCallback((item: { user_id?: string | null; creator_id?: string | null; creator_profile?: unknown }) => {
+    if (!user) return true;
     const ownerId = item.user_id || item.creator_id;
-    return ownerId === user?.id || Boolean(item.creator_profile);
-  }, [user?.id]);
+    return ownerId === user.id || Boolean(item.creator_profile);
+  }, [user]);
 
   // Filtered project lists for sub-tabs
   const visibleProjects = allProjects.filter(hasVisibleCreator);
@@ -829,7 +861,7 @@ const FeedPage: React.FC = () => {
             )}
 
             {/* Content Type Filters */}
-            <div className="mb-4">
+            <div className={`mb-4 ${showVisitorFeedGate ? 'relative z-[80]' : ''}`}>
               <div className="relative">
                 <div className="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-2">
                 {contentFilters.map((filter) => (
@@ -893,9 +925,31 @@ const FeedPage: React.FC = () => {
 
             {/* Show project sub-content when on projects tab */}
             {contentFilter === 'you' ? (
-              <YouTab />
+              user ? (
+                <YouTab />
+              ) : (
+                <VisitorAuthOverlay
+                  title="You"
+                  description="The You tab becomes a personalized daily surface."
+                  features={['Your daily picks', 'Connect today', '3 Explorations', 'Match of the day']}
+                  className="mt-8"
+                >
+                  <YouTab />
+                </VisitorAuthOverlay>
+              )
             ) : contentFilter === 'updates' ? (
-              <ServicesTab />
+              user ? (
+                <ServicesTab />
+              ) : (
+                <VisitorAuthOverlay
+                  title="Services"
+                  description="Services is where you discover creative collaborators by skill."
+                  features={['Creative services', 'Skills', 'Collaborators']}
+                  className="mt-8"
+                >
+                  <ServicesTab />
+                </VisitorAuthOverlay>
+              )
             ) : contentFilter === 'projects' ? (
               renderProjectsContent()
             ) : contentFilter === 'group' && primaryGroup ? (

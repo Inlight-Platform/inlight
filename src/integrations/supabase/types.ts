@@ -998,6 +998,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_featured: boolean
+          is_public: boolean
           is_remote: boolean
           link_title: string | null
           link_url: string | null
@@ -1024,6 +1025,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_featured?: boolean
+          is_public?: boolean
           is_remote?: boolean
           link_title?: string | null
           link_url?: string | null
@@ -1050,6 +1052,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_featured?: boolean
+          is_public?: boolean
           is_remote?: boolean
           link_title?: string | null
           link_url?: string | null

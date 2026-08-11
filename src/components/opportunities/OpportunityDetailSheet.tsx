@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import {
-  MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2, CheckCircle2, CalendarPlus, Pencil, ExternalLink
+  MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2, CheckCircle2, CalendarPlus, Pencil, ExternalLink, X
 } from 'lucide-react';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
@@ -13,6 +13,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { OpportunityView } from '@/hooks/useOpportunities';
 import { buildOpportunityCalendarUrl, parseOpportunityDate } from '@/lib/opportunityCalendar';
+import { useAuth } from '@/hooks/useAuth';
+import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 
 const opportunityTypeColors: Record<string, string> = {
   job: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -47,6 +49,9 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
   opportunity, open, onOpenChange, posterProfile, hasApplied, applicationStatus, onApply, onEdit
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
+  const sheetContentRef = useRef<HTMLDivElement>(null);
 
   if (!opportunity) return null;
 
@@ -72,11 +77,89 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
     }
   })();
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setShowVisitorAuthPrompt(false);
+    }
+    onOpenChange(nextOpen);
+  };
+
+  const handleOverlayClose = (event: React.SyntheticEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handleOpenChange(false);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+
+    const getClientPoint = (event: PointerEvent | MouseEvent | TouchEvent) => {
+      if ('touches' in event) {
+        const touch = event.touches[0] ?? event.changedTouches[0];
+        return touch ? { clientX: touch.clientX, clientY: touch.clientY } : null;
+      }
+
+      return { clientX: event.clientX, clientY: event.clientY };
+    };
+
+    const handleOutsidePress = (event: PointerEvent | MouseEvent | TouchEvent) => {
+      const content = sheetContentRef.current;
+      if (!content) return;
+
+      const point = getClientPoint(event);
+      if (!point) return;
+
+      const rect = content.getBoundingClientRect();
+      const pointerIsInsideDrawer =
+        point.clientX >= rect.left &&
+        point.clientX <= rect.right &&
+        point.clientY >= rect.top &&
+        point.clientY <= rect.bottom;
+
+      if (!pointerIsInsideDrawer) {
+        setShowVisitorAuthPrompt(false);
+        onOpenChange(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handleOutsidePress, true);
+    document.addEventListener('mousedown', handleOutsidePress, true);
+    document.addEventListener('touchstart', handleOutsidePress, true);
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePress, true);
+      document.removeEventListener('mousedown', handleOutsidePress, true);
+      document.removeEventListener('touchstart', handleOutsidePress, true);
+    };
+  }, [open, onOpenChange]);
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent
+        ref={sheetContentRef}
+        className="z-[90] w-full border-l border-border bg-card text-card-foreground shadow-2xl sm:max-w-lg overflow-y-auto"
+        overlayProps={{
+          onClick: handleOverlayClose,
+          onMouseDown: handleOverlayClose,
+          onPointerDown: handleOverlayClose,
+          onTouchStart: handleOverlayClose,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-4 flex items-center justify-between border-b border-border bg-card/95 px-6 py-3 backdrop-blur">
+          <span className="text-sm font-medium text-muted-foreground">Job details</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="gap-2"
+            onClick={() => handleOpenChange(false)}
+          >
+            <X className="h-4 w-4" />
+            Close
+          </Button>
+        </div>
         {opportunity.imageUrl && (
-          <div className="w-full aspect-video bg-muted overflow-hidden rounded-lg mb-4 -mt-2">
+          <div className="w-full aspect-video bg-muted overflow-hidden rounded-lg mb-4">
             <img src={opportunity.imageUrl} alt={opportunity.title} className="w-full h-full object-cover" />
           </div>
         )}
@@ -99,7 +182,7 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
           <>
             <div
               className="flex items-center gap-3 py-3 cursor-pointer hover:opacity-80"
-              onClick={() => { onOpenChange(false); navigate(`/profile/${posterProfile.user_id}`); }}
+              onClick={() => { handleOpenChange(false); navigate(`/profile/${posterProfile.user_id}`); }}
             >
               <Avatar className="h-10 w-10 border-2 border-border">
                 <AvatarImage src={posterProfile.avatar_url || undefined} />
@@ -278,13 +361,52 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
             <Button
               size="sm"
               disabled={isDeadlinePast || opportunity.status !== 'open'}
-              onClick={(e) => { e.stopPropagation(); onApply(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!user) {
+                  setShowVisitorAuthPrompt(true);
+                  return;
+                }
+                onApply();
+              }}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Apply Now
             </Button>
           )}
         </div>
+
+        {showVisitorAuthPrompt && (
+          <div
+            className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) handleOpenChange(false);
+            }}
+            onPointerDown={(e) => {
+              if (e.target === e.currentTarget) handleOpenChange(false);
+            }}
+            onTouchStart={(e) => {
+              if (e.target === e.currentTarget) handleOpenChange(false);
+            }}
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 top-4 rounded-full bg-card/90 text-foreground shadow-lg hover:bg-card"
+              onClick={() => setShowVisitorAuthPrompt(false)}
+              aria-label="Close sign in prompt"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <VisitorAuthPrompt
+              compact
+              title="Apply on Inlight"
+              description="Sign in or create an account to apply."
+              features={['Internal application', 'Creator profile', 'Application tracking']}
+            />
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );

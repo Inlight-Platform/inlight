@@ -2,22 +2,31 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UserPostsProps {
   userId: string;
 }
 
 export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
+  const { user } = useAuth();
+
   // Fetch all posts by this user
   const { data: posts = [], isLoading } = useQuery({
-    queryKey: ['user-posts', userId],
+    queryKey: ['user-posts', userId, user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
       // Fetch regular posts
-      const { data: postsData, error: postsError } = await supabase
+      let postsQuery = supabase
         .from('posts')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
+
+      if (!user) {
+        postsQuery = postsQuery.eq('visibility', 'public');
+      }
+
+      const { data: postsData, error: postsError } = await postsQuery;
 
       if (postsError) throw postsError;
 

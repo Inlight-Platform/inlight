@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FolderKanban, Plus, Bookmark, BookmarkCheck, Filter, Search, X, ArrowUpDown, Users, Archive } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -54,21 +54,29 @@ const ProjectsPage: React.FC = () => {
 
   // Fetch all projects with creator info
   const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['projects-feed'],
+    queryKey: ['projects-feed', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('projects')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (!user) {
+        query = query.eq('is_public', true);
+      }
+
+      const { data, error } = await query;
       
       if (error) throw error;
 
       // Fetch creator profiles
-      const creatorIds = [...new Set(data.map(p => p.creator_id))];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', creatorIds);
+      const creatorIds = [...new Set(data.map(p => p.creator_id))].filter(Boolean);
+      const { data: profiles } = creatorIds.length
+        ? await supabase
+            .from('profiles_public')
+            .select('user_id, display_name, avatar_url')
+            .in('user_id', creatorIds)
+        : { data: [] };
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
@@ -77,6 +85,10 @@ const ProjectsPage: React.FC = () => {
         creator_profile: profileMap.get(project.creator_id)
       })) as Project[];
     },
+    placeholderData: keepPreviousData,
+    retry: 1,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch saved projects

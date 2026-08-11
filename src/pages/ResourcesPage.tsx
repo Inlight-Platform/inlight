@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 
 type ResourceCategory = 'news' | 'directories' | 'education' | 'union' | 'casting' | 'scripts';
 
@@ -246,6 +248,7 @@ const ResourcesPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<ResourceCategory | null>(null);
   const [educationFilter, setEducationFilter] = useState<EducationProgram['type'] | 'all'>('all');
   const { isSaved, toggleSave } = useSavedItems();
+  const { user } = useAuth();
 
   const { data: dbResources } = useQuery({
     queryKey: ['public-resources'],
@@ -330,7 +333,17 @@ const ResourcesPage: React.FC = () => {
         </div>
       </header>
       
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {!user && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6">
+            <VisitorAuthPrompt
+              title="Resources"
+              description="Browse public resource lists now. Sign in to save resources and shape recommendations around your creative path."
+              features={['Browse by Category', 'Education Programs', 'Saved resources']}
+            />
+          </div>
+        )}
+
         {/* Industry Tabs */}
         <Tabs
           value={activeTab}

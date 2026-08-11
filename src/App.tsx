@@ -58,13 +58,11 @@ const RouteAnalytics = () => {
 };
 
 const AppShell = () => (
-  <RequireAuth>
-    <OnboardingGate>
-      <PageLayout>
-        <Outlet />
-      </PageLayout>
-    </OnboardingGate>
-  </RequireAuth>
+  <OnboardingGate>
+    <PageLayout>
+      <Outlet />
+    </PageLayout>
+  </OnboardingGate>
 );
 
 const App = () => (
@@ -93,7 +91,7 @@ const App = () => (
 
           {/* App shell (sidebar on desktop, bottom nav on mobile) */}
           <Route element={<AppShell />}>
-            <Route path="/settings" element={<ProfileSettingsPage />} />
+            <Route path="/settings" element={<RequireAuth><ProfileSettingsPage /></RequireAuth>} />
             <Route path="/profile/:userId" element={<ProfilePage />} />
             <Route path="/directory/:badgeSlug" element={<DirectoryPage />} />
             <Route path="/feed" element={<FeedPage />} />
@@ -102,22 +100,22 @@ const App = () => (
             <Route path="/insights" element={<InsightsPage />} />
             <Route path="/events" element={<EventsPage />} />
             <Route path="/opportunities" element={<OpportunitiesPage />} />
-            <Route path="/messages" element={<MessagesPage />} />
-            <Route path="/messages/direct/:userId" element={<MessagesPage />} />
-            <Route path="/messages/group/:projectId" element={<MessagesPage />} />
-            <Route path="/notifications" element={<NotificationsPage />} />
-            <Route path="/network" element={<NetworkPage />} />
+            <Route path="/messages" element={<RequireAuth><MessagesPage /></RequireAuth>} />
+            <Route path="/messages/direct/:userId" element={<RequireAuth><MessagesPage /></RequireAuth>} />
+            <Route path="/messages/group/:projectId" element={<RequireAuth><MessagesPage /></RequireAuth>} />
+            <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
+            <Route path="/network" element={<RequireAuth><NetworkPage /></RequireAuth>} />
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/projects/new" element={<ProjectNewPage />} />
+            <Route path="/projects/new" element={<RequireAuth><ProjectNewPage /></RequireAuth>} />
             <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
             <Route path="/stage-whisper" element={<StageWhisperPage />} />
             <Route path="/company/:companyId" element={<CompanyProfilePage />} />
-            <Route path="/saves" element={<MySavesPage />} />
+            <Route path="/saves" element={<RequireAuth><MySavesPage /></RequireAuth>} />
             <Route path="/group" element={<GroupMembersPage />} />
             <Route path="/groups/:slug" element={<GroupPage />} />
             <Route path="/pie-chart" element={<NetworkPieChartPage />} />
-            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin" element={<RequireAuth><AdminPage /></RequireAuth>} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

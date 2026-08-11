@@ -12,6 +12,7 @@ import {
   TrackStop,
   CTAStop,
 } from "@/components/scrollytelling";
+import { AuthSegmentedButton } from "@/components/auth/AuthSegmentedButton";
 import logo from "@/assets/inlight-logo.jpeg";
 
 function SectionWrapper({
@@ -70,19 +71,17 @@ export default function LandingPage() {
         <a href="#" className="flex items-center gap-2">
           <img src={logo} alt="Inlight" className="h-8 w-8 rounded-full object-cover" />
         </a>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
-            to="/auth"
-            className="text-xs tracking-[0.25em] uppercase px-4 py-2 rounded-full border border-border hover:border-glow hover:text-glow transition"
+            to="/feed"
+            className="group inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-background shadow-glow transition-transform hover:scale-[1.03] sm:px-5 sm:tracking-[0.22em]"
           >
-            Sign in
+            <Sparkle size={12} />
+            <span className="sm:hidden">Explore</span>
+            <span className="hidden sm:inline">Explore Inlight</span>
+            <span className="hidden transition-transform group-hover:translate-x-0.5 sm:inline">→</span>
           </Link>
-          <Link
-            to="/auth?mode=signup"
-            className="text-xs tracking-[0.25em] uppercase px-4 py-2 rounded-full bg-foreground text-background hover:opacity-90 transition"
-          >
-            Sign up
-          </Link>
+          <AuthSegmentedButton size="sm" />
         </div>
       </nav>
 

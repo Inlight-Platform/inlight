@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { 
   MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2,
-  CheckCircle2, Bookmark, BookmarkCheck, CalendarPlus, Pencil, Trash2, ExternalLink
+  CheckCircle2, Bookmark, BookmarkCheck, CalendarPlus, Pencil, Trash2, ExternalLink, X
 } from 'lucide-react';
 import { useSavedItems } from '@/hooks/useSavedItems';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -19,6 +19,7 @@ import ApplicationDialog from './ApplicationDialog';
 import OpportunityDetailSheet from './OpportunityDetailSheet';
 import EditOpportunityDialog from './EditOpportunityDialog';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
+import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 
 interface OpportunityCardProps {
   opportunity: OpportunityView;
@@ -49,6 +50,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
   const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
   const [hasAppliedDB, setHasAppliedDB] = useState(false);
   const [posterProfile, setPosterProfile] = useState<{
     display_name: string | null;
@@ -118,6 +120,10 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
     } else if (opportunity.actionType === 'external' && hasUsableExternalLink) {
       window.open(opportunity.linkUrl, '_blank', 'noopener,noreferrer');
     } else {
+      if (!user) {
+        setShowVisitorAuthPrompt(true);
+        return;
+      }
       setShowApplicationDialog(true);
     }
   };
@@ -169,7 +175,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
   }
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border-border/50 hover:border-primary/30 cursor-pointer" onClick={() => setShowDetailSheet(true)}>
+    <Card className="relative overflow-hidden hover:shadow-lg transition-all duration-200 border-border/50 hover:border-primary/30 cursor-pointer" onClick={() => setShowDetailSheet(true)}>
       {opportunity.imageUrl && (
         <div className="relative w-full aspect-video bg-muted overflow-hidden">
           <img
@@ -278,37 +284,39 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
             <span className="text-xs text-muted-foreground">
               Posted {formatDistanceToNow(new Date(opportunity.createdAt), { addSuffix: true })}
             </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleSave({
-                  item_type: 'job',
-                  item_id: opportunity.id,
-                  item_title: opportunity.title,
-                  item_metadata: {
-                    company: opportunity.company,
-                    type: opportunity.type,
-                    location: opportunity.isRemote ? 'Remote' : opportunity.location,
-                    description: opportunity.description?.slice(0, 200),
-                    compensation: opportunity.compensation,
-                    deadline: opportunity.deadline,
-                    status: opportunity.status,
-                    image_url: opportunity.imageUrl || null,
-                    link_url: opportunity.linkUrl || null,
-                    link_title: opportunity.linkTitle || null,
-                    action_type: opportunity.actionType,
-                    created_at: opportunity.createdAt,
-                  },
-                });
-              }}
-              className="p-1 rounded-full hover:bg-accent transition-colors"
-            >
-              {isSaved('job', opportunity.title) ? (
-                <BookmarkCheck className="w-4 h-4 text-primary" />
-              ) : (
-                <Bookmark className="w-4 h-4 text-muted-foreground" />
-              )}
-            </button>
+            {user && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleSave({
+                    item_type: 'job',
+                    item_id: opportunity.id,
+                    item_title: opportunity.title,
+                    item_metadata: {
+                      company: opportunity.company,
+                      type: opportunity.type,
+                      location: opportunity.isRemote ? 'Remote' : opportunity.location,
+                      description: opportunity.description?.slice(0, 200),
+                      compensation: opportunity.compensation,
+                      deadline: opportunity.deadline,
+                      status: opportunity.status,
+                      image_url: opportunity.imageUrl || null,
+                      link_url: opportunity.linkUrl || null,
+                      link_title: opportunity.linkTitle || null,
+                      action_type: opportunity.actionType,
+                      created_at: opportunity.createdAt,
+                    },
+                  });
+                }}
+                className="p-1 rounded-full hover:bg-accent transition-colors"
+              >
+                {isSaved('job', opportunity.title) ? (
+                  <BookmarkCheck className="w-4 h-4 text-primary" />
+                ) : (
+                  <Bookmark className="w-4 h-4 text-muted-foreground" />
+                )}
+              </button>
+            )}
             {user && (user.id === opportunity.postedBy || isAdmin) && (
               <button
                 onClick={(e) => { e.stopPropagation(); setShowEditDialog(true); }}
@@ -381,6 +389,30 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
         </div>
       </CardContent>
 
+      {showVisitorAuthPrompt && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full bg-card/90 text-foreground shadow-lg hover:bg-card"
+            onClick={() => setShowVisitorAuthPrompt(false)}
+            aria-label="Close sign in prompt"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <VisitorAuthPrompt
+            compact
+            title="Apply on Inlight"
+            description="Sign in or create an account to apply."
+            features={['Internal application', 'Creator profile', 'Application tracking']}
+          />
+        </div>
+      )}
+
       <ApplicationDialog
         open={showApplicationDialog}
         onOpenChange={setShowApplicationDialog}
@@ -395,7 +427,14 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
         onOpenChange={setShowDetailSheet}
         posterProfile={posterProfile}
         hasApplied={hasApplied}
-        onApply={() => { setShowDetailSheet(false); setShowApplicationDialog(true); }}
+        onApply={() => {
+          if (!user) {
+            setShowVisitorAuthPrompt(true);
+            return;
+          }
+          setShowDetailSheet(false);
+          setShowApplicationDialog(true);
+        }}
         onEdit={user && (user.id === opportunity.postedBy || isAdmin) ? () => { setShowDetailSheet(false); setShowEditDialog(true); } : undefined}
       />
 

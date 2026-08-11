@@ -1,8 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { toast } from 'sonner';
+
+const QUERY_TIMEOUT_MS = 10000;
 
 export interface DBOpportunity {
   id: string;
@@ -28,6 +30,7 @@ export interface DBOpportunity {
   image_url: string | null;
   link_url: string | null;
   link_title: string | null;
+  is_public?: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -162,28 +165,63 @@ function isUsableExternalUrl(value?: string | null) {
   }
 }
 
+function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout>;
+
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out`));
+    }, QUERY_TIMEOUT_MS);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 export function useOpportunities() {
   const { user } = useAuth();
   const { canManageJobs } = useFeatureAccess();
   const queryClient = useQueryClient();
 
-  const { data: opportunities = [], isLoading } = useQuery({
-    queryKey: ['opportunities'],
+  const { data: opportunities = [], isLoading, isError, error } = useQuery({
+    queryKey: ['opportunities', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      const { data: opportunityRows, error: opportunitiesError } = await supabase
+      let opportunityQuery = supabase
         .from('opportunities')
         .select('*')
         .order('created_at', { ascending: false });
 
+      if (!user) {
+        opportunityQuery = opportunityQuery.eq('is_public', true);
+      }
+
+      const { data: opportunityRows, error: opportunitiesError } = await withTimeout(
+        opportunityQuery,
+        'Loading opportunities'
+      );
+
       if (opportunitiesError) throw opportunitiesError;
 
-      const { data: jobPostRows, error: jobPostsError } = await supabase
+      let jobPostQuery = supabase
         .from('posts')
         .select('id, user_id, content, image_url, link_url, link_title, created_at')
         .like('content', '🎯%')
         .order('created_at', { ascending: false });
 
-      if (jobPostsError) throw jobPostsError;
+      if (!user) {
+        jobPostQuery = jobPostQuery.eq('visibility', 'public');
+      }
+
+      const { data: jobPostRows, error: jobPostsError } = await withTimeout(
+        jobPostQuery,
+        'Loading feed jobs'
+      ).catch((error) => {
+        console.warn('Feed job posts failed to load; showing canonical opportunities only.', error);
+        return { data: [], error: null };
+      });
+
+      if (jobPostsError) {
+        console.warn('Feed job posts failed to load; showing canonical opportunities only.', jobPostsError);
+      }
 
       const canonicalOpportunities = (opportunityRows as DBOpportunity[]).map(toView);
       const canonicalTitles = new Set(canonicalOpportunities.map((row) => normalizeOpportunityTitle(row.title)));
@@ -197,6 +235,10 @@ export function useOpportunities() {
         ...feedOnlyJobs,
       ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     },
+    placeholderData: keepPreviousData,
+    retry: 1,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const createOpportunity = useMutation({
@@ -250,6 +292,7 @@ export function useOpportunities() {
         image_url: input.image_url || null,
         link_url: input.link_url || null,
         link_title: input.link_title || null,
+        is_public: true,
       });
 
       if (error) throw error;
@@ -352,5 +395,5 @@ export function useOpportunities() {
     },
   });
 
-  return { opportunities, isLoading, createOpportunity, updateOpportunity, deleteOpportunity };
+  return { opportunities, isLoading, isError, error, createOpportunity, updateOpportunity, deleteOpportunity };
 }

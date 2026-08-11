@@ -1,46 +1,89 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Plus, CalendarDays, List } from 'lucide-react';
+import { ChevronLeft, CalendarDays, List, Loader2 } from 'lucide-react';
 import { useStore, EventType, Event } from '@/store/useStore';
-import { stubUsers, stubConnections, stubMaterials, stubCredits, stubStories, stubMessages, stubThreads, stubEvents } from '@/data/stubData';
 import EventCard from '@/components/events/EventCard';
 import EventFilters from '@/components/events/EventFilters';
 import EventCalendar from '@/components/events/EventCalendar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+
+const eventTypeMap: Record<string, EventType> = {
+  networking: 'networking',
+  workshop: 'workshop',
+  screening: 'screening',
+  audition: 'audition',
+  meetup: 'meetup',
+  conference: 'conference',
+  general: 'meetup',
+};
+
+const normalizeEventType = (value: string | null): EventType =>
+  eventTypeMap[(value || '').toLowerCase()] || 'meetup';
+
+const mapPublicEvent = (event: {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  event_date: string;
+  location: string | null;
+  event_type: string | null;
+  user_id: string;
+}): Event => {
+  const location = event.location?.trim() || 'Location TBD';
+  const isVirtual = /virtual|online|zoom|livestream/i.test(location);
+
+  return {
+    id: event.id,
+    title: event.title,
+    description: event.description || '',
+    type: normalizeEventType(event.event_type),
+    location: isVirtual ? 'virtual' : location,
+    address: location,
+    date: event.event_date,
+    hostId: event.user_id,
+    coverImage: event.image_url || '',
+    attendees: [],
+    tags: event.event_type ? [event.event_type] : [],
+    isVirtual,
+  };
+};
 
 const EventsPage: React.FC = () => {
   const navigate = useNavigate();
   const users = useStore((s) => s.users);
-  const events = useStore((s) => s.events);
   const { currentUserId, getUser, get1stDegree } = useStore();
+  const { user } = useAuth();
+  const { data: events = [], isLoading: eventsLoading, isError: eventsError } = useQuery({
+    queryKey: ['public-events-page'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, title, description, image_url, event_date, location, event_type, user_id')
+        .order('event_date', { ascending: true });
+
+      if (error) throw error;
+      return (data || []).map(mapPublicEvent);
+    },
+    placeholderData: keepPreviousData,
+    retry: 1,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<EventType | 'all'>('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
-  const [dateFilter, setDateFilter] = useState<'upcoming' | 'this-week' | 'this-month' | 'all'>('upcoming');
+  const [dateFilter, setDateFilter] = useState<'upcoming' | 'this-week' | 'this-month' | 'all'>('all');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'grid' | 'calendar'>('grid');
 
-  // Initialize stub data if empty
-  useEffect(() => {
-    if (users.length === 0) {
-      useStore.setState({
-        users: stubUsers,
-        connections: stubConnections,
-        materials: stubMaterials,
-        credits: stubCredits,
-        stories: stubStories,
-        messages: stubMessages,
-        threads: stubThreads,
-        events: stubEvents,
-      });
-    }
-  }, [users.length]);
-
-  const connections = get1stDegree(currentUserId);
+  const connections = user ? get1stDegree(currentUserId) : [];
 
   // Get unique locations
   const locations: string[] = useMemo(() => {
@@ -112,19 +155,21 @@ const EventsPage: React.FC = () => {
 
   // Get events where connections are going
   const connectionsEvents = useMemo(() => {
+    if (!user) return [];
     return events.filter((e) =>
       e.attendees.some(
         (a) => a.status === 'going' && connections.some((c) => c.id === a.userId)
       )
     );
-  }, [events, connections]);
+  }, [events, connections, user]);
 
   // Get my RSVPed events
   const myEvents = useMemo(() => {
+    if (!user) return [];
     return events.filter((e) =>
       e.attendees.some((a) => a.userId === currentUserId && (a.status === 'going' || a.status === 'interested'))
     );
-  }, [events, currentUserId]);
+  }, [events, currentUserId, user]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -164,16 +209,26 @@ const EventsPage: React.FC = () => {
           <div className="overflow-x-auto scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex sm:justify-center">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
               <TabsTrigger value="discover" className="flex-shrink-0 whitespace-nowrap">Discover</TabsTrigger>
-              <TabsTrigger value="connections" className="flex-shrink-0 whitespace-nowrap">
-                Connections ({connectionsEvents.length})
-              </TabsTrigger>
-              <TabsTrigger value="my-events" className="flex-shrink-0 whitespace-nowrap">
-                My Events ({myEvents.length})
-              </TabsTrigger>
+              {user && (
+                <>
+                  <TabsTrigger value="connections" className="flex-shrink-0 whitespace-nowrap">
+                    Connections ({connectionsEvents.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="my-events" className="flex-shrink-0 whitespace-nowrap">
+                    My Events ({myEvents.length})
+                  </TabsTrigger>
+                </>
+              )}
             </TabsList>
           </div>
 
           <TabsContent value="discover" className="space-y-6">
+            {eventsError && (
+              <div className="rounded-lg border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-muted-foreground">
+                Events could not load from the local sandbox right now. Check that Supabase is running, then refresh this page.
+              </div>
+            )}
+
             {/* Filters */}
             <EventFilters
               search={search}
@@ -202,7 +257,7 @@ const EventsPage: React.FC = () => {
                   </h3>
                   {filteredEvents.length === 0 ? (
                     <p className="text-muted-foreground text-sm">
-                      No events found for this date.
+                      {eventsLoading ? 'Loading events...' : 'No events found for this date.'}
                     </p>
                   ) : (
                     filteredEvents.map((event) => (
@@ -213,7 +268,11 @@ const EventsPage: React.FC = () => {
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredEvents.length === 0 ? (
+                {eventsLoading ? (
+                  <div className="col-span-full flex items-center justify-center py-12 text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : filteredEvents.length === 0 ? (
                   <div className="col-span-full text-center py-12 text-muted-foreground">
                     No events found matching your filters.
                   </div>

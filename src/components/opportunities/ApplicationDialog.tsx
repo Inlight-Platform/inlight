@@ -130,7 +130,8 @@ const ApplicationDialog: React.FC<ApplicationDialogProps> = ({
 
   const handleSubmit = async () => {
     if (!user) {
-      toast.error('You must be logged in to apply');
+      onOpenChange(false);
+      navigate('/auth', { state: { from: { pathname: window.location.pathname, search: window.location.search } } });
       return;
     }
 

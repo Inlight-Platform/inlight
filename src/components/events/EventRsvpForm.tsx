@@ -104,6 +104,10 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUserId) {
+      navigate('/auth', { state: { from: { pathname: window.location.pathname, search: window.location.search } } });
+      return;
+    }
     if (eventHasPassed) {
       toast.error('RSVPs are closed for this past event.');
       return;
@@ -247,11 +251,17 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
         <Button
           className="w-full gap-2 text-base py-6"
           size="lg"
-          onClick={() => setDialogOpen(true)}
+          onClick={() => {
+            if (!currentUserId) {
+              navigate('/auth', { state: { from: { pathname: window.location.pathname, search: window.location.search } } });
+              return;
+            }
+            setDialogOpen(true);
+          }}
           disabled={eventHasPassed}
         >
           <PartyPopper className="w-5 h-5" />
-          {eventHasPassed ? 'RSVP Closed' : 'RSVP to this Event'}
+          {!currentUserId && !eventHasPassed ? 'Sign in to RSVP' : eventHasPassed ? 'RSVP Closed' : 'RSVP to this Event'}
         </Button>
       ) : !isPaid ? (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 text-center space-y-2">

@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
+import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 const EMPTY_FILTERS: FilterState = {
   category: [],
   showType: [],
@@ -386,7 +387,7 @@ const StageWhisperPage: React.FC = () => {
     );
   };
 
-  const content = <div className="w-full">
+  const content = <div className="relative w-full">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -511,6 +512,16 @@ const StageWhisperPage: React.FC = () => {
             </Button>
           </div>}
       </header>
+
+      {!user && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6">
+          <VisitorAuthPrompt
+            title="Industry Now"
+            description="Browse public shows, films, and local performances. Sign in to save picks, add community listings, and keep a personal industry watchlist."
+            features={['Theatre', 'Film', 'Music', 'Saved picks']}
+          />
+        </div>
+      )}
 
       {/* Content */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
