@@ -9,6 +9,16 @@ const isExistingSignupResponse = (data: Awaited<ReturnType<typeof supabase.auth.
   return Boolean(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
 };
 
+const clearStoredAuthSession = () => {
+  try {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith('sb-') && key.includes('auth'))
+      .forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // Storage can be unavailable in private/restricted browser contexts.
+  }
+};
+
 type SignupRpcResult<T> = {
   data: T | null;
   error: { message: string } | null;
@@ -291,18 +301,22 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    const result = await supabase.auth.signOut({ scope: 'local' });
-    if (result.error) {
-      // The Supabase client won't clear the local session when the server
-      // returns a non-404/401/403 error. Clear auth keys from storage
-      // ourselves so a subsequent page load starts unauthenticated.
-      try {
-        Object.keys(localStorage)
-          .filter((k) => k.startsWith('sb-') && k.includes('auth'))
-          .forEach((k) => localStorage.removeItem(k));
-      } catch { /* storage unavailable */ }
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) {
+        console.warn('Supabase sign-out returned an error; clearing local session anyway.', error);
+      }
+    } catch (error) {
+      console.warn('Supabase sign-out failed; clearing local session anyway.', error);
     }
-    return result;
+
+    clearStoredAuthSession();
+    setSession(null);
+    setUser(null);
+    setIsPasswordRecovery(false);
+    setRecoveryError(null);
+
+    return { error: null };
   };
 
   const resetPassword = async (email: string) => {

@@ -229,6 +229,26 @@ const PlatformInvitesManager: React.FC = () => {
   const [note, setNote] = useState('');
   const [latestInviteUrl, setLatestInviteUrl] = useState('');
 
+  const getFunctionErrorMessage = async (error: Error & { context?: unknown }) => {
+    const response = error.context instanceof Response ? error.context.clone() : null;
+    if (!response) return error.message || 'Failed to send invite';
+
+    try {
+      const responseBody = await response.json();
+      if (typeof responseBody?.error === 'string') return responseBody.error;
+      if (typeof responseBody?.message === 'string') return responseBody.message;
+    } catch {
+      try {
+        const text = await response.text();
+        if (text.trim()) return text.trim();
+      } catch {
+        // Fall through to the Supabase error message below.
+      }
+    }
+
+    return error.message || 'Failed to send invite';
+  };
+
   const { data: invites = [], isLoading } = useQuery({
     queryKey: ['platform-invites'],
     queryFn: async () => {
@@ -248,12 +268,7 @@ const PlatformInvitesManager: React.FC = () => {
         body: { email, note: note || undefined },
       });
       if (error) {
-        let message: string | undefined;
-        try {
-          const responseBody = await (error.context as Response)?.json();
-          message = responseBody?.error;
-        } catch {}
-        throw new Error(message || error.message || 'Failed to send invite');
+        throw new Error(await getFunctionErrorMessage(error));
       }
       return data as { invite: { email: string; token: string }; inviteUrl?: string; alreadyMember?: boolean };
     },
@@ -261,6 +276,7 @@ const PlatformInvitesManager: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['platform-invites'] });
       setEmail('');
       setNote('');
+      setLatestInviteUrl('');
       if (data.alreadyMember) {
         toast.success(`${data.invite.email} is already on Inlight!`);
       } else {
