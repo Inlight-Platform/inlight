@@ -78,15 +78,6 @@ jobs:
       - name: Run tests
         run: npm run test:run
 
-      - name: Deploy sandbox invite functions
-        run: |
-          project_ref="$(node -e "const host = new URL(process.env.VITE_SUPABASE_URL).hostname; const ref = host.split('.')[0]; if (!ref || host === 'piofmmawwnermvaysonw.supabase.co') process.exit(1); process.stdout.write(ref);")"
-          site_url="https://${PREVIEW_BRANCH}.${CF_PAGES_PROJECT_NAME}.pages.dev"
-
-          npx --yes supabase@latest functions deploy send-platform-invite --project-ref "$project_ref"
-          npx --yes supabase@latest functions deploy send-project-credit-invite --project-ref "$project_ref"
-          npx --yes supabase@latest secrets set RESEND_API_KEY="$RESEND_API_KEY" SITE_URL="$site_url" --project-ref "$project_ref"
-
       - name: Build sandbox app
         run: npm run build:sandbox
 
@@ -108,6 +99,16 @@ jobs:
             url="https://${PREVIEW_BRANCH}.${CF_PAGES_PROJECT_NAME}.pages.dev"
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy sandbox invite functions
+        env:
+          PREVIEW_URL: ${{ steps.preview-url.outputs.url }}
+        run: |
+          project_ref="$(node -e "const host = new URL(process.env.VITE_SUPABASE_URL).hostname; const ref = host.split('.')[0]; if (!ref || host === 'piofmmawwnermvaysonw.supabase.co') process.exit(1); process.stdout.write(ref);")"
+
+          npx --yes supabase@latest secrets set RESEND_API_KEY="$RESEND_API_KEY" SITE_URL="$PREVIEW_URL" --project-ref "$project_ref"
+          npx --yes supabase@latest functions deploy send-platform-invite --project-ref "$project_ref"
+          npx --yes supabase@latest functions deploy send-project-credit-invite --project-ref "$project_ref"
 
       - name: Comment preview URL
         uses: actions/github-script@v7
