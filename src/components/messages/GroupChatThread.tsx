@@ -1,11 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Users } from 'lucide-react';
+import SharedItemCard, { parseSharedItem, SharedItemData } from '@/components/messages/SharedItemCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useGroupChats } from '@/hooks/useGroupChats';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Show } from '@/components/stage-whisper/ShowCard';
+import { ShowDetailSheet } from '@/components/stage-whisper/ShowDetailSheet';
+import { FilmDetailSheet } from '@/components/stage-whisper/FilmDetailSheet';
+import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
+import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
+import { OpportunityView } from '@/hooks/useOpportunities';
+import { useSavedShows } from '@/hooks/useSavedShows';
+import { useSavedFilms } from '@/hooks/useSavedFilms';
 
 interface GroupChatThreadProps {
   groupChatId: string;
@@ -18,6 +29,88 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
   const { user } = useAuth();
   const { useGroupMessages, sendGroupMessage } = useGroupChats();
   const { data: messages = [], isLoading } = useGroupMessages(groupChatId);
+
+  const [detailShowId, setDetailShowId] = useState<string | null>(null);
+  const [detailFilmId, setDetailFilmId] = useState<string | null>(null);
+  const [detailJobId, setDetailJobId] = useState<string | null>(null);
+  const [detailJobShared, setDetailJobShared] = useState<SharedItemData | null>(null);
+  const [showApplyDialog, setShowApplyDialog] = useState(false);
+
+  const { isSaved: isShowSaved, saveShow, unsaveShow } = useSavedShows();
+  const { isFilmSaved, saveFilm, unsaveFilm } = useSavedFilms();
+
+  const { data: detailShow } = useQuery<Show | null>({
+    queryKey: ['gc-detail-show', detailShowId],
+    queryFn: async () => {
+      if (!detailShowId) return null;
+      const { data } = await supabase.from('nyc_shows').select('*').eq('id', detailShowId).single();
+      return data as Show;
+    },
+    enabled: !!detailShowId,
+  });
+
+  const { data: detailFilm } = useQuery<any | null>({
+    queryKey: ['gc-detail-film', detailFilmId],
+    queryFn: async () => {
+      if (!detailFilmId) return null;
+      const { data } = await supabase.from('film_metrics').select('*').eq('id', detailFilmId).single();
+      return data;
+    },
+    enabled: !!detailFilmId,
+  });
+
+  const { data: detailOpportunity } = useQuery<OpportunityView | null>({
+    queryKey: ['gc-detail-job', detailJobId],
+    queryFn: async () => {
+      if (!detailJobId) return null;
+      const { data } = await supabase.from('opportunities').select('*').eq('id', detailJobId).maybeSingle();
+      if (data) {
+        return {
+          id: data.id, title: data.title, description: data.description,
+          type: data.type, status: data.status, postedBy: data.posted_by,
+          company: data.company || undefined, location: data.location || 'Remote',
+          isRemote: data.is_remote, compensation: data.compensation || undefined,
+          experienceLevel: data.experience_level, roles: data.roles || [],
+          skills: (data as any).skills || [], requirements: data.requirements || [],
+          deadline: data.deadline || undefined, startDate: data.start_date || undefined,
+          duration: data.duration || undefined, tags: data.tags || [],
+          createdAt: data.created_at, isFeatured: data.is_featured,
+          actionType: data.action_type || 'apply', imageUrl: data.image_url || undefined,
+          linkUrl: data.link_url || undefined, linkTitle: data.link_title || undefined,
+          source: 'opportunity' as const, applicants: [],
+        } as OpportunityView;
+      }
+      const { data: post } = await supabase.from('posts').select('id, content, image_url, link_url, link_title, created_at').eq('id', detailJobId).maybeSingle();
+      if (post) {
+        const titleMatch = post.content?.match(/^🎯\s+\*\*(.+?)\*\*/);
+        const title = titleMatch?.[1]?.trim() || detailJobShared?.title || 'Job Opportunity';
+        const linkUrl = post.link_url || post.content?.match(/https?:\/\/[^\s)]+/)?.[0] || undefined;
+        return {
+          id: post.id, title, type: 'job', status: 'open', postedBy: '',
+          description: post.content?.split('\n').slice(1).join('\n').replace(/https?:\/\/[^\s)]+/g, '').trim() || '',
+          location: 'Remote', isRemote: true, experienceLevel: 'any',
+          roles: [], skills: [], requirements: [], tags: [],
+          createdAt: post.created_at, isFeatured: false,
+          actionType: linkUrl ? 'external' : 'apply',
+          imageUrl: post.image_url || detailJobShared?.image_url || undefined,
+          linkUrl, linkTitle: post.link_title || undefined,
+          source: 'opportunity' as const, applicants: [],
+        } as OpportunityView;
+      }
+      return null;
+    },
+    enabled: !!detailJobId,
+  });
+
+  const handleSharedItemClick = (item: SharedItemData) => {
+    if (!item.url) return;
+    const showMatch = item.url.match(/showId=([^&]+)/);
+    const filmMatch = item.url.match(/filmId=([^&]+)/);
+    const jobMatch = item.url.match(/jobId=([^&]+)/);
+    if (showMatch) { setDetailShowId(showMatch[1]); return; }
+    if (filmMatch) { setDetailFilmId(filmMatch[1]); return; }
+    if (jobMatch) { setDetailJobShared(item); setDetailJobId(jobMatch[1]); return; }
+  };
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -110,22 +203,40 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
                             {msg.sender?.display_name || 'Unknown'}
                           </p>
                         )}
-                        <div
-                          className={cn(
-                            'px-4 py-2 rounded-2xl',
-                            isOwn
-                              ? 'bg-primary text-primary-foreground rounded-br-sm'
-                              : 'bg-muted rounded-bl-sm'
-                          )}
-                        >
-                          <p className="text-sm break-words">{msg.content}</p>
-                          <p className={cn(
-                            'text-[10px] mt-1',
-                            isOwn ? 'text-primary-foreground/70 text-right' : 'text-muted-foreground'
-                          )}>
-                            {formatTime(msg.created_at)}
-                          </p>
-                        </div>
+                        {(() => {
+                          const sharedItem = parseSharedItem(msg.content);
+                          if (sharedItem) {
+                            return (
+                              <div>
+                                <SharedItemCard data={sharedItem} isOwn={isOwn} onCardClick={handleSharedItemClick} />
+                                <p className={cn(
+                                  'text-[10px] mt-1',
+                                  isOwn ? 'text-right text-muted-foreground' : 'text-muted-foreground'
+                                )}>
+                                  {formatTime(msg.created_at)}
+                                </p>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div
+                              className={cn(
+                                'px-4 py-2 rounded-2xl',
+                                isOwn
+                                  ? 'bg-primary text-primary-foreground rounded-br-sm'
+                                  : 'bg-muted rounded-bl-sm'
+                              )}
+                            >
+                              <p className="text-sm break-words">{msg.content}</p>
+                              <p className={cn(
+                                'text-[10px] mt-1',
+                                isOwn ? 'text-primary-foreground/70 text-right' : 'text-muted-foreground'
+                              )}>
+                                {formatTime(msg.created_at)}
+                              </p>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   );
@@ -136,6 +247,38 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      <ShowDetailSheet
+        show={detailShow ?? null}
+        isOpen={!!detailShowId && !!detailShow}
+        onClose={() => setDetailShowId(null)}
+        isSaved={detailShow ? isShowSaved(detailShow.id) : false}
+        onSave={saveShow}
+        onUnsave={unsaveShow}
+      />
+      <FilmDetailSheet
+        film={detailFilm ?? null}
+        isOpen={!!detailFilmId && !!detailFilm}
+        onClose={() => setDetailFilmId(null)}
+        isSaved={detailFilm ? isFilmSaved(detailFilm.id) : false}
+        onSave={saveFilm}
+        onUnsave={unsaveFilm}
+      />
+      <OpportunityDetailSheet
+        opportunity={detailOpportunity ?? null}
+        open={!!detailJobId && !!detailOpportunity}
+        onOpenChange={(open) => { if (!open) setDetailJobId(null); }}
+        posterProfile={null}
+        hasApplied={false}
+        onApply={() => setShowApplyDialog(true)}
+      />
+      <ApplicationDialog
+        open={showApplyDialog}
+        onOpenChange={(open) => { if (!open) setShowApplyDialog(false); }}
+        opportunityId={detailJobId || ''}
+        opportunityTitle={detailOpportunity?.title || ''}
+        onApplicationSubmitted={() => { setShowApplyDialog(false); setDetailJobId(null); }}
+      />
 
       {/* Input Area */}
       <div className="border-t border-border p-4">

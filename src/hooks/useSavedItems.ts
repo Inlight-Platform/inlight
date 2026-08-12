@@ -48,14 +48,14 @@ export const useSavedItems = () => {
       if (!user?.id) throw new Error('Must be logged in');
       const { error } = await supabase
         .from('saved_items')
-        .insert({
+        .upsert({
           user_id: user.id,
           item_type: input.item_type,
           item_id: input.item_id || null,
           item_title: input.item_title,
-          item_url: input.item_url || null,
+          item_url: input.item_url || '',
           item_metadata: input.item_metadata || {},
-        });
+        }, { onConflict: 'user_id,item_type,item_title,item_url', ignoreDuplicates: true });
       if (error) throw error;
     },
     onSuccess: () => {
