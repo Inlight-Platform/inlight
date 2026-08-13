@@ -976,7 +976,7 @@ const OpportunitiesPage: React.FC = () => {
             )}
 
             {!isLoading && (
-              <OpenRolesFeed prependOpportunities={openOpportunities} />
+              <OpenRolesFeed prependOpportunities={openOpportunities} restoreOpportunities={allOpportunities} />
             )}
           </TabsContent>
 

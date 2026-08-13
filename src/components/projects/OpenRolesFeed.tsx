@@ -36,7 +36,10 @@ interface OpenRole {
   createdAt: string;
 }
 
-export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] }> = ({ prependOpportunities = [] }) => {
+export const OpenRolesFeed: React.FC<{
+  prependOpportunities?: OpportunityView[];
+  restoreOpportunities?: OpportunityView[];
+}> = ({ prependOpportunities = [], restoreOpportunities = prependOpportunities }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -83,7 +86,7 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
     if (!jobId) return;
     if (restoredOpportunityIdRef.current === jobId) return;
 
-    const restoredOpportunity = prependOpportunities.find((opportunity) => opportunity.id === jobId);
+    const restoredOpportunity = restoreOpportunities.find((opportunity) => opportunity.id === jobId);
     if (!restoredOpportunity) return;
 
     restoredOpportunityIdRef.current = jobId;
@@ -96,7 +99,7 @@ export const OpenRolesFeed: React.FC<{ prependOpportunities?: OpportunityView[] 
       replace: true,
       state: Object.keys(nextRouteState).length > 0 ? nextRouteState : undefined,
     });
-  }, [prependOpportunities, location, navigate]);
+  }, [restoreOpportunities, location, navigate]);
 
   useEffect(() => {
     const fetchProfile = async () => {
