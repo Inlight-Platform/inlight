@@ -251,7 +251,6 @@ const ProfileSettingsPage: React.FC = () => {
   const [instagramUrl, setInstagramUrl] = useState('');
   const [messagePrivacy, setMessagePrivacy] = useState('mutuals_only');
   const [anonymousEventRsvps, setAnonymousEventRsvps] = useState(false);
-  const [eventPrivacySettingSupported, setEventPrivacySettingSupported] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
@@ -306,12 +305,12 @@ const ProfileSettingsPage: React.FC = () => {
 
       if (eventPrivacySettingsError) {
         if (/anonymous_event_rsvps|schema cache|column/i.test(eventPrivacySettingsError.message)) {
-          setEventPrivacySettingSupported(false);
+          console.warn('ProfileSettingsPage: event privacy preference could not be loaded yet', eventPrivacySettingsError);
         } else {
           console.error('ProfileSettingsPage: failed loading event privacy settings', eventPrivacySettingsError);
         }
       } else {
-        setEventPrivacySettingSupported(true);
+        setAnonymousEventRsvps(Boolean((eventPrivacySettings as { anonymous_event_rsvps?: boolean } | null)?.anonymous_event_rsvps));
       }
 
       return {
@@ -402,7 +401,6 @@ const ProfileSettingsPage: React.FC = () => {
     if (error) {
       setAnonymousEventRsvps(previousValue);
       if (/anonymous_event_rsvps|schema cache|column/i.test(error.message)) {
-        setEventPrivacySettingSupported(false);
         toast.error('Event privacy setting is not available until the latest database migration is applied.');
         return;
       }
@@ -861,15 +859,9 @@ const ProfileSettingsPage: React.FC = () => {
               </div>
               <Switch
                 checked={anonymousEventRsvps}
-                disabled={!eventPrivacySettingSupported}
                 onCheckedChange={updateAnonymousEventRsvpPreference}
               />
             </div>
-            {!eventPrivacySettingSupported && (
-              <p className="text-xs text-muted-foreground mt-3">
-                This setting will be available after the latest database migration is applied.
-              </p>
-            )}
           </CardContent>
         </Card>
 
