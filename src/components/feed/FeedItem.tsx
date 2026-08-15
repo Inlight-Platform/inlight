@@ -35,6 +35,7 @@ export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show' | 'open
 
 export interface FeedItemData {
   id: string;
+  slug?: string | null;
   type: FeedItemType;
   user_id: string;
   content?: string;

@@ -6,9 +6,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { projectPath } from '@/lib/publicPaths';
 
 interface Project {
   id: string;
+  slug?: string | null;
   title: string;
   description: string | null;
   main_image_url: string | null;
@@ -102,7 +104,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({ userId, isOwnProfile }) 
   const ProjectCard = ({ project, showRole = false }: { project: Project; showRole?: boolean }) => (
     <Card 
       className="flex aspect-square cursor-pointer flex-col overflow-hidden bg-card border-border transition-shadow hover:shadow-lg"
-      onClick={() => navigate(`/projects/${project.id}`, { state: { returnTo, returnState: routeState || undefined } })}
+      onClick={() => navigate(projectPath(project), { state: { returnTo, returnState: routeState || undefined } })}
     >
       {project.header_image_url || project.main_image_url ? (
         <img

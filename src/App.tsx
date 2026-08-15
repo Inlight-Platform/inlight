@@ -99,6 +99,7 @@ const App = () => (
             <Route path="/mutuals" element={<PeoplePage />} />
             <Route path="/insights" element={<InsightsPage />} />
             <Route path="/events" element={<EventsPage />} />
+            <Route path="/events/:eventId" element={<FeedPage />} />
             <Route path="/opportunities" element={<OpportunitiesPage />} />
             <Route path="/messages" element={<RequireAuth><MessagesPage /></RequireAuth>} />
             <Route path="/messages/direct/:userId" element={<RequireAuth><MessagesPage /></RequireAuth>} />

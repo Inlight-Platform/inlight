@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +27,7 @@ import { VisitorAuthOverlay, VisitorAuthPrompt } from '@/components/auth/Visitor
 import { toast } from 'sonner';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
 import { clearAuthRestore, readAuthRestore } from '@/lib/authRestore';
+import { eventPath, projectPath } from '@/lib/publicPaths';
 
 type NetworkFilter = 'all' | '1st';
 type ContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates' | 'group';
@@ -48,6 +49,7 @@ type ProjectCategory = typeof PROJECT_CATEGORIES[number]['value'];
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { eventId: routeEventIdentifier } = useParams<{ eventId?: string }>();
   const routeState = location.state as { scrollToTop?: boolean; restore?: ReturnType<typeof readAuthRestore> } | null;
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -69,10 +71,18 @@ const FeedPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const showVisitorFeedGate = (contentFilter === 'you' || contentFilter === 'updates') && !user;
 
-  const updateEventSearchParam = useCallback((eventId?: string) => {
+  const updateEventSearchParam = useCallback((event?: FeedItemData) => {
+    if (location.pathname.startsWith('/events/')) {
+      navigate(event ? eventPath(event) : '/events', {
+        replace: true,
+        state: location.state,
+      });
+      return;
+    }
+
     const nextParams = new URLSearchParams(location.search);
-    if (eventId) {
-      nextParams.set('event', eventId);
+    if (event) {
+      nextParams.set('event', event.slug || event.id);
     } else {
       nextParams.delete('event');
     }
@@ -87,7 +97,7 @@ const FeedPage: React.FC = () => {
   const openFeedDetails = useCallback((item: FeedItemData) => {
     setSelectedItem(item);
     if (item.type === 'event') {
-      updateEventSearchParam(item.id);
+      updateEventSearchParam(item);
     }
   }, [updateEventSearchParam]);
 
@@ -381,6 +391,7 @@ const FeedPage: React.FC = () => {
 
       return data.map((event) => ({
         id: event.id,
+        slug: event.slug,
         type: 'event' as const,
         user_id: event.user_id,
         title: event.title,
@@ -408,12 +419,12 @@ const FeedPage: React.FC = () => {
 
   useEffect(() => {
     const storedRestore = routeState?.restore || readAuthRestore();
-    const eventId = storedRestore?.type === 'event'
+    const eventIdentifier = storedRestore?.type === 'event'
       ? storedRestore.id
-      : searchParams.get('event');
-    if (!eventId || selectedItem?.id === eventId) return;
+      : routeEventIdentifier || searchParams.get('event');
+    if (!eventIdentifier || selectedItem?.id === eventIdentifier || selectedItem?.slug === eventIdentifier) return;
 
-    const restoredEvent = events.find((event) => event.id === eventId);
+    const restoredEvent = events.find((event) => event.id === eventIdentifier || event.slug === eventIdentifier);
     if (!restoredEvent) return;
 
     setContentFilter('events');
@@ -425,7 +436,7 @@ const FeedPage: React.FC = () => {
         state: routeState.scrollToTop ? { scrollToTop: routeState.scrollToTop } : undefined,
       });
     }
-  }, [events, location.hash, location.pathname, location.search, navigate, routeState, searchParams, selectedItem?.id]);
+  }, [events, location.hash, location.pathname, location.search, navigate, routeEventIdentifier, routeState, searchParams, selectedItem?.id, selectedItem?.slug]);
 
   // Fetch saved projects
   const { data: savedProjects = [] } = useQuery({
@@ -562,6 +573,7 @@ const FeedPage: React.FC = () => {
   const projectsToFeedItems = (list: typeof allProjects): FeedItemData[] =>
     list.map((project) => ({
       id: project.id,
+      slug: project.slug,
       type: 'project' as const,
       user_id: project.creator_id,
       title: project.title,
@@ -601,7 +613,7 @@ const FeedPage: React.FC = () => {
             key={`project-${item.id}`}
             item={item}
             size={getBentoSize(idx)}
-            onClick={() => navigate(`/projects/${item.id}`, { state: { returnTo: feedReturnTo } })}
+            onClick={() => navigate(projectPath(item), { state: { returnTo: feedReturnTo } })}
           />
         ))}
       </div>
@@ -695,7 +707,7 @@ const FeedPage: React.FC = () => {
     return (
       <Card
         className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border"
-        onClick={() => navigate(`/projects/${project.id}`, { state: { returnTo: feedReturnTo } })}
+        onClick={() => navigate(projectPath(project), { state: { returnTo: feedReturnTo } })}
       >
         <div className="relative">
           <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1">
@@ -1113,7 +1125,7 @@ const FeedPage: React.FC = () => {
                         size={getBentoSize(idx)}
                         onClick={() => {
                           if (item.type === 'project') {
-                            navigate(`/projects/${item.id}`, { state: { returnTo: feedReturnTo } });
+                            navigate(projectPath(item), { state: { returnTo: feedReturnTo } });
                           } else if (item.type === 'event') {
                             openFeedDetails(item);
                           } else if (item.type === 'post') {

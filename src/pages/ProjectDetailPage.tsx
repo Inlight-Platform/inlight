@@ -52,6 +52,7 @@ import { useLocation } from 'react-router-dom';
 import { InviteFriendDialog } from '@/components/invitations/InviteFriendDialog';
 import { ProjectInvitationPrompt } from '@/components/invitations/ProjectInvitationPrompt';
 import { UserSearchInput } from '@/components/projects/UserSearchInput';
+import { isUuid } from '@/lib/publicPaths';
 
 interface InviteeProfile {
   user_id: string;
@@ -160,11 +161,15 @@ const ProjectDetailPage: React.FC = () => {
     queryKey: ['project', projectId],
     queryFn: async () => {
       if (!projectId) return null;
-      const { data, error } = await supabase
+      let query = supabase
         .from('projects')
-        .select('*')
-        .eq('id', projectId)
-        .single();
+        .select('*');
+
+      query = isUuid(projectId)
+        ? query.eq('id', projectId)
+        : query.eq('slug', projectId);
+
+      const { data, error } = await query.single();
       
       if (error) throw error;
 
@@ -179,16 +184,17 @@ const ProjectDetailPage: React.FC = () => {
     },
     enabled: !!projectId,
   });
+  const resolvedProjectId = project?.id || (isUuid(projectId) ? projectId : undefined);
 
   // Fetch project members
   const { data: members = [] } = useQuery({
-    queryKey: ['project-members', projectId],
+    queryKey: ['project-members', resolvedProjectId],
     queryFn: async () => {
-      if (!projectId) return [];
+      if (!resolvedProjectId) return [];
       const { data, error } = await supabase
         .from('project_members')
         .select('*')
-        .eq('project_id', projectId);
+        .eq('project_id', resolvedProjectId);
       
       if (error) throw error;
 
@@ -206,57 +212,57 @@ const ProjectDetailPage: React.FC = () => {
         profile: profileMap.get(member.user_id)
       })) as ProjectMember[];
     },
-    enabled: !!projectId,
+    enabled: !!resolvedProjectId,
   });
 
   // Fetch project photos
   const { data: photos = [] } = useQuery({
-    queryKey: ['project-photos', projectId],
+    queryKey: ['project-photos', resolvedProjectId],
     queryFn: async () => {
-      if (!projectId) return [];
+      if (!resolvedProjectId) return [];
       const { data, error } = await supabase
         .from('project_photos')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id', resolvedProjectId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as ProjectPhoto[];
     },
-    enabled: !!projectId,
+    enabled: !!resolvedProjectId,
   });
 
   // Fetch project links
   const { data: projectLinks = [] } = useQuery({
-    queryKey: ['project-links', projectId],
+    queryKey: ['project-links', resolvedProjectId],
     queryFn: async () => {
-      if (!projectId) return [];
+      if (!resolvedProjectId) return [];
       const { data, error } = await supabase
         .from('project_links')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id', resolvedProjectId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data as ProjectLink[];
     },
-    enabled: !!projectId,
+    enabled: !!resolvedProjectId,
   });
 
   // Check if saved
   const { data: isSaved } = useQuery({
-    queryKey: ['project-saved', projectId, user?.id],
+    queryKey: ['project-saved', resolvedProjectId, user?.id],
     queryFn: async () => {
-      if (!projectId || !user?.id) return false;
+      if (!resolvedProjectId || !user?.id) return false;
       const { data } = await supabase
         .from('saved_projects')
         .select('id')
-        .eq('project_id', projectId)
+        .eq('project_id', resolvedProjectId)
         .eq('user_id', user.id)
         .maybeSingle();
       return !!data;
     },
-    enabled: !!projectId && !!user?.id,
+    enabled: !!resolvedProjectId && !!user?.id,
   });
 
   const isCreator = project?.creator_id === user?.id;
@@ -266,11 +272,11 @@ const ProjectDetailPage: React.FC = () => {
 
   const togglePublicMutation = useMutation({
     mutationFn: async (next: boolean) => {
-      if (!projectId) throw new Error('Missing project');
+      if (!resolvedProjectId) throw new Error('Missing project');
       const { error } = await supabase
         .from('projects')
         .update({ is_public: next })
-        .eq('id', projectId);
+        .eq('id', resolvedProjectId);
       if (error) throw error;
       return next;
     },
@@ -284,7 +290,7 @@ const ProjectDetailPage: React.FC = () => {
   // Handle file upload
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !projectId || !user?.id) return;
+    if (!file || !resolvedProjectId || !user?.id) return;
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -298,10 +304,10 @@ const ProjectDetailPage: React.FC = () => {
       return;
     }
 
-    const result = await uploadPhoto(file, projectId, user.id, photoCaption);
+    const result = await uploadPhoto(file, resolvedProjectId, user.id, photoCaption);
     
     if (result) {
-      queryClient.invalidateQueries({ queryKey: ['project-photos', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-photos', resolvedProjectId] });
       setPhotoCaption('');
       setAddPhotoOpen(false);
     }
@@ -323,7 +329,7 @@ const ProjectDetailPage: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-photos', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-photos', resolvedProjectId] });
       toast.success('Photo deleted');
     },
     onError: () => toast.error('Failed to delete photo'),
@@ -332,18 +338,18 @@ const ProjectDetailPage: React.FC = () => {
   // Add member mutation
   const addMemberMutation = useMutation({
     mutationFn: async () => {
-      if (!projectId || !memberEmail.trim()) throw new Error('Invalid data');
+      if (!resolvedProjectId || !memberEmail.trim()) throw new Error('Invalid data');
       if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
       
       const { error } = await supabase.rpc('add_project_member_by_email', {
-        target_project_id: projectId,
+        target_project_id: resolvedProjectId,
         target_email: memberEmail.trim(),
         target_role: memberRole.trim() || null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-members', resolvedProjectId] });
       setMemberEmail('');
       setMemberRole('');
       setAddMemberOpen(false);
@@ -355,23 +361,23 @@ const ProjectDetailPage: React.FC = () => {
   // Toggle save mutation
   const toggleSaveMutation = useMutation({
     mutationFn: async () => {
-      if (!projectId || !user?.id) throw new Error('Must be logged in');
+      if (!resolvedProjectId || !user?.id) throw new Error('Must be logged in');
       if (isSaved) {
         const { error } = await supabase
           .from('saved_projects')
           .delete()
-          .eq('project_id', projectId)
+          .eq('project_id', resolvedProjectId)
           .eq('user_id', user.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('saved_projects')
-          .insert({ project_id: projectId, user_id: user.id });
+          .insert({ project_id: resolvedProjectId, user_id: user.id });
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-saved', projectId, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['project-saved', resolvedProjectId, user?.id] });
       queryClient.invalidateQueries({ queryKey: ['saved-projects'] });
       toast.success(isSaved ? 'Removed from saved' : 'Project saved!');
     },
@@ -381,7 +387,7 @@ const ProjectDetailPage: React.FC = () => {
   // Add project link mutation
   const addProjectLinkMutation = useMutation({
     mutationFn: async () => {
-      if (!projectId || !user?.id) throw new Error('You must be logged in');
+      if (!resolvedProjectId || !user?.id) throw new Error('You must be logged in');
       if (!canManageProjectContent) throw new Error('Only project team members can add links.');
 
       const title = linkTitle.trim();
@@ -397,7 +403,7 @@ const ProjectDetailPage: React.FC = () => {
       const { error } = await supabase
         .from('project_links')
         .insert({
-          project_id: projectId,
+          project_id: resolvedProjectId,
           user_id: user.id,
           title,
           url,
@@ -406,7 +412,7 @@ const ProjectDetailPage: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-links', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-links', resolvedProjectId] });
       resetLinkDialog();
       setAddLinkOpen(false);
       toast.success('Link added');
@@ -438,7 +444,7 @@ const ProjectDetailPage: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-links', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-links', resolvedProjectId] });
       resetLinkDialog();
       setAddLinkOpen(false);
       toast.success('Link updated');
@@ -457,7 +463,7 @@ const ProjectDetailPage: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-links', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-links', resolvedProjectId] });
       toast.success('Link removed');
     },
     onError: () => toast.error('Failed to remove link'),
@@ -466,12 +472,12 @@ const ProjectDetailPage: React.FC = () => {
   // Delete project mutation
   const deleteProjectMutation = useMutation({
     mutationFn: async () => {
-      if (!projectId) throw new Error('No project ID');
+      if (!resolvedProjectId) throw new Error('No project ID');
       if (!canManageProjects) throw new Error('This beta group cannot delete projects.');
       const { error } = await supabase
         .from('projects')
         .delete()
-        .eq('id', projectId);
+        .eq('id', resolvedProjectId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -486,12 +492,12 @@ const ProjectDetailPage: React.FC = () => {
   // Update description mutation
   const updateDescriptionMutation = useMutation({
     mutationFn: async (newDescription: string) => {
-      if (!projectId) throw new Error('No project ID');
+      if (!resolvedProjectId) throw new Error('No project ID');
       if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
       const { error } = await supabase
         .from('projects')
         .update({ description: newDescription })
-        .eq('id', projectId);
+        .eq('id', resolvedProjectId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -505,14 +511,14 @@ const ProjectDetailPage: React.FC = () => {
   // Add role mutation
   const addRoleMutation = useMutation({
     mutationFn: async ({ roleName, invitee }: { roleName: string; invitee: InviteeProfile | null }) => {
-      if (!projectId) throw new Error('No project ID');
+      if (!resolvedProjectId) throw new Error('No project ID');
       if (!user?.id) throw new Error('You must be logged in');
       if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
 
       const { data: projectRole, error } = await supabase
         .from('project_roles')
         .insert({
-          project_id: projectId,
+          project_id: resolvedProjectId,
           role_name: roleName.trim(),
           assigned_user_id: invitee?.user_id || null,
         })
@@ -535,8 +541,8 @@ const ProjectDetailPage: React.FC = () => {
       }
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project-role-invitations', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['open-roles', resolvedProjectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-role-invitations', resolvedProjectId] });
       setNewRoleName('');
       setSelectedRoleInvitee(null);
       setAddRoleOpen(false);
@@ -558,7 +564,7 @@ const ProjectDetailPage: React.FC = () => {
       if (!data?.length) throw new Error('No matching role was removed.');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['open-roles', resolvedProjectId] });
       toast.success('Role removed');
     },
     onError: () => toast.error('Failed to remove role'),
@@ -575,7 +581,7 @@ const ProjectDetailPage: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-members', resolvedProjectId] });
       toast.success('Team member removed');
     },
     onError: () => toast.error('Failed to remove team member'),
@@ -583,12 +589,12 @@ const ProjectDetailPage: React.FC = () => {
   // Update Google Drive URL mutation
   const updateDriveUrlMutation = useMutation({
     mutationFn: async (url: string) => {
-      if (!projectId) throw new Error('No project ID');
+      if (!resolvedProjectId) throw new Error('No project ID');
       if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
       const { error } = await supabase
         .from('projects')
         .update({ google_drive_url: url || null })
-        .eq('id', projectId);
+        .eq('id', resolvedProjectId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -601,7 +607,7 @@ const ProjectDetailPage: React.FC = () => {
 
   const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !projectId || !user?.id) return;
+    if (!file || !resolvedProjectId || !user?.id) return;
     if (!canManageProjects) {
       toast.info('This beta group can browse projects, but cannot edit them yet.');
       return;
@@ -620,7 +626,7 @@ const ProjectDetailPage: React.FC = () => {
     setIsUploadingCover(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/projects/${projectId}/cover-${Date.now()}.${fileExt}`;
+      const fileName = `${user.id}/projects/${resolvedProjectId}/cover-${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
@@ -635,7 +641,7 @@ const ProjectDetailPage: React.FC = () => {
       const { error: updateError } = await supabase
         .from('projects')
         .update({ header_image_url: urlData.publicUrl })
-        .eq('id', projectId);
+        .eq('id', resolvedProjectId);
 
       if (updateError) throw updateError;
 
@@ -744,7 +750,7 @@ const ProjectDetailPage: React.FC = () => {
               <CardTitle>Project Status</CardTitle>
               {canEditProject && (
                 <ProjectStatusDropdown 
-                  projectId={projectId!} 
+                  projectId={resolvedProjectId!}
                   currentStatus={project.status} 
                 />
               )}
@@ -990,7 +996,7 @@ const ProjectDetailPage: React.FC = () => {
           </div>
         </section>
 
-        <ProjectInvitationPrompt projectId={projectId!} projectTitle={project.title} />
+        {resolvedProjectId && <ProjectInvitationPrompt projectId={resolvedProjectId} projectTitle={project.title} />}
 
         {/* Open Roles - Collapsible */}
         <Collapsible open={rolesOpen} onOpenChange={setRolesOpen}>
@@ -1066,7 +1072,7 @@ const ProjectDetailPage: React.FC = () => {
             <CollapsibleContent>
               <CardContent className="pt-0">
                 <OpenRolesDisplay 
-                  projectId={projectId!} 
+                  projectId={resolvedProjectId!}
                   creatorId={project.creator_id}
                   onDeleteRole={canEditProject ? (roleId) => deleteRoleMutation.mutate(roleId) : undefined}
                 />
@@ -1084,7 +1090,7 @@ const ProjectDetailPage: React.FC = () => {
             </CardTitle>
             {canEditProject && (
               <div className="flex flex-wrap justify-end gap-2">
-                <InviteFriendDialog projectId={projectId} projectTitle={project.title}>
+                <InviteFriendDialog projectId={resolvedProjectId} projectTitle={project.title}>
                   <Button size="sm" variant="outline">
                     <UserPlus className="w-4 h-4 mr-2" />
                     Invite for Credit
@@ -1384,14 +1390,14 @@ const ProjectDetailPage: React.FC = () => {
 
       {/* Floating chat icon for project members */}
       {/* Floating chat icon for project members - or minimized bubble */}
-      {isMember && projectId && (
+      {isMember && resolvedProjectId && (
         chatMinimized && chatOriginRoute === location.pathname ? (
           <FloatingChatButton onClick={() => {
             expandChat();
             navigate(chatRoute!, { state: { originRoute: location.pathname } });
           }} />
         ) : !chatMinimized ? (
-          <FloatingChatButton onClick={() => navigate(`/messages/group/${projectId}`, { state: { originRoute: location.pathname } })} />
+          <FloatingChatButton onClick={() => navigate(`/messages/group/${resolvedProjectId}`, { state: { originRoute: location.pathname } })} />
         ) : null
       )}
     </div>

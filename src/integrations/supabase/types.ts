@@ -546,6 +546,7 @@ export type Database = {
           location: string | null
           payment_link_url: string | null
           price: number | null
+          slug: string
           stripe_price_id: string | null
           title: string
           updated_at: string
@@ -566,6 +567,7 @@ export type Database = {
           location?: string | null
           payment_link_url?: string | null
           price?: number | null
+          slug?: string
           stripe_price_id?: string | null
           title: string
           updated_at?: string
@@ -586,6 +588,7 @@ export type Database = {
           location?: string | null
           payment_link_url?: string | null
           price?: number | null
+          slug?: string
           stripe_price_id?: string | null
           title?: string
           updated_at?: string
@@ -1747,6 +1750,7 @@ export type Database = {
           link_url: string | null
           main_image_url: string | null
           post_approval_required: boolean
+          slug: string
           start_date: string | null
           status: string | null
           title: string
@@ -1767,6 +1771,7 @@ export type Database = {
           link_url?: string | null
           main_image_url?: string | null
           post_approval_required?: boolean
+          slug?: string
           start_date?: string | null
           status?: string | null
           title: string
@@ -1787,6 +1792,7 @@ export type Database = {
           link_url?: string | null
           main_image_url?: string | null
           post_approval_required?: boolean
+          slug?: string
           start_date?: string | null
           status?: string | null
           title?: string

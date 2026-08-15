@@ -16,10 +16,12 @@ import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { projectPath } from '@/lib/publicPaths';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 
 interface Project {
   id: string;
+  slug?: string | null;
   title: string;
   description: string | null;
   main_image_url: string | null;
@@ -293,7 +295,7 @@ const ProjectsPage: React.FC = () => {
     return (
       <Card 
         className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border"
-        onClick={() => navigate(`/projects/${project.id}`)}
+        onClick={() => navigate(projectPath(project))}
       >
         <div className="relative">
           {/* Creator profile in top corner */}

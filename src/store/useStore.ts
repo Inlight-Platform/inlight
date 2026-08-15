@@ -112,6 +112,7 @@ export interface Opportunity {
 
 export interface Event {
   id: string;
+  slug?: string | null;
   title: string;
   description: string;
   type: EventType;

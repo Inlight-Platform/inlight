@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { Event, useStore } from '@/store/useStore';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -10,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { isEventPast } from '@/lib/eventDates';
 import inlightLogo from '@/assets/inlight-logo.jpeg';
 import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
+import { eventPath } from '@/lib/publicPaths';
 
 interface EventCardProps {
   event: Event;
@@ -26,6 +28,7 @@ const eventTypeColors: Record<string, string> = {
 };
 
 const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { getUser, currentUserId, rsvpToEvent, get1stDegree } = useStore();
   const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
@@ -94,8 +97,9 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
 
   if (compact) {
     return (
-      <div 
-        className="flex items-center gap-3 p-3 rounded-lg bg-card transition-colors"
+      <div
+        className="flex cursor-pointer items-center gap-3 rounded-lg bg-card p-3 transition-colors"
+        onClick={() => navigate(eventPath(event))}
       >
         <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center shrink-0">
           <span className="text-xs font-medium text-primary">
@@ -120,7 +124,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
 
   return (
     <>
-    <div className="rounded-xl overflow-hidden bg-card border border-border transition-colors">
+    <div
+      className="cursor-pointer overflow-hidden rounded-xl border border-border bg-card transition-colors"
+      onClick={() => navigate(eventPath(event))}
+    >
       {/* Cover Image */}
       <div className="relative h-40 overflow-hidden">
         <img 
@@ -220,7 +227,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
             size="sm"
             variant={myRsvp?.status === 'going' ? 'default' : 'outline'}
             className="flex-1"
-            onClick={() => handleRsvp('going')}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRsvp('going');
+            }}
             disabled={eventHasPassed}
           >
             {!user && !eventHasPassed ? 'Sign in to RSVP' : eventHasPassed ? 'RSVP Closed' : myRsvp?.status === 'going' ? '✓ Going' : 'RSVP'}
@@ -228,7 +238,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
           <Button
             size="sm"
             variant={myRsvp?.status === 'interested' ? 'secondary' : 'ghost'}
-            onClick={() => handleRsvp('interested')}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRsvp('interested');
+            }}
             disabled={eventHasPassed}
           >
             {myRsvp?.status === 'interested' ? '★ Interested' : '☆'}
