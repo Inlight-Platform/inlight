@@ -1,6 +1,6 @@
 import React from 'react';
 import { LogIn, UserPlus } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { AuthRestoreState, saveAuthRestore, saveAuthReturnTo } from '@/lib/authRestore';
 
@@ -37,7 +37,6 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
   showIcons = false,
   restore,
 }) => {
-  const navigate = useNavigate();
   const location = useLocation();
   const styles = sizeClasses[size];
 
@@ -59,15 +58,7 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
     if (restore?.type === 'opportunity') authParams.set('restoreOpportunityId', restore.id);
     if (restore?.type === 'event') authParams.set('restoreEventId', restore.id);
 
-    navigate(`/auth?${authParams.toString()}`, {
-      state: {
-        from: {
-          ...location,
-          search: returnSearch ? `?${returnSearch}` : '',
-        },
-        restore,
-      },
-    });
+    window.location.assign(`/auth?${authParams.toString()}`);
   };
 
   return (
