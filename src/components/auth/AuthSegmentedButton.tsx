@@ -80,6 +80,8 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
         className,
       )}
       aria-label="Sign in or sign up"
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
     >
       <button
         type="button"

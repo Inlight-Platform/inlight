@@ -32,6 +32,8 @@ export const VisitorAuthPrompt: React.FC<VisitorAuthPromptProps> = ({
         compact ? 'max-w-md p-4' : 'max-w-2xl p-5 sm:p-6',
         className
       )}
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
     >
       <div className={cn('flex gap-4', compact ? 'items-start' : 'items-start sm:items-center')}>
         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
