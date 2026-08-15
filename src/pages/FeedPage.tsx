@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles } from 'lucide-react';
@@ -1171,16 +1170,9 @@ const FeedPage: React.FC = () => {
         </SheetContent>
       </Sheet>
 
-      {eventAuthPrompt && createPortal(
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setEventAuthPrompt(null);
-          }}
-          onPointerDown={(event) => {
-            if (event.target === event.currentTarget) setEventAuthPrompt(null);
-          }}
-        >
+      <Dialog open={!!eventAuthPrompt} onOpenChange={(open) => !open && setEventAuthPrompt(null)}>
+        <DialogContent className="z-[220] border-0 bg-transparent p-0 shadow-none sm:max-w-md [&>button]:hidden">
+          {eventAuthPrompt && (
           <VisitorAuthPrompt
             compact
             title={eventAuthPrompt.action === 'ticket' ? 'Buy tickets on Inlight' : 'RSVP on Inlight'}
@@ -1188,9 +1180,9 @@ const FeedPage: React.FC = () => {
             features={eventAuthPrompt.action === 'ticket' ? ['Ticket checkout', 'Event updates', 'Saved event access'] : ['RSVP tracking', 'Event updates', 'Saved event access']}
             restore={{ type: 'event', id: eventAuthPrompt.item.id }}
           />
-        </div>,
-        document.body,
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
