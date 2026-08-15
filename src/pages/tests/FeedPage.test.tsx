@@ -78,7 +78,12 @@ vi.mock('@/integrations/supabase/client', () => {
         };
         return chain;
       },
-      rpc: vi.fn(async () => ({ data: null, error: null })),
+      rpc: vi.fn(async (fn: string) => {
+        if (fn === 'get_public_profiles') {
+          return { data: profiles, error: null };
+        }
+        return { data: null, error: null };
+      }),
     },
   };
 });
