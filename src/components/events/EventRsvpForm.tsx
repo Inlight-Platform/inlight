@@ -193,26 +193,11 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
           console.error('Auto-RSVP error:', e);
         }
       }
-      window.open(paymentLinkUrl, '_blank');
+      window.open(paymentLinkUrl, '_blank', 'noopener,noreferrer');
       return;
     }
-    if (!stripePriceId) {
-      toast.error('Tickets are not yet available for this event.');
-      return;
-    }
-    setBuyingTicket(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {
-        body: { event_id: eventId },
-      });
-      if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to start checkout');
-      setBuyingTicket(false);
-    }
+
+    toast.error('Tickets are not yet available for this event.');
   };
 
   const totalCount = goingCount + cantMakeItCount;

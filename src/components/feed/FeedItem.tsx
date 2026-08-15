@@ -116,6 +116,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
 
   const isEventItem = item.type === 'event';
   const isPaidEvent = isEventItem && !!item.is_paid;
+  const directTicketUrl = isPaidEvent ? item.payment_link_url || item.link_url || null : null;
   const eventHasPassed = isEventPast(item.event_date);
   const eventLinkClosed = isEventItem && eventHasPassed;
   const { rsvps, goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
@@ -292,7 +293,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         title: item.title,
         currentUrl: `${window.location.pathname}${window.location.search}${window.location.hash}`,
         isPaidEvent,
-        hasPaymentLink: Boolean(item.payment_link_url),
+        hasPaymentLink: Boolean(directTicketUrl),
         hasStripePrice: Boolean(item.stripe_price_id),
         handledByParent: Boolean(onRequireAuth),
       });
@@ -304,8 +305,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       return;
     }
 
-    // If a direct payment link exists, auto-RSVP and open it
-    if (item.payment_link_url) {
+    if (directTicketUrl) {
       // Auto-RSVP the logged-in user as "going"
       try {
         const { data: profile } = await supabase
@@ -327,32 +327,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         // Don't block checkout if RSVP fails
         console.error('Auto-RSVP error:', e);
       }
-      window.open(item.payment_link_url, '_blank');
+      window.open(directTicketUrl, '_blank', 'noopener,noreferrer');
       return;
     }
 
-    if (!isPaidEvent || !item.stripe_price_id) {
-      toast.error('Tickets are not yet available for this event.');
-      return;
-    }
-
-    setBuyingTicket(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {
-        body: {
-          event_id: item.id,
-        },
-      });
-
-      if (error) throw error;
-      if (!data?.url) throw new Error('Checkout link unavailable');
-
-      window.location.href = data.url;
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : 'Failed to start checkout');
-      setBuyingTicket(false);
-    }
+    toast.error('Tickets are not yet available for this event.');
   };
 
   const getDegreeColor = () => {

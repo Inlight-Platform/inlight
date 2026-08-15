@@ -163,11 +163,13 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
         }
         
         const parsedPrice = isPaid && ticketPrice ? parseFloat(ticketPrice) : null;
+        const normalizedLinkUrl = linkUrl.trim();
         const defaultPaymentLink = isPaid && parsedPrice === 10
           ? 'https://buy.stripe.com/5kQcN4fsA37B9Br4yjco001'
           : null;
+        const paymentLinkUrl = isPaid ? normalizedLinkUrl || defaultPaymentLink : null;
 
-        const { data: eventData, error } = await supabase
+        const { error } = await supabase
           .from('events')
           .insert({
             user_id: user.id,
@@ -177,35 +179,17 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             location: location.trim() || null,
             event_type: eventType.trim() || 'general',
             image_url: imageUrl || null,
-            link_url: linkUrl.trim() || null,
+            link_url: normalizedLinkUrl || null,
             link_title: linkTitle.trim() || null,
             custom_question: customQuestion.trim() || null,
             is_paid: isPaid,
             price: parsedPrice,
             currency: 'usd',
-            payment_link_url: defaultPaymentLink,
-          })
-          .select('id')
-          .single();
+            payment_link_url: paymentLinkUrl,
+          });
         if (error) {
           console.error('Event creation error:', error);
           throw error;
-        }
-
-        // If paid event, create Stripe price
-        if (isPaid && ticketPrice && eventData) {
-          const { error: priceError } = await supabase.functions.invoke('create-event-price', {
-            body: {
-              event_id: eventData.id,
-              title: title.trim(),
-              price: parseFloat(ticketPrice),
-              currency: 'usd',
-            },
-          });
-          if (priceError) {
-            console.error('Stripe price creation error:', priceError);
-            // Non-fatal: event is created, price can be retried
-          }
         }
       } else if (postType === 'job') {
         // Jobs are stored as posts with a special format and optional link
