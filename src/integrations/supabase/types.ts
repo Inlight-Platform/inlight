@@ -486,6 +486,7 @@ export type Database = {
           email: string
           event_id: string
           id: string
+          is_anonymous: boolean
           name: string
           role_type: string
           status: string
@@ -500,6 +501,7 @@ export type Database = {
           email: string
           event_id: string
           id?: string
+          is_anonymous?: boolean
           name: string
           role_type?: string
           status?: string
@@ -514,6 +516,7 @@ export type Database = {
           email?: string
           event_id?: string
           id?: string
+          is_anonymous?: boolean
           name?: string
           role_type?: string
           status?: string
@@ -1315,6 +1318,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           email: string
+          anonymous_event_rsvps: boolean
           email_notifications: boolean | null
           favorite_artist: string | null
           favorite_movie: string | null
@@ -1363,6 +1367,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email: string
+          anonymous_event_rsvps?: boolean
           email_notifications?: boolean | null
           favorite_artist?: string | null
           favorite_movie?: string | null
@@ -1411,6 +1416,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string
+          anonymous_event_rsvps?: boolean
           email_notifications?: boolean | null
           favorite_artist?: string | null
           favorite_movie?: string | null
@@ -2915,6 +2921,7 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          is_anonymous: boolean
           name: string
           role_type: string
           status: string

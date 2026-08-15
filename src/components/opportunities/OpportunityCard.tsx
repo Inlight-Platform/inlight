@@ -206,8 +206,11 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
           </div>
           {posterProfile && (
             <div 
-              className="flex items-center gap-2 cursor-pointer hover:opacity-80"
-              onClick={(e) => { e.stopPropagation(); navigate(`/profile/${posterProfile.user_id}`); }}
+              className={`flex items-center gap-2 ${user ? 'cursor-pointer hover:opacity-80' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (user) navigate(`/profile/${posterProfile.user_id}`);
+              }}
             >
               <div className="text-right">
                 <p className="text-sm font-medium">{posterProfile.display_name}</p>

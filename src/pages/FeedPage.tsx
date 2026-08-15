@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles } from 'lucide-react';
@@ -27,7 +27,7 @@ import { VisitorAuthOverlay, VisitorAuthPrompt } from '@/components/auth/Visitor
 import { toast } from 'sonner';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
 import { clearAuthRestore, readAuthRestore } from '@/lib/authRestore';
-import { eventPath, identifierFallbackUuid, projectPath, publicIdentifier, slugifyTitle } from '@/lib/publicPaths';
+import { eventIdentifier as publicEventIdentifier, eventPath, identifierFallbackUuid, projectPath } from '@/lib/publicPaths';
 
 type NetworkFilter = 'all' | '1st';
 type ContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates' | 'group';
@@ -46,18 +46,101 @@ const PROJECT_CATEGORIES = [
 
 type ProjectCategory = typeof PROJECT_CATEGORIES[number]['value'];
 
+const fetchPublicProfileMap = async (userIds: string[]) => {
+  const uniqueUserIds = [...new Set(userIds)].filter(Boolean);
+  if (!uniqueUserIds.length) {
+    return new Map<string, { user_id: string; display_name: string | null; avatar_url: string | null }>();
+  }
+
+  const { data, error } = await supabase.rpc('get_public_profiles', { _user_ids: uniqueUserIds });
+
+  if (!error) {
+    return new Map((data || []).map((profile) => [profile.user_id, {
+      user_id: profile.user_id,
+      display_name: profile.display_name,
+      avatar_url: profile.avatar_url,
+    }]));
+  }
+
+  console.warn('[Inlight Public Profile Debug] get_public_profiles failed, falling back to profiles_public', {
+    userIds: uniqueUserIds,
+    error,
+  });
+
+  const { data: fallbackProfiles, error: fallbackError } = await supabase
+    .from('profiles_public')
+    .select('user_id, display_name, avatar_url')
+    .in('user_id', uniqueUserIds);
+
+  if (fallbackError) {
+    console.warn('[Inlight Public Profile Debug] profiles_public fallback failed', {
+      userIds: uniqueUserIds,
+      error: fallbackError,
+    });
+  }
+
+  return new Map((fallbackProfiles || []).map((profile) => [profile.user_id, profile]));
+};
+
+const compareEventsBySchedule = <T extends { event_date?: string | null; created_at: string }>(a: T, b: T) => {
+  const now = Date.now();
+
+  const aEventTime = a.event_date ? new Date(a.event_date).getTime() : Number.NaN;
+  const bEventTime = b.event_date ? new Date(b.event_date).getTime() : Number.NaN;
+  const aHasEventDate = Number.isFinite(aEventTime);
+  const bHasEventDate = Number.isFinite(bEventTime);
+
+  if (aHasEventDate && bHasEventDate) {
+    const aIsUpcoming = aEventTime >= now;
+    const bIsUpcoming = bEventTime >= now;
+
+    if (aIsUpcoming !== bIsUpcoming) {
+      return aIsUpcoming ? -1 : 1;
+    }
+
+    return aIsUpcoming
+      ? aEventTime - bEventTime
+      : bEventTime - aEventTime;
+  }
+
+  if (aHasEventDate !== bHasEventDate) {
+    return aHasEventDate ? -1 : 1;
+  }
+
+  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+};
+
+const sortEventsBySchedule = <T extends { event_date?: string | null; created_at: string }>(items: T[]) =>
+  [...items].sort(compareEventsBySchedule);
+
+const compareFeedItemsForDisplay = (a: FeedItemData, b: FeedItemData) => {
+  if (a.type === 'event' && b.type === 'event') {
+    return compareEventsBySchedule(a, b);
+  }
+
+  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+};
+
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { eventId: routeEventIdentifier } = useParams<{ eventId?: string }>();
-  const routeState = location.state as { scrollToTop?: boolean; restore?: ReturnType<typeof readAuthRestore> } | null;
+  const routeState = location.state as {
+    event?: FeedItemData;
+    returnTab?: ContentFilter;
+    scrollToTop?: boolean;
+    restore?: ReturnType<typeof readAuthRestore>;
+  } | null;
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
+  const routeStateEvent = routeState?.event?.type === 'event' ? routeState.event : null;
   const [searchParamsInit] = [new URLSearchParams(window.location.search)];
   const _initialTab = searchParamsInit.get('tab');
   const [contentFilter, setContentFilter] = useState<ContentFilter>(
-    _initialTab && ['all', 'you', 'events', 'projects', 'updates', 'group'].includes(_initialTab)
+    routeEventIdentifier
+      ? 'events'
+      : _initialTab && ['all', 'you', 'events', 'projects', 'updates', 'group'].includes(_initialTab)
       ? (_initialTab as ContentFilter)
       : 'all'
   );
@@ -68,22 +151,28 @@ const FeedPage: React.FC = () => {
     item: FeedItemData;
     action: 'rsvp' | 'ticket';
   } | null>(null);
+  const [contentAuthPrompt, setContentAuthPrompt] = useState<FeedItemData | null>(null);
+  const isClosingDetailsRef = useRef(false);
+  const eventDetailsReturnTabRef = useRef<ContentFilter | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const showVisitorFeedGate = (contentFilter === 'you' || contentFilter === 'updates') && !user;
 
-  const updateEventSearchParam = useCallback((event?: FeedItemData) => {
+  const updateEventSearchParam = useCallback((event?: FeedItemData, returnTab?: ContentFilter | null) => {
     if (event) {
       navigate(eventPath(event), {
         replace: true,
-        state: location.state,
+        state: returnTab ? { ...(location.state || {}), returnTab } : location.state,
       });
+      isClosingDetailsRef.current = false;
       return;
     }
 
     if (location.pathname.startsWith('/events/')) {
-      navigate('/events', {
+      const tab = eventDetailsReturnTabRef.current || 'events';
+      eventDetailsReturnTabRef.current = null;
+      navigate(`/feed?tab=${encodeURIComponent(tab)}`, {
         replace: true,
-        state: location.state,
+        state: undefined,
       });
       return;
     }
@@ -94,16 +183,23 @@ const FeedPage: React.FC = () => {
     const nextSearch = nextParams.toString();
     navigate(`${location.pathname}${nextSearch ? `?${nextSearch}` : ''}${location.hash}`, {
       replace: true,
-      state: location.state,
+      state: undefined,
     });
   }, [location.hash, location.pathname, location.search, location.state, navigate]);
 
   const openFeedDetails = useCallback((item: FeedItemData) => {
+    if (!user && (item.type === 'post' || item.type === 'project')) {
+      setContentAuthPrompt(item);
+      return;
+    }
+
+    isClosingDetailsRef.current = false;
     setSelectedItem(item);
     if (item.type === 'event') {
-      updateEventSearchParam(item);
+      eventDetailsReturnTabRef.current = contentFilter;
+      updateEventSearchParam(item, contentFilter);
     }
-  }, [updateEventSearchParam]);
+  }, [contentFilter, updateEventSearchParam, user]);
 
   const openEventAuthPrompt = useCallback((item: FeedItemData, action: 'rsvp' | 'ticket') => {
     console.log('[Inlight Auth Debug] FeedPage opening page-level event auth prompt', {
@@ -117,8 +213,10 @@ const FeedPage: React.FC = () => {
 
   const closeFeedDetails = useCallback(() => {
     const wasEvent = selectedItem?.type === 'event';
+    isClosingDetailsRef.current = true;
     setSelectedItem(null);
     setEventAuthPrompt(null);
+    setContentAuthPrompt(null);
     if (wasEvent) {
       updateEventSearchParam();
     }
@@ -177,11 +275,7 @@ const FeedPage: React.FC = () => {
       const rows = (links as any[]).map((l) => l.posts).filter(Boolean);
       const uids = [...new Set(rows.map((p) => p.user_id))];
       if (!uids.length) return [] as FeedItemData[];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', uids);
-      const map = new Map((profiles || []).map((p) => [p.user_id, p]));
+      const map = await fetchPublicProfileMap(uids);
       return rows
         .map((p) => ({
           ...p,
@@ -205,11 +299,7 @@ const FeedPage: React.FC = () => {
       const rows = (links as any[]).map((l) => l.projects).filter(Boolean);
       const uids = [...new Set(rows.map((p) => p.creator_id))];
       if (!uids.length) return [] as FeedItemData[];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', uids);
-      const map = new Map((profiles || []).map((p) => [p.user_id, p]));
+      const map = await fetchPublicProfileMap(uids);
       return rows
         .map((p) => ({
           id: p.id,
@@ -312,15 +402,7 @@ const FeedPage: React.FC = () => {
       const { data, error } = await query.limit(100);
       if (error) throw error;
 
-      const userIds = [...new Set(data.map((p) => p.user_id))].filter(Boolean);
-      const { data: profiles } = userIds.length
-        ? await supabase
-            .from('profiles_public')
-            .select('user_id, display_name, avatar_url')
-            .in('user_id', userIds)
-        : { data: [] };
-
-      const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
+      const profileMap = await fetchPublicProfileMap(data.map((p) => p.user_id));
 
       return data.map((post) => ({
         ...post,
@@ -351,15 +433,7 @@ const FeedPage: React.FC = () => {
       const { data, error } = await query.limit(100);
       if (error) throw error;
 
-      const userIds = [...new Set(data.map((p) => p.creator_id))].filter(Boolean);
-      const { data: profiles } = userIds.length
-        ? await supabase
-            .from('profiles_public')
-            .select('user_id, display_name, avatar_url')
-            .in('user_id', userIds)
-        : { data: [] };
-
-      const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
+      const profileMap = await fetchPublicProfileMap(data.map((p) => p.creator_id));
 
       return data.map((project) => ({
         ...project,
@@ -379,21 +453,13 @@ const FeedPage: React.FC = () => {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('event_date', { ascending: true })
         .limit(100);
       if (error) throw error;
 
-      const userIds = [...new Set(data.map((e) => e.user_id))].filter(Boolean);
-      const { data: profiles } = userIds.length
-        ? await supabase
-            .from('profiles_public')
-            .select('user_id, display_name, avatar_url')
-            .in('user_id', userIds)
-        : { data: [] };
+      const profileMap = await fetchPublicProfileMap(data.map((e) => e.user_id));
 
-      const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
-
-      return data.map((event) => ({
+      return sortEventsBySchedule(data.map((event) => ({
         id: event.id,
         slug: event.slug,
         type: 'event' as const,
@@ -413,7 +479,7 @@ const FeedPage: React.FC = () => {
         stripe_price_id: event.stripe_price_id,
         payment_link_url: event.payment_link_url,
         creator_profile: profileMap.get(event.user_id)
-      }));
+      })));
     },
     placeholderData: keepPreviousData,
     retry: 1,
@@ -428,17 +494,45 @@ const FeedPage: React.FC = () => {
       : routeEventIdentifier || searchParams.get('event');
     const fallbackEventId = identifierFallbackUuid(rawEventIdentifier);
     const eventIdentifier = fallbackEventId || rawEventIdentifier;
-    if (!eventIdentifier || selectedItem?.id === eventIdentifier || selectedItem?.slug === eventIdentifier) return;
+
+    if (!eventIdentifier) {
+      isClosingDetailsRef.current = false;
+      return;
+    }
+
+    if (isClosingDetailsRef.current) return;
+
+    if (
+      rawEventIdentifier &&
+      routeStateEvent &&
+      routeStateEvent.id !== selectedItem?.id &&
+      (
+        routeStateEvent.id === eventIdentifier ||
+        routeStateEvent.slug === eventIdentifier ||
+        publicEventIdentifier(routeStateEvent) === rawEventIdentifier
+      )
+    ) {
+      eventDetailsReturnTabRef.current = routeState?.returnTab || 'events';
+      setSelectedItem(routeStateEvent);
+      return;
+    }
+
+    if (
+      !eventIdentifier ||
+      selectedItem?.id === eventIdentifier ||
+      selectedItem?.slug === eventIdentifier ||
+      (selectedItem && publicEventIdentifier(selectedItem) === rawEventIdentifier)
+    ) return;
 
     const restoredEvent = events.find((event) =>
       event.id === eventIdentifier ||
       event.slug === eventIdentifier ||
-      slugifyTitle(event.title) === rawEventIdentifier ||
-      publicIdentifier(event) === rawEventIdentifier
+      publicEventIdentifier(event) === rawEventIdentifier
     );
     if (!restoredEvent) return;
 
     setContentFilter('events');
+    eventDetailsReturnTabRef.current = routeState?.returnTab || 'events';
     setSelectedItem(restoredEvent);
     clearAuthRestore();
     if (routeState?.restore) {
@@ -447,7 +541,7 @@ const FeedPage: React.FC = () => {
         state: routeState.scrollToTop ? { scrollToTop: routeState.scrollToTop } : undefined,
       });
     }
-  }, [events, location.hash, location.pathname, location.search, navigate, routeEventIdentifier, routeState, searchParams, selectedItem?.id, selectedItem?.slug]);
+  }, [events, location.hash, location.pathname, location.search, navigate, routeEventIdentifier, routeState, routeStateEvent, searchParams, selectedItem?.id, selectedItem?.slug]);
 
   // Fetch saved projects
   const { data: savedProjects = [] } = useQuery({
@@ -624,7 +718,13 @@ const FeedPage: React.FC = () => {
             key={`project-${item.id}`}
             item={item}
             size={getBentoSize(idx)}
-            onClick={() => navigate(projectPath(item), { state: { returnTo: feedReturnTo } })}
+            onClick={() => {
+              if (!user) {
+                setContentAuthPrompt(item);
+                return;
+              }
+              navigate(projectPath(item), { state: { returnTo: feedReturnTo } });
+            }}
           />
         ))}
       </div>
@@ -662,9 +762,9 @@ const FeedPage: React.FC = () => {
       });
     }
 
-    allItems.sort((a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    allItems = contentFilter === 'events'
+      ? sortEventsBySchedule(allItems)
+      : allItems.sort(compareFeedItemsForDisplay);
 
     if (networkFilter !== 'all') {
       allItems = allItems.filter((item) => {
@@ -718,7 +818,13 @@ const FeedPage: React.FC = () => {
     return (
       <Card
         className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border"
-        onClick={() => navigate(projectPath(project), { state: { returnTo: feedReturnTo } })}
+        onClick={() => {
+          if (!user) {
+            setContentAuthPrompt(projectsToFeedItems([project])[0]);
+            return;
+          }
+          navigate(projectPath(project), { state: { returnTo: feedReturnTo } });
+        }}
       >
         <div className="relative">
           <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1">
@@ -1136,6 +1242,10 @@ const FeedPage: React.FC = () => {
                         size={getBentoSize(idx)}
                         onClick={() => {
                           if (item.type === 'project') {
+                            if (!user) {
+                              setContentAuthPrompt(item);
+                              return;
+                            }
                             navigate(projectPath(item), { state: { returnTo: feedReturnTo } });
                           } else if (item.type === 'event') {
                             openFeedDetails(item);
@@ -1203,6 +1313,19 @@ const FeedPage: React.FC = () => {
             features={eventAuthPrompt.action === 'ticket' ? ['Ticket checkout', 'Event updates', 'Saved event access'] : ['RSVP tracking', 'Event updates', 'Saved event access']}
             restore={{ type: 'event', id: eventAuthPrompt.item.id }}
           />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!contentAuthPrompt} onOpenChange={(open) => !open && setContentAuthPrompt(null)}>
+        <DialogContent className="z-[220] border-0 bg-transparent p-0 shadow-none sm:max-w-md [&>button]:hidden">
+          {contentAuthPrompt && (
+            <VisitorAuthPrompt
+              compact
+              title={contentAuthPrompt.type === 'project' ? 'View project on Inlight' : 'View update on Inlight'}
+              description={contentAuthPrompt.type === 'project' ? 'Sign in or create an account to view project details.' : 'Sign in or create an account to view this update.'}
+              features={contentAuthPrompt.type === 'project' ? ['Project details', 'Creator context', 'Saved project access'] : ['Creator updates', 'Community context', 'Saved access']}
+            />
           )}
         </DialogContent>
       </Dialog>

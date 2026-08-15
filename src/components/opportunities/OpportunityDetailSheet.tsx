@@ -225,8 +225,13 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
         {posterProfile && (
           <>
             <div
-              className="flex items-center gap-3 py-3 cursor-pointer hover:opacity-80"
-              onClick={() => { handleOpenChange(false); navigate(`/profile/${posterProfile.user_id}`); }}
+              className={`flex items-center gap-3 py-3 ${user ? 'cursor-pointer hover:opacity-80' : ''}`}
+              onClick={() => {
+                if (user) {
+                  handleOpenChange(false);
+                  navigate(`/profile/${posterProfile.user_id}`);
+                }
+              }}
             >
               <Avatar className="h-10 w-10 border-2 border-border">
                 <AvatarImage src={posterProfile.avatar_url || undefined} />

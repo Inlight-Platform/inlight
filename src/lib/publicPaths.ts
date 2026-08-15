@@ -17,11 +17,23 @@ export const identifierFallbackUuid = (value?: string | null) => {
   return match?.[0] || null;
 };
 
+export const identifierFallbackShortId = (value?: string | null) => {
+  if (!value) return null;
+  const match = value.match(/-([0-9a-f]{8})$/i);
+  return match?.[1] || null;
+};
+
 export const publicIdentifier = (item: { slug?: string | null; title?: string | null; id: string }) =>
   item.slug?.trim() || slugifyTitle(item.title) || item.id;
 
 export const projectPath = (project: { slug?: string | null; title?: string | null; id: string }) =>
   `/projects/${publicIdentifier(project)}`;
 
+export const eventIdentifier = (event: { slug?: string | null; title?: string | null; id: string }) => {
+  const readableSlug = event.slug?.trim() || slugifyTitle(event.title);
+  const shortId = event.id.replace(/-/g, '').slice(0, 8);
+  return shortId ? `${readableSlug}-${shortId}` : readableSlug;
+};
+
 export const eventPath = (event: { slug?: string | null; title?: string | null; id: string }) =>
-  `/events/${publicIdentifier(event)}`;
+  `/events/${eventIdentifier(event)}`;

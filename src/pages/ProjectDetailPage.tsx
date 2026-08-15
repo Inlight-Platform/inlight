@@ -88,6 +88,30 @@ interface ProjectLink {
   created_at: string;
 }
 
+const fetchPublicProfileMap = async (userIds: string[]) => {
+  const uniqueUserIds = [...new Set(userIds)].filter(Boolean);
+  if (!uniqueUserIds.length) {
+    return new Map<string, { user_id: string; display_name: string | null; avatar_url: string | null }>();
+  }
+
+  const { data, error } = await supabase.rpc('get_public_profiles', { _user_ids: uniqueUserIds });
+
+  if (!error) {
+    return new Map((data || []).map((profile) => [profile.user_id, {
+      user_id: profile.user_id,
+      display_name: profile.display_name,
+      avatar_url: profile.avatar_url,
+    }]));
+  }
+
+  const { data: fallbackProfiles } = await supabase
+    .from('profiles_public')
+    .select('user_id, display_name, avatar_url')
+    .in('user_id', uniqueUserIds);
+
+  return new Map((fallbackProfiles || []).map((profile) => [profile.user_id, profile]));
+};
+
 const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -188,12 +212,8 @@ const ProjectDetailPage: React.FC = () => {
 
       if (!resolvedProject) throw error || new Error('Project not found');
 
-      // Fetch creator profile
-      const { data: creatorProfile } = await supabase
-        .from('profiles_public')
-        .select('display_name, avatar_url')
-        .eq('user_id', resolvedProject.creator_id)
-        .single();
+      const profileMap = await fetchPublicProfileMap([resolvedProject.creator_id]);
+      const creatorProfile = profileMap.get(resolvedProject.creator_id);
 
       return { ...resolvedProject, creator_profile: creatorProfile };
     },
@@ -213,14 +233,7 @@ const ProjectDetailPage: React.FC = () => {
       
       if (error) throw error;
 
-      // Fetch member profiles
-      const userIds = data.map(m => m.user_id);
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
-
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = await fetchPublicProfileMap(data.map(m => m.user_id));
 
       return data.map(member => ({
         ...member,
@@ -1150,8 +1163,12 @@ const ProjectDetailPage: React.FC = () => {
             <div className="flex flex-wrap gap-4">
               {/* Creator */}
               <div 
-                className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors"
-                onClick={() => navigate(`/profile/${project.creator_id}`, { state: { returnTo, returnState: routeState || undefined } })}
+                className={`flex items-center gap-2 rounded-lg p-2 transition-colors ${user ? 'cursor-pointer hover:bg-accent' : ''}`}
+                onClick={() => {
+                  if (user) {
+                    navigate(`/profile/${project.creator_id}`, { state: { returnTo, returnState: routeState || undefined } });
+                  }
+                }}
               >
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={project.creator_profile?.avatar_url || undefined} />
@@ -1174,8 +1191,12 @@ const ProjectDetailPage: React.FC = () => {
                     className="flex items-center gap-2 group"
                   >
                     <div
-                      className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors flex-1"
-                      onClick={() => navigate(`/profile/${member.user_id}`, { state: { returnTo, returnState: routeState || undefined } })}
+                      className={`flex items-center gap-2 rounded-lg p-2 transition-colors flex-1 ${user ? 'cursor-pointer hover:bg-accent' : ''}`}
+                      onClick={() => {
+                        if (user) {
+                          navigate(`/profile/${member.user_id}`, { state: { returnTo, returnState: routeState || undefined } });
+                        }
+                      }}
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={member.profile?.avatar_url || undefined} />

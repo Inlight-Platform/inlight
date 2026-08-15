@@ -61,6 +61,8 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   const ticketStatus = searchParams.get('ticket');
   const hasTicketSuccess = ticketStatus === 'success';
   const eventHasPassed = isEventPast(eventDate);
+  const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
+  const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -313,65 +315,76 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
       </div>
 
       {/* Attendees dropdown */}
-      <div className="rounded-xl border border-border overflow-hidden">
-        <button
-          onClick={() => setShowAttendees(!showAttendees)}
-          className="w-full flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" />
-            <span className="font-medium text-sm">Attendees ({goingCount})</span>
-          </div>
-          {showAttendees ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-          )}
-        </button>
-
-        {showAttendees && (
-          <div className="border-t border-border max-h-60 overflow-y-auto">
-            {goingRsvps.length === 0 ? (
-              <p className="p-4 text-sm text-muted-foreground text-center">
-                No RSVPs yet — be the first!
-              </p>
+      {currentUserId && (
+        <div className="rounded-xl border border-border overflow-hidden">
+          <button
+            onClick={() => setShowAttendees(!showAttendees)}
+            className="w-full flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" />
+              <span className="font-medium text-sm">Attendees ({goingCount})</span>
+            </div>
+            {showAttendees ? (
+              <ChevronUp className="w-4 h-4 text-muted-foreground" />
             ) : (
-              <div className="divide-y divide-border">
-                {goingRsvps.map((rsvp) => (
-                  <div
-                    key={rsvp.id}
-                    className={cn(
-                      'flex items-center gap-3 p-3',
-                      rsvp.user_id && 'cursor-pointer hover:bg-accent/50 transition-colors'
-                    )}
-                    onClick={() => rsvp.user_id && navigate(`/profile/${rsvp.user_id}`)}
-                  >
-                    <Avatar className="w-8 h-8">
-                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                        {rsvp.name[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{rsvp.name}</p>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        'text-xs shrink-0',
-                        rsvp.role_type === 'actor'
-                          ? 'border-rose-400/40 text-rose-400'
-                          : 'border-cyan-400/40 text-cyan-400'
-                      )}
-                    >
-                      {rsvp.role_type === 'actor' ? 'Actor' : 'Filmmaker'}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
             )}
-          </div>
-        )}
-      </div>
+          </button>
+
+          {showAttendees && (
+            <div className="border-t border-border max-h-60 overflow-y-auto">
+              {goingRsvps.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground text-center">
+                  No RSVPs yet — be the first!
+                </p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {visibleGoingRsvps.map((rsvp) => (
+                    <div
+                      key={rsvp.id}
+                      className={cn(
+                        'flex items-center gap-3 p-3',
+                        rsvp.user_id && 'cursor-pointer hover:bg-accent/50 transition-colors'
+                      )}
+                      onClick={() => rsvp.user_id && navigate(`/profile/${rsvp.user_id}`)}
+                    >
+                      <Avatar className="w-8 h-8">
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                          {rsvp.name[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{rsvp.name}</p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'text-xs shrink-0',
+                          rsvp.role_type === 'actor'
+                            ? 'border-rose-400/40 text-rose-400'
+                            : 'border-cyan-400/40 text-cyan-400'
+                        )}
+                      >
+                        {rsvp.role_type === 'actor' ? 'Actor' : 'Filmmaker'}
+                      </Badge>
+                    </div>
+                ))}
+                {anonymousGoingCount > 0 && (
+                    <div className="p-3 text-sm text-muted-foreground">
+                      <span>
+                        {visibleGoingRsvps.length > 0
+                          ? `and ${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} more`
+                          : `${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} attending`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* RSVP Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

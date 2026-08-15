@@ -80,6 +80,18 @@ const sizeClasses: Record<BentoSize, string> = {
   wide: 'min-h-[220px] sm:col-span-4 sm:row-span-1',
 };
 
+const formatEventSchedule = (eventDate?: string | null) => {
+  if (!eventDate) return null;
+
+  return new Date(eventDate).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
+
 export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClick }) => {
   const meta = typeMeta(item);
   const hasImage = !!item.image_url;
@@ -91,6 +103,9 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
     (item.content ? item.content.slice(0, 80) + (item.content.length > 80 ? '…' : '') : 'Untitled');
   const subtitle = item.description || item.content;
   const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
+  const displayTime = item.type === 'event'
+    ? formatEventSchedule(item.event_date) || timeAgo
+    : timeAgo;
   const objectPosition = `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%`;
 
   const baseShell =
@@ -122,7 +137,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
         <div className="relative flex h-full flex-col justify-end p-6 sm:p-10">
           <div className="mb-4 flex items-center gap-3">
             <span className={cn(labelPillClass, meta.pillClass)}>{meta.label}</span>
-            <span className={cn('text-xs font-semibold', meta.accent)}>{timeAgo}</span>
+            <span className={cn('text-xs font-semibold', meta.accent)}>{displayTime}</span>
           </div>
           <h3 className="font-display text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-5xl group-hover:translate-x-1 transition-transform duration-500 line-clamp-3">
             {title}
@@ -205,7 +220,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               <p className={cn('truncate text-xs font-bold', isLight ? 'text-slate-900' : 'text-white')}>
                 {displayName}
               </p>
-              <p className={cn('text-[10px]', isLight ? 'text-slate-500' : 'text-white/50')}>{timeAgo}</p>
+              <p className={cn('text-[10px]', isLight ? 'text-slate-500' : 'text-white/50')}>{displayTime}</p>
             </div>
           </div>
         </div>
@@ -262,7 +277,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               <span className="truncate font-semibold text-muted-foreground">{displayName}</span>
             </div>
             <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-              {timeAgo}
+              {displayTime}
             </span>
           </div>
         </div>
@@ -316,7 +331,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
             <span className="truncate text-xs font-semibold text-white/80">{displayName}</span>
           </div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-white/60">
-            {timeAgo}
+            {displayTime}
           </span>
         </div>
       </div>

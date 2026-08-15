@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Outlet, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, useLocation, Navigate } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import RequireAuth from "@/components/layout/RequireAuth";
 import { useTrackPageView } from "@/hooks/usePageAnalytics";
@@ -15,7 +15,6 @@ import FeedPage from "./pages/FeedPage";
 import ResourcesPage from "./pages/ResourcesPage";
 import InsightsPage from "./pages/InsightsPage";
 import OpportunitiesPage from "./pages/OpportunitiesPage";
-import EventsPage from "./pages/EventsPage";
 import MessagesPage from "./pages/MessagesPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import AuthPage from "./pages/AuthPage";
@@ -24,6 +23,7 @@ import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ProjectNewPage from "./pages/ProjectNewPage";
+import EventDashboardPage from "./pages/EventDashboardPage";
 import StageWhisperPage from "./pages/StageWhisperPage";
 import GroupMembersPage from "./pages/GroupMembersPage";
 import GroupPage from "./pages/GroupPage";
@@ -98,7 +98,8 @@ const App = () => (
             <Route path="/people" element={<PeoplePage />} />
             <Route path="/mutuals" element={<PeoplePage />} />
             <Route path="/insights" element={<InsightsPage />} />
-            <Route path="/events" element={<EventsPage />} />
+            <Route path="/events" element={<Navigate to="/feed?tab=events" replace />} />
+            <Route path="/events/:eventId/dashboard" element={<EventDashboardPage />} />
             <Route path="/events/:eventId" element={<FeedPage />} />
             <Route path="/opportunities" element={<OpportunitiesPage />} />
             <Route path="/messages" element={<RequireAuth><MessagesPage /></RequireAuth>} />

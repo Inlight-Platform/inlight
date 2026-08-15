@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp, Ticket } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp, Ticket, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -30,6 +30,7 @@ import { cn, capitalizeName } from '@/lib/utils';
 import { isEventPast } from '@/lib/eventDates';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
 import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
+import { eventPath } from '@/lib/publicPaths';
 
 export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show' | 'open_role';
 
@@ -125,8 +126,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const alreadyRsvpd = !!userRsvp || rsvpSubmitted;
   const alreadyGoing = rsvpSubmitted || userRsvp?.status === 'going';
   const userEmail = user?.email ?? '';
+  const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
+  const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
 
   const attendeeUserIds = goingRsvps
+    .filter((r) => !r.is_anonymous)
     .map((r) => r.user_id)
     .filter((id): id is string => !!id);
   const { data: currentUserProfile } = useQuery({
@@ -158,6 +162,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const avatarByUserId = new Map(attendeeProfiles.map((p) => [p.user_id, p.avatar_url]));
 
   const isOwner = user?.id === item.user_id;
+  const canOpenEventDashboard = isEventItem && isOwner;
   const canManageFeedItem =
     isAdmin ||
     ((item.type !== 'event' || canManageEvents) &&
@@ -220,6 +225,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     deleteMutation.mutate();
   };
 
+  const openEventDashboard = () => {
+    navigate(`/events/${item.id}/dashboard`, { state: { event: item } });
+  };
+
   const getTypeIcon = () => {
     switch (item.type) {
       case 'project':
@@ -255,8 +264,17 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   };
 
   const handleClick = () => {
+    if (!user && (item.type === 'post' || item.type === 'project')) {
+      setShowVisitorAuthPrompt(true);
+      return;
+    }
+
     if (item.type === 'event') {
-      navigate('/events');
+      if (onOpenDetails) {
+        onOpenDetails(item);
+      } else {
+        navigate(eventPath(item));
+      }
       return;
     }
 
@@ -357,11 +375,33 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     ? 'Anonymous'
     : capitalizeName(item.creator_profile?.display_name || '') || 'Inlight Member';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
+  const canOpenCreatorProfile = !!user && !showAnonymous;
   const bodyText = item.content || item.description;
   const compactCollapsed = compactSquare && !compactTextExpanded;
   const compactBodyLineCount = bodyText?.split('\n').filter((line) => line.trim()).length || 0;
   const showCompactTextToggle = compactSquare && Boolean(bodyText && (bodyText.length > 90 || compactBodyLineCount > 2));
-  const visitorAuthOverlay = showVisitorAuthPrompt && isEventItem
+  const visitorPromptCopy = isEventItem
+    ? {
+        title: isPaidEvent ? 'Buy tickets on Inlight' : 'RSVP on Inlight',
+        description: isPaidEvent ? 'Sign in or create an account to buy tickets.' : 'Sign in or create an account to RSVP.',
+        features: isPaidEvent ? ['Ticket checkout', 'Event updates', 'Saved event access'] : ['RSVP tracking', 'Event updates', 'Saved event access'],
+        restore: { type: 'event' as const, id: item.id },
+      }
+    : item.type === 'project'
+      ? {
+          title: 'View project on Inlight',
+          description: 'Sign in or create an account to view project details.',
+          features: ['Project details', 'Creator context', 'Saved project access'],
+          restore: undefined,
+        }
+      : {
+          title: 'View update on Inlight',
+          description: 'Sign in or create an account to view this update.',
+          features: ['Creator updates', 'Community context', 'Saved access'],
+          restore: undefined,
+        };
+
+  const visitorAuthOverlay = showVisitorAuthPrompt && (isEventItem || item.type === 'post' || item.type === 'project')
     ? createPortal(
         <div
           className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
@@ -374,10 +414,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         >
           <VisitorAuthPrompt
             compact
-            title={isPaidEvent ? 'Buy tickets on Inlight' : 'RSVP on Inlight'}
-            description={isPaidEvent ? 'Sign in or create an account to buy tickets.' : 'Sign in or create an account to RSVP.'}
-            features={isPaidEvent ? ['Ticket checkout', 'Event updates', 'Saved event access'] : ['RSVP tracking', 'Event updates', 'Saved event access']}
-            restore={{ type: 'event', id: item.id }}
+            title={visitorPromptCopy.title}
+            description={visitorPromptCopy.description}
+            features={visitorPromptCopy.features}
+            restore={visitorPromptCopy.restore}
           />
         </div>,
         document.body,
@@ -409,10 +449,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
           <Avatar 
-            className={`h-10 w-10 ${showAnonymous ? '' : 'cursor-pointer'}`}
+            className={`h-10 w-10 ${canOpenCreatorProfile ? 'cursor-pointer' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
-              if (!showAnonymous) {
+              if (canOpenCreatorProfile) {
                 navigate(`/profile/${item.user_id}`);
               }
             }}
@@ -423,10 +463,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span 
-                className={`font-medium text-foreground ${showAnonymous ? 'italic text-muted-foreground' : 'cursor-pointer hover:underline'}`}
+                className={`font-medium text-foreground ${showAnonymous ? 'italic text-muted-foreground' : ''} ${canOpenCreatorProfile ? 'cursor-pointer hover:underline' : ''}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!showAnonymous) {
+                  if (canOpenCreatorProfile) {
                     navigate(`/profile/${item.user_id}`);
                   }
                 }}
@@ -448,7 +488,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
             <div className="p-1.5 rounded-full bg-muted">
               {getTypeIcon()}
             </div>
-            {canDelete && (
+            {(canDelete || canOpenEventDashboard) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -461,6 +501,12 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  {canOpenEventDashboard && (
+                    <DropdownMenuItem onClick={openEventDashboard}>
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Creator Dashboard
+                    </DropdownMenuItem>
+                  )}
                   {canEdit && (
                     <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
                       <Pencil className="h-4 w-4 mr-2" />
@@ -626,7 +672,20 @@ export const FeedItem: React.FC<FeedItemProps> = ({
               </div>
             )}
             <div className="flex gap-2">
-              {isPaidEvent ? (
+              {canOpenEventDashboard ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEventDashboard();
+                  }}
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  View Dashboard
+                </Button>
+              ) : isPaidEvent ? (
                 <Button
                   size="sm"
                   className="flex-1"
@@ -697,7 +756,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
             </div>
 
             {/* Attendees dropdown */}
-            {goingCount > 0 && (
+            {user && goingCount > 0 && (
               <div className="rounded-lg border border-border overflow-hidden mt-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowAttendees(!showAttendees); }}
@@ -711,7 +770,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 </button>
                 {showAttendees && (
                   <div className="border-t border-border max-h-40 overflow-y-auto divide-y divide-border">
-                    {goingRsvps.map((rsvp) => {
+                    {visibleGoingRsvps.map((rsvp) => {
                       const canOpenProfile = !!rsvp.user_id && avatarByUserId.has(rsvp.user_id);
                       return (
                       <div
@@ -735,6 +794,15 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                       </div>
                       );
                     })}
+                    {anonymousGoingCount > 0 && (
+                      <div className="p-2 text-xs text-muted-foreground">
+                        <span>
+                          {visibleGoingRsvps.length > 0
+                            ? `and ${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} more`
+                            : `${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} attending`}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

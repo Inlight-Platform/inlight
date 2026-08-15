@@ -38,6 +38,7 @@ interface Profile {
   website_url: string | null;
   instagram_url: string | null;
   message_privacy: string;
+  anonymous_event_rsvps?: boolean;
   email_notifications: boolean;
   union_status: string | null;
   representation: string | null;
@@ -249,6 +250,8 @@ const ProfileSettingsPage: React.FC = () => {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [instagramUrl, setInstagramUrl] = useState('');
   const [messagePrivacy, setMessagePrivacy] = useState('mutuals_only');
+  const [anonymousEventRsvps, setAnonymousEventRsvps] = useState(false);
+  const [eventPrivacySettingSupported, setEventPrivacySettingSupported] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
@@ -295,9 +298,27 @@ const ProfileSettingsPage: React.FC = () => {
         console.error('ProfileSettingsPage: failed loading notification settings', notificationSettingsError);
       }
 
+      const { data: eventPrivacySettings, error: eventPrivacySettingsError } = await supabase
+        .from('profiles')
+        .select('anonymous_event_rsvps')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (eventPrivacySettingsError) {
+        if (/anonymous_event_rsvps|schema cache|column/i.test(eventPrivacySettingsError.message)) {
+          setEventPrivacySettingSupported(false);
+        } else {
+          console.error('ProfileSettingsPage: failed loading event privacy settings', eventPrivacySettingsError);
+        }
+      } else {
+        setEventPrivacySettingSupported(true);
+      }
+
       return {
         ...(profileByUserId as Profile),
         email_notifications: notificationSettings?.email_notifications ?? true,
+        anonymous_event_rsvps:
+          (eventPrivacySettings as { anonymous_event_rsvps?: boolean } | null)?.anonymous_event_rsvps ?? false,
       };
     },
     enabled: !!user?.id,
@@ -328,6 +349,7 @@ const ProfileSettingsPage: React.FC = () => {
       setWebsiteUrl(((profile as unknown as { website_url?: string | null }).website_url) || '');
       setInstagramUrl(((profile as unknown as { instagram_url?: string | null }).instagram_url) || '');
       setMessagePrivacy(profile.message_privacy || 'mutuals_only');
+      setAnonymousEventRsvps(profile.anonymous_event_rsvps ?? false);
       setEmailNotifications(profile.email_notifications ?? true);
       // Professional details
       setUnionStatus(profile.union_status || '');
@@ -360,6 +382,53 @@ const ProfileSettingsPage: React.FC = () => {
       toast.error(error.message || 'Failed to update profile');
     },
   });
+
+  const updateAnonymousEventRsvpPreference = async (checked: boolean) => {
+    if (!user?.id) return;
+
+    const previousValue = anonymousEventRsvps;
+    setAnonymousEventRsvps(checked);
+
+    const profilesTable = supabase.from('profiles') as ReturnType<typeof supabase.from> & {
+      update: (values: Record<string, unknown>) => {
+        eq: (column: string, value: string) => Promise<{ error: { message: string } | null }>;
+      };
+    };
+
+    const { error } = await profilesTable
+      .update({ anonymous_event_rsvps: checked })
+      .eq('user_id', user.id);
+
+    if (error) {
+      setAnonymousEventRsvps(previousValue);
+      if (/anonymous_event_rsvps|schema cache|column/i.test(error.message)) {
+        setEventPrivacySettingSupported(false);
+        toast.error('Event privacy setting is not available until the latest database migration is applied.');
+        return;
+      }
+
+      toast.error(error.message || 'Failed to update event privacy setting');
+      return;
+    }
+
+    const eventRsvpsTable = supabase.from('event_rsvps') as ReturnType<typeof supabase.from> & {
+      update: (values: Record<string, unknown>) => {
+        eq: (column: string, value: string) => Promise<{ error: { message: string } | null }>;
+      };
+    };
+
+    const { error: rsvpSyncError } = await eventRsvpsTable
+      .update({ is_anonymous: checked })
+      .eq('user_id', user.id);
+
+    if (rsvpSyncError && !/is_anonymous|schema cache|column/i.test(rsvpSyncError.message)) {
+      toast.error(rsvpSyncError.message || 'Event privacy was saved, but existing RSVPs could not be updated.');
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['event-rsvps'] });
+    toast.success('Event privacy updated successfully!');
+  };
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -763,6 +832,44 @@ const ProfileSettingsPage: React.FC = () => {
                 </div>
               </div>
             </RadioGroup>
+          </CardContent>
+        </Card>
+
+        {/* Event Privacy Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <EyeOff className="h-5 w-5" />
+              Event Privacy
+            </CardTitle>
+            <CardDescription>
+              Choose how your RSVP appears on event attendee lists
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-muted">
+                  <EyeOff className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-medium">Attend events anonymously</p>
+                  <p className="text-sm text-muted-foreground">
+                    Hide your name from public attendee lists and include your RSVP in the anonymous count
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={anonymousEventRsvps}
+                disabled={!eventPrivacySettingSupported}
+                onCheckedChange={updateAnonymousEventRsvpPreference}
+              />
+            </div>
+            {!eventPrivacySettingSupported && (
+              <p className="text-xs text-muted-foreground mt-3">
+                This setting will be available after the latest database migration is applied.
+              </p>
+            )}
           </CardContent>
         </Card>
 
