@@ -286,6 +286,43 @@ const AuthPage: React.FC = () => {
   } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    console.log('[Inlight Auth Debug] AuthPage mounted/updated', {
+      path: `${location.pathname}${location.search}${location.hash}`,
+      forceAuth,
+      mode,
+      returnToParam,
+      storedReturnTo,
+      restoreOpportunityId,
+      restoreEventId,
+      restoreState,
+      redirectPath,
+      hasUser: Boolean(user),
+      userId: user?.id,
+      loading,
+      isLoading,
+      view,
+      isPasswordRecovery,
+    });
+  }, [
+    forceAuth,
+    isLoading,
+    isPasswordRecovery,
+    loading,
+    location.hash,
+    location.pathname,
+    location.search,
+    mode,
+    redirectPath,
+    restoreEventId,
+    restoreOpportunityId,
+    restoreState,
+    returnToParam,
+    storedReturnTo,
+    user,
+    view,
+  ]);
+
   // Handle password recovery mode - detect when user arrives via reset link
   useEffect(() => {
     if (isPasswordRecovery) {
@@ -295,7 +332,22 @@ const AuthPage: React.FC = () => {
 
   useEffect(() => {
     // Don't redirect if in password recovery mode
+    console.log('[Inlight Auth Debug] AuthPage redirect check', {
+      forceAuth,
+      loading,
+      isLoading,
+      hasUser: Boolean(user),
+      userId: user?.id,
+      view,
+      isPasswordRecovery,
+      redirectPath,
+      willRedirect: !forceAuth && !loading && !isLoading && Boolean(user) && view !== 'reset' && !isPasswordRecovery,
+    });
     if (!forceAuth && !loading && !isLoading && user && view !== 'reset' && !isPasswordRecovery) {
+      console.log('[Inlight Auth Debug] AuthPage redirecting authenticated user', {
+        redirectPath,
+        redirectOptions,
+      });
       navigate(redirectPath, redirectOptions);
     }
   }, [forceAuth, user, loading, isLoading, navigate, view, isPasswordRecovery, redirectPath, redirectOptions]);
@@ -328,6 +380,11 @@ const AuthPage: React.FC = () => {
       const isFirstTimeSignupWelcomePending = await consumeFirstTimeSignupWelcomePending(email);
       toast.success(isFirstTimeSignupWelcomePending ? firstTimeSignupWelcomeCopy : returningUserWelcomeCopy);
       if (restoreState) {
+        console.log('[Inlight Auth Debug] Login success with restore state', {
+          redirectPath,
+          redirectOptions,
+          restoreState,
+        });
         navigate(redirectPath, redirectOptions);
         return;
       }
@@ -335,11 +392,22 @@ const AuthPage: React.FC = () => {
         const { data: facultyGroup } = await (supabase.rpc as unknown as FacultyGroupRpc)('get_my_faculty_group');
         const first = Array.isArray(facultyGroup) ? facultyGroup[0] : facultyGroup;
         if (first?.slug) {
+          console.log('[Inlight Auth Debug] Login success faculty redirect', {
+            groupSlug: first.slug,
+          });
           navigate(`/groups/${first.slug}`, { replace: true });
         } else {
+          console.log('[Inlight Auth Debug] Login success default redirect', {
+            redirectPath,
+            redirectOptions,
+          });
           navigate(redirectPath, redirectOptions);
         }
       } catch {
+        console.log('[Inlight Auth Debug] Login success fallback redirect', {
+          redirectPath,
+          redirectOptions,
+        });
         navigate(redirectPath, redirectOptions);
       }
     }

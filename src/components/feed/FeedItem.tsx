@@ -285,6 +285,14 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     }
 
     if (!user) {
+      console.log('[Inlight Auth Debug] Logged-out Buy Ticket clicked', {
+        eventId: item.id,
+        title: item.title,
+        currentUrl: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+        isPaidEvent,
+        hasPaymentLink: Boolean(item.payment_link_url),
+        hasStripePrice: Boolean(item.stripe_price_id),
+      });
       setShowVisitorAuthPrompt(true);
       return;
     }
@@ -651,6 +659,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     if (!user) {
+                      console.log('[Inlight Auth Debug] Logged-out RSVP clicked', {
+                        eventId: item.id,
+                        title: item.title,
+                        currentUrl: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+                      });
                       setShowVisitorAuthPrompt(true);
                       return;
                     }

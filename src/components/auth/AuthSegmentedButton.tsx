@@ -59,7 +59,16 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
     if (restore?.type === 'opportunity') authParams.set('restoreOpportunityId', restore.id);
     if (restore?.type === 'event') authParams.set('restoreEventId', restore.id);
 
-    window.location.assign(`/auth?${authParams.toString()}`);
+    const authUrl = `/auth?${authParams.toString()}`;
+    console.log('[Inlight Auth Debug] AuthSegmentedButton click', {
+      mode,
+      currentPath: `${location.pathname}${location.search}${location.hash}`,
+      restore,
+      returnTo,
+      authUrl,
+    });
+
+    window.location.assign(authUrl);
   };
 
   return (
