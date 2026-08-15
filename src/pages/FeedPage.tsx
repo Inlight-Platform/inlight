@@ -27,7 +27,7 @@ import { VisitorAuthOverlay, VisitorAuthPrompt } from '@/components/auth/Visitor
 import { toast } from 'sonner';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
 import { clearAuthRestore, readAuthRestore } from '@/lib/authRestore';
-import { eventPath, projectPath } from '@/lib/publicPaths';
+import { eventPath, identifierFallbackUuid, projectPath, publicIdentifier } from '@/lib/publicPaths';
 
 type NetworkFilter = 'all' | '1st';
 type ContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates' | 'group';
@@ -72,8 +72,16 @@ const FeedPage: React.FC = () => {
   const showVisitorFeedGate = (contentFilter === 'you' || contentFilter === 'updates') && !user;
 
   const updateEventSearchParam = useCallback((event?: FeedItemData) => {
+    if (event) {
+      navigate(eventPath(event), {
+        replace: true,
+        state: location.state,
+      });
+      return;
+    }
+
     if (location.pathname.startsWith('/events/')) {
-      navigate(event ? eventPath(event) : '/events', {
+      navigate('/events', {
         replace: true,
         state: location.state,
       });
@@ -81,11 +89,7 @@ const FeedPage: React.FC = () => {
     }
 
     const nextParams = new URLSearchParams(location.search);
-    if (event) {
-      nextParams.set('event', event.slug || event.id);
-    } else {
-      nextParams.delete('event');
-    }
+    nextParams.delete('event');
 
     const nextSearch = nextParams.toString();
     navigate(`${location.pathname}${nextSearch ? `?${nextSearch}` : ''}${location.hash}`, {
@@ -419,12 +423,18 @@ const FeedPage: React.FC = () => {
 
   useEffect(() => {
     const storedRestore = routeState?.restore || readAuthRestore();
-    const eventIdentifier = storedRestore?.type === 'event'
+    const rawEventIdentifier = storedRestore?.type === 'event'
       ? storedRestore.id
       : routeEventIdentifier || searchParams.get('event');
+    const fallbackEventId = identifierFallbackUuid(rawEventIdentifier);
+    const eventIdentifier = fallbackEventId || rawEventIdentifier;
     if (!eventIdentifier || selectedItem?.id === eventIdentifier || selectedItem?.slug === eventIdentifier) return;
 
-    const restoredEvent = events.find((event) => event.id === eventIdentifier || event.slug === eventIdentifier);
+    const restoredEvent = events.find((event) =>
+      event.id === eventIdentifier ||
+      event.slug === eventIdentifier ||
+      publicIdentifier(event) === rawEventIdentifier
+    );
     if (!restoredEvent) return;
 
     setContentFilter('events');

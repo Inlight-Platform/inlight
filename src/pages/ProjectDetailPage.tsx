@@ -52,7 +52,7 @@ import { useLocation } from 'react-router-dom';
 import { InviteFriendDialog } from '@/components/invitations/InviteFriendDialog';
 import { ProjectInvitationPrompt } from '@/components/invitations/ProjectInvitationPrompt';
 import { UserSearchInput } from '@/components/projects/UserSearchInput';
-import { isUuid } from '@/lib/publicPaths';
+import { identifierFallbackUuid, isUuid } from '@/lib/publicPaths';
 
 interface InviteeProfile {
   user_id: string;
@@ -161,12 +161,13 @@ const ProjectDetailPage: React.FC = () => {
     queryKey: ['project', projectId],
     queryFn: async () => {
       if (!projectId) return null;
+      const fallbackProjectId = identifierFallbackUuid(projectId);
       let query = supabase
         .from('projects')
         .select('*');
 
-      query = isUuid(projectId)
-        ? query.eq('id', projectId)
+      query = isUuid(projectId) || fallbackProjectId
+        ? query.eq('id', fallbackProjectId || projectId)
         : query.eq('slug', projectId);
 
       const { data, error } = await query.single();
@@ -184,7 +185,7 @@ const ProjectDetailPage: React.FC = () => {
     },
     enabled: !!projectId,
   });
-  const resolvedProjectId = project?.id || (isUuid(projectId) ? projectId : undefined);
+  const resolvedProjectId = project?.id || identifierFallbackUuid(projectId) || (isUuid(projectId) ? projectId : undefined);
 
   // Fetch project members
   const { data: members = [] } = useQuery({
