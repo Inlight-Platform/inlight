@@ -54,6 +54,7 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
     saveAuthReturnTo(returnTo);
     const authParams = new URLSearchParams();
     if (mode === 'signup') authParams.set('mode', 'signup');
+    authParams.set('forceAuth', '1');
     authParams.set('returnTo', returnTo);
     if (restore?.type === 'opportunity') authParams.set('restoreOpportunityId', restore.id);
     if (restore?.type === 'event') authParams.set('restoreEventId', restore.id);

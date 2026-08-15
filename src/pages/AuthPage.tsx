@@ -219,6 +219,7 @@ const AuthPage: React.FC = () => {
   const returnToParam = searchParams.get('returnTo');
   const restoreOpportunityId = searchParams.get('restoreOpportunityId');
   const restoreEventId = searchParams.get('restoreEventId');
+  const forceAuth = searchParams.get('forceAuth') === '1';
   const storedReturnTo = useMemo(() => readAuthReturnTo(), []);
   const restoreState = useMemo(() => {
     if (routeState.restore) return routeState.restore;
@@ -294,10 +295,10 @@ const AuthPage: React.FC = () => {
 
   useEffect(() => {
     // Don't redirect if in password recovery mode
-    if (!loading && !isLoading && user && view !== 'reset' && !isPasswordRecovery) {
+    if (!forceAuth && !loading && !isLoading && user && view !== 'reset' && !isPasswordRecovery) {
       navigate(redirectPath, redirectOptions);
     }
-  }, [user, loading, isLoading, navigate, view, isPasswordRecovery, redirectPath, redirectOptions]);
+  }, [forceAuth, user, loading, isLoading, navigate, view, isPasswordRecovery, redirectPath, redirectOptions]);
 
   useEffect(() => {
     if (mode === 'reset') {
