@@ -84,6 +84,7 @@ interface FeedItemProps {
   imageClassName?: string;
   compactSquare?: boolean;
   onOpenDetails?: (item: FeedItemData) => void;
+  onRequireAuth?: (item: FeedItemData, action: 'rsvp' | 'ticket') => void;
 }
 
 export const FeedItem: React.FC<FeedItemProps> = ({
@@ -95,6 +96,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   imageClassName,
   compactSquare = false,
   onOpenDetails,
+  onRequireAuth,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -292,8 +294,13 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         isPaidEvent,
         hasPaymentLink: Boolean(item.payment_link_url),
         hasStripePrice: Boolean(item.stripe_price_id),
+        handledByParent: Boolean(onRequireAuth),
       });
-      setShowVisitorAuthPrompt(true);
+      if (onRequireAuth) {
+        onRequireAuth(item, 'ticket');
+      } else {
+        setShowVisitorAuthPrompt(true);
+      }
       return;
     }
 
@@ -663,8 +670,13 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                         eventId: item.id,
                         title: item.title,
                         currentUrl: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+                        handledByParent: Boolean(onRequireAuth),
                       });
-                      setShowVisitorAuthPrompt(true);
+                      if (onRequireAuth) {
+                        onRequireAuth(item, 'rsvp');
+                      } else {
+                        setShowVisitorAuthPrompt(true);
+                      }
                       return;
                     }
                     setRsvpDialogOpen(true);

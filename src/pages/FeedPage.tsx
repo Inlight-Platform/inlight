@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles } from 'lucide-react';
@@ -23,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { VisitorAuthOverlay } from '@/components/auth/VisitorAuthPrompt';
+import { VisitorAuthOverlay, VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 import { toast } from 'sonner';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
 import { clearAuthRestore, readAuthRestore } from '@/lib/authRestore';
@@ -62,6 +63,10 @@ const FeedPage: React.FC = () => {
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [composePostType, setComposePostType] = useState<PostType>('update');
   const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
+  const [eventAuthPrompt, setEventAuthPrompt] = useState<{
+    item: FeedItemData;
+    action: 'rsvp' | 'ticket';
+  } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const showVisitorFeedGate = (contentFilter === 'you' || contentFilter === 'updates') && !user;
 
@@ -87,9 +92,20 @@ const FeedPage: React.FC = () => {
     }
   }, [updateEventSearchParam]);
 
+  const openEventAuthPrompt = useCallback((item: FeedItemData, action: 'rsvp' | 'ticket') => {
+    console.log('[Inlight Auth Debug] FeedPage opening page-level event auth prompt', {
+      eventId: item.id,
+      title: item.title,
+      action,
+      currentUrl: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    });
+    setEventAuthPrompt({ item, action });
+  }, []);
+
   const closeFeedDetails = useCallback(() => {
     const wasEvent = selectedItem?.type === 'event';
     setSelectedItem(null);
+    setEventAuthPrompt(null);
     if (wasEvent) {
       updateEventSearchParam();
     }
@@ -1082,6 +1098,7 @@ const FeedPage: React.FC = () => {
                         item={item}
                         networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
                         onOpenDetails={openFeedDetails}
+                        onRequireAuth={openEventAuthPrompt}
                       />
                     ))}
                   </div>
@@ -1147,11 +1164,33 @@ const FeedPage: React.FC = () => {
               <FeedItem
                 item={selectedItem}
                 networkDegree={selectedItem.user_id === user?.id ? null : getConnectionDegree(selectedItem.user_id)}
+                onRequireAuth={openEventAuthPrompt}
               />
             </div>
           )}
         </SheetContent>
       </Sheet>
+
+      {eventAuthPrompt && createPortal(
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setEventAuthPrompt(null);
+          }}
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) setEventAuthPrompt(null);
+          }}
+        >
+          <VisitorAuthPrompt
+            compact
+            title={eventAuthPrompt.action === 'ticket' ? 'Buy tickets on Inlight' : 'RSVP on Inlight'}
+            description={eventAuthPrompt.action === 'ticket' ? 'Sign in or create an account to buy tickets.' : 'Sign in or create an account to RSVP.'}
+            features={eventAuthPrompt.action === 'ticket' ? ['Ticket checkout', 'Event updates', 'Saved event access'] : ['RSVP tracking', 'Event updates', 'Saved event access']}
+            restore={{ type: 'event', id: eventAuthPrompt.item.id }}
+          />
+        </div>,
+        document.body,
+      )}
     </div>
   );
 };
