@@ -52,7 +52,7 @@ import { useLocation } from 'react-router-dom';
 import { InviteFriendDialog } from '@/components/invitations/InviteFriendDialog';
 import { ProjectInvitationPrompt } from '@/components/invitations/ProjectInvitationPrompt';
 import { UserSearchInput } from '@/components/projects/UserSearchInput';
-import { identifierFallbackUuid, isUuid } from '@/lib/publicPaths';
+import { identifierFallbackUuid, isUuid, slugifyTitle } from '@/lib/publicPaths';
 
 interface InviteeProfile {
   user_id: string;
@@ -166,22 +166,36 @@ const ProjectDetailPage: React.FC = () => {
         .from('projects')
         .select('*');
 
-      query = isUuid(projectId) || fallbackProjectId
-        ? query.eq('id', fallbackProjectId || projectId)
-        : query.eq('slug', projectId);
+      if (isUuid(projectId) || fallbackProjectId) {
+        query = query.eq('id', fallbackProjectId || projectId);
+      } else {
+        query = query.eq('slug', projectId);
+      }
 
       const { data, error } = await query.single();
-      
-      if (error) throw error;
+
+      let resolvedProject = data;
+      if (error && !isUuid(projectId) && !fallbackProjectId) {
+        const { data: titleMatches, error: fallbackError } = await supabase
+          .from('projects')
+          .select('*');
+
+        if (fallbackError) throw error;
+        resolvedProject = titleMatches?.find((candidate) => slugifyTitle(candidate.title) === projectId) || null;
+      } else if (error) {
+        throw error;
+      }
+
+      if (!resolvedProject) throw error || new Error('Project not found');
 
       // Fetch creator profile
       const { data: creatorProfile } = await supabase
         .from('profiles_public')
         .select('display_name, avatar_url')
-        .eq('user_id', data.creator_id)
+        .eq('user_id', resolvedProject.creator_id)
         .single();
 
-      return { ...data, creator_profile: creatorProfile };
+      return { ...resolvedProject, creator_profile: creatorProfile };
     },
     enabled: !!projectId,
   });

@@ -27,7 +27,7 @@ import { VisitorAuthOverlay, VisitorAuthPrompt } from '@/components/auth/Visitor
 import { toast } from 'sonner';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
 import { clearAuthRestore, readAuthRestore } from '@/lib/authRestore';
-import { eventPath, identifierFallbackUuid, projectPath, publicIdentifier } from '@/lib/publicPaths';
+import { eventPath, identifierFallbackUuid, projectPath, publicIdentifier, slugifyTitle } from '@/lib/publicPaths';
 
 type NetworkFilter = 'all' | '1st';
 type ContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates' | 'group';
@@ -433,6 +433,7 @@ const FeedPage: React.FC = () => {
     const restoredEvent = events.find((event) =>
       event.id === eventIdentifier ||
       event.slug === eventIdentifier ||
+      slugifyTitle(event.title) === rawEventIdentifier ||
       publicIdentifier(event) === rawEventIdentifier
     );
     if (!restoredEvent) return;

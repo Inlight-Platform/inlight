@@ -18,7 +18,7 @@ export const identifierFallbackUuid = (value?: string | null) => {
 };
 
 export const publicIdentifier = (item: { slug?: string | null; title?: string | null; id: string }) =>
-  item.slug?.trim() || `${slugifyTitle(item.title)}-${item.id}`;
+  item.slug?.trim() || slugifyTitle(item.title) || item.id;
 
 export const projectPath = (project: { slug?: string | null; title?: string | null; id: string }) =>
   `/projects/${publicIdentifier(project)}`;
