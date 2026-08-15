@@ -1,0 +1,68 @@
+name: Supabase Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Supabase environment to migrate
+        required: true
+        default: sandbox
+        type: choice
+        options:
+          - sandbox
+          - production
+      dry_run:
+        description: Preview pending migrations without applying them
+        required: true
+        default: true
+        type: boolean
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/**'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply Supabase migrations
+    runs-on: ubuntu-latest
+    env:
+      TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'production' }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+      SANDBOX_DB_URL: ${{ secrets.SANDBOX_SUPABASE_DB_URL }}
+      PRODUCTION_DB_URL: ${{ secrets.PRODUCTION_SUPABASE_DB_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select database URL
+        run: |
+          if [ "$TARGET" = "sandbox" ]; then
+            db_url="$SANDBOX_DB_URL"
+          else
+            db_url="$PRODUCTION_DB_URL"
+          fi
+
+          if [ -z "$db_url" ]; then
+            echo "::error::Missing database URL secret for target '$TARGET'. Configure SANDBOX_SUPABASE_DB_URL or PRODUCTION_SUPABASE_DB_URL."
+            exit 1
+          fi
+
+          echo "::add-mask::$db_url"
+          echo "SUPABASE_DB_URL=$db_url" >> "$GITHUB_ENV"
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Show pending migrations
+        if: ${{ env.DRY_RUN == 'true' }}
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --dry-run --skip-vault
+
+      - name: Apply migrations
+        if: ${{ env.DRY_RUN != 'true' }}
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --yes --skip-vault

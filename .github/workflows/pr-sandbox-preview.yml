@@ -42,6 +42,7 @@ jobs:
       VITE_SUPABASE_ALLOW_REMOTE_SANDBOX: 'true'
       VITE_SUPABASE_URL: ${{ secrets.VITE_SANDBOX_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SANDBOX_SUPABASE_PUBLISHABLE_KEY }}
+      SANDBOX_SUPABASE_DB_URL: ${{ secrets.SANDBOX_SUPABASE_DB_URL }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
@@ -75,6 +76,20 @@ jobs:
 
       - name: Run tests
         run: npm run test:run
+
+      - name: Set up Supabase CLI
+        if: ${{ env.SANDBOX_SUPABASE_DB_URL != '' }}
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Apply sandbox database migrations
+        if: ${{ env.SANDBOX_SUPABASE_DB_URL != '' }}
+        run: supabase db push --db-url "$SANDBOX_SUPABASE_DB_URL" --yes --skip-vault
+
+      - name: Skip sandbox database migrations
+        if: ${{ env.SANDBOX_SUPABASE_DB_URL == '' }}
+        run: echo "::notice::SANDBOX_SUPABASE_DB_URL is not configured, so PR sandbox database migrations were skipped."
 
       - name: Build sandbox app
         run: npm run build:sandbox
