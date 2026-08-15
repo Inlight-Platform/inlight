@@ -74,7 +74,7 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({ onClose }) => {
           start_date: startDate || null,
           end_date: endDate || null,
         })
-        .select('id, title, slug')
+        .select('id, title')
         .single();
 
       if (projectError) throw projectError;

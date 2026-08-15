@@ -27,7 +27,7 @@ const normalizeEventType = (value: string | null): EventType =>
 
 const mapPublicEvent = (event: {
   id: string;
-  slug: string;
+  slug?: string | null;
   title: string;
   description: string | null;
   image_url: string | null;
@@ -66,7 +66,7 @@ const EventsPage: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('events')
-        .select('id, slug, title, description, image_url, event_date, location, event_type, user_id')
+        .select('id, title, description, image_url, event_date, location, event_type, user_id')
         .order('event_date', { ascending: true });
 
       if (error) throw error;

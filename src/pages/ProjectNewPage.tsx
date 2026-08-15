@@ -89,7 +89,7 @@ const ProjectNewPage: React.FC = () => {
           link_url: linkUrl.trim() || null,
           link_title: linkTitle.trim() || null,
         })
-        .select('id, title, slug')
+        .select('id, title')
         .single();
 
       if (projectError) throw projectError;
