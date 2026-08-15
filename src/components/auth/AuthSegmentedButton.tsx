@@ -88,7 +88,11 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
           'dark:hover:bg-white/[0.07] dark:hover:text-white',
           styles.button,
         )}
-        onClick={() => goToAuth('signin')}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          goToAuth('signin');
+        }}
       >
         {showIcons && <LogIn className={styles.icon} />}
         <span className="whitespace-nowrap">Sign in</span>
@@ -100,7 +104,11 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
           'dark:bg-white/[0.105] dark:text-white/92 dark:hover:bg-white/[0.16]',
           styles.button,
         )}
-        onClick={() => goToAuth('signup')}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          goToAuth('signup');
+        }}
       >
         {showIcons && <UserPlus className={styles.icon} />}
         <span className="whitespace-nowrap">Sign up</span>
