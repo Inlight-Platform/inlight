@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { VisitorAuthOverlay } from '@/components/auth/VisitorAuthPrompt';
 import { toast } from 'sonner';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
+import { clearAuthRestore, readAuthRestore } from '@/lib/authRestore';
 
 type NetworkFilter = 'all' | '1st';
 type ContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates' | 'group';
@@ -47,7 +48,7 @@ type ProjectCategory = typeof PROJECT_CATEGORIES[number]['value'];
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const routeState = location.state as { scrollToTop?: boolean } | null;
+  const routeState = location.state as { scrollToTop?: boolean; restore?: ReturnType<typeof readAuthRestore> } | null;
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
@@ -63,6 +64,36 @@ const FeedPage: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const showVisitorFeedGate = (contentFilter === 'you' || contentFilter === 'updates') && !user;
+
+  const updateEventSearchParam = useCallback((eventId?: string) => {
+    const nextParams = new URLSearchParams(location.search);
+    if (eventId) {
+      nextParams.set('event', eventId);
+    } else {
+      nextParams.delete('event');
+    }
+
+    const nextSearch = nextParams.toString();
+    navigate(`${location.pathname}${nextSearch ? `?${nextSearch}` : ''}${location.hash}`, {
+      replace: true,
+      state: location.state,
+    });
+  }, [location.hash, location.pathname, location.search, location.state, navigate]);
+
+  const openFeedDetails = useCallback((item: FeedItemData) => {
+    setSelectedItem(item);
+    if (item.type === 'event') {
+      updateEventSearchParam(item.id);
+    }
+  }, [updateEventSearchParam]);
+
+  const closeFeedDetails = useCallback(() => {
+    const wasEvent = selectedItem?.type === 'event';
+    setSelectedItem(null);
+    if (wasEvent) {
+      updateEventSearchParam();
+    }
+  }, [selectedItem?.type, updateEventSearchParam]);
 
   useEffect(() => {
     if (!routeState?.scrollToTop) return;
@@ -360,6 +391,27 @@ const FeedPage: React.FC = () => {
     refetchOnWindowFocus: false,
   });
 
+  useEffect(() => {
+    const storedRestore = routeState?.restore || readAuthRestore();
+    const eventId = storedRestore?.type === 'event'
+      ? storedRestore.id
+      : searchParams.get('event');
+    if (!eventId || selectedItem?.id === eventId) return;
+
+    const restoredEvent = events.find((event) => event.id === eventId);
+    if (!restoredEvent) return;
+
+    setContentFilter('events');
+    setSelectedItem(restoredEvent);
+    clearAuthRestore();
+    if (routeState?.restore) {
+      navigate(`${location.pathname}${location.search}${location.hash}`, {
+        replace: true,
+        state: routeState.scrollToTop ? { scrollToTop: routeState.scrollToTop } : undefined,
+      });
+    }
+  }, [events, location.hash, location.pathname, location.search, navigate, routeState, searchParams, selectedItem?.id]);
+
   // Fetch saved projects
   const { data: savedProjects = [] } = useQuery({
     queryKey: ['saved-projects', user?.id],
@@ -518,7 +570,7 @@ const FeedPage: React.FC = () => {
               key={`project-list-${item.id}`}
               item={item}
               networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
-              onOpenDetails={setSelectedItem}
+              onOpenDetails={openFeedDetails}
             />
           ))}
         </div>
@@ -986,7 +1038,7 @@ const FeedPage: React.FC = () => {
                           key={`group-${item.type}-${item.id}`}
                           item={item}
                           networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
-                          onOpenDetails={setSelectedItem}
+                          onOpenDetails={openFeedDetails}
                         />
                       ))}
                     </div>
@@ -1029,7 +1081,7 @@ const FeedPage: React.FC = () => {
                         key={`list-${item.type}-${item.id}`}
                         item={item}
                         networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
-                        onOpenDetails={setSelectedItem}
+                        onOpenDetails={openFeedDetails}
                       />
                     ))}
                   </div>
@@ -1047,9 +1099,9 @@ const FeedPage: React.FC = () => {
                           if (item.type === 'project') {
                             navigate(`/projects/${item.id}`, { state: { returnTo: feedReturnTo } });
                           } else if (item.type === 'event') {
-                            setSelectedItem(item);
+                            openFeedDetails(item);
                           } else if (item.type === 'post') {
-                            setSelectedItem(item);
+                            openFeedDetails(item);
                           } else {
                             const destination = getFeedItemDestination(item);
                             if (destination?.kind === 'internal') {
@@ -1085,7 +1137,7 @@ const FeedPage: React.FC = () => {
       </Dialog>
 
       {/* Expanded Item Sheet */}
-      <Sheet open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
+      <Sheet open={!!selectedItem} onOpenChange={(open) => !open && closeFeedDetails()}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="text-left">Details</SheetTitle>

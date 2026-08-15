@@ -218,19 +218,26 @@ const AuthPage: React.FC = () => {
   const routeState = (location.state || {}) as AuthRouteState;
   const returnToParam = searchParams.get('returnTo');
   const restoreOpportunityId = searchParams.get('restoreOpportunityId');
+  const restoreEventId = searchParams.get('restoreEventId');
   const storedReturnTo = useMemo(() => readAuthReturnTo(), []);
   const restoreState = useMemo(() => {
     if (routeState.restore) return routeState.restore;
     if (restoreOpportunityId) return { type: 'opportunity', id: restoreOpportunityId } satisfies AuthRestoreState;
+    if (restoreEventId) return { type: 'event', id: restoreEventId } satisfies AuthRestoreState;
     return readAuthRestore();
-  }, [routeState.restore, restoreOpportunityId]);
+  }, [routeState.restore, restoreOpportunityId, restoreEventId]);
   const routeFromPath = routeState.from
     ? `${routeState.from.pathname}${routeState.from.search}${routeState.from.hash}`
     : null;
-  const redirectPath = returnToParam || storedReturnTo || restoreOpportunityId
-    ? returnToParam || storedReturnTo || `/opportunities?job=${encodeURIComponent(restoreOpportunityId || '')}`
-    : routeFromPath || restoreState?.type === 'opportunity'
-      ? routeFromPath || '/opportunities'
+  const fallbackRestorePath = restoreOpportunityId
+    ? `/opportunities?job=${encodeURIComponent(restoreOpportunityId)}`
+    : restoreEventId
+      ? `/feed?event=${encodeURIComponent(restoreEventId)}`
+      : null;
+  const redirectPath = returnToParam || storedReturnTo || fallbackRestorePath
+    ? returnToParam || storedReturnTo || fallbackRestorePath || '/feed'
+    : routeFromPath || restoreState
+      ? routeFromPath || (restoreState?.type === 'opportunity' ? '/opportunities' : '/feed')
       : '/feed';
   const redirectOptions = useMemo(() => restoreState
     ? { replace: true, state: { restore: restoreState } }
@@ -243,6 +250,8 @@ const AuthPage: React.FC = () => {
     params.set('returnTo', redirectPath);
     if (restoreState?.type === 'opportunity') {
       params.set('restoreOpportunityId', restoreState.id);
+    } else if (restoreState?.type === 'event') {
+      params.set('restoreEventId', restoreState.id);
     }
     return `${window.location.origin}/auth?${params.toString()}`;
   }, [redirectPath, restoreState]);

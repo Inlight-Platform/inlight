@@ -5,6 +5,10 @@ export type AuthRestoreState =
   | {
       type: 'opportunity';
       id: string;
+    }
+  | {
+      type: 'event';
+      id: string;
     };
 
 export function saveAuthRestore(restore?: AuthRestoreState) {
@@ -33,7 +37,11 @@ export function readAuthRestore(): AuthRestoreState | undefined {
     if (!raw) return undefined;
 
     const parsed = JSON.parse(raw) as AuthRestoreState;
-    if (parsed?.type === 'opportunity' && typeof parsed.id === 'string' && parsed.id) {
+    if (
+      (parsed?.type === 'opportunity' || parsed?.type === 'event') &&
+      typeof parsed.id === 'string' &&
+      parsed.id
+    ) {
       return parsed;
     }
   } catch {

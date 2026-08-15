@@ -1,5 +1,5 @@
-import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Event, useStore } from '@/store/useStore';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -9,6 +9,7 @@ import { Calendar, MapPin, Users, Video, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isEventPast } from '@/lib/eventDates';
 import inlightLogo from '@/assets/inlight-logo.jpeg';
+import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 
 interface EventCardProps {
   event: Event;
@@ -25,10 +26,9 @@ const eventTypeColors: Record<string, string> = {
 };
 
 const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   const { getUser, currentUserId, rsvpToEvent, get1stDegree } = useStore();
+  const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
   
   const host = getUser(event.hostId);
   const hostName = host?.name || 'Inlight creator';
@@ -63,11 +63,34 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
   const handleRsvp = (status: 'going' | 'interested') => {
     if (eventHasPassed) return;
     if (!user) {
-      navigate('/auth', { state: { from: location } });
+      setShowVisitorAuthPrompt(true);
       return;
     }
     rsvpToEvent(event.id, currentUserId, status);
   };
+
+  const visitorAuthOverlay = showVisitorAuthPrompt
+    ? createPortal(
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowVisitorAuthPrompt(false);
+          }}
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) setShowVisitorAuthPrompt(false);
+          }}
+        >
+          <VisitorAuthPrompt
+            compact
+            title="RSVP on Inlight"
+            description="Sign in or create an account to RSVP."
+            features={['RSVP tracking', 'Event updates', 'Saved event access']}
+            restore={{ type: 'event', id: event.id }}
+          />
+        </div>,
+        document.body,
+      )
+    : null;
 
   if (compact) {
     return (
@@ -96,6 +119,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
   }
 
   return (
+    <>
     <div className="rounded-xl overflow-hidden bg-card border border-border transition-colors">
       {/* Cover Image */}
       <div className="relative h-40 overflow-hidden">
@@ -212,6 +236,8 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
         </div>
       </div>
     </div>
+    {visitorAuthOverlay}
+    </>
   );
 };
 

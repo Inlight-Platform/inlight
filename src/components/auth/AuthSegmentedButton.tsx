@@ -45,6 +45,8 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
     const returnParams = new URLSearchParams(location.search);
     if (restore?.type === 'opportunity') {
       returnParams.set('job', restore.id);
+    } else if (restore?.type === 'event') {
+      returnParams.set('event', restore.id);
     }
 
     const returnSearch = returnParams.toString();
@@ -55,6 +57,7 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
     if (mode === 'signup') authParams.set('mode', 'signup');
     authParams.set('returnTo', returnTo);
     if (restore?.type === 'opportunity') authParams.set('restoreOpportunityId', restore.id);
+    if (restore?.type === 'event') authParams.set('restoreEventId', restore.id);
 
     navigate(`/auth?${authParams.toString()}`, {
       state: {

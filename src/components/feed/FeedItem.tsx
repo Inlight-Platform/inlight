@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -28,6 +29,7 @@ import { useEventRsvps } from '@/hooks/useEventRsvps';
 import { cn, capitalizeName } from '@/lib/utils';
 import { isEventPast } from '@/lib/eventDates';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
+import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 
 export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show' | 'open_role';
 
@@ -106,6 +108,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const [rsvpEmail, setRsvpEmail] = useState('');
   const [rsvpSubmitted, setRsvpSubmitted] = useState(false);
   const [showAttendees, setShowAttendees] = useState(false);
+  const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
   const [buyingTicket, setBuyingTicket] = useState(false);
   const [compactTextExpanded, setCompactTextExpanded] = useState(false);
 
@@ -281,30 +284,33 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       return;
     }
 
+    if (!user) {
+      setShowVisitorAuthPrompt(true);
+      return;
+    }
+
     // If a direct payment link exists, auto-RSVP and open it
     if (item.payment_link_url) {
       // Auto-RSVP the logged-in user as "going"
-      if (user) {
-        try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name')
-            .eq('user_id', user.id)
-            .single();
-          const ownerEmail = user.email ?? '';
-          if (profile && ownerEmail) {
-            submitRsvp.mutate({
-              event_id: item.id,
-              name: profile.display_name || ownerEmail.split('@')[0],
-              email: ownerEmail,
-              role_type: 'attendee',
-              status: 'going',
-            });
-          }
-        } catch (e) {
-          // Don't block checkout if RSVP fails
-          console.error('Auto-RSVP error:', e);
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('user_id', user.id)
+          .single();
+        const ownerEmail = user.email ?? '';
+        if (profile && ownerEmail) {
+          submitRsvp.mutate({
+            event_id: item.id,
+            name: profile.display_name || ownerEmail.split('@')[0],
+            email: ownerEmail,
+            role_type: 'attendee',
+            status: 'going',
+          });
         }
+      } catch (e) {
+        // Don't block checkout if RSVP fails
+        console.error('Auto-RSVP error:', e);
       }
       window.open(item.payment_link_url, '_blank');
       return;
@@ -360,9 +366,32 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const compactCollapsed = compactSquare && !compactTextExpanded;
   const compactBodyLineCount = bodyText?.split('\n').filter((line) => line.trim()).length || 0;
   const showCompactTextToggle = compactSquare && Boolean(bodyText && (bodyText.length > 90 || compactBodyLineCount > 2));
+  const visitorAuthOverlay = showVisitorAuthPrompt && isEventItem
+    ? createPortal(
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowVisitorAuthPrompt(false);
+          }}
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) setShowVisitorAuthPrompt(false);
+          }}
+        >
+          <VisitorAuthPrompt
+            compact
+            title={isPaidEvent ? 'Buy tickets on Inlight' : 'RSVP on Inlight'}
+            description={isPaidEvent ? 'Sign in or create an account to buy tickets.' : 'Sign in or create an account to RSVP.'}
+            features={isPaidEvent ? ['Ticket checkout', 'Event updates', 'Saved event access'] : ['RSVP tracking', 'Event updates', 'Saved event access']}
+            restore={{ type: 'event', id: item.id }}
+          />
+        </div>,
+        document.body,
+      )
+    : null;
 
   return (
-    <Card 
+    <>
+    <Card
       className={cn(
         'bg-card border-border',
         isClickable && 'cursor-pointer hover:shadow-md transition-shadow',
@@ -621,6 +650,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!user) {
+                      setShowVisitorAuthPrompt(true);
+                      return;
+                    }
                     setRsvpDialogOpen(true);
                   }}
                   disabled={eventHasPassed}
@@ -717,6 +750,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
+                  if (!user) {
+                    setRsvpDialogOpen(false);
+                    setShowVisitorAuthPrompt(true);
+                    return;
+                  }
                   if (eventHasPassed) {
                     toast.error('RSVPs are closed for this past event.');
                     return;
@@ -890,5 +928,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         item={item}
       />
     </Card>
+    {visitorAuthOverlay}
+    </>
   );
 };

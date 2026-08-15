@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { isEventPast } from '@/lib/eventDates';
+import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 
 interface EventRsvpFormProps {
   eventId: string;
@@ -49,6 +51,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   const [showAttendees, setShowAttendees] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState('');
   const [currentUserDisplayName, setCurrentUserDisplayName] = useState('');
@@ -105,7 +108,8 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUserId) {
-      navigate('/auth', { state: { from: { pathname: window.location.pathname, search: window.location.search } } });
+      setDialogOpen(false);
+      setShowVisitorAuthPrompt(true);
       return;
     }
     if (eventHasPassed) {
@@ -157,6 +161,11 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   const handleBuyTicket = async () => {
     if (eventHasPassed) {
       toast.error('Tickets are closed for this past event.');
+      return;
+    }
+
+    if (!currentUserId) {
+      setShowVisitorAuthPrompt(true);
       return;
     }
 
@@ -214,6 +223,26 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
 
   return (
     <div className="space-y-5">
+      {showVisitorAuthPrompt && createPortal(
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowVisitorAuthPrompt(false);
+          }}
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) setShowVisitorAuthPrompt(false);
+          }}
+        >
+          <VisitorAuthPrompt
+            compact
+            title={isPaid ? 'Buy tickets on Inlight' : 'RSVP on Inlight'}
+            description={isPaid ? 'Sign in or create an account to buy tickets.' : 'Sign in or create an account to RSVP.'}
+            features={isPaid ? ['Ticket checkout', 'Event updates', 'Saved event access'] : ['RSVP tracking', 'Event updates', 'Saved event access']}
+            restore={{ type: 'event', id: eventId }}
+          />
+        </div>,
+        document.body,
+      )}
       {/* Ticket confirmed state (from Stripe redirect) */}
       {hasTicketSuccess && (
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5 text-center space-y-2">
@@ -253,7 +282,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
           size="lg"
           onClick={() => {
             if (!currentUserId) {
-              navigate('/auth', { state: { from: { pathname: window.location.pathname, search: window.location.search } } });
+              setShowVisitorAuthPrompt(true);
               return;
             }
             setDialogOpen(true);
