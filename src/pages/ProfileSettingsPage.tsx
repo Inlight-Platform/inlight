@@ -445,12 +445,10 @@ const ProfileSettingsPage: React.FC = () => {
       shouldAttendAnonymously: checked,
     });
 
-    const { data: updatedProfile, error } = await supabase
+    const { error } = await supabase
       .from('profiles')
       .update({ anonymous_event_rsvps: checked })
-      .eq('user_id', user.id)
-      .select('anonymous_event_rsvps')
-      .maybeSingle();
+      .eq('user_id', user.id);
 
     if (error) {
       setAnonymousEventRsvps(previousValue);
@@ -473,26 +471,8 @@ const ProfileSettingsPage: React.FC = () => {
     console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Direct profiles.anonymous_event_rsvps update succeeded', {
       ...debugContext,
       requestedValue: checked,
-      savedPreference: updatedProfile?.anonymous_event_rsvps,
+      savedPreference: checked,
     });
-
-    const { error: rsvpSyncError } = await supabase
-      .from('event_rsvps')
-      .update({ is_anonymous: checked })
-      .eq('user_id', user.id);
-
-    if (rsvpSyncError) {
-      console.warn(EVENT_PRIVACY_DEBUG_PREFIX, 'Could not sync existing event_rsvps.is_anonymous rows; profile preference still saved', {
-        ...debugContext,
-        requestedValue: checked,
-        error: rsvpSyncError,
-      });
-    } else {
-      console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Existing event_rsvps.is_anonymous rows synced', {
-        ...debugContext,
-        requestedValue: checked,
-      });
-    }
     console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Invalidating event privacy related queries', debugContext);
     queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
     queryClient.invalidateQueries({ queryKey: ['event-rsvps'] });
