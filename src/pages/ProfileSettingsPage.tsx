@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { SUPABASE_URL } from '@/integrations/supabase/config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,6 +71,21 @@ const PROFILE_SETTINGS_FIELDS = `
   show_representation,
   show_gear_list
 `;
+
+const EVENT_PRIVACY_DEBUG_PREFIX = '[Inlight Event Privacy Debug]';
+
+const getEventPrivacyDebugContext = (userId?: string) => ({
+  userId,
+  path:
+    typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}${window.location.hash}`
+      : undefined,
+  origin: typeof window !== 'undefined' ? window.location.origin : undefined,
+  supabaseUrl: SUPABASE_URL,
+  viteMode: import.meta.env.MODE,
+  supabaseEnv: import.meta.env.VITE_SUPABASE_ENV,
+  allowRemoteSandbox: import.meta.env.VITE_SUPABASE_ALLOW_REMOTE_SANDBOX,
+});
 
 const AFFILIATION_OPTIONS = [
   { tag: "etw", label: "Experimental Theatre Wing" },
@@ -275,6 +291,9 @@ const ProfileSettingsPage: React.FC = () => {
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
+      const debugContext = getEventPrivacyDebugContext(user.id);
+      console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Profile settings load started', debugContext);
+
       const { data: profileByUserId, error: profileByUserIdError } = await supabase
         .from('profiles')
         .select(PROFILE_SETTINGS_FIELDS)
@@ -282,10 +301,23 @@ const ProfileSettingsPage: React.FC = () => {
         .maybeSingle();
 
       if (profileByUserIdError) {
+        console.error(EVENT_PRIVACY_DEBUG_PREFIX, 'Profile row load failed', {
+          ...debugContext,
+          error: profileByUserIdError,
+        });
         console.error('ProfileSettingsPage: failed loading profile by user id', profileByUserIdError);
       }
 
-      if (!profileByUserId) return null;
+      console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Profile row load finished', {
+        ...debugContext,
+        hasProfile: Boolean(profileByUserId),
+        profileUserId: profileByUserId?.user_id,
+      });
+
+      if (!profileByUserId) {
+        console.warn(EVENT_PRIVACY_DEBUG_PREFIX, 'Stopping settings load because no profile row was returned', debugContext);
+        return null;
+      }
 
       const { data: notificationSettings, error: notificationSettingsError } = await supabase
         .from('profiles')
@@ -297,13 +329,23 @@ const ProfileSettingsPage: React.FC = () => {
         console.error('ProfileSettingsPage: failed loading notification settings', notificationSettingsError);
       }
 
+      console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Calling get_my_event_privacy_preference', debugContext);
       const { data: eventPrivacyPreference, error: eventPrivacyPreferenceError } = await supabase.rpc(
         'get_my_event_privacy_preference',
       );
 
       if (eventPrivacyPreferenceError) {
+        console.error(EVENT_PRIVACY_DEBUG_PREFIX, 'get_my_event_privacy_preference failed', {
+          ...debugContext,
+          error: eventPrivacyPreferenceError,
+        });
         console.error('ProfileSettingsPage: failed loading event privacy preference', eventPrivacyPreferenceError);
       } else {
+        console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'get_my_event_privacy_preference succeeded', {
+          ...debugContext,
+          value: eventPrivacyPreference,
+          normalizedValue: Boolean(eventPrivacyPreference),
+        });
         setAnonymousEventRsvps(Boolean(eventPrivacyPreference));
       }
 
@@ -332,6 +374,10 @@ const ProfileSettingsPage: React.FC = () => {
   // Populate form when profile loads
   useEffect(() => {
     if (profile) {
+      console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Hydrating settings form from profile query', {
+        ...getEventPrivacyDebugContext(user?.id),
+        anonymousEventRsvpsFromProfile: profile.anonymous_event_rsvps,
+      });
       setDisplayName(profile.display_name || '');
       setStageName(profile.stage_name || '');
       setAvatarUrl(profile.avatar_url || '');
@@ -376,17 +422,39 @@ const ProfileSettingsPage: React.FC = () => {
   });
 
   const updateAnonymousEventRsvpPreference = async (checked: boolean) => {
-    if (!user?.id) return;
+    const debugContext = getEventPrivacyDebugContext(user?.id);
+    console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Toggle requested', {
+      ...debugContext,
+      checked,
+      previousValue: anonymousEventRsvps,
+      hasUser: Boolean(user?.id),
+    });
+
+    if (!user?.id) {
+      console.warn(EVENT_PRIVACY_DEBUG_PREFIX, 'Toggle ignored because no authenticated user is available', debugContext);
+      return;
+    }
 
     const previousValue = anonymousEventRsvps;
     setAnonymousEventRsvps(checked);
 
-    const { error } = await supabase.rpc('set_my_event_privacy_preference', {
+    console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Calling set_my_event_privacy_preference', {
+      ...debugContext,
+      shouldAttendAnonymously: checked,
+    });
+
+    const { data: savedPreference, error } = await supabase.rpc('set_my_event_privacy_preference', {
       should_attend_anonymously: checked,
     });
 
     if (error) {
       setAnonymousEventRsvps(previousValue);
+      console.error(EVENT_PRIVACY_DEBUG_PREFIX, 'set_my_event_privacy_preference failed', {
+        ...debugContext,
+        requestedValue: checked,
+        rolledBackTo: previousValue,
+        error,
+      });
       console.error('ProfileSettingsPage: failed updating event privacy preference', error);
       if (/set_my_event_privacy_preference|get_my_event_privacy_preference|anonymous_event_rsvps|schema cache|column|function/i.test(error.message)) {
         toast.error('Event privacy setting is not available until the latest database migration is applied.');
@@ -397,6 +465,12 @@ const ProfileSettingsPage: React.FC = () => {
       return;
     }
 
+    console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'set_my_event_privacy_preference succeeded', {
+      ...debugContext,
+      requestedValue: checked,
+      savedPreference,
+    });
+    console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Invalidating event privacy related queries', debugContext);
     queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
     queryClient.invalidateQueries({ queryKey: ['event-rsvps'] });
     toast.success('Event privacy updated successfully!');
