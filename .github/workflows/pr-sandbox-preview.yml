@@ -162,6 +162,7 @@ jobs:
     env:
       CF_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME || 'inlight' }}
       PREVIEW_BRANCH: pr-${{ github.event.pull_request.number }}-production-data
+      PRODUCTION_SUPABASE_DB_URL: ${{ secrets.PRODUCTION_SUPABASE_DB_URL }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
@@ -195,6 +196,20 @@ jobs:
 
       - name: Run tests
         run: npm run test:run
+
+      - name: Set up Supabase CLI
+        if: ${{ env.PRODUCTION_SUPABASE_DB_URL != '' }}
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Apply production database migrations
+        if: ${{ env.PRODUCTION_SUPABASE_DB_URL != '' }}
+        run: supabase db push --db-url "$PRODUCTION_SUPABASE_DB_URL" --yes --skip-vault
+
+      - name: Skip production database migrations
+        if: ${{ env.PRODUCTION_SUPABASE_DB_URL == '' }}
+        run: echo "::notice::PRODUCTION_SUPABASE_DB_URL is not configured, so production-data preview database migrations were skipped."
 
       - name: Build production-data app
         run: npm run build

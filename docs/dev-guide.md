@@ -120,7 +120,7 @@ The workflow has two gates:
 
 1. `main-freshness` checks that latest `origin/main` is an ancestor of the PR head. If this fails, update the PR branch with latest `main` before reviewing the preview.
 2. `sandbox-preview` typechecks, runs tests, applies sandbox migrations when configured, builds with `npm run build:sandbox`, deploys the `dist` folder to Cloudflare Pages, and comments the sandbox preview URL on the PR.
-3. `production-data-preview` typechecks, runs tests, builds with `npm run build`, deploys a separate Cloudflare Pages preview, and comments the production-data preview URL on the PR.
+3. `production-data-preview` typechecks, runs tests, applies production migrations when configured, builds with `npm run build`, deploys a separate Cloudflare Pages preview, and comments the production-data preview URL on the PR.
 
 Repository configuration required:
 
@@ -131,11 +131,12 @@ Repository configuration required:
 | `VITE_SANDBOX_SUPABASE_URL` | GitHub secret | Hosted sandbox Supabase URL for PR previews. Must not be the production Supabase URL. |
 | `VITE_SANDBOX_SUPABASE_PUBLISHABLE_KEY` | GitHub secret | Hosted sandbox Supabase publishable/anon key for PR previews. |
 | `SANDBOX_SUPABASE_DB_URL` | GitHub secret | Optional. Database connection string used to apply PR migrations to the sandbox Supabase project before preview builds. |
+| `PRODUCTION_SUPABASE_DB_URL` | GitHub secret | Optional. Database connection string used to apply PR migrations to the real Inlight Supabase project for production-data previews and main-branch migration runs. |
 | `CLOUDFLARE_PAGES_PROJECT_NAME` | GitHub variable | Optional. Defaults to `inlight` when unset. |
 
 The application still locks normal production and local development builds to the production Supabase URL. Hosted sandbox previews must set `VITE_SUPABASE_ENV=sandbox` and `VITE_SUPABASE_ALLOW_REMOTE_SANDBOX=true`, which the workflow does automatically.
 
-The production-data preview runs PR code against the real Inlight Supabase project. Treat this URL carefully because creating, editing, RSVPing, or deleting data there can affect real shared data.
+The production-data preview runs PR code against the real Inlight Supabase project. Treat this URL carefully because migrations and user actions there can affect real shared data.
 
 ## Troubleshooting
 
