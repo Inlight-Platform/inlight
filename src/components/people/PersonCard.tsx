@@ -88,7 +88,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
     >
       <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-br from-primary/12 via-primary/6 to-transparent" />
 
-      <div className="relative p-4 sm:p-5">
+      <div className="relative flex h-full flex-col p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <Avatar className="h-16 w-16 border border-border shadow-sm ring-2 ring-background">
             <AvatarImage src={avatarUrl || undefined} className="object-cover" />
@@ -98,9 +98,8 @@ const PersonCard: React.FC<PersonCardProps> = ({
           </Avatar>
 
           <div className="min-w-0 flex-1 pt-0.5">
-            <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="truncate font-display text-base font-semibold text-foreground">
+                <h3 className="line-clamp-2 font-display text-base font-semibold text-foreground">
                   {displayName}
                 </h3>
                 {user.role ? (
@@ -111,15 +110,17 @@ const PersonCard: React.FC<PersonCardProps> = ({
               </div>
 
               {user.graduation_year ? (
-                <Badge variant="secondary" className="shrink-0 gap-1 rounded-full px-2 py-1 text-[10px]">
+                <Badge variant="secondary" className="absolute right-1 top-1 shrink-0 gap-1 rounded-full px-2 py-1 text-[10px]">
                   <GraduationCap className="h-3 w-3" />
                   {String(user.graduation_year).slice(-2)}
                 </Badge>
               ) : null}
-            </div>
+            
+          </div>
+        </div>
 
-            {user.badges && user.badges.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-1.5">
+        {user.badges && user.badges.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-1.5">
                 {user.badges.slice(0, 2).map((badge) => (
                   <Badge key={badge} variant="outline" className="max-w-full rounded-full text-[10px]">
                     <span className="truncate">#{badge}</span>
@@ -127,8 +128,6 @@ const PersonCard: React.FC<PersonCardProps> = ({
                 ))}
               </div>
             ) : null}
-          </div>
-        </div>
 
         {user.bio ? (
           <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
@@ -155,7 +154,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
         ) : null}
 
         {!isOwnProfile ? (
-          <div className="mt-5 flex items-center gap-2">
+          <div className="mt-auto flex items-center gap-2 pt-5">
             {connectionStatus === 'connected' ? (
               <>
                 <Button
