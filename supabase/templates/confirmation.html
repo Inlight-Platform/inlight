@@ -3,7 +3,7 @@
 <p>Please verify your email address to access the platform.</p>
 
 <p>
-  <a href="{{ .ConfirmationURL }}">Confirm your mail</a>
+  <a href="{{ .RedirectTo }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup">Confirm your email</a>
 </p>
 
 <p>If you did not create this account, you can safely ignore this email.</p>

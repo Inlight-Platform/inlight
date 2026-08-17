@@ -1,7 +1,12 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, vi, expect, beforeEach } from 'vitest';
 
-const fakeUser = { id: 'user_1', email: 'test@example.com' };
+const fakeUser = {
+  id: 'user_1',
+  email: 'test@example.com',
+  email_confirmed_at: '2026-08-16T00:00:00.000Z',
+  confirmed_at: '2026-08-16T00:00:00.000Z',
+};
 let currentSession: { user: typeof fakeUser } | null = null;
 
 // Mock the supabase client used in useAuth.ts
@@ -25,6 +30,7 @@ vi.mock('@/integrations/supabase/client', () => {
           currentSession = { user: fakeUser };
           return { data: { session: currentSession, user: fakeUser }, error: null };
         }),
+        signOut: vi.fn(async () => ({ error: null })),
       },
       rpc: vi.fn(async () => ({ data: null, error: null })),
       functions: { invoke: vi.fn(async () => ({ data: { ok: true }, error: null })) },

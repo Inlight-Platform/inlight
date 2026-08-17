@@ -71,14 +71,8 @@ export const MainNav: React.FC = () => {
 
   const handleSignOut = async () => {
     setShowSignOutDialog(false);
-    const { error } = await signOut();
-    if (error) {
-      // Server rejected the sign-out and the Supabase client didn't clear the
-      // local session. We've already wiped auth keys from localStorage in
-      // useAuth, so a hard reload lands on /auth with no stored session.
-      window.location.replace('/auth');
-    }
-    // On success onAuthStateChange fires SIGNED_OUT → RequireAuth redirects.
+    await signOut();
+    window.location.replace('/auth');
   };
 
   const { data: profile } = useQuery({
