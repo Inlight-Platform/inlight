@@ -33,6 +33,7 @@ jobs:
   sandbox-preview:
     name: Build and deploy sandbox preview
     runs-on: ubuntu-latest
+    environment: preview
     needs: main-freshness
     if: ${{ !github.event.pull_request.draft }}
     env:
