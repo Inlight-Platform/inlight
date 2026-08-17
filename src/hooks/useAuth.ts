@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { emailNotConfirmedMessage, isUserEmailConfirmed } from '@/lib/authVerification';
 
 export const accountAlreadyExistsMessage =
   'Your account already exists. Try signing in or resetting your password.';
@@ -17,6 +18,16 @@ const clearStoredAuthSession = () => {
   } catch {
     // Storage can be unavailable in private/restricted browser contexts.
   }
+};
+
+const clearUnconfirmedSession = async () => {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch {
+    // The app should still forget the local session if Supabase sign-out fails.
+  }
+
+  clearStoredAuthSession();
 };
 
 type SignupRpcResult<T> = {
@@ -152,9 +163,15 @@ export function useAuth() {
           if (isHashRecoveryFlow) {
             setIsPasswordRecovery(true);
           }
-          setSession(data.session);
-          setUser(data.user);
-          void maybeClaimInvites(data.session);
+          if (isUserEmailConfirmed(data.user)) {
+            setSession(data.session);
+            setUser(data.user);
+            void maybeClaimInvites(data.session);
+          } else {
+            await clearUnconfirmedSession();
+            setSession(null);
+            setUser(null);
+          }
           replaceAuthUrl(isHashRecoveryFlow);
         }
 
@@ -177,9 +194,15 @@ export function useAuth() {
           if (isRecoveryFlow) {
             setIsPasswordRecovery(true);
           }
-          setSession(data.session);
-          setUser(data.user);
-          void maybeClaimInvites(data.session);
+          if (isUserEmailConfirmed(data.user)) {
+            setSession(data.session);
+            setUser(data.user);
+            void maybeClaimInvites(data.session);
+          } else {
+            await clearUnconfirmedSession();
+            setSession(null);
+            setUser(null);
+          }
           replaceAuthUrl(isRecoveryFlow);
         }
 
@@ -189,9 +212,15 @@ export function useAuth() {
           return;
         }
 
-        setSession(session);
-        setUser(session?.user ?? null);
-        void maybeClaimInvites(session);
+        if (session && !isUserEmailConfirmed(session.user)) {
+          await clearUnconfirmedSession();
+          setSession(null);
+          setUser(null);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+          void maybeClaimInvites(session);
+        }
         setLoading(false);
       } catch (error) {
         console.error('Auth initialization failed:', error);
@@ -214,6 +243,14 @@ export function useAuth() {
           setIsPasswordRecovery(true);
         }
         
+        if (session && !isUserEmailConfirmed(session.user)) {
+          void clearUnconfirmedSession();
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -276,6 +313,11 @@ export function useAuth() {
       return { data, error };
     }
 
+    if (data?.session && !isUserEmailConfirmed(data.user)) {
+      await clearUnconfirmedSession();
+      return { data: { ...data, session: null }, error: null };
+    }
+
     if (isExistingSignupResponse(data)) {
       return { data, error: { message: accountAlreadyExistsMessage } };
     }
@@ -296,6 +338,11 @@ export function useAuth() {
       email: email.trim().toLowerCase(),
       password,
     });
+
+    if (!error && data?.session && !isUserEmailConfirmed(data.user)) {
+      await clearUnconfirmedSession();
+      return { data: { ...data, session: null }, error: { message: emailNotConfirmedMessage } };
+    }
 
     return { data, error };
   };
