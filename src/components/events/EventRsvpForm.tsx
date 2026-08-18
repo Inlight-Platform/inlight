@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,6 +43,7 @@ type RsvpMutationError = {
 const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, isPaid, price, currency = 'usd', stripePriceId, paymentLinkUrl, eventDate }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const { rsvps, goingRsvps, goingCount, cantMakeItCount, submitRsvp } = useEventRsvps(eventId);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -64,6 +66,25 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   const eventHasPassed = isEventPast(eventDate);
   const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
   const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
+  const { data: confirmedTicket } = useQuery({
+    queryKey: ['event-ticket', eventId, currentUserId],
+    queryFn: async () => {
+      if (!currentUserId) return null;
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('id, ticket_code, amount_paid')
+        .eq('event_id', eventId)
+        .eq('user_id', currentUserId)
+        .eq('status', 'confirmed')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!isPaid && !!currentUserId,
+  });
+  const ticketConfirmed = hasTicketSuccess || !!confirmedTicket;
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -114,6 +135,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
       if (cancelled) return;
       if (error) throw error;
       if (data?.status === 'confirmed') {
+        queryClient.invalidateQueries({ queryKey: ['event-ticket', eventId, currentUserId] });
         toast.success('Ticket confirmed');
       }
     }).catch((error) => {
@@ -125,7 +147,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
     return () => {
       cancelled = true;
     };
-  }, [checkoutSessionId, currentUserId, eventId, hasTicketSuccess]);
+  }, [checkoutSessionId, currentUserId, eventId, hasTicketSuccess, queryClient]);
 
   // Check if user already RSVP'd (any status — going or can't make it)
   const userRsvp = currentUserId ? rsvps.find(r => r.user_id === currentUserId) : null;
@@ -232,6 +254,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
         });
         if (error) throw error;
         if (data?.status === 'confirmed') {
+          queryClient.invalidateQueries({ queryKey: ['event-ticket', eventId, currentUserId] });
           toast.success('Ticket confirmed');
           setBuyingTicket(false);
           navigate(`/events/${eventId}?ticket=success`);
@@ -277,19 +300,19 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
         </div>,
         document.body,
       )}
-      {/* Ticket confirmed state (from Stripe redirect) */}
-      {hasTicketSuccess && (
+      {/* Ticket confirmed state */}
+      {isPaid && ticketConfirmed && (
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5 text-center space-y-2">
           <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto">
             <Ticket className="w-6 h-6 text-emerald-500" />
           </div>
-          <p className="font-semibold text-emerald-400">Ticket Confirmed! 🎟️</p>
-          <p className="text-sm text-muted-foreground">Your ticket has been purchased. See you there!</p>
+          <p className="font-semibold text-emerald-400">You're on the list</p>
+          <p className="text-sm text-muted-foreground">Your ticket is confirmed. We'll see you there.</p>
         </div>
       )}
 
       {/* Paid event: Buy Ticket button */}
-      {isPaid && !hasTicketSuccess && (
+      {isPaid && !ticketConfirmed && (
         <div className="space-y-3">
           {price && (
             <div className="text-center">
