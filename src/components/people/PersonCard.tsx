@@ -106,14 +106,16 @@ const PersonCard: React.FC<PersonCardProps> = ({
                   {user.role}
                 </p>
               ) : null}
-
-              {user.graduation_year && (
-                <p className="mt-0.5 hidden sm:block text-[13px] text-muted-foreground">
-                  Class of {user.graduation_year}
-                </p>
-              )}
+              
             </div>
           </div>
+
+          {user.graduation_year ? (
+              <Badge variant="secondary" className="hidden sm:flex sm:justify-center absolute right-1 top-1 shrink-0 gap-1 rounded-full px-2 py-1 text-[10px]">
+                <GraduationCap className="h-3 w-3" />
+                {String(user.graduation_year).slice(-2)}
+              </Badge>
+            ) : null}
         </div>
 
         <div className='flex flex-1 flex-col p-4 gap-2'>
