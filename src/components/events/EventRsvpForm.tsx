@@ -302,12 +302,11 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
       )}
       {/* Ticket confirmed state */}
       {isPaid && ticketConfirmed && (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5 text-center space-y-2">
-          <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto">
-            <Ticket className="w-6 h-6 text-emerald-500" />
+        <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
+          <div className="flex items-center gap-2 font-semibold text-primary">
+            <Check className="h-4 w-4" />
+            You're on the list!
           </div>
-          <p className="font-semibold text-emerald-400">You're on the list</p>
-          <p className="text-sm text-muted-foreground">Your ticket is confirmed. We'll see you there.</p>
         </div>
       )}
 
