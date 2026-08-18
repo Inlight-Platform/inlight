@@ -115,8 +115,10 @@ const ProjectDetailPage: React.FC = () => {
   const [memberEmail, setMemberEmail] = useState('');
   const [memberRole, setMemberRole] = useState('');
   const [deleteProjectDialogOpen, setDeleteProjectDialogOpen] = useState(false);
-  const [rolesOpen, setRolesOpen] = useState(true);
-  const [photosOpen, setPhotosOpen] = useState(true);
+  const [rolesOpen, setRolesOpen] = useState(false);
+  const [photosOpen, setPhotosOpen] = useState(false);
+  const [rolesManuallyToggled, setRolesManuallyToggled] = useState(false);
+  const [photosManuallyToggled, setPhotosManuallyToggled] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState('');
   const [addRoleOpen, setAddRoleOpen] = useState(false);
@@ -227,6 +229,21 @@ const ProjectDetailPage: React.FC = () => {
     enabled: !!projectId,
   });
 
+  const { data: roleCount = 0 } = useQuery({
+    queryKey: ['project-role-count', projectId],
+    queryFn: async () => {
+      if (!projectId) return 0;
+      const { count, error } = await supabase
+        .from('project_roles')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', projectId);
+
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!projectId,
+  });
+
   // Fetch project links
   const { data: projectLinks = [] } = useQuery({
     queryKey: ['project-links', projectId],
@@ -264,6 +281,23 @@ const ProjectDetailPage: React.FC = () => {
   const isMember = members.some(m => m.user_id === user?.id) || isCreator;
   const canEditProject = canManageProjects && isCreator;
   const canManageProjectContent = canManageProjects && isMember;
+
+  useEffect(() => {
+    setRolesManuallyToggled(false);
+    setPhotosManuallyToggled(false);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!rolesManuallyToggled) {
+      setRolesOpen(roleCount > 0);
+    }
+  }, [roleCount, rolesManuallyToggled]);
+
+  useEffect(() => {
+    if (!photosManuallyToggled) {
+      setPhotosOpen(photos.length > 0);
+    }
+  }, [photos.length, photosManuallyToggled]);
 
   const togglePublicMutation = useMutation({
     mutationFn: async (next: boolean) => {
@@ -537,6 +571,7 @@ const ProjectDetailPage: React.FC = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-role-count', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-role-invitations', projectId] });
       setNewRoleName('');
       setSelectedRoleInvitee(null);
@@ -560,6 +595,7 @@ const ProjectDetailPage: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-role-count', projectId] });
       toast.success('Role removed');
     },
     onError: () => toast.error('Failed to remove role'),
@@ -994,7 +1030,13 @@ const ProjectDetailPage: React.FC = () => {
         <ProjectInvitationPrompt projectId={projectId!} projectTitle={project.title} />
 
         {/* Open Roles - Collapsible */}
-        <Collapsible open={rolesOpen} onOpenChange={setRolesOpen}>
+        <Collapsible
+          open={rolesOpen}
+          onOpenChange={(open) => {
+            setRolesManuallyToggled(true);
+            setRolesOpen(open);
+          }}
+        >
           <Card>
             <CardHeader className="flex flex-row items-center justify-between py-4">
               <CollapsibleTrigger asChild>
@@ -1190,7 +1232,13 @@ const ProjectDetailPage: React.FC = () => {
         </Card>
 
         {/* Photos Section - Collapsible */}
-        <Collapsible open={photosOpen} onOpenChange={setPhotosOpen}>
+        <Collapsible
+          open={photosOpen}
+          onOpenChange={(open) => {
+            setPhotosManuallyToggled(true);
+            setPhotosOpen(open);
+          }}
+        >
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CollapsibleTrigger asChild>
