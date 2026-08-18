@@ -47,6 +47,11 @@ type EventRow = {
 
 type RsvpFilter = 'all' | 'going' | 'cant_make_it';
 
+type TicketMetricRow = {
+  id: string;
+  amount_paid: number | null;
+};
+
 const csvEscape = (value: string | number | boolean | null | undefined) => {
   const text = value == null ? '' : String(value);
   return `"${text.replace(/"/g, '""')}"`;
@@ -71,6 +76,12 @@ const formatDateTime = (value?: string | null) => {
     minute: '2-digit',
   });
 };
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount);
 
 const EventDashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -203,6 +214,30 @@ const EventDashboardPage: React.FC = () => {
 
   const { rsvps, isLoading: rsvpsLoading, goingCount, cantMakeItCount } = useEventRsvps(dashboardEvent?.id || '', {
     includePrivate: true,
+  });
+
+  const { data: ticketMetrics, isLoading: ticketMetricsLoading } = useQuery({
+    queryKey: ['event-dashboard-ticket-metrics', dashboardEvent?.id],
+    queryFn: async () => {
+      if (!dashboardEvent?.id) {
+        return { ticketsSold: 0, revenue: 0 };
+      }
+
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('id, amount_paid')
+        .eq('event_id', dashboardEvent.id)
+        .eq('status', 'confirmed');
+
+      if (error) throw error;
+
+      const confirmedTickets = (data || []) as TicketMetricRow[];
+      return {
+        ticketsSold: confirmedTickets.length,
+        revenue: confirmedTickets.reduce((sum, ticket) => sum + Number(ticket.amount_paid || 0), 0),
+      };
+    },
+    enabled: !!dashboardEvent?.id && userOwnsDashboardEvent,
   });
 
   const publicUrl = useMemo(() => {
@@ -387,8 +422,16 @@ const EventDashboardPage: React.FC = () => {
           <MetricCard title="Total RSVPs" value={rsvps.length} icon={<Users className="h-4 w-4" />} />
           <MetricCard title="Going" value={goingCount} icon={<CheckCircle2 className="h-4 w-4" />} />
           <MetricCard title="Can't make it" value={cantMakeItCount} icon={<XCircle className="h-4 w-4" />} />
-          <MetricCard title="Tickets sold" value="--" note="Stripe future issue" icon={<Ticket className="h-4 w-4" />} />
-          <MetricCard title="Revenue" value="$0" note="Stripe future issue" icon={<Ticket className="h-4 w-4" />} />
+          <MetricCard
+            title="Tickets sold"
+            value={ticketMetricsLoading ? '...' : ticketMetrics?.ticketsSold ?? 0}
+            icon={<Ticket className="h-4 w-4" />}
+          />
+          <MetricCard
+            title="Revenue"
+            value={ticketMetricsLoading ? '...' : formatCurrency(ticketMetrics?.revenue ?? 0)}
+            icon={<Ticket className="h-4 w-4" />}
+          />
         </section>
 
         <section>
