@@ -62,6 +62,7 @@ import {
   Link as LinkIcon,
   GraduationCap,
   Bookmark,
+  BookmarkCheck,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PublicMediaGallery } from "@/components/profile/PublicMediaGallery";
@@ -109,6 +110,7 @@ import { VouchDialog } from "@/components/profile/VouchDialog";
 import { SkillsCombobox } from "@/components/ui/skills-combobox";
 import { RequestCompanyAccountDialog } from "@/components/profile/RequestCompanyAccountDialog";
 import { LocationCombobox } from "@/components/ui/location-combobox";
+import { useSavedItems } from "@/hooks/useSavedItems";
 import ProfileCompletionBar from "@/components/profile/ProfileCompletionBar";
 import FloatingChatButton from "@/components/messages/FloatingChatButton";
 import { useMinimizedChat } from "@/hooks/useMinimizedChat";
@@ -363,6 +365,7 @@ const ProfilePage: React.FC = () => {
   // Follow/connection hooks
   const { isFollowing, follow, unfollow, isFollowPending, isUnfollowPending, isMutual } = useNetworkConnections();
   const { sendRequest, hasSentRequestTo, sentRequests, cancelRequest } = useConnectionRequests();
+  const { isSaved, getSavedItem, saveItem, unsaveItem } = useSavedItems();
 
   const userIsFollowing = resolvedUserId ? isFollowing(resolvedUserId) : false;
   const hasPendingRequest = resolvedUserId ? hasSentRequestTo(resolvedUserId) : false;
@@ -1929,6 +1932,36 @@ const ProfilePage: React.FC = () => {
                       >
                         {getConnectButtonLabel()}
                       </button>
+
+                      {/* Save Profile Button */}
+                      {(() => {
+                        const saveData = {
+                          item_type: 'person' as const,
+                          item_id: resolvedUserId,
+                          item_title: displayName || 'Unknown',
+                          item_url: `/profile/${resolvedUserId}`,
+                          item_metadata: {
+                            headline: dbProfile?.headline,
+                            avatar_url: displayAvatar,
+                            location: displayLocation,
+                          },
+                        };
+                        const saved = isSaved('person', displayName || 'Unknown', `/profile/${resolvedUserId}`);
+                        const savedEntry = getSavedItem('person', displayName || 'Unknown', `/profile/${resolvedUserId}`);
+                        return (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => saved && savedEntry ? unsaveItem(savedEntry.id) : saveItem(saveData)}
+                          >
+                            {saved ? (
+                              <><BookmarkCheck className="w-4 h-4 mr-1 text-primary" />Saved</>
+                            ) : (
+                              <><Bookmark className="w-4 h-4 mr-1" />Save</>
+                            )}
+                          </Button>
+                        );
+                      })()}
                     </>
                   )}
 

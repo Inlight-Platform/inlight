@@ -229,6 +229,26 @@ const PlatformInvitesManager: React.FC = () => {
   const [note, setNote] = useState('');
   const [latestInviteUrl, setLatestInviteUrl] = useState('');
 
+  const getFunctionErrorMessage = async (error: Error & { context?: unknown }) => {
+    const response = error.context instanceof Response ? error.context.clone() : null;
+    if (!response) return error.message || 'Failed to send invite';
+
+    try {
+      const responseBody = await response.json();
+      if (typeof responseBody?.error === 'string') return responseBody.error;
+      if (typeof responseBody?.message === 'string') return responseBody.message;
+    } catch {
+      try {
+        const text = await response.text();
+        if (text.trim()) return text.trim();
+      } catch {
+        // Fall through to the Supabase error message below.
+      }
+    }
+
+    return error.message || 'Failed to send invite';
+  };
+
   const { data: invites = [], isLoading } = useQuery({
     queryKey: ['platform-invites'],
     queryFn: async () => {
@@ -245,24 +265,27 @@ const PlatformInvitesManager: React.FC = () => {
   const createInviteMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('send-platform-invite', {
-        body: {
-          email,
-          note: note || undefined,
-        },
+        body: { email, note: note || undefined },
       });
-
-      if (error) throw error;
-      return data as { invite: { email: string; token: string }; inviteUrl: string };
+      if (error) {
+        throw new Error(await getFunctionErrorMessage(error));
+      }
+      return data as { invite: { email: string; token: string }; inviteUrl?: string; alreadyMember?: boolean };
     },
-    onSuccess: ({ invite, inviteUrl }) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['platform-invites'] });
-      setLatestInviteUrl(inviteUrl);
       setEmail('');
       setNote('');
-      toast.success(`Invite sent to ${invite.email}`);
+      setLatestInviteUrl('');
+      if (data.alreadyMember) {
+        toast.success(`${data.invite.email} is already on Inlight!`);
+      } else {
+        setLatestInviteUrl(data.inviteUrl || '');
+        toast.success(`Invite sent to ${data.invite.email}`);
+      }
     },
     onError: (error) => {
-      toast.error('Failed to create invite: ' + error.message);
+      toast.error('Failed to create invite: ' + (error instanceof Error ? error.message : 'Unknown error'));
     },
   });
 

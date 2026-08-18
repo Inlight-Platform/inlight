@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Theater, Search, Shuffle, Heart, SlidersHorizontal, Sparkles, Plus, Film, Music, ExternalLink, Archive, Trash2, Link2, LogIn } from 'lucide-react';
 import { isPast } from 'date-fns';
@@ -94,6 +94,21 @@ const StageWhisperPage: React.FC = () => {
   const [archiveMode, setArchiveMode] = useState(false);
   const [selectedFilm, setSelectedFilm] = useState<FilmMetric | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; table: string; label: string } | null>(null);
+  const [targetShowId, setTargetShowId] = useState<string | null>(null);
+  const [targetFilmId, setTargetFilmId] = useState<string | null>(null);
+
+  // On mount, read navigation state from MySavesPage to auto-open a specific item
+  useEffect(() => {
+    const state = location.state as { openShowId?: string; openFilmId?: string } | null;
+    if (state?.openShowId) {
+      setTargetShowId(state.openShowId);
+    }
+    if (state?.openFilmId) {
+      setTargetFilmId(state.openFilmId);
+      setIndustryTab('film');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const adminDeleteMutation = useMutation({
     mutationFn: async ({ id, table }: { id: string; table: string }) => {
@@ -153,6 +168,25 @@ const StageWhisperPage: React.FC = () => {
     enabled: industryTab === 'film'
   });
 
+  // Auto-open show modal when navigated from My Saves
+  useEffect(() => {
+    if (!targetShowId || !shows.length) return;
+    const show = shows.find(s => s.id === targetShowId);
+    if (show) {
+      setSelectedShow(show);
+      setTargetShowId(null);
+    }
+  }, [targetShowId, shows]);
+
+  // Auto-open film modal when navigated from My Saves
+  useEffect(() => {
+    if (!targetFilmId || !theatreFilms.length) return;
+    const film = theatreFilms.find(f => f.id === targetFilmId);
+    if (film) {
+      setSelectedFilm(film);
+      setTargetFilmId(null);
+    }
+  }, [targetFilmId, theatreFilms]);
 
   // Fetch user-submitted films
   const {

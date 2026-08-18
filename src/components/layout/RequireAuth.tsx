@@ -1,7 +1,8 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
+import { isUserEmailConfirmed } from '@/lib/authVerification';
 
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -15,11 +16,11 @@ const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     );
   }
 
-  if (!user) {
+  if (!user || !isUserEmailConfirmed(user)) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  return <>{children}</>;
+  return <>{children ?? <Outlet />}</>;
 };
 
 export default RequireAuth;

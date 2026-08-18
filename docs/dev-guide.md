@@ -129,6 +129,8 @@ Repository configuration required:
 | `CLOUDFLARE_ACCOUNT_ID` | GitHub secret | Cloudflare account that owns the Pages project. |
 | `VITE_SANDBOX_SUPABASE_URL` | GitHub secret | Hosted sandbox Supabase URL for PR previews. Must not be the production Supabase URL. |
 | `VITE_SANDBOX_SUPABASE_PUBLISHABLE_KEY` | GitHub secret | Hosted sandbox Supabase publishable/anon key for PR previews. |
+| `SUPABASE_ACCESS_TOKEN` | GitHub secret | Supabase access token used to deploy invite edge functions to the hosted sandbox project. |
+| `RESEND_API_KEY` | GitHub secret | Resend key used by sandbox invite edge functions to send invite emails. |
 | `CLOUDFLARE_PAGES_PROJECT_NAME` | GitHub variable | Optional. Defaults to `inlight` when unset. |
 
 The application still locks normal production and local development builds to the production Supabase URL. Hosted PR previews must set `VITE_SUPABASE_ENV=sandbox` and `VITE_SUPABASE_ALLOW_REMOTE_SANDBOX=true`, which the workflow does automatically.
