@@ -380,6 +380,26 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       return;
     }
 
+    if (item.stripe_price_id) {
+      setBuyingTicket(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {
+          body: {
+            event_id: item.id,
+          },
+        });
+
+        if (error) throw error;
+        if (!data?.url) throw new Error('Checkout link unavailable');
+
+        window.location.href = data.url;
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : 'Failed to start checkout');
+        setBuyingTicket(false);
+      }
+      return;
+    }
+
     toast.error('Tickets are not yet available for this event.');
   };
 
