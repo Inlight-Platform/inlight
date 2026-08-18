@@ -49,7 +49,27 @@ type RsvpFilter = 'all' | 'going' | 'cant_make_it';
 
 type TicketMetricRow = {
   id: string;
+  attendee_email: string | null;
+  attendee_name: string | null;
   amount_paid: number | null;
+  checked_in_at: string | null;
+  created_at: string;
+  ticket_code: string | null;
+  user_id: string;
+};
+
+type DashboardAttendee = {
+  id: string;
+  source: 'rsvp' | 'ticket';
+  user_id: string | null;
+  name: string;
+  email: string | null;
+  status: string;
+  role_type: string;
+  custom_answer: string | null;
+  created_at: string;
+  attended: boolean;
+  ticket_code?: string | null;
 };
 
 const csvEscape = (value: string | number | boolean | null | undefined) => {
@@ -216,29 +236,30 @@ const EventDashboardPage: React.FC = () => {
     includePrivate: true,
   });
 
-  const { data: ticketMetrics, isLoading: ticketMetricsLoading } = useQuery({
+  const { data: confirmedTickets = [], isLoading: ticketMetricsLoading } = useQuery({
     queryKey: ['event-dashboard-ticket-metrics', dashboardEvent?.id],
     queryFn: async () => {
       if (!dashboardEvent?.id) {
-        return { ticketsSold: 0, revenue: 0 };
+        return [] as TicketMetricRow[];
       }
 
       const { data, error } = await supabase
         .from('tickets')
-        .select('id, amount_paid')
+        .select('id, amount_paid, attendee_email, attendee_name, checked_in_at, created_at, ticket_code, user_id')
         .eq('event_id', dashboardEvent.id)
-        .eq('status', 'confirmed');
+        .eq('status', 'confirmed')
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
 
-      const confirmedTickets = (data || []) as TicketMetricRow[];
-      return {
-        ticketsSold: confirmedTickets.length,
-        revenue: confirmedTickets.reduce((sum, ticket) => sum + Number(ticket.amount_paid || 0), 0),
-      };
+      return (data || []) as TicketMetricRow[];
     },
     enabled: !!dashboardEvent?.id && userOwnsDashboardEvent,
   });
+  const ticketMetrics = useMemo(() => ({
+    ticketsSold: confirmedTickets.length,
+    revenue: confirmedTickets.reduce((sum, ticket) => sum + Number(ticket.amount_paid || 0), 0),
+  }), [confirmedTickets]);
 
   const publicUrl = useMemo(() => {
     if (!dashboardEvent) return '';
@@ -271,23 +292,68 @@ const EventDashboardPage: React.FC = () => {
     navigate(eventPath(dashboardEvent), { state: { event: eventFeedItem } });
   }, [dashboardEvent, eventFeedItem, navigate]);
 
-  const filteredRsvps = useMemo(() => {
+  const dashboardAttendees = useMemo<DashboardAttendee[]>(() => {
+    const rsvpKeys = new Set(
+      rsvps
+        .flatMap((rsvp) => [rsvp.user_id ? `user:${rsvp.user_id}` : null, rsvp.email ? `email:${rsvp.email.toLowerCase()}` : null])
+        .filter((value): value is string => Boolean(value))
+    );
+
+    const rsvpAttendees = rsvps.map((rsvp) => ({
+      id: rsvp.id,
+      source: 'rsvp' as const,
+      user_id: rsvp.user_id,
+      name: rsvp.name || 'Inlight Member',
+      email: rsvp.email || null,
+      status: rsvp.status,
+      role_type: rsvp.role_type,
+      custom_answer: rsvp.custom_answer || null,
+      created_at: rsvp.created_at,
+      attended: Boolean(rsvp.attended),
+    }));
+
+    const ticketAttendees = confirmedTickets
+      .filter((ticket) => {
+        const userKey = ticket.user_id ? `user:${ticket.user_id}` : null;
+        const emailKey = ticket.attendee_email ? `email:${ticket.attendee_email.toLowerCase()}` : null;
+        return !((userKey && rsvpKeys.has(userKey)) || (emailKey && rsvpKeys.has(emailKey)));
+      })
+      .map((ticket) => ({
+        id: ticket.id,
+        source: 'ticket' as const,
+        user_id: ticket.user_id,
+        name: ticket.attendee_name || ticket.attendee_email?.split('@')[0] || 'Ticket holder',
+        email: ticket.attendee_email,
+        status: 'going',
+        role_type: 'ticket_holder',
+        custom_answer: ticket.ticket_code ? `Ticket ${ticket.ticket_code}` : null,
+        created_at: ticket.created_at,
+        attended: Boolean(ticket.checked_in_at),
+        ticket_code: ticket.ticket_code,
+      }));
+
+    return [...rsvpAttendees, ...ticketAttendees].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+  }, [confirmedTickets, rsvps]);
+
+  const filteredAttendees = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
 
-    return rsvps.filter((rsvp) => {
-      const matchesFilter = rsvpFilter === 'all' || rsvp.status === rsvpFilter;
+    return dashboardAttendees.filter((attendee) => {
+      const matchesFilter = rsvpFilter === 'all' || attendee.status === rsvpFilter;
       const matchesSearch =
         !normalizedSearch ||
-        [rsvp.name, rsvp.email, rsvp.role_type, rsvp.status, rsvp.custom_answer]
+        [attendee.name, attendee.email, attendee.role_type, attendee.status, attendee.custom_answer, attendee.ticket_code, attendee.source]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(normalizedSearch));
 
       return matchesFilter && matchesSearch;
     });
-  }, [rsvps, rsvpFilter, searchQuery]);
+  }, [dashboardAttendees, rsvpFilter, searchQuery]);
 
-  const expectedCount = rsvps.filter((rsvp) => rsvp.status === 'going').length;
-  const checkedInCount = rsvps.filter((rsvp) => rsvp.status === 'going' && rsvp.attended).length;
+  const expectedCount = dashboardAttendees.filter((attendee) => attendee.status === 'going').length;
+  const checkedInCount = dashboardAttendees.filter((attendee) => attendee.status === 'going' && attendee.attended).length;
 
   const checkInMutation = useMutation({
     mutationFn: async ({ rsvpId, attended }: { rsvpId: string; attended: boolean }) => {
@@ -317,15 +383,15 @@ const EventDashboardPage: React.FC = () => {
   };
 
   const exportCsv = () => {
-    const headers = ['Name', 'Email', 'RSVP status', 'Role/type', 'Custom answer', 'RSVP date', 'Checked in'];
-    const rows = filteredRsvps.map((rsvp) => [
-      rsvp.name,
-      rsvp.email,
-      statusLabel(rsvp.status),
-      roleLabel(rsvp.role_type),
-      rsvp.custom_answer,
-      formatDateTime(rsvp.created_at),
-      rsvp.attended ? 'Yes' : 'No',
+    const headers = ['Name', 'Email', 'Status', 'Role/type', 'Details', 'Date', 'Checked in'];
+    const rows = filteredAttendees.map((attendee) => [
+      attendee.name,
+      attendee.email,
+      statusLabel(attendee.status),
+      roleLabel(attendee.role_type),
+      attendee.custom_answer,
+      formatDateTime(attendee.created_at),
+      attendee.attended ? 'Yes' : 'No',
     ]);
     const csv = [headers, ...rows]
       .map((row) => row.map(csvEscape).join(','))
@@ -420,7 +486,7 @@ const EventDashboardPage: React.FC = () => {
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <MetricCard title="Total RSVPs" value={rsvps.length} icon={<Users className="h-4 w-4" />} />
-          <MetricCard title="Going" value={goingCount} icon={<CheckCircle2 className="h-4 w-4" />} />
+          <MetricCard title="Going" value={expectedCount} icon={<CheckCircle2 className="h-4 w-4" />} />
           <MetricCard title="Can't make it" value={cantMakeItCount} icon={<XCircle className="h-4 w-4" />} />
           <MetricCard
             title="Tickets sold"
@@ -441,7 +507,7 @@ const EventDashboardPage: React.FC = () => {
                 <div>
                   <CardTitle>Attendees</CardTitle>
                   <CardDescription>
-                    Full RSVP data is visible only to the event creator. {checkedInCount} checked in of {expectedCount} expected.
+                    RSVP and confirmed ticket data is visible only to the event creator. {checkedInCount} checked in of {expectedCount} expected.
                   </CardDescription>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
@@ -472,11 +538,11 @@ const EventDashboardPage: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {rsvpsLoading ? (
+              {rsvpsLoading || ticketMetricsLoading ? (
                 <div className="flex min-h-48 items-center justify-center">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
-              ) : filteredRsvps.length === 0 ? (
+              ) : filteredAttendees.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
                   No attendees match this view yet.
                 </div>
@@ -496,29 +562,31 @@ const EventDashboardPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredRsvps.map((rsvp) => (
-                      <TableRow key={rsvp.id}>
-                        <TableCell className="font-medium">{rsvp.name || 'Inlight Member'}</TableCell>
-                        <TableCell>{rsvp.email || '-'}</TableCell>
+                    {filteredAttendees.map((attendee) => (
+                      <TableRow key={`${attendee.source}-${attendee.id}`}>
+                        <TableCell className="font-medium">{attendee.name || 'Inlight Member'}</TableCell>
+                        <TableCell>{attendee.email || '-'}</TableCell>
                         <TableCell>
-                          <Badge variant={rsvp.status === 'going' ? 'default' : 'secondary'}>
-                            {statusLabel(rsvp.status)}
+                          <Badge variant={attendee.status === 'going' ? 'default' : 'secondary'}>
+                            {statusLabel(attendee.status)}
                           </Badge>
                         </TableCell>
-                        <TableCell>{roleLabel(rsvp.role_type)}</TableCell>
-                        <TableCell className="max-w-[220px] truncate">{rsvp.custom_answer || '-'}</TableCell>
-                        <TableCell>{formatDateTime(rsvp.created_at)}</TableCell>
-                        <TableCell>{rsvp.attended ? 'Yes' : 'No'}</TableCell>
+                        <TableCell>{roleLabel(attendee.role_type)}</TableCell>
+                        <TableCell className="max-w-[220px] truncate">{attendee.custom_answer || '-'}</TableCell>
+                        <TableCell>{formatDateTime(attendee.created_at)}</TableCell>
+                        <TableCell>{attendee.attended ? 'Yes' : 'No'}</TableCell>
                         <TableCell>
-                          {rsvp.status === 'going' ? (
+                          {attendee.source === 'rsvp' && attendee.status === 'going' ? (
                             <Button
                               size="sm"
-                              variant={rsvp.attended ? 'outline' : 'default'}
-                              onClick={() => checkInMutation.mutate({ rsvpId: rsvp.id, attended: !rsvp.attended })}
+                              variant={attendee.attended ? 'outline' : 'default'}
+                              onClick={() => checkInMutation.mutate({ rsvpId: attendee.id, attended: !attendee.attended })}
                               disabled={checkInMutation.isPending}
                             >
-                              {rsvp.attended ? 'Undo' : 'Mark attended'}
+                              {attendee.attended ? 'Undo' : 'Mark attended'}
                             </Button>
+                          ) : attendee.source === 'ticket' ? (
+                            <span className="text-sm text-muted-foreground">Ticket holder</span>
                           ) : (
                             <span className="text-sm text-muted-foreground">Not expected</span>
                           )}
