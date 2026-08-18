@@ -390,6 +390,12 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         });
 
         if (error) throw error;
+        if (data?.status === 'confirmed') {
+          toast.success('Ticket confirmed');
+          setBuyingTicket(false);
+          navigate(`/events/${item.id}?ticket=success`);
+          return;
+        }
         if (!data?.url) throw new Error('Checkout link unavailable');
 
         window.location.href = data.url;
