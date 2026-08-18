@@ -115,7 +115,10 @@ const ProjectDetailPage: React.FC = () => {
   const [memberEmail, setMemberEmail] = useState('');
   const [memberRole, setMemberRole] = useState('');
   const [deleteProjectDialogOpen, setDeleteProjectDialogOpen] = useState(false);
-  const [rolesOpen, setRolesOpen] = useState(true);
+  const [rolesOpen, setRolesOpen] = useState(false);
+  const [photosOpen, setPhotosOpen] = useState(false);
+  const [rolesManuallyToggled, setRolesManuallyToggled] = useState(false);
+  const [photosManuallyToggled, setPhotosManuallyToggled] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState('');
   const [addRoleOpen, setAddRoleOpen] = useState(false);
@@ -226,6 +229,21 @@ const ProjectDetailPage: React.FC = () => {
     enabled: !!projectId,
   });
 
+  const { data: roleCount = 0 } = useQuery({
+    queryKey: ['project-role-count', projectId],
+    queryFn: async () => {
+      if (!projectId) return 0;
+      const { count, error } = await supabase
+        .from('project_roles')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', projectId);
+
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!projectId,
+  });
+
   // Fetch project links
   const { data: projectLinks = [] } = useQuery({
     queryKey: ['project-links', projectId],
@@ -263,6 +281,23 @@ const ProjectDetailPage: React.FC = () => {
   const isMember = members.some(m => m.user_id === user?.id) || isCreator;
   const canEditProject = canManageProjects && isCreator;
   const canManageProjectContent = canManageProjects && isMember;
+
+  useEffect(() => {
+    setRolesManuallyToggled(false);
+    setPhotosManuallyToggled(false);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!rolesManuallyToggled) {
+      setRolesOpen(roleCount > 0);
+    }
+  }, [roleCount, rolesManuallyToggled]);
+
+  useEffect(() => {
+    if (!photosManuallyToggled) {
+      setPhotosOpen(photos.length > 0);
+    }
+  }, [photos.length, photosManuallyToggled]);
 
   const togglePublicMutation = useMutation({
     mutationFn: async (next: boolean) => {
@@ -536,6 +571,7 @@ const ProjectDetailPage: React.FC = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-role-count', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-role-invitations', projectId] });
       setNewRoleName('');
       setSelectedRoleInvitee(null);
@@ -559,6 +595,7 @@ const ProjectDetailPage: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-role-count', projectId] });
       toast.success('Role removed');
     },
     onError: () => toast.error('Failed to remove role'),
@@ -993,7 +1030,13 @@ const ProjectDetailPage: React.FC = () => {
         <ProjectInvitationPrompt projectId={projectId!} projectTitle={project.title} />
 
         {/* Open Roles - Collapsible */}
-        <Collapsible open={rolesOpen} onOpenChange={setRolesOpen}>
+        <Collapsible
+          open={rolesOpen}
+          onOpenChange={(open) => {
+            setRolesManuallyToggled(true);
+            setRolesOpen(open);
+          }}
+        >
           <Card>
             <CardHeader className="flex flex-row items-center justify-between py-4">
               <CollapsibleTrigger asChild>
@@ -1128,7 +1171,7 @@ const ProjectDetailPage: React.FC = () => {
           <CardContent>
             <div className="flex flex-wrap gap-4">
               {/* Creator */}
-              <div 
+              <div
                 className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-lg p-2 transition-colors"
                 onClick={() => navigate(`/profile/${project.creator_id}`, { state: { returnTo, returnState: routeState || undefined } })}
               >
@@ -1148,7 +1191,7 @@ const ProjectDetailPage: React.FC = () => {
               {members
                 .filter(member => member.user_id !== project.creator_id)
                 .map(member => (
-                  <div 
+                  <div
                     key={member.id}
                     className="flex items-center gap-2 group"
                   >
@@ -1188,13 +1231,29 @@ const ProjectDetailPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Photos Section */}
+        {/* Photos Section - Collapsible */}
+        <Collapsible
+          open={photosOpen}
+          onOpenChange={(open) => {
+            setPhotosManuallyToggled(true);
+            setPhotosOpen(open);
+          }}
+        >
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Camera className="w-5 h-5" />
-              Project Photos ({photos.length})
-            </CardTitle>
+            <CollapsibleTrigger asChild>
+              <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <CardTitle className="flex items-center gap-2">
+                  <Camera className="w-5 h-5" />
+                  Project Photos ({photos.length})
+                </CardTitle>
+                {photosOpen ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
             {canManageProjectContent && (
               <Dialog open={addPhotoOpen} onOpenChange={setAddPhotoOpen}>
                 <DialogTrigger asChild>
@@ -1252,6 +1311,7 @@ const ProjectDetailPage: React.FC = () => {
               </Dialog>
             )}
           </CardHeader>
+          <CollapsibleContent>
           <CardContent>
             {photos.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">No photos yet</p>
@@ -1282,7 +1342,9 @@ const ProjectDetailPage: React.FC = () => {
               </div>
             )}
           </CardContent>
+          </CollapsibleContent>
         </Card>
+        </Collapsible>
 
         {/* Google Drive Link - Only visible to team members */}
         {isMember && (
