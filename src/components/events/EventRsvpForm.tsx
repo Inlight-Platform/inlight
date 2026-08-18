@@ -199,6 +199,22 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
       return;
     }
 
+    if (stripePriceId) {
+      setBuyingTicket(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {
+          body: { event_id: eventId },
+        });
+        if (error) throw error;
+        if (!data?.url) throw new Error('Checkout link unavailable');
+        window.location.href = data.url;
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : 'Failed to start checkout');
+        setBuyingTicket(false);
+      }
+      return;
+    }
+
     toast.error('Tickets are not yet available for this event.');
   };
 

@@ -164,12 +164,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
         
         const parsedPrice = isPaid && ticketPrice ? parseFloat(ticketPrice) : null;
         const normalizedLinkUrl = linkUrl.trim();
-        const defaultPaymentLink = isPaid && parsedPrice === 10
-          ? 'https://buy.stripe.com/5kQcN4fsA37B9Br4yjco001'
-          : null;
-        const paymentLinkUrl = isPaid ? normalizedLinkUrl || defaultPaymentLink : null;
+        const paymentLinkUrl = isPaid ? normalizedLinkUrl || null : null;
 
-        const { error } = await supabase
+        const { data: eventData, error } = await supabase
           .from('events')
           .insert({
             user_id: user.id,
@@ -186,10 +183,26 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             price: parsedPrice,
             currency: 'usd',
             payment_link_url: paymentLinkUrl,
-          });
+          })
+          .select('id')
+          .single();
         if (error) {
           console.error('Event creation error:', error);
           throw error;
+        }
+
+        if (isPaid && parsedPrice && eventData?.id && !paymentLinkUrl) {
+          const { error: priceError } = await supabase.functions.invoke('create-event-price', {
+            body: {
+              event_id: eventData.id,
+              price: parsedPrice,
+              currency: 'usd',
+            },
+          });
+
+          if (priceError) {
+            console.error('Stripe price creation error:', priceError);
+          }
         }
       } else if (postType === 'job') {
         // Jobs are stored as posts with a special format and optional link
@@ -261,6 +274,10 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       else toast.error('Please add an image for your event');
       return;
     }
+    if (postType === 'event' && isPaid && (!ticketPrice.trim() || Number(ticketPrice) <= 0)) {
+      toast.error('Please add a ticket price');
+      return;
+    }
     if (postType === 'job' && (!title.trim() || !content.trim() || !imageUrl)) {
       console.log('Job validation failed');
       if (!imageUrl) toast.error('Please add an image for your opportunity');
@@ -273,7 +290,14 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const isValid = () => {
     if (visibility === 'specific' && selectedRecipients.length === 0 && (postType === 'update' || postType === 'job')) return false;
     if (postType === 'update') return content.trim().length > 0;
-    if (postType === 'event') return title.trim().length > 0 && eventDate.trim().length > 0 && imageUrl.length > 0;
+    if (postType === 'event') {
+      return (
+        title.trim().length > 0 &&
+        eventDate.trim().length > 0 &&
+        imageUrl.length > 0 &&
+        (!isPaid || (ticketPrice.trim().length > 0 && Number(ticketPrice) > 0))
+      );
+    }
     if (postType === 'job') return title.trim().length > 0 && content.trim().length > 0 && imageUrl.length > 0;
     return false;
   };
