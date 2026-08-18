@@ -59,6 +59,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
 
   // Check for ticket success from Stripe redirect
   const ticketStatus = searchParams.get('ticket');
+  const checkoutSessionId = searchParams.get('session_id');
   const hasTicketSuccess = ticketStatus === 'success';
   const eventHasPassed = isEventPast(eventDate);
   const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
@@ -101,6 +102,30 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
     setName((currentName) => currentName.trim() || currentUserDisplayName);
     setEmail(currentUserEmail);
   }, [dialogOpen, currentUserDisplayName, currentUserEmail]);
+
+  useEffect(() => {
+    if (!hasTicketSuccess || !checkoutSessionId || !currentUserId) return;
+
+    let cancelled = false;
+
+    supabase.functions.invoke('verify-ticket-checkout', {
+      body: { event_id: eventId, session_id: checkoutSessionId },
+    }).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) throw error;
+      if (data?.status === 'confirmed') {
+        toast.success('Ticket confirmed');
+      }
+    }).catch((error) => {
+      if (cancelled) return;
+      console.error('Ticket verification error:', error);
+      toast.error('Payment received. Ticket confirmation is still processing.');
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutSessionId, currentUserId, eventId, hasTicketSuccess]);
 
   // Check if user already RSVP'd (any status — going or can't make it)
   const userRsvp = currentUserId ? rsvps.find(r => r.user_id === currentUserId) : null;
@@ -206,6 +231,12 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
           body: { event_id: eventId },
         });
         if (error) throw error;
+        if (data?.status === 'confirmed') {
+          toast.success('Ticket confirmed');
+          setBuyingTicket(false);
+          navigate(`/events/${eventId}?ticket=success`);
+          return;
+        }
         if (!data?.url) throw new Error('Checkout link unavailable');
         window.location.href = data.url;
       } catch (err: unknown) {

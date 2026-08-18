@@ -53,10 +53,49 @@ serve(async (req) => {
       // Handle ticket purchases
       if (eventId && userId) {
         const amountPaid = (session.amount_total || 0) / 100;
-        const { error: ticketError } = await supabase
+        const { data: ticket, error: ticketLookupError } = await supabase
           .from("tickets")
-          .update({ status: "confirmed", amount_paid: amountPaid })
-          .eq("stripe_session_id", session.id);
+          .select("id, ticket_code")
+          .eq("stripe_session_id", session.id)
+          .maybeSingle();
+
+        if (ticketLookupError) {
+          console.error("[STRIPE-WEBHOOK] Ticket lookup error:", ticketLookupError);
+        }
+
+        let ticketCode = ticket?.ticket_code ?? null;
+        if (!ticketCode) {
+          const { data: generatedCode, error: codeError } = await supabase.rpc("generate_ticket_code");
+          if (codeError) {
+            console.error("[STRIPE-WEBHOOK] Ticket code generation error:", codeError);
+          } else {
+            ticketCode = generatedCode;
+          }
+        }
+
+        const ticketWrite = ticket
+          ? supabase
+              .from("tickets")
+              .update({
+                status: "confirmed",
+                amount_paid: amountPaid,
+                attendee_email: session.customer_details?.email ?? null,
+                ticket_code: ticketCode,
+              })
+              .eq("id", ticket.id)
+          : supabase
+              .from("tickets")
+              .insert({
+                event_id: eventId,
+                user_id: userId,
+                stripe_session_id: session.id,
+                status: "confirmed",
+                amount_paid: amountPaid,
+                attendee_email: session.customer_details?.email ?? null,
+                ticket_code: ticketCode,
+              });
+
+        const { error: ticketError } = await ticketWrite;
 
         if (ticketError) {
           console.error("[STRIPE-WEBHOOK] Ticket update error:", ticketError);
