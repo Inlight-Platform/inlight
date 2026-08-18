@@ -66,25 +66,24 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   const eventHasPassed = isEventPast(eventDate);
   const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
   const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
-  const { data: confirmedTicket } = useQuery({
+  const { data: latestTicket } = useQuery({
     queryKey: ['event-ticket', eventId, currentUserId],
     queryFn: async () => {
       if (!currentUserId) return null;
       const { data, error } = await supabase
         .from('tickets')
-        .select('id, ticket_code, amount_paid')
+        .select('id, ticket_code, amount_paid, status, stripe_session_id')
         .eq('event_id', eventId)
         .eq('user_id', currentUserId)
-        .eq('status', 'confirmed')
+        .in('status', ['confirmed', 'pending'])
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(10);
       if (error) throw error;
-      return data;
+      return data?.find((ticket) => ticket.status === 'confirmed') || data?.[0] || null;
     },
     enabled: !!isPaid && !!currentUserId,
   });
-  const ticketConfirmed = hasTicketSuccess || !!confirmedTicket;
+  const ticketConfirmed = hasTicketSuccess || latestTicket?.status === 'confirmed';
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -125,12 +124,13 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   }, [dialogOpen, currentUserDisplayName, currentUserEmail]);
 
   useEffect(() => {
-    if (!hasTicketSuccess || !checkoutSessionId || !currentUserId) return;
+    const sessionIdToVerify = checkoutSessionId || (latestTicket?.status === 'pending' ? latestTicket.stripe_session_id : null);
+    if ((!hasTicketSuccess && latestTicket?.status !== 'pending') || !sessionIdToVerify || !currentUserId) return;
 
     let cancelled = false;
 
     supabase.functions.invoke('verify-ticket-checkout', {
-      body: { event_id: eventId, session_id: checkoutSessionId },
+      body: { event_id: eventId, session_id: sessionIdToVerify },
     }).then(({ data, error }) => {
       if (cancelled) return;
       if (error) throw error;
@@ -147,7 +147,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
     return () => {
       cancelled = true;
     };
-  }, [checkoutSessionId, currentUserId, eventId, hasTicketSuccess, queryClient]);
+  }, [checkoutSessionId, currentUserId, eventId, hasTicketSuccess, latestTicket?.status, latestTicket?.stripe_session_id, queryClient]);
 
   // Check if user already RSVP'd (any status — going or can't make it)
   const userRsvp = currentUserId ? rsvps.find(r => r.user_id === currentUserId) : null;
