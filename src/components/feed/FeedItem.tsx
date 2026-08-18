@@ -761,11 +761,9 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                   View Dashboard
                 </Button>
               ) : ticketConfirmed ? (
-                <div className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm">
-                  <div className="flex items-center gap-2 font-semibold text-primary">
-                    <Check className="h-4 w-4" />
-                    You're on the list!
-                  </div>
+                <div className="flex flex-1 items-center gap-2 text-sm font-semibold text-primary">
+                  <Check className="h-4 w-4" />
+                  You're on the list!
                 </div>
               ) : isPaidEvent ? (
                 <Button
