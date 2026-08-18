@@ -132,25 +132,24 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const userEmail = user?.email ?? '';
   const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
   const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
-  const { data: confirmedTicket } = useQuery({
+  const { data: latestTicket } = useQuery({
     queryKey: ['event-ticket', item.id, user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from('tickets')
-        .select('id, ticket_code, amount_paid')
+        .select('id, ticket_code, amount_paid, status, stripe_session_id')
         .eq('event_id', item.id)
         .eq('user_id', user.id)
-        .eq('status', 'confirmed')
+        .in('status', ['confirmed', 'pending'])
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(10);
       if (error) throw error;
-      return data;
+      return data?.find((ticket) => ticket.status === 'confirmed') || data?.[0] || null;
     },
     enabled: isPaidEvent && !!user?.id,
   });
-  const ticketConfirmed = isPaidEvent && (hasTicketSuccess || !!confirmedTicket);
+  const ticketConfirmed = isPaidEvent && (hasTicketSuccess || latestTicket?.status === 'confirmed');
 
   const attendeeUserIds = goingRsvps
     .filter((r) => !r.is_anonymous)
@@ -193,12 +192,13 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       (item.type !== 'project' || canManageProjects));
 
   useEffect(() => {
-    if (!isPaidEvent || !hasTicketSuccess || !checkoutSessionId || !user?.id) return;
+    const sessionIdToVerify = checkoutSessionId || (latestTicket?.status === 'pending' ? latestTicket.stripe_session_id : null);
+    if (!isPaidEvent || (!hasTicketSuccess && latestTicket?.status !== 'pending') || !sessionIdToVerify || !user?.id) return;
 
     let cancelled = false;
 
     supabase.functions.invoke('verify-ticket-checkout', {
-      body: { event_id: item.id, session_id: checkoutSessionId },
+      body: { event_id: item.id, session_id: sessionIdToVerify },
     }).then(({ data, error }) => {
       if (cancelled) return;
       if (error) throw error;
@@ -215,7 +215,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [checkoutSessionId, hasTicketSuccess, isPaidEvent, item.id, queryClient, user?.id]);
+  }, [checkoutSessionId, hasTicketSuccess, isPaidEvent, item.id, latestTicket?.status, latestTicket?.stripe_session_id, queryClient, user?.id]);
   const canDelete = (isOwner || isAdmin) && canManageFeedItem;
   const supportsInlineEdit = item.type !== 'show' && item.type !== 'open_role' && item.source !== 'opportunity';
   const canEdit = (isOwner || isAdmin) && supportsInlineEdit && canManageFeedItem; // Shows have their own edit flow
