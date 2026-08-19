@@ -100,6 +100,7 @@ type PublicTicketAttendee = {
   name: string;
   avatar_url: string | null;
   created_at: string;
+  is_anonymous?: boolean | null;
 };
 
 interface FeedItemProps {
@@ -183,6 +184,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     },
     enabled: isPaidEvent,
   });
+  const visibleTicketAttendees = ticketAttendees.filter((ticket) => !ticket.is_anonymous);
+  const anonymousTicketCount = ticketAttendees.length - visibleTicketAttendees.length;
   const attendeeRows = useMemo(() => {
     const rsvpKeys = new Set(
       visibleGoingRsvps
@@ -198,7 +201,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       source: 'rsvp' as const,
     }));
 
-    const ticketRows = ticketAttendees
+    const ticketRows = visibleTicketAttendees
       .filter((ticket) => {
         const userKey = ticket.user_id ? `user:${ticket.user_id}` : null;
         return !(userKey && rsvpKeys.has(userKey));
@@ -209,11 +212,12 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         name: ticket.name || 'Inlight Member',
         avatar_url: ticket.avatar_url,
         source: 'ticket' as const,
-      }));
+    }));
 
     return [...rsvpRows, ...ticketRows];
-  }, [ticketAttendees, visibleGoingRsvps]);
-  const attendeeCount = attendeeRows.length + anonymousGoingCount;
+  }, [visibleTicketAttendees, visibleGoingRsvps]);
+  const anonymousAttendeeCount = anonymousGoingCount + anonymousTicketCount;
+  const attendeeCount = attendeeRows.length + anonymousAttendeeCount;
   const { data: confirmedTicket } = useQuery({
     queryKey: ['event-ticket', item.id, user?.id],
     queryFn: async () => {
@@ -239,7 +243,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     .filter((r) => !r.is_anonymous)
     .map((r) => r.user_id)
     .filter((id): id is string => !!id),
-    ...ticketAttendees.map((attendee) => attendee.user_id).filter((id): id is string => !!id),
+    ...visibleTicketAttendees.map((attendee) => attendee.user_id).filter((id): id is string => !!id),
   ];
   const { data: currentUserProfile } = useQuery({
     queryKey: ['current-user-rsvp-profile', user?.id],
@@ -1044,12 +1048,12 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                       </div>
                       );
                     })}
-                    {anonymousGoingCount > 0 && (
+                    {anonymousAttendeeCount > 0 && (
                       <div className="p-2 text-xs text-muted-foreground">
                         <span>
                           {attendeeRows.length > 0
-                            ? `and ${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} more`
-                            : `${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} attending`}
+                            ? `and ${anonymousAttendeeCount} ${anonymousAttendeeCount === 1 ? 'member' : 'members'} more`
+                            : `${anonymousAttendeeCount} ${anonymousAttendeeCount === 1 ? 'member' : 'members'} attending`}
                         </span>
                       </div>
                     )}
