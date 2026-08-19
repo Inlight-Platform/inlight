@@ -376,6 +376,27 @@ const EventDashboardPage: React.FC = () => {
     },
   });
 
+  const ticketCheckInMutation = useMutation({
+    mutationFn: async ({ ticketId, attended }: { ticketId: string; attended: boolean }) => {
+      const { error } = await supabase
+        .from('tickets')
+        .update({
+          checked_in_at: attended ? new Date().toISOString() : null,
+          checked_in_by: attended ? user?.id : null,
+        })
+        .eq('id', ticketId)
+        .eq('event_id', dashboardEvent!.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event-dashboard-ticket-metrics', dashboardEvent?.id] });
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error.message || 'Could not update ticket check-in status.');
+    },
+  });
+
   const copyPublicLink = async () => {
     if (!publicUrl) return;
     await navigator.clipboard.writeText(publicUrl);
@@ -586,7 +607,14 @@ const EventDashboardPage: React.FC = () => {
                               {attendee.attended ? 'Undo' : 'Mark attended'}
                             </Button>
                           ) : attendee.source === 'ticket' ? (
-                            <span className="text-sm text-muted-foreground">Ticket holder</span>
+                            <Button
+                              size="sm"
+                              variant={attendee.attended ? 'outline' : 'default'}
+                              onClick={() => ticketCheckInMutation.mutate({ ticketId: attendee.id, attended: !attendee.attended })}
+                              disabled={ticketCheckInMutation.isPending}
+                            >
+                              {attendee.attended ? 'Undo' : 'Mark attended'}
+                            </Button>
                           ) : (
                             <span className="text-sm text-muted-foreground">Not expected</span>
                           )}
