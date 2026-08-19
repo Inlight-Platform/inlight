@@ -1,12 +1,33 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { emailNotConfirmedMessage, isUserEmailConfirmed } from '@/lib/authVerification';
 
 export const accountAlreadyExistsMessage =
   'Your account already exists. Try signing in or resetting your password.';
 
 const isExistingSignupResponse = (data: Awaited<ReturnType<typeof supabase.auth.signUp>>['data']) => {
   return Boolean(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
+};
+
+const clearStoredAuthSession = () => {
+  try {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith('sb-') && key.includes('auth'))
+      .forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // Storage can be unavailable in private/restricted browser contexts.
+  }
+};
+
+const clearUnconfirmedSession = async () => {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch {
+    // The app should still forget the local session if Supabase sign-out fails.
+  }
+
+  clearStoredAuthSession();
 };
 
 type SignupRpcResult<T> = {
@@ -142,9 +163,15 @@ export function useAuth() {
           if (isHashRecoveryFlow) {
             setIsPasswordRecovery(true);
           }
-          setSession(data.session);
-          setUser(data.user);
-          void maybeClaimInvites(data.session);
+          if (isUserEmailConfirmed(data.user)) {
+            setSession(data.session);
+            setUser(data.user);
+            void maybeClaimInvites(data.session);
+          } else {
+            await clearUnconfirmedSession();
+            setSession(null);
+            setUser(null);
+          }
           replaceAuthUrl(isHashRecoveryFlow);
         }
 
@@ -167,9 +194,15 @@ export function useAuth() {
           if (isRecoveryFlow) {
             setIsPasswordRecovery(true);
           }
-          setSession(data.session);
-          setUser(data.user);
-          void maybeClaimInvites(data.session);
+          if (isUserEmailConfirmed(data.user)) {
+            setSession(data.session);
+            setUser(data.user);
+            void maybeClaimInvites(data.session);
+          } else {
+            await clearUnconfirmedSession();
+            setSession(null);
+            setUser(null);
+          }
           replaceAuthUrl(isRecoveryFlow);
         }
 
@@ -179,9 +212,15 @@ export function useAuth() {
           return;
         }
 
-        setSession(session);
-        setUser(session?.user ?? null);
-        void maybeClaimInvites(session);
+        if (session && !isUserEmailConfirmed(session.user)) {
+          await clearUnconfirmedSession();
+          setSession(null);
+          setUser(null);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+          void maybeClaimInvites(session);
+        }
         setLoading(false);
       } catch (error) {
         console.error('Auth initialization failed:', error);
@@ -204,6 +243,14 @@ export function useAuth() {
           setIsPasswordRecovery(true);
         }
         
+        if (session && !isUserEmailConfirmed(session.user)) {
+          void clearUnconfirmedSession();
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -267,6 +314,11 @@ export function useAuth() {
       return { data, error };
     }
 
+    if (data?.session && !isUserEmailConfirmed(data.user)) {
+      await clearUnconfirmedSession();
+      return { data: { ...data, session: null }, error: null };
+    }
+
     if (isExistingSignupResponse(data)) {
       return { data, error: { message: accountAlreadyExistsMessage } };
     }
@@ -288,22 +340,31 @@ export function useAuth() {
       password,
     });
 
+    if (!error && data?.session && !isUserEmailConfirmed(data.user)) {
+      await clearUnconfirmedSession();
+      return { data: { ...data, session: null }, error: { message: emailNotConfirmedMessage } };
+    }
+
     return { data, error };
   };
 
   const signOut = async () => {
-    const result = await supabase.auth.signOut({ scope: 'local' });
-    if (result.error) {
-      // The Supabase client won't clear the local session when the server
-      // returns a non-404/401/403 error. Clear auth keys from storage
-      // ourselves so a subsequent page load starts unauthenticated.
-      try {
-        Object.keys(localStorage)
-          .filter((k) => k.startsWith('sb-') && k.includes('auth'))
-          .forEach((k) => localStorage.removeItem(k));
-      } catch { /* storage unavailable */ }
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) {
+        console.warn('Supabase sign-out returned an error; clearing local session anyway.', error);
+      }
+    } catch (error) {
+      console.warn('Supabase sign-out failed; clearing local session anyway.', error);
     }
-    return result;
+
+    clearStoredAuthSession();
+    setSession(null);
+    setUser(null);
+    setIsPasswordRecovery(false);
+    setRecoveryError(null);
+
+    return { error: null };
   };
 
   const resetPassword = async (email: string) => {

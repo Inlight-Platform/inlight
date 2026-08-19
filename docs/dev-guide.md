@@ -132,6 +132,8 @@ Repository configuration required:
 | `VITE_SANDBOX_SUPABASE_PUBLISHABLE_KEY` | GitHub secret | Hosted sandbox Supabase publishable/anon key for PR previews. |
 | `SANDBOX_SUPABASE_DB_URL` | GitHub secret | Optional. Database connection string used to apply PR migrations to the sandbox Supabase project before preview builds. |
 | `PRODUCTION_SUPABASE_DB_URL` | GitHub secret | Optional. Database connection string used to apply PR migrations to the real Inlight Supabase project for production-data previews and main-branch migration runs. |
+| `SUPABASE_ACCESS_TOKEN` | GitHub secret | Supabase access token used to deploy invite edge functions to the hosted sandbox project. |
+| `RESEND_API_KEY` | GitHub secret | Resend key used by sandbox invite edge functions to send invite emails. |
 | `CLOUDFLARE_PAGES_PROJECT_NAME` | GitHub variable | Optional. Defaults to `inlight` when unset. |
 
 The application still locks normal production and local development builds to the production Supabase URL. Hosted sandbox previews must set `VITE_SUPABASE_ENV=sandbox` and `VITE_SUPABASE_ALLOW_REMOTE_SANDBOX=true`, which the workflow does automatically.

@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { formatSignInErrorMessage } from '@/lib/authPolicy';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthRestoreState, readAuthRestore, readAuthReturnTo, saveAuthReturnTo } from '@/lib/authRestore';
+import { isUserEmailConfirmed } from '@/lib/authVerification';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset' | 'confirm';
 
@@ -454,7 +455,7 @@ const AuthPage: React.FC = () => {
         } else {
           toast.error(error.message);
         }
-      } else if (!data?.session) {
+      } else if (!data?.session || !isUserEmailConfirmed(data.user)) {
         await markFirstTimeSignupWelcomePending(email);
         setPendingConfirmationEmail(email.trim().toLowerCase());
         setPassword('');
