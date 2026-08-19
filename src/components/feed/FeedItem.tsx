@@ -87,6 +87,18 @@ type PublicTicketAttendee = {
   is_anonymous?: boolean | null;
 };
 
+type EventPanelist = {
+  id: string;
+  user_id: string | null;
+  display_name: string;
+  title: string | null;
+  bio: string | null;
+  headshot_url: string | null;
+  website_url: string | null;
+  reel_url: string | null;
+  public_slug: string;
+};
+
 interface FeedItemProps {
   item: FeedItemData;
   networkDegree: NetworkDegree | null;
@@ -140,12 +152,27 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const alreadyRsvpd = !!userRsvp || rsvpSubmitted;
   const alreadyGoing = rsvpSubmitted || userRsvp?.status === 'going';
   const userEmail = user?.email ?? '';
+  const { data: eventPanelists = [] } = useQuery({
+    queryKey: ['event-panelists-public', item.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('event_panelists')
+        .select('id, user_id, display_name, title, bio, headshot_url, website_url, reel_url, public_slug')
+        .eq('event_id', item.id)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('display_name', { ascending: true });
+      if (error) throw error;
+      return (data || []) as EventPanelist[];
+    },
+    enabled: isEventItem,
+  });
   const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
   const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
   const { data: ticketAttendees = [] } = useQuery({
     queryKey: ['public-event-ticket-attendees', item.id],
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)('get_public_event_ticket_attendees', {
+      const { data, error } = await supabase.rpc('get_public_event_ticket_attendees', {
         target_event_id: item.id,
       });
       if (error) throw error;
@@ -802,6 +829,78 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                   {formatPrice(item.price, item.currency || 'usd')}
                   <span className="ml-1 text-xs font-normal text-muted-foreground">per ticket</span>
                 </p>
+              </div>
+            )}
+            {eventPanelists.length > 0 && (
+              <div className="rounded-xl border border-border bg-card/80 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Panelists
+                    </h3>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {eventPanelists.length}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {eventPanelists.map((panelist) => {
+                    const eventIdentifier = item.slug || item.id;
+                    const panelistUrl = `/events/${eventIdentifier}/panelists/${panelist.public_slug}`;
+                    const canOpenPanelist = Boolean(panelistUrl);
+
+                    return (
+                      <button
+                        key={panelist.id}
+                        type="button"
+                        className={cn(
+                          'group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-background/70 p-3 text-left shadow-sm',
+                          canOpenPanelist && 'transition-colors hover:border-primary/40 hover:bg-accent/40'
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(panelistUrl);
+                        }}
+                        disabled={!canOpenPanelist}
+                      >
+                        <Avatar className="h-16 w-16 shrink-0 rounded-xl">
+                          <AvatarImage src={panelist.headshot_url || undefined} />
+                          <AvatarFallback className="rounded-xl bg-primary/10 text-lg font-semibold text-primary">
+                            {panelist.display_name[0]?.toUpperCase() || 'P'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="min-w-0 flex-1 space-y-1">
+                          <span className="flex items-start justify-between gap-3">
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-semibold leading-tight text-foreground">
+                              {panelist.display_name}
+                              </span>
+                              {panelist.title && (
+                                <span className="mt-1 block truncate text-xs leading-tight text-muted-foreground">
+                                  {panelist.title}
+                                </span>
+                              )}
+                            </span>
+                            {canOpenPanelist && (
+                              <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+                            )}
+                          </span>
+                          {panelist.bio && (
+                            <span className="line-clamp-2 block text-xs leading-relaxed text-muted-foreground">
+                              {panelist.bio}
+                            </span>
+                          )}
+                          {canOpenPanelist && (
+                            <span className="inline-flex text-xs font-medium text-primary">
+                              View profile
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
             <div className="flex gap-2">

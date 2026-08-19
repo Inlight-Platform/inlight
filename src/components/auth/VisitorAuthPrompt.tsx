@@ -11,6 +11,7 @@ interface VisitorAuthPromptProps {
   className?: string;
   compact?: boolean;
   restore?: AuthRestoreState;
+  returnTo?: string;
 }
 
 interface VisitorAuthOverlayProps extends VisitorAuthPromptProps {
@@ -24,6 +25,7 @@ export const VisitorAuthPrompt: React.FC<VisitorAuthPromptProps> = ({
   className,
   compact = false,
   restore,
+  returnTo,
 }) => {
   return (
     <div
@@ -61,7 +63,7 @@ export const VisitorAuthPrompt: React.FC<VisitorAuthPromptProps> = ({
             </div>
           )}
 
-          <AuthSegmentedButton size={compact ? 'md' : 'lg'} fullWidth className="max-w-sm" restore={restore} />
+          <AuthSegmentedButton size={compact ? 'md' : 'lg'} fullWidth className="max-w-sm" restore={restore} returnTo={returnTo} />
         </div>
       </div>
     </div>

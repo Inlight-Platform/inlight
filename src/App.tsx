@@ -43,6 +43,7 @@ import OnboardingGate from "@/components/layout/OnboardingGate";
 import PublicCompanyPage from "./pages/PublicCompanyPage";
 import PublicCompanyProjectPage from "./pages/PublicCompanyProjectPage";
 import PublicCompanyStaffPage from "./pages/PublicCompanyStaffPage";
+import PublicEventPanelistPage from "./pages/PublicEventPanelistPage";
 
 const queryClient = new QueryClient();
 
@@ -102,6 +103,7 @@ const App = () => (
             <Route path="/insights" element={<InsightsPage />} />
             <Route path="/events" element={<Navigate to="/feed?tab=events" replace />} />
             <Route path="/events/:eventId/dashboard" element={<EventDashboardPage />} />
+            <Route path="/events/:eventId/panelists/:panelistSlug" element={<PublicEventPanelistPage />} />
             <Route path="/events/:eventId" element={<FeedPage />} />
             <Route path="/opportunities" element={<OpportunitiesPage />} />
             <Route path="/messages" element={<RequireAuth><MessagesPage /></RequireAuth>} />

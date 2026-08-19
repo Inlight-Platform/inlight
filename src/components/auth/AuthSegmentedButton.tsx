@@ -10,6 +10,7 @@ interface AuthSegmentedButtonProps {
   fullWidth?: boolean;
   showIcons?: boolean;
   restore?: AuthRestoreState;
+  returnTo?: string;
 }
 
 const sizeClasses = {
@@ -36,6 +37,7 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
   fullWidth = false,
   showIcons = false,
   restore,
+  returnTo: returnToOverride,
 }) => {
   const location = useLocation();
   const styles = sizeClasses[size];
@@ -49,7 +51,7 @@ export const AuthSegmentedButton: React.FC<AuthSegmentedButtonProps> = ({
     }
 
     const returnSearch = returnParams.toString();
-    const returnTo = `${location.pathname}${returnSearch ? `?${returnSearch}` : ''}${location.hash}`;
+    const returnTo = returnToOverride || `${location.pathname}${returnSearch ? `?${returnSearch}` : ''}${location.hash}`;
     saveAuthRestore(restore);
     saveAuthReturnTo(returnTo);
     const authParams = new URLSearchParams();
