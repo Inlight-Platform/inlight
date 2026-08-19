@@ -58,6 +58,11 @@ type TicketMetricRow = {
   user_id: string;
 };
 
+type TicketProfileRow = {
+  user_id: string;
+  display_name: string | null;
+};
+
 type DashboardAttendee = {
   id: string;
   source: 'rsvp' | 'ticket';
@@ -260,6 +265,32 @@ const EventDashboardPage: React.FC = () => {
     ticketsSold: confirmedTickets.length,
     revenue: confirmedTickets.reduce((sum, ticket) => sum + Number(ticket.amount_paid || 0), 0),
   }), [confirmedTickets]);
+  const ticketUserIds = useMemo(
+    () => Array.from(new Set(confirmedTickets.map((ticket) => ticket.user_id).filter(Boolean))),
+    [confirmedTickets]
+  );
+  const { data: ticketProfiles = [], isLoading: ticketProfilesLoading } = useQuery({
+    queryKey: ['event-dashboard-ticket-profiles', dashboardEvent?.id, ticketUserIds],
+    queryFn: async () => {
+      if (ticketUserIds.length === 0) {
+        return [] as TicketProfileRow[];
+      }
+
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name')
+        .in('user_id', ticketUserIds);
+
+      if (error) throw error;
+
+      return (data || []) as TicketProfileRow[];
+    },
+    enabled: userOwnsDashboardEvent && ticketUserIds.length > 0,
+  });
+  const ticketProfileNameByUserId = useMemo(
+    () => new Map(ticketProfiles.map((profile) => [profile.user_id, profile.display_name])),
+    [ticketProfiles]
+  );
 
   const publicUrl = useMemo(() => {
     if (!dashboardEvent) return '';
@@ -322,7 +353,7 @@ const EventDashboardPage: React.FC = () => {
         id: ticket.id,
         source: 'ticket' as const,
         user_id: ticket.user_id,
-        name: ticket.attendee_name || ticket.attendee_email?.split('@')[0] || 'Ticket holder',
+        name: ticketProfileNameByUserId.get(ticket.user_id) || ticket.attendee_name || ticket.attendee_email?.split('@')[0] || 'Ticket holder',
         email: ticket.attendee_email,
         status: 'going',
         role_type: 'ticket_holder',
@@ -335,7 +366,7 @@ const EventDashboardPage: React.FC = () => {
     return [...rsvpAttendees, ...ticketAttendees].sort(
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     );
-  }, [confirmedTickets, rsvps]);
+  }, [confirmedTickets, rsvps, ticketProfileNameByUserId]);
 
   const filteredAttendees = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -559,7 +590,7 @@ const EventDashboardPage: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {rsvpsLoading || ticketMetricsLoading ? (
+              {rsvpsLoading || ticketMetricsLoading || ticketProfilesLoading ? (
                 <div className="flex min-h-48 items-center justify-center">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
