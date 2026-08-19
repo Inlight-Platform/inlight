@@ -82,16 +82,17 @@ const EventsManager: React.FC = () => {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [scannerEventId, setScannerEventId] = useState<string | null>(null);
 
-  // Fetch all events created by the Inlight account
+  // AdminPage gates this component. Fetch every event visible to admins so
+  // panelists can be attached to existing events regardless of creator.
   const { data: events, isLoading } = useQuery({
-    queryKey: ['admin-inlight-events', user?.id],
+    queryKey: ['admin-events', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .eq('user_id', user.id)
-        .order('event_date', { ascending: false });
+        .order('event_date', { ascending: false })
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -103,14 +104,14 @@ const EventsManager: React.FC = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="w-5 h-5" />
-          Inlight Events
+          Events
         </CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <p className="text-muted-foreground">Loading events...</p>
         ) : events?.length === 0 ? (
-          <p className="text-muted-foreground">No events created by Inlight yet.</p>
+          <p className="text-muted-foreground">No events found.</p>
         ) : (
           <div className="space-y-2">
             {events?.map((event) => (
