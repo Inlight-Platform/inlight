@@ -206,34 +206,34 @@ const PublicEventPanelistPage = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/35 to-transparent" />
         </div>
 
-        <div className="grid gap-8 px-5 py-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch">
-          <div className="min-w-0 text-center lg:order-1 lg:flex lg:flex-col lg:justify-center">
-            <div className="w-full">
-              <div className="space-y-4">
-              <h1 className="font-display text-4xl font-bold tracking-normal text-foreground sm:text-5xl">
-                {displayName}
-              </h1>
-              {instagramHandle && instagramUrl && (
-                <a
-                  href={instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1 text-sm italic hover:underline"
-                  style={{ color: '#c2185b' }}
-                >
-                  <Instagram className="h-3.5 w-3.5" style={{ color: '#ec4899' }} />
-                  @{instagramHandle}
-                </a>
-              )}
-              {roleLocationLine && (
-                <p className="text-sm text-muted-foreground">
-                  {roleLocationLine}
-                </p>
-              )}
+        <div className="grid gap-6 px-5 py-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch lg:gap-8">
+          <div className="order-2 min-w-0 text-center lg:order-1 lg:flex lg:flex-col lg:justify-center">
+            <div className="flex w-full flex-col">
+              <div className="order-2 space-y-4 lg:order-1">
+                <h1 className="font-display text-4xl font-bold tracking-normal text-foreground sm:text-5xl">
+                  {displayName}
+                </h1>
+                {instagramHandle && instagramUrl && (
+                  <a
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1 text-sm italic hover:underline"
+                    style={{ color: '#c2185b' }}
+                  >
+                    <Instagram className="h-3.5 w-3.5" style={{ color: '#ec4899' }} />
+                    @{instagramHandle}
+                  </a>
+                )}
+                {roleLocationLine && (
+                  <p className="text-sm text-muted-foreground">
+                    {roleLocationLine}
+                  </p>
+                )}
               </div>
 
               {badges.length > 0 && (
-                <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <div className="order-3 mt-5 flex flex-wrap justify-center gap-2 lg:order-2">
                   {badges.slice(0, 8).map((badge) => (
                     <Badge key={badge} variant="secondary" className="rounded-full px-4 py-1.5 text-sm font-medium lowercase">
                       {badge}
@@ -242,11 +242,30 @@ const PublicEventPanelistPage = () => {
                 </div>
               )}
 
-              {bio && <p className="mx-auto mt-7 max-w-3xl whitespace-pre-line text-sm leading-relaxed text-foreground">{bio}</p>}
+              {bio && (
+                <p className="order-4 mx-auto mt-7 max-w-3xl whitespace-pre-line text-sm leading-relaxed text-foreground lg:order-3">
+                  {bio}
+                </p>
+              )}
 
-              <div className="mx-auto mt-8 h-px max-w-3xl bg-border" />
+              {event?.title && (
+                <div className="order-5 mt-7 rounded-xl border border-border bg-background/70 p-4 text-left text-sm lg:hidden">
+                  <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">Panelist For</p>
+                  <Link to={backToEvent} className="mt-1 block font-semibold text-foreground hover:text-primary">
+                    {event.title}
+                  </Link>
+                  {event.event_date && (
+                    <p className="mt-2 flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      {format(new Date(event.event_date), 'EEE, MMM d, yyyy h:mm a')}
+                    </p>
+                  )}
+                </div>
+              )}
 
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <div className="order-4 mx-auto mt-8 hidden h-px w-full max-w-3xl bg-border lg:block" />
+
+              <div className="order-1 mb-7 flex flex-wrap justify-center gap-3 lg:order-5 lg:mb-0 lg:mt-8">
                 {inlightProfilePath && (
                   <Button className="gap-2" onClick={openInlightProfile}>
                     <User className="h-4 w-4" />
@@ -273,7 +292,7 @@ const PublicEventPanelistPage = () => {
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-4 lg:order-2">
+          <div className="order-1 flex flex-col items-center gap-4 lg:order-2">
             {avatarUrl ? (
               <img
                 src={avatarUrl}
@@ -287,7 +306,7 @@ const PublicEventPanelistPage = () => {
             )}
 
             {event?.title && (
-              <div className="w-full rounded-xl border border-border bg-background/70 p-4 text-sm">
+              <div className="hidden w-full rounded-xl border border-border bg-background/70 p-4 text-sm lg:block">
                 <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">Panelist For</p>
                 <Link to={backToEvent} className="mt-1 block font-semibold text-foreground hover:text-primary">
                   {event.title}
