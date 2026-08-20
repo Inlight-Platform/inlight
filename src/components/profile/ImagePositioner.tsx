@@ -13,6 +13,7 @@ interface ImagePositionerProps {
   imageUrl: string;
   initialPositionX?: number;
   initialPositionY?: number;
+  initialZoom?: number;
   aspectRatio?: number;
   onSave: (positionX: number, positionY: number, zoom: number) => void;
   onCancel?: () => void;
@@ -23,6 +24,7 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   imageUrl,
   initialPositionX = 50,
   initialPositionY = 50,
+  initialZoom = 1,
   aspectRatio = 16 / 9,
   onSave,
   onCancel,
@@ -41,9 +43,9 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
     if (open) {
       setPositionX(initialPositionX);
       setPositionY(initialPositionY);
-      setZoom(1);
+      setZoom(initialZoom);
     }
-  }, [open, initialPositionX, initialPositionY]);
+  }, [open, initialPositionX, initialPositionY, initialZoom]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
