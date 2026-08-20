@@ -844,52 +844,54 @@ const PanelistQrDialog: React.FC<{
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[560px] overflow-y-auto overflow-x-hidden sm:max-w-[560px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="flex max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[640px] flex-col overflow-hidden p-0 sm:max-w-[640px]">
+        <DialogHeader className="shrink-0 px-6 pb-4 pt-6">
+          <DialogTitle className="flex items-center gap-2 pr-8">
             <QrCode className="h-5 w-5" />
             Panelist QR Code
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="pr-8">
             Inlight-branded QR code for {panelist.display_name}'s public Hot Seat profile.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-5 text-center text-white">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-[#D4AF37] bg-black/40 font-display text-3xl italic shadow-[0_0_28px_rgba(212,175,55,0.28)]">
-            i
+        <div className="min-h-0 space-y-4 overflow-y-auto overflow-x-hidden px-6 pb-6">
+          <div className="w-full overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-4 py-5 text-center text-white sm:px-6">
+            <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full border border-[#D4AF37] bg-black/40 font-display text-3xl italic shadow-[0_0_28px_rgba(212,175,55,0.28)]">
+              i
+            </div>
+            <div className="relative mx-auto flex aspect-square w-full max-w-[300px] items-center justify-center rounded-[22px] bg-white p-4 shadow-[0_24px_70px_rgba(46,70,255,0.28)] sm:max-w-[320px]">
+              <canvas
+                ref={renderQr}
+                width={360}
+                height={360}
+                className="aspect-square h-auto w-full max-w-[260px] shrink-0 sm:max-w-[280px]"
+                aria-label={`QR code for ${panelist.display_name}`}
+              />
+              {!qrReady && (
+                <div className="absolute inset-4 flex items-center justify-center rounded-lg bg-white text-sm font-medium text-slate-500">
+                  Generating QR...
+                </div>
+              )}
+            </div>
+            <p className="mt-4 font-display text-2xl font-semibold">{panelist.display_name}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.28em] text-white/60">Scan to view profile</p>
           </div>
-          <div className="relative mx-auto flex w-full max-w-[312px] items-center justify-center rounded-[22px] bg-white p-4 shadow-[0_24px_70px_rgba(46,70,255,0.28)]">
-            <canvas
-              ref={renderQr}
-              width={360}
-              height={360}
-              className="aspect-square h-[280px] w-[280px] max-w-full shrink-0"
-              aria-label={`QR code for ${panelist.display_name}`}
-            />
-            {!qrReady && (
-              <div className="absolute inset-4 flex items-center justify-center rounded-lg bg-white text-sm font-medium text-slate-500">
-                Generating QR...
-              </div>
-            )}
+
+          <div className="min-w-0 rounded-md bg-muted p-3 text-xs text-muted-foreground">
+            <p className="break-all">{url}</p>
           </div>
-          <p className="mt-4 font-display text-2xl font-semibold">{panelist.display_name}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.28em] text-white/60">Scan to view profile</p>
-        </div>
 
-        <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
-          <p className="truncate">{url}</p>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Button variant="outline" className="gap-2" onClick={copyUrl}>
-            <Copy className="h-4 w-4" />
-            Copy URL
-          </Button>
-          <Button className="gap-2" onClick={downloadQr}>
-            <Download className="h-4 w-4" />
-            Download PNG
-          </Button>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button variant="outline" className="w-full gap-2" onClick={copyUrl}>
+              <Copy className="h-4 w-4" />
+              Copy URL
+            </Button>
+            <Button className="w-full gap-2" onClick={downloadQr}>
+              <Download className="h-4 w-4" />
+              Download PNG
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
