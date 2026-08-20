@@ -91,10 +91,14 @@ Deno.serve(async (req) => {
 
     // Send existing Inlight users to sign-in so they can claim the credit
     // immediately; send new recipients to sign-up.
-    const { data: emailExists } = await supabase.rpc("check_email_exists_for_signup", {
+    const { data: emailExists, error: emailCheckError } = await supabase.rpc("check_email_exists_for_signup", {
       search_email: normalizedEmail,
     });
-    const authMode = emailExists ? "signin" : "signup";
+    if (emailCheckError) {
+      console.error("check_email_exists_for_signup error:", emailCheckError);
+    }
+    // Use strict equality — null/undefined (RPC error) falls back to signup mode
+    const authMode = emailExists === true ? "signin" : "signup";
     const inviteUrl = `${getSiteUrl()}/auth?mode=${authMode}&credit_invite=${encodeURIComponent(token)}`;
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
 

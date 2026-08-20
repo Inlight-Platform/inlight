@@ -32,7 +32,7 @@ export const useSavedFilms = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saved-film-ids'] });
       queryClient.invalidateQueries({ queryKey: ['my-saved-films'] });
-      toast.success('Added to your watchlist! 🎬');
+      toast.success('Added to your film list');
     },
     onError: () => {
       toast.error('Could not save film');
