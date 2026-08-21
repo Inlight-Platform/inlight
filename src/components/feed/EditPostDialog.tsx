@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Move, X, ImagePlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Move, X, ImagePlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
@@ -100,6 +100,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const [location, setLocation] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imagePositions, setImagePositions] = useState<ImagePosition[]>([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showImageUploader, setShowImageUploader] = useState(false);
 
   useEffect(() => {
@@ -117,6 +118,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
       };
       setImageUrls(urls);
       setImagePositions(normalizeImagePositions(item.image_positions, urls.length, fallback));
+      setSelectedImageIndex(0);
       setShowImageUploader(false);
     }
   }, [open, item]);
@@ -141,6 +143,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
           };
           setImageUrls(urls);
           setImagePositions(normalizeImagePositions(data.image_positions, urls.length, fallback));
+          setSelectedImageIndex(0);
         }
       }
     };
@@ -221,17 +224,24 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const handleImageUploaded = (url: string) => {
     setImageUrls((current) => {
       if (current.length >= MAX_IMAGES) return current;
-      return [...current, url].slice(0, MAX_IMAGES);
+      const next = [...current, url].slice(0, MAX_IMAGES);
+      setSelectedImageIndex(next.length - 1);
+      setShowImageUploader(next.length < MAX_IMAGES);
+      return next;
     });
     setImagePositions((current) => {
       if (current.length >= MAX_IMAGES) return current;
       return [...current, DEFAULT_IMAGE_POSITION].slice(0, MAX_IMAGES);
     });
-    setShowImageUploader(imageUrls.length + 1 < MAX_IMAGES);
   };
 
   const handleRemoveImage = (index: number) => {
-    setImageUrls((current) => current.filter((_, i) => i !== index));
+    setImageUrls((current) => {
+      const next = current.filter((_, i) => i !== index);
+      setSelectedImageIndex((selected) => Math.min(selected, Math.max(next.length - 1, 0)));
+      setShowImageUploader(false);
+      return next;
+    });
     setImagePositions((current) => current.filter((_, i) => i !== index));
   };
 
@@ -251,6 +261,8 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const showLocation = isEvent;
   const showImage = item.type === 'post' || isJob || isEvent;
   const atImageLimit = imageUrls.length >= MAX_IMAGES;
+  const selectedImageUrl = imageUrls[selectedImageIndex];
+  const selectedImagePosition = imagePositions[selectedImageIndex] ?? DEFAULT_IMAGE_POSITION;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -295,53 +307,93 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
                 
                 {imageUrls.length > 0 ? (
                   <div className="space-y-3">
-                    {imageUrls.map((url, index) => {
-                      const position = imagePositions[index] ?? DEFAULT_IMAGE_POSITION;
-
-                      return (
-                        <div key={`${url}-${index}`} className="relative overflow-hidden rounded-lg border border-border bg-muted">
-                          <div className="relative aspect-video">
-                            <PositionedImagePreview
-                              url={url}
-                              position={position}
-                              alt={`Post image ${index + 1}`}
-                            />
-                          </div>
-                          <div className="absolute left-2 top-2 rounded-full bg-background/80 px-2 py-0.5 text-xs font-medium backdrop-blur-sm">
-                            {index + 1} / {imageUrls.length}
-                          </div>
-                          <div className="absolute right-2 top-2 flex gap-2">
-                            <ImagePositioner
-                              imageUrl={url}
-                              initialPositionX={position.x}
-                              initialPositionY={position.y}
-                              initialZoom={position.zoom}
-                              aspectRatio={16 / 9}
-                              onSave={(x, y, zoom) => handlePositionSave(index, x, y, zoom)}
-                              trigger={
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  size="icon"
-                                  className="h-8 w-8 bg-background/80 backdrop-blur-sm"
-                                >
-                                  <Move className="h-4 w-4" />
-                                </Button>
-                              }
-                            />
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleRemoveImage(index)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
+                    {selectedImageUrl && (
+                      <div className="relative overflow-hidden rounded-lg border border-border bg-muted">
+                        <div className="relative aspect-video">
+                          <PositionedImagePreview
+                            url={selectedImageUrl}
+                            position={selectedImagePosition}
+                            alt={`Post image ${selectedImageIndex + 1}`}
+                          />
                         </div>
-                      );
-                    })}
+
+                        <div className="absolute left-2 top-2 rounded-full bg-background/80 px-2 py-0.5 text-xs font-medium backdrop-blur-sm">
+                          {selectedImageIndex + 1} / {imageUrls.length}
+                        </div>
+
+                        {imageUrls.length > 1 && selectedImageIndex > 0 && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            className="absolute left-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-background/80 backdrop-blur-sm"
+                            onClick={() => setSelectedImageIndex((current) => Math.max(current - 1, 0))}
+                            aria-label="Previous image"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {imageUrls.length > 1 && selectedImageIndex < imageUrls.length - 1 && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-background/80 backdrop-blur-sm"
+                            onClick={() => setSelectedImageIndex((current) => Math.min(current + 1, imageUrls.length - 1))}
+                            aria-label="Next image"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        <div className="absolute right-2 top-2 flex gap-2">
+                          <ImagePositioner
+                            imageUrl={selectedImageUrl}
+                            initialPositionX={selectedImagePosition.x}
+                            initialPositionY={selectedImagePosition.y}
+                            initialZoom={selectedImagePosition.zoom}
+                            aspectRatio={16 / 9}
+                            onSave={(x, y, zoom) => handlePositionSave(selectedImageIndex, x, y, zoom)}
+                            trigger={
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="icon"
+                                className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+                              >
+                                <Move className="h-4 w-4" />
+                              </Button>
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleRemoveImage(selectedImageIndex)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        {imageUrls.length > 1 && (
+                          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
+                            {imageUrls.map((_, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => setSelectedImageIndex(index)}
+                                aria-label={`Show image ${index + 1}`}
+                                className={`h-1.5 rounded-full transition-all duration-200 ${
+                                  index === selectedImageIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/75'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <Button
                       type="button"
