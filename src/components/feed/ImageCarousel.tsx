@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,8 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const didDragRef = useRef(false);
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
@@ -82,8 +84,24 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
   return (
     <div
       className={cn('relative rounded-lg overflow-hidden', className)}
-      onClick={(e) => e.stopPropagation()}
-      onPointerDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => {
+        pointerStartRef.current = { x: e.clientX, y: e.clientY };
+        didDragRef.current = false;
+      }}
+      onPointerMove={(e) => {
+        const start = pointerStartRef.current;
+        if (!start) return;
+        const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y);
+        if (moved > 6) {
+          didDragRef.current = true;
+        }
+      }}
+      onClickCapture={(e) => {
+        if (didDragRef.current) {
+          e.stopPropagation();
+          didDragRef.current = false;
+        }
+      }}
     >
       <div ref={emblaRef} className={cn('overflow-hidden', className && 'h-full')}>
         <div className={cn('flex', className && 'h-full')}>
