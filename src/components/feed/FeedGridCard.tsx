@@ -64,6 +64,7 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
                 positionX={item.image_position_x ?? 50}
                 positionY={item.image_position_y ?? 50}
                 positionZoom={item.image_zoom ?? 1}
+                positions={item.image_positions}
                 className="w-full h-32 rounded-none"
                 imageClassName="h-32 max-h-none object-cover group-hover:scale-105 transition-transform duration-300"
               />

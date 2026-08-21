@@ -118,6 +118,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               positionX={posX}
               positionY={posY}
               positionZoom={zoom}
+              positions={item.image_positions}
               className="absolute inset-0 rounded-none"
               imageClassName="h-full max-h-none object-cover opacity-60 grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80"
             />
@@ -177,6 +178,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                 positionX={posX}
                 positionY={posY}
                 positionZoom={zoom}
+                positions={item.image_positions}
                 className="h-full rounded-2xl"
                 imageClassName="h-full max-h-none object-cover"
               />
@@ -251,6 +253,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                 positionX={posX}
                 positionY={posY}
                 positionZoom={zoom}
+                positions={item.image_positions}
                 className="h-full rounded-xl"
                 imageClassName="h-full max-h-none object-cover"
               />
@@ -296,6 +299,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                 positionX={posX}
                 positionY={posY}
                 positionZoom={zoom}
+                positions={item.image_positions}
                 className="h-full rounded-2xl"
                 imageClassName="h-full max-h-none object-cover"
               />

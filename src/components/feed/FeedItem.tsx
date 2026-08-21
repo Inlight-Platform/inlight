@@ -44,6 +44,7 @@ export interface FeedItemData {
   image_position_x?: number | null;
   image_position_y?: number | null;
   image_zoom?: number | null;
+  image_positions?: Array<{ x?: number | null; y?: number | null; zoom?: number | null }> | null;
   link_url?: string | null;
   link_title?: string | null;
   created_at: string;
@@ -512,6 +513,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 positionX={item.image_position_x ?? 50}
                 positionY={item.image_position_y ?? 50}
                 positionZoom={item.image_zoom ?? 1}
+                positions={item.image_positions}
                 className="h-full rounded-lg"
                 imageClassName={cn(compactSquare && 'h-full max-h-none object-cover', imageClassName)}
               />

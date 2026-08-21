@@ -303,6 +303,7 @@ const FeedPage: React.FC = () => {
         description: event.description,
         image_url: event.image_url,
         image_urls: event.image_urls ?? (event.image_url ? [event.image_url] : undefined),
+        image_positions: event.image_positions,
         link_url: event.link_url,
         link_title: event.link_title,
         created_at: event.created_at,

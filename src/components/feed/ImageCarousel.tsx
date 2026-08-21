@@ -8,6 +8,7 @@ interface ImageCarouselProps {
   positionX?: number;
   positionY?: number;
   positionZoom?: number;
+  positions?: Array<{ x?: number | null; y?: number | null; zoom?: number | null }> | null;
   className?: string;
   imageClassName?: string;
 }
@@ -17,6 +18,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
   positionX = 50,
   positionY = 50,
   positionZoom = 1,
+  positions,
   className,
   imageClassName,
 }) => {
@@ -42,41 +44,77 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
     return () => { emblaApi.off('select', onSelect); };
   }, [emblaApi, onSelect]);
 
-  if (urls.length === 1) {
-    const zoom = positionZoom ?? 1;
-    return (
-      <div className={cn('rounded-lg overflow-hidden bg-muted relative', className)}>
-        {zoom > 1 ? (
-          <div style={{ position: 'absolute', inset: 0 }}>
-            <div
+  const getImagePosition = (index: number) => {
+    const position = positions?.[index];
+    return {
+      x: position?.x ?? positionX,
+      y: position?.y ?? positionY,
+      zoom: position?.zoom ?? positionZoom ?? 1,
+    };
+  };
+
+  const renderPositionedImage = (url: string, index: number, alt: string) => {
+    const position = getImagePosition(index);
+    const zoom = position.zoom ?? 1;
+
+    if (zoom > 1) {
+      return (
+        <div className="absolute inset-0 overflow-hidden">
+          <div
+            style={{
+              position: 'absolute',
+              left: `${position.x * (1 - zoom)}%`,
+              top: `${position.y * (1 - zoom)}%`,
+              right: `${(100 - position.x) * (1 - zoom)}%`,
+              bottom: `${(100 - position.y) * (1 - zoom)}%`,
+            }}
+          >
+            <img
+              src={url}
+              alt={alt}
               style={{
                 position: 'absolute',
-                left: `${positionX * (1 - zoom)}%`,
-                top: `${positionY * (1 - zoom)}%`,
-                right: `${(100 - positionX) * (1 - zoom)}%`,
-                bottom: `${(100 - positionY) * (1 - zoom)}%`,
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: `${position.x}% ${position.y}%`,
               }}
-            >
-              <img
-                src={urls[0]}
-                alt="Post image"
-                style={{
-                  position: 'absolute',
-                  top: 0, left: 0, width: '100%', height: '100%',
-                  objectFit: 'cover',
-                  objectPosition: `${positionX}% ${positionY}%`,
-                }}
-              />
-            </div>
+            />
           </div>
-        ) : (
+        </div>
+      );
+    }
+
+    return (
+      <img
+        src={url}
+        alt={alt}
+        className={cn('w-full h-72 object-cover', imageClassName)}
+        style={{ objectPosition: `${position.x}% ${position.y}%` }}
+      />
+    );
+  };
+
+  if (urls.length === 1) {
+    const position = getImagePosition(0);
+    if ((position.zoom ?? 1) <= 1) {
+      return (
+        <div className={cn('rounded-lg overflow-hidden bg-muted relative', className)}>
           <img
             src={urls[0]}
             alt="Post image"
             className={cn('w-full max-h-[32rem] object-contain', imageClassName)}
-            style={{ objectPosition: `${positionX}% ${positionY}%` }}
+            style={{ objectPosition: `${position.x}% ${position.y}%` }}
           />
-        )}
+        </div>
+      );
+    }
+
+    return (
+      <div className={cn('rounded-lg overflow-hidden bg-muted relative', className)}>
+        {renderPositionedImage(urls[0], 0, 'Post image')}
       </div>
     );
   }
@@ -106,12 +144,8 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
       <div ref={emblaRef} className={cn('overflow-hidden', className && 'h-full')}>
         <div className={cn('flex', className && 'h-full')}>
           {urls.map((url, i) => (
-            <div key={i} className={cn('flex-none w-full', className && 'h-full')}>
-              <img
-                src={url}
-                alt={`Image ${i + 1} of ${urls.length}`}
-                className={cn('w-full h-72 object-cover', imageClassName)}
-              />
+            <div key={i} className={cn('relative flex-none w-full', className && 'h-full')}>
+              {renderPositionedImage(url, i, `Image ${i + 1} of ${urls.length}`)}
             </div>
           ))}
         </div>
