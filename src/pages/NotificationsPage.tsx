@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2, MessageSquare, Loader2 } from 'lucide-react';
+import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2, MessageSquare, Loader2, GraduationCap } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { parseSharedItem } from '@/components/messages/SharedItemCard';
 
 const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -48,6 +49,7 @@ const NotificationsPage: React.FC = () => {
       case 'follow': return <Users className="w-4 h-4" />;
       case 'connection_request': return <Link2 className="w-4 h-4" />;
       case 'connection_request_accepted': return <Check className="w-4 h-4" />;
+      case 'affiliation_request': return <GraduationCap className="w-4 h-4" />;
       default: return <Bell className="w-4 h-4" />;
     }
   };
@@ -278,7 +280,10 @@ const NotificationsPage: React.FC = () => {
                           c.unread_count > 0 ? 'text-foreground' : 'text-muted-foreground'
                         )}>
                           {c.last_message.sender_id === user?.id && 'You: '}
-                          {c.last_message.content}
+                          {(() => {
+                            const shared = parseSharedItem(c.last_message.content);
+                            return shared ? `Shared a ${shared.type}` : c.last_message.content;
+                          })()}
                         </p>
                       )}
                     </div>

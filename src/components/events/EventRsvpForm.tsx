@@ -31,6 +31,12 @@ interface EventRsvpFormProps {
   eventDate?: string | null;
 }
 
+type RsvpMutationError = {
+  message?: string;
+  details?: string;
+  code?: string;
+};
+
 const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, isPaid, price, currency = 'usd', stripePriceId, paymentLinkUrl, eventDate }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -44,6 +50,8 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   const [submitted, setSubmitted] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
+  const [currentUserDisplayName, setCurrentUserDisplayName] = useState('');
   const [buyingTicket, setBuyingTicket] = useState(false);
 
   // Check for ticket success from Stripe redirect
@@ -52,8 +60,42 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   const eventHasPassed = isEventPast(eventDate);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+    supabase.auth.getUser().then(async ({ data }) => {
+      const user = data.user;
+      setCurrentUserId(user?.id ?? null);
+      setCurrentUserEmail(user?.email ?? '');
+
+      if (!user) {
+        setCurrentUserDisplayName('');
+        return;
+      }
+
+      const fallbackName =
+        user.user_metadata?.display_name ||
+        user.user_metadata?.full_name ||
+        (user.email ? user.email.split('@')[0] : '');
+
+      const { data: profile } = await supabase
+        .from('profiles_public')
+        .select('display_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      setCurrentUserDisplayName(profile?.display_name || fallbackName);
+    });
   }, []);
+
+  useEffect(() => {
+    setSubmitted(false);
+    setName('');
+    setEmail('');
+  }, [eventId, currentUserId]);
+
+  useEffect(() => {
+    if (!dialogOpen) return;
+    setName((currentName) => currentName.trim() || currentUserDisplayName);
+    setEmail(currentUserEmail);
+  }, [dialogOpen, currentUserDisplayName, currentUserEmail]);
 
   // Check if user already RSVP'd (any status — going or can't make it)
   const userRsvp = currentUserId ? rsvps.find(r => r.user_id === currentUserId) : null;
@@ -93,7 +135,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
           setSubmitted(true);
           setDialogOpen(false);
         },
-        onError: (err: any) => {
+        onError: (err: RsvpMutationError) => {
           const msg = String(err?.message || err?.details || err?.code || err || '');
           console.error('RSVP error:', JSON.stringify(err));
           if (msg.includes('unique') || msg.includes('duplicate') || msg.includes('23505') || err?.code === '23505') {
@@ -154,8 +196,8 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
       if (data?.url) {
         window.location.href = data.url;
       }
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to start checkout');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to start checkout');
       setBuyingTicket(false);
     }
   };
@@ -365,10 +407,12 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
                   id="rsvp-email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  readOnly
+                  aria-readonly="true"
+                  placeholder="Account email"
                   required
                   maxLength={255}
+                  className="bg-muted/50"
                 />
               </div>
               <div>

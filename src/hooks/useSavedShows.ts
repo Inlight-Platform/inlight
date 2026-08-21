@@ -28,7 +28,7 @@ export const useSavedShows = () => {
       if (!user?.id) throw new Error('Must be logged in');
       const { error } = await supabase
         .from('saved_shows')
-        .insert({ user_id: user.id, show_id: showId });
+        .upsert({ user_id: user.id, show_id: showId }, { onConflict: 'user_id,show_id', ignoreDuplicates: true });
       if (error) throw error;
     },
     onMutate: async (showId) => {
@@ -40,13 +40,14 @@ export const useSavedShows = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saved-show-ids'] });
       queryClient.invalidateQueries({ queryKey: ['my-saved-shows'] });
-      toast.success('Added to your watchlist! 🎭');
+      toast.success('Added to your show list');
     },
-    onError: (_err, _showId, context) => {
+    onError: (error: any, _showId, context) => {
       if (context?.previous !== undefined) {
         queryClient.setQueryData(['saved-show-ids', user?.id], context.previous);
       }
-      toast.error('Could not save show');
+      console.error('Save show error:', error);
+      toast.error(error?.message || 'Could not save show');
     },
   });
 

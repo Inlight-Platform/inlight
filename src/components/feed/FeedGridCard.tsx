@@ -38,6 +38,7 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
 
   const imageUrls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
   const hasImage = imageUrls.length > 0;
+  // Show image area for ANY item that has an image (including update posts), plus projects/events/shows (which fall back to a placeholder icon)
   const showImage = hasImage || item.type === 'project' || item.type === 'event' || item.type === 'show';
   const showAnonymous = item.type === 'show' && item.is_anonymous;
   const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
@@ -55,13 +56,14 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
     >
       {/* Image header - shown whenever the item has an image_url, with a placeholder icon for project/event/show without one */}
       {showImage && (
-        <div className="w-full h-32 overflow-hidden flex-shrink-0 bg-muted">
+        <div className="relative w-full h-32 overflow-hidden flex-shrink-0 bg-muted">
           {hasImage ? (
             <div className="w-full h-full" onClick={(e) => e.stopPropagation()}>
               <ImageCarousel
                 urls={imageUrls}
                 positionX={item.image_position_x ?? 50}
                 positionY={item.image_position_y ?? 50}
+                positionZoom={item.image_zoom ?? 1}
                 className="w-full h-32 rounded-none"
                 imageClassName="h-32 max-h-none object-cover group-hover:scale-105 transition-transform duration-300"
               />

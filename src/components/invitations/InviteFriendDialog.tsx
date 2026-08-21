@@ -32,6 +32,26 @@ export const InviteFriendDialog: React.FC<InviteFriendDialogProps> = ({
   const [note, setNote] = useState('');
   const isProjectInvite = Boolean(projectId);
 
+  const getFunctionErrorMessage = async (error: Error & { context?: unknown }) => {
+    const response = error.context instanceof Response ? error.context.clone() : null;
+    if (!response) return error.message || 'Failed to send invite';
+
+    try {
+      const responseBody = await response.json();
+      if (typeof responseBody?.error === 'string') return responseBody.error;
+      if (typeof responseBody?.message === 'string') return responseBody.message;
+    } catch {
+      try {
+        const text = await response.text();
+        if (text.trim()) return text.trim();
+      } catch {
+        // Fall through to the Supabase error message below.
+      }
+    }
+
+    return error.message || 'Failed to send invite';
+  };
+
   const inviteMutation = useMutation({
     mutationFn: async () => {
       const functionName = isProjectInvite ? 'send-project-credit-invite' : 'send-platform-invite';
@@ -49,12 +69,7 @@ export const InviteFriendDialog: React.FC<InviteFriendDialogProps> = ({
 
       const { data, error } = await supabase.functions.invoke(functionName, { body });
       if (error) {
-        let message: string | undefined;
-        try {
-          const responseBody = await (error.context as Response)?.json();
-          message = responseBody?.error;
-        } catch {}
-        throw new Error(message || error.message || 'Failed to send invite');
+        throw new Error(await getFunctionErrorMessage(error));
       }
       return data as { invite?: { email?: string }; inviteUrl?: string; alreadyMember?: boolean };
     },

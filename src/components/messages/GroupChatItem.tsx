@@ -2,6 +2,7 @@ import React from 'react';
 import { Users } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { parseSharedItem } from '@/components/messages/SharedItemCard';
 
 interface GroupChatItemProps {
   name: string;
@@ -78,7 +79,9 @@ const GroupChatItem: React.FC<GroupChatItemProps> = ({
           {lastMessage ? (
             <>
               {lastMessage.sender_name && `${lastMessage.sender_name}: `}
-              {lastMessage.content}
+              {parseSharedItem(lastMessage.content)
+                ? `Shared a ${parseSharedItem(lastMessage.content)!.type}`
+                : lastMessage.content}
             </>
           ) : (
             'No messages yet'

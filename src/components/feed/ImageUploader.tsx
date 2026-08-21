@@ -1,64 +1,35 @@
-import React, { useRef, useState, useImperativeHandle, forwardRef } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { ImagePlus, X, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-const SUPPORTED_MIME_TYPES = [
-  'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
-  'image/webp', 'image/avif', 'image/heic', 'image/heif',
+// Supported image MIME types - comprehensive list
+const SUPPORTED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'image/bmp',
+  'image/tiff',
+  'image/avif',
+  'image/heic',
+  'image/heif',
 ];
-const SUPPORTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.heic', '.heif'];
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
-const COMPRESSION_THRESHOLD = 500 * 1024; // compress if > 500 KB
-const TARGET_MAX_SIZE = 8 * 1024 * 1024; // 8 MB after compression
+// Max file size before compression: 50MB (will be compressed down)
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+
+// Compression settings
+const COMPRESSION_MAX_WIDTH = 1920;
+const COMPRESSION_MAX_HEIGHT = 1920;
+const COMPRESSION_QUALITY = 0.85;
+const COMPRESSION_THRESHOLD = 500 * 1024; // Compress if > 500KB
+const TARGET_MAX_SIZE = 8 * 1024 * 1024; // Target max 8MB after compression
 const MAX_IMAGES = 4;
-
-const compressImage = async (file: File): Promise<File> => {
-  if (['image/gif'].includes(file.type)) return file;
-  if (file.size < COMPRESSION_THRESHOLD) return file;
-
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(img.src);
-      let { width, height } = img;
-      const maxDim = file.size > 20 * 1024 * 1024 ? 1600 : file.size > 10 * 1024 * 1024 ? 1800 : 1920;
-      if (width > maxDim) { height = (height * maxDim) / width; width = maxDim; }
-      if (height > maxDim) { width = (width * maxDim) / height; height = maxDim; }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width; canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { resolve(file); return; }
-      ctx.drawImage(img, 0, 0, width, height);
-
-      const tryCompress = (quality: number) => {
-        canvas.toBlob((blob) => {
-          if (!blob) { resolve(file); return; }
-          if (blob.size > TARGET_MAX_SIZE && quality > 0.5) { tryCompress(quality - 0.1); return; }
-          if (blob.size >= file.size && file.size < TARGET_MAX_SIZE) { resolve(file); return; }
-          resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg', lastModified: Date.now() }));
-        }, 'image/jpeg', quality);
-      };
-      tryCompress(0.85);
-    };
-    img.onerror = () => { URL.revokeObjectURL(img.src); resolve(file); };
-    img.src = URL.createObjectURL(file);
-  });
-};
-
-const validateFile = (file: File): string | null => {
-  if (file.size > MAX_FILE_SIZE)
-    return `"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is 50 MB.`;
-  const type = file.type.toLowerCase();
-  const name = file.name.toLowerCase();
-  if (SUPPORTED_MIME_TYPES.includes(type)) return null;
-  if (SUPPORTED_EXTENSIONS.some((ext) => name.endsWith(ext))) return null;
-  return `"${file.name}" is not a supported image type. Use JPG, PNG, GIF, WebP, AVIF, or HEIC.`;
-};
 
 interface ImageUploaderProps {
   userId: string;
@@ -67,12 +38,120 @@ interface ImageUploaderProps {
   onRemoveImage?: () => void;
   className?: string;
   compact?: boolean;
+  compactLabel?: React.ReactNode;
   currentCount?: number;
 }
 
 export interface ImageUploaderHandle {
   trigger: () => void;
 }
+
+/**
+ * Compresses an image file using Canvas API with progressive quality reduction
+ * Returns the original file if compression isn't needed or fails
+ */
+const compressImage = async (file: File): Promise<File> => {
+  // Skip compression for GIFs and SVGs (they don't compress well with canvas)
+  const skipTypes = ['image/gif', 'image/svg+xml'];
+  if (skipTypes.includes(file.type)) {
+    return file;
+  }
+
+  // For small files, skip unless they're over threshold
+  if (file.size < COMPRESSION_THRESHOLD) {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(img.src);
+
+      // Calculate new dimensions maintaining aspect ratio
+      let { width, height } = img;
+
+      // For very large files, be more aggressive with resizing
+      let maxDimension = COMPRESSION_MAX_WIDTH;
+      if (file.size > 20 * 1024 * 1024) {
+        maxDimension = 1600; // Reduce more for huge files
+      } else if (file.size > 10 * 1024 * 1024) {
+        maxDimension = 1800;
+      }
+
+      if (width > maxDimension) {
+        height = (height * maxDimension) / width;
+        width = maxDimension;
+      }
+
+      if (height > maxDimension) {
+        width = (width * maxDimension) / height;
+        height = maxDimension;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      // Draw image
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Progressive compression: try different quality levels
+      const tryCompress = (quality: number): void => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+
+            // If still too large and quality > 0.5, try lower quality
+            if (blob.size > TARGET_MAX_SIZE && quality > 0.5) {
+              tryCompress(quality - 0.1);
+              return;
+            }
+
+            // If compression made it bigger, use original (only for small files)
+            if (blob.size >= file.size && file.size < TARGET_MAX_SIZE) {
+              resolve(file);
+              return;
+            }
+
+            // Create new file with compressed blob
+            const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+
+            const originalMB = (file.size / 1024 / 1024).toFixed(2);
+            const compressedMB = (blob.size / 1024 / 1024).toFixed(2);
+            const savings = Math.round((1 - blob.size / file.size) * 100);
+            console.log(`Image compressed: ${originalMB}MB → ${compressedMB}MB (${savings}% smaller, quality: ${quality})`);
+
+            resolve(compressedFile);
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+
+      tryCompress(COMPRESSION_QUALITY);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      resolve(file); // Return original on error
+    };
+
+    img.src = URL.createObjectURL(file);
+  });
+};
 
 export const ImageUploader = forwardRef<ImageUploaderHandle, ImageUploaderProps>(({
   userId,
@@ -81,82 +160,170 @@ export const ImageUploader = forwardRef<ImageUploaderHandle, ImageUploaderProps>
   onRemoveImage,
   className,
   compact = false,
+  compactLabel = 'Image',
   currentCount = 0,
 }, ref) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   useImperativeHandle(ref, () => ({ trigger: () => fileInputRef.current?.click() }));
   const [uploading, setUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState('');
+  const [uploadStatus, setUploadStatus] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
-
   const remaining = MAX_IMAGES - currentCount;
   const atLimit = remaining <= 0;
 
+  const validateFile = (file: File): string | null => {
+    // Check file size - allow up to 50MB, will be compressed
+    if (file.size > MAX_FILE_SIZE) {
+      return `File too large. Maximum size is 50MB (will be auto-compressed)`;
+    }
+
+    // Check file type - be more permissive
+    const fileType = file.type.toLowerCase();
+    const fileName = file.name.toLowerCase();
+
+    // Check by MIME type first
+    if (SUPPORTED_IMAGE_TYPES.includes(fileType)) {
+      return null;
+    }
+
+    // Fallback: check by extension for edge cases where MIME type is empty
+    const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff', '.tif', '.avif', '.heic', '.heif'];
+    const hasValidExtension = supportedExtensions.some(ext => fileName.endsWith(ext));
+
+    if (hasValidExtension) {
+      return null;
+    }
+
+    return 'Please upload an image file (JPG, PNG, GIF, WebP, SVG, etc.)';
+  };
+
   const uploadFile = async (file: File): Promise<string | null> => {
-    const err = validateFile(file);
-    if (err) { toast.error(err); return null; }
+    const validationError = validateFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      return null;
+    }
 
     try {
-      const processed = await compressImage(file);
-      const ext = processed.type === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop()?.toLowerCase() || 'jpg');
-      const path = `${userId}/posts/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
+      // Compress the image first
+      const processedFile = await compressImage(file);
+
+      setUploadStatus('Uploading...');
+
+      // Generate unique file path
+      const fileExt = processedFile.type === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop()?.toLowerCase() || 'jpg');
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 9);
+      const fileName = `posts/${timestamp}-${randomId}.${fileExt}`;
+      const filePath = `${userId}/${fileName}`;
+
+      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
-        .upload(path, processed, { cacheControl: '3600', upsert: false, contentType: processed.type || 'image/jpeg' });
+        .upload(filePath, processedFile, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: processedFile.type || 'image/jpeg',
+        });
+
       if (uploadError) {
-        if (uploadError.message.includes('security') || uploadError.message.includes('policy'))
-          throw new Error('Upload permission denied. Please sign in and try again.');
-        if (uploadError.message.includes('size') || uploadError.message.includes('large'))
-          throw new Error('File is too large even after compression. Try a smaller image.');
-        throw new Error(uploadError.message || 'Upload failed. Check your connection and try again.');
+        console.error('Upload error:', uploadError);
+        throw new Error(uploadError.message);
       }
-      const { data } = supabase.storage.from('profile-media').getPublicUrl(path);
-      return data.publicUrl;
-    } catch (e: any) {
-      toast.error(e.message || 'Upload failed. Check your connection and try again.');
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('profile-media')
+        .getPublicUrl(filePath);
+
+      return urlData.publicUrl;
+    } catch (error: unknown) {
+      console.error('Upload failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to upload image');
       return null;
     }
   };
 
   const handleFiles = async (files: FileList | File[]) => {
-    const arr = Array.from(files).slice(0, remaining);
-    if (arr.length === 0) return;
-    if (atLimit) { toast.error(`Maximum ${MAX_IMAGES} images per post.`); return; }
+    if (atLimit) {
+      toast.error(`Maximum ${MAX_IMAGES} images per post.`);
+      return;
+    }
+
+    const selected = Array.from(files).slice(0, remaining);
+    if (!selected.length) return;
 
     setUploading(true);
     let uploaded = 0;
-    for (let i = 0; i < arr.length; i++) {
-      setUploadStatus(`Uploading ${i + 1} of ${arr.length}…`);
-      const url = await uploadFile(arr[i]);
-      if (url) { onImageUploaded(url); uploaded++; }
+
+    for (let i = 0; i < selected.length; i++) {
+      setUploadStatus(`Uploading ${i + 1} of ${selected.length}...`);
+      const publicUrl = await uploadFile(selected[i]);
+      if (publicUrl) {
+        onImageUploaded(publicUrl);
+        uploaded++;
+      }
     }
+
     setUploading(false);
     setUploadStatus('');
-    if (uploaded > 0) toast.success(uploaded === 1 ? 'Image added!' : `${uploaded} images added!`);
+
+    if (uploaded > 0) {
+      toast.success(uploaded === 1 ? 'Image uploaded!' : `${uploaded} images uploaded!`);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length) handleFiles(e.target.files);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    const files = e.target.files;
+    if (files?.length) {
+      void handleFiles(files);
+    }
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation();
-    setDragActive(e.type === 'dragenter' || e.type === 'dragover');
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
+
+    const files = e.dataTransfer.files;
+    if (files?.length) {
+      void handleFiles(files);
+    }
+  };
+
+  const handleClick = () => {
+    fileInputRef.current?.click();
   };
 
   if (currentImageUrl) {
     return (
-      <div className={cn('relative rounded-lg overflow-hidden', className)}>
-        <img src={currentImageUrl} alt="Uploaded preview" className="w-full max-h-64 object-cover" />
+      <div className={cn("relative rounded-lg overflow-hidden", className)}>
+        <img
+          src={currentImageUrl}
+          alt="Uploaded preview"
+          className="w-full max-h-64 object-cover"
+        />
         {onRemoveImage && (
-          <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8" onClick={onRemoveImage}>
+          <Button
+            variant="destructive"
+            size="icon"
+            className="absolute top-2 right-2 h-8 w-8"
+            onClick={onRemoveImage}
+          >
             <X className="h-4 w-4" />
           </Button>
         )}
@@ -167,10 +334,26 @@ export const ImageUploader = forwardRef<ImageUploaderHandle, ImageUploaderProps>
   if (compact) {
     return (
       <>
-        <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
-        <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading || atLimit}>
-          {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ImagePlus className="h-4 w-4 mr-2" />}
-          {uploading ? uploadStatus || 'Uploading…' : atLimit ? 'Max images' : 'Image'}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleClick}
+          disabled={uploading || atLimit}
+        >
+          {uploading ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <ImagePlus className="h-4 w-4 mr-2" />
+          )}
+          {uploading ? uploadStatus || 'Uploading...' : atLimit ? 'Max images' : compactLabel}
         </Button>
       </>
     );
@@ -178,30 +361,42 @@ export const ImageUploader = forwardRef<ImageUploaderHandle, ImageUploaderProps>
 
   return (
     <div className={className}>
-      <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileChange}
+        className="hidden"
+      />
       <div
-        onClick={() => !atLimit && fileInputRef.current?.click()}
-        onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
+        onClick={() => !atLimit && handleClick()}
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
         className={cn(
-          'border-2 border-dashed rounded-lg p-6 text-center transition-colors',
+          "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
           atLimit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
-          dragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-accent/50',
-          uploading && 'pointer-events-none opacity-50',
+          dragActive
+            ? "border-primary bg-primary/5"
+            : "border-border hover:border-primary/50 hover:bg-accent/50",
+          uploading && "pointer-events-none opacity-50"
         )}
       >
         {uploading ? (
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">{uploadStatus || 'Processing…'}</p>
+            <p className="text-sm text-muted-foreground">{uploadStatus || 'Processing...'}</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
             <Upload className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              {atLimit ? `Maximum ${MAX_IMAGES} images reached` : 'Drag & drop or click to upload'}
+              Drag and drop or click to upload
             </p>
             <p className="text-xs text-muted-foreground/70">
-              JPG, PNG, GIF, WebP, AVIF, HEIC · up to 50 MB each · {remaining} of {MAX_IMAGES} slots remaining
+              Images auto-compressed for fast uploads · {remaining} of {MAX_IMAGES} slots remaining
             </p>
           </div>
         )}

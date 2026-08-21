@@ -236,6 +236,9 @@ BEGIN
     VALUES (_strasberg_id, _existing_annie_id, 'active')
     ON CONFLICT (group_id, user_id) DO UPDATE SET status = 'active';
   END IF;
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE WARNING 'Skipping Strasberg demo faculty seed: %', SQLERRM;
 END $$;
 
 -- updated_at trigger on groups

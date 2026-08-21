@@ -24,6 +24,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { getFeedItemDestination } from '@/lib/feedDestinations';
 
 type NetworkFilter = 'all' | '1st';
 type ContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates' | 'group';
@@ -244,7 +245,7 @@ const FeedPage: React.FC = () => {
         ...post,
         type: 'post' as const,
         visibility: post.visibility,
-        image_position_zoom: post.image_position_zoom ?? 1,
+        image_zoom: post.image_zoom ?? 1,
         creator_profile: profileMap.get(post.user_id)
       }));
     }
@@ -313,6 +314,9 @@ const FeedPage: React.FC = () => {
         currency: event.currency,
         stripe_price_id: event.stripe_price_id,
         payment_link_url: event.payment_link_url,
+        image_position_x: event.image_position_x,
+        image_position_y: event.image_position_y,
+        image_zoom: event.image_zoom,
         creator_profile: profileMap.get(event.user_id)
       }));
     }
@@ -475,6 +479,7 @@ const FeedPage: React.FC = () => {
               key={`project-list-${item.id}`}
               item={item}
               networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
+              onOpenDetails={setSelectedItem}
             />
           ))}
         </div>
@@ -920,6 +925,7 @@ const FeedPage: React.FC = () => {
                           key={`group-${item.type}-${item.id}`}
                           item={item}
                           networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
+                          onOpenDetails={setSelectedItem}
                         />
                       ))}
                     </div>
@@ -962,6 +968,7 @@ const FeedPage: React.FC = () => {
                         key={`list-${item.type}-${item.id}`}
                         item={item}
                         networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
+                        onOpenDetails={setSelectedItem}
                       />
                     ))}
                   </div>
@@ -975,19 +982,20 @@ const FeedPage: React.FC = () => {
                         key={`${item.type}-${item.id}`}
                         item={item}
                         size={getBentoSize(idx)}
-                       onClick={() => {
+                        onClick={() => {
                           if (item.type === 'project') {
                             navigate(`/projects/${item.id}`, { state: { returnTo: feedReturnTo } });
                           } else if (item.type === 'event') {
                             setSelectedItem(item);
-                          } else if (item.type === 'show') {
-                            navigate('/stage-whisper');
-                          } else if (item.type === 'open_role' && item.project_id) {
-                            navigate(`/projects/${item.project_id}`, { state: { returnTo: feedReturnTo } });
-                          } else if (item.type === 'job') {
-                            navigate('/opportunities');
-                          } else if (item.user_id) {
-                            navigate(`/profile/${item.user_id}`, { state: { returnTo: feedReturnTo } });
+                          } else if (item.type === 'post') {
+                            setSelectedItem(item);
+                          } else {
+                            const destination = getFeedItemDestination(item);
+                            if (destination?.kind === 'internal') {
+                              navigate(destination.to, { state: { returnTo: feedReturnTo } });
+                            } else if (destination?.kind === 'external') {
+                              window.open(destination.url, '_blank', 'noopener,noreferrer');
+                            }
                           }
                         }}
                       />

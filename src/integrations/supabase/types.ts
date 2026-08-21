@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliation_requests: {
+        Row: {
+          id: string
+          user_id: string
+          requested_name: string
+          description_or_context: string | null
+          status: 'pending' | 'approved' | 'denied'
+          admin_notes: string | null
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          requested_name: string
+          description_or_context?: string | null
+          status?: 'pending' | 'approved' | 'denied'
+          admin_notes?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          requested_name?: string
+          description_or_context?: string | null
+          status?: 'pending' | 'approved' | 'denied'
+          admin_notes?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliation_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -492,8 +539,11 @@ export type Database = {
           event_date: string
           event_type: string | null
           id: string
+          image_position_x: number | null
+          image_position_y: number | null
           image_url: string | null
           image_urls: string[] | null
+          image_zoom: number | null
           is_paid: boolean
           link_title: string | null
           link_url: string | null
@@ -513,8 +563,11 @@ export type Database = {
           event_date: string
           event_type?: string | null
           id?: string
+          image_position_x?: number | null
+          image_position_y?: number | null
           image_url?: string | null
           image_urls?: string[] | null
+          image_zoom?: number | null
           is_paid?: boolean
           link_title?: string | null
           link_url?: string | null
@@ -534,8 +587,11 @@ export type Database = {
           event_date?: string
           event_type?: string | null
           id?: string
+          image_position_x?: number | null
+          image_position_y?: number | null
           image_url?: string | null
           image_urls?: string[] | null
+          image_zoom?: number | null
           is_paid?: boolean
           link_title?: string | null
           link_url?: string | null
@@ -1166,7 +1222,7 @@ export type Database = {
           id: string
           image_position_x: number | null
           image_position_y: number | null
-          image_position_zoom: number | null
+          image_zoom: number | null
           image_url: string | null
           image_urls: string[] | null
           link_title: string | null
@@ -1181,7 +1237,7 @@ export type Database = {
           id?: string
           image_position_x?: number | null
           image_position_y?: number | null
-          image_position_zoom?: number | null
+          image_zoom?: number | null
           image_url?: string | null
           image_urls?: string[] | null
           link_title?: string | null
@@ -1196,7 +1252,7 @@ export type Database = {
           id?: string
           image_position_x?: number | null
           image_position_y?: number | null
-          image_position_zoom?: number | null
+          image_zoom?: number | null
           image_url?: string | null
           image_urls?: string[] | null
           link_title?: string | null

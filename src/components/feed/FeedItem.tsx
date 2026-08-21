@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ImageCarousel } from './ImageCarousel';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -28,6 +28,7 @@ import { Label } from '@/components/ui/label';
 import { useEventRsvps } from '@/hooks/useEventRsvps';
 import { cn, capitalizeName } from '@/lib/utils';
 import { isEventPast } from '@/lib/eventDates';
+import { getFeedItemDestination } from '@/lib/feedDestinations';
 
 export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show' | 'open_role';
 
@@ -42,7 +43,7 @@ export interface FeedItemData {
   image_urls?: string[] | null;
   image_position_x?: number | null;
   image_position_y?: number | null;
-  image_position_zoom?: number | null;
+  image_zoom?: number | null;
   link_url?: string | null;
   link_title?: string | null;
   created_at: string;
@@ -83,6 +84,7 @@ interface FeedItemProps {
   imageContainerClassName?: string;
   imageClassName?: string;
   compactSquare?: boolean;
+  onOpenDetails?: (item: FeedItemData) => void;
 }
 
 export const FeedItem: React.FC<FeedItemProps> = ({
@@ -93,6 +95,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   imageContainerClassName,
   imageClassName,
   compactSquare = false,
+  onOpenDetails,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -113,11 +116,29 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const isPaidEvent = isEventItem && !!item.is_paid;
   const eventHasPassed = isEventPast(item.event_date);
   const eventLinkClosed = isEventItem && eventHasPassed;
-  const { goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
+  const { rsvps, goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
+  const userRsvp = user?.id ? rsvps.find((rsvp) => rsvp.user_id === user.id) : undefined;
+  const alreadyRsvpd = !!userRsvp || rsvpSubmitted;
+  const alreadyGoing = rsvpSubmitted || userRsvp?.status === 'going';
+  const userEmail = user?.email ?? '';
 
   const attendeeUserIds = goingRsvps
     .map((r) => r.user_id)
     .filter((id): id is string => !!id);
+  const { data: currentUserProfile } = useQuery({
+    queryKey: ['current-user-rsvp-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('display_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isEventItem && !!user?.id,
+  });
   const { data: attendeeProfiles = [] } = useQuery({
     queryKey: ['attendee-profiles', item.id, attendeeUserIds],
     queryFn: async () => {
@@ -141,6 +162,24 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const canDelete = (isOwner || isAdmin) && canManageFeedItem;
   const supportsInlineEdit = item.type !== 'show' && item.type !== 'open_role' && item.source !== 'opportunity';
   const canEdit = (isOwner || isAdmin) && supportsInlineEdit && canManageFeedItem; // Shows have their own edit flow
+
+  useEffect(() => {
+    setRsvpSubmitted(false);
+    setRsvpName('');
+    setRsvpEmail('');
+  }, [item.id, user?.id]);
+
+  const userDisplayName =
+    currentUserProfile?.display_name ||
+    user?.user_metadata?.display_name ||
+    user?.user_metadata?.full_name ||
+    (userEmail ? userEmail.split('@')[0] : '');
+
+  useEffect(() => {
+    if (!rsvpDialogOpen) return;
+    setRsvpName((currentName) => currentName.trim() || userDisplayName);
+    setRsvpEmail(userEmail);
+  }, [rsvpDialogOpen, userDisplayName, userEmail]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -212,14 +251,27 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   };
 
   const handleClick = () => {
-    if (item.type === 'project') {
-      navigate(`/projects/${item.id}`);
-    } else if (item.type === 'event') {
+    if (item.type === 'event') {
       navigate('/events');
-    } else if (item.type === 'show') {
-      navigate('/stage-whisper');
-    } else if (item.type === 'open_role' && item.project_id) {
-      navigate(`/projects/${item.project_id}`);
+      return;
+    }
+
+    if (item.type === 'post') {
+      if (onOpenDetails) {
+        onOpenDetails(item);
+      }
+      return;
+    }
+
+    const destination = getFeedItemDestination(item);
+    if (destination?.kind === 'internal') {
+      navigate(destination.to);
+      return;
+    }
+
+    if (destination?.kind === 'external') {
+      window.open(destination.url, '_blank', 'noopener,noreferrer');
+      return;
     }
   };
 
@@ -279,8 +331,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       if (!data?.url) throw new Error('Checkout link unavailable');
 
       window.location.href = data.url;
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to start checkout');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to start checkout');
       setBuyingTicket(false);
     }
   };
@@ -296,7 +348,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     }
   };
 
-  const isClickable = item.type === 'project' || item.type === 'event' || item.type === 'show' || item.type === 'open_role';
+  const isClickable =
+    item.type === 'event' ||
+    item.type === 'post' ||
+    Boolean(getFeedItemDestination(item));
   
   // For anonymous shows, hide the creator info
   const showAnonymous = item.type === 'show' && item.is_anonymous;
@@ -440,14 +495,24 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         {item.type !== 'open_role' && (() => {
           const urls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
           if (!urls.length) return null;
+
           return (
-            <div className={cn('mb-3', compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1', compactSquare && compactTextExpanded && 'aspect-square mb-0', imageContainerClassName)}>
+            <div
+              className={cn(
+                'rounded-lg overflow-hidden mb-3 relative bg-muted',
+                !compactSquare && 'aspect-video',
+                compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1',
+                compactSquare && compactTextExpanded && 'aspect-square mb-0',
+                compactSquare && !compactTextExpanded && 'aspect-square',
+                imageContainerClassName
+              )}
+            >
               <ImageCarousel
                 urls={urls}
                 positionX={item.image_position_x ?? 50}
                 positionY={item.image_position_y ?? 50}
-                positionZoom={item.image_position_zoom ?? 1}
-                className={compactCollapsed ? 'h-full' : undefined}
+                positionZoom={item.image_zoom ?? 1}
+                className="h-full rounded-lg"
                 imageClassName={cn(compactSquare && 'h-full max-h-none object-cover', imageClassName)}
               />
             </div>
@@ -503,7 +568,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Event details */}
-        {item.type === 'event' && (
+        {item.type === 'event' && !compactCollapsed && (
           <div className="space-y-3 mt-2">
             <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-muted/50">
               {item.event_date && (
@@ -559,7 +624,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                   <Ticket className="h-4 w-4 mr-2" />
                   {eventHasPassed ? 'Tickets Closed' : buyingTicket ? 'Redirecting...' : 'Buy Ticket'}
                 </Button>
-              ) : !rsvpSubmitted ? (
+              ) : !alreadyRsvpd ? (
                 <Button
                   size="sm"
                   className="flex-1"
@@ -575,7 +640,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
               ) : (
                 <div className="flex-1 flex items-center justify-center gap-2 text-sm text-primary font-medium py-1">
                   <Check className="h-4 w-4" />
-                  You're on the list!
+                  {alreadyGoing ? "You're on the list!" : 'Response received'}
                 </div>
               )}
               {item.event_date && (
@@ -669,6 +734,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                     toast.error('Please fill in all fields');
                     return;
                   }
+                  if (alreadyRsvpd) {
+                    toast.error("You've already RSVP'd to this event.");
+                    setRsvpDialogOpen(false);
+                    return;
+                  }
                   submitRsvp.mutate(
                     {
                       event_id: item.id,
@@ -690,7 +760,16 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                           });
                         }
                       },
-                      onError: (error) => toast.error(error?.message || 'Something went wrong. Try again.'),
+                      onError: (error: { message?: string; code?: string }) => {
+                        if (error?.code === '23505' || error?.message?.toLowerCase().includes('duplicate')) {
+                          toast.error("You've already RSVP'd to this event.");
+                          setRsvpSubmitted(true);
+                          setRsvpDialogOpen(false);
+                          return;
+                        }
+
+                        toast.error(error?.message || 'Something went wrong. Try again.');
+                      },
                     }
                   );
                 }}
@@ -713,9 +792,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                       id={`rsvp-email-${item.id}`}
                       type="email"
                       value={rsvpEmail}
-                      onChange={(e) => setRsvpEmail(e.target.value)}
-                      placeholder="you@example.com"
+                      readOnly
+                      aria-readonly="true"
+                      placeholder="Account email"
                       required
+                      className="bg-muted/50"
                     />
                   </div>
                 </div>

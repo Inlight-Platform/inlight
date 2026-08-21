@@ -8,7 +8,7 @@ How to set up Inlight locally, run the app, and validate changes.
 - npm.
 - GitHub access to `Inlight-Platform/inlight`.
 - Supabase access if you are changing migrations, RLS policies, storage, or edge functions.
-- Optional: Supabase CLI for local database/function work.
+- Optional: Supabase CLI and Docker Desktop for local database/function work.
 
 ## Clone and install
 
@@ -28,6 +28,8 @@ VITE_SUPABASE_PUBLISHABLE_KEY="sb_publishable_Np7ZYBlXrk0bOtzAGzYW5g_Rfr0xubM"
 ```
 
 The publishable key is safe for the browser. Do not add service role keys or private secrets to `.env`, `.env.example`, source files, or PR descriptions.
+
+For sandbox testing, do not edit `.env` to point at a different cloud project. Use [Local Supabase sandbox](local-supabase-sandbox.md), which creates `.env.sandbox.local` and runs Vite with `--mode sandbox`.
 
 ## Start the app
 
@@ -57,10 +59,16 @@ Both checks run `npm run verify:supabase` first. That script confirms the code s
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Start local Vite server. |
+| `npm run dev:sandbox` | Start local Vite server against local Supabase only. |
+| `npm run supabase:sandbox:start` | Start local Supabase and generate `.env.sandbox.local`. |
+| `npm run supabase:sandbox:reset` | Rebuild the local database from migrations and refresh sandbox env. |
+| `npm run supabase:sandbox:status` | Show local Supabase URLs, keys, and service status. |
+| `npm run supabase:sandbox:stop` | Stop local Supabase containers. |
 | `npm run verify:supabase` | Confirm required Supabase config is present. |
 | `npm run lint` | Run Supabase config verification and ESLint. |
 | `npm run build` | Run Supabase config verification and production build. |
 | `npm run build:dev` | Build with Vite development mode. |
+| `npm run build:sandbox` | Build with sandbox Supabase env vars. Used by PR sandbox previews. |
 | `npm run preview` | Preview the latest build locally. |
 
 ## Project structure
@@ -103,6 +111,29 @@ Most application behavior is controlled by Supabase tables, RLS policies, storag
 5. Document the test account, route, and data conditions in the PR.
 
 Edge functions configured in `supabase/config.toml` include notification email, Stripe checkout/webhooks, password reset, platform/project-credit invites, company account approval/denial, analytics, and ticket checkout.
+
+## Automated PR sandbox previews
+
+Pull requests run `.github/workflows/pr-sandbox-preview.yml`.
+
+The workflow has two gates:
+
+1. `main-freshness` checks that latest `origin/main` is an ancestor of the PR head. If this fails, update the PR branch with latest `main` before reviewing the preview.
+2. `sandbox-preview` typechecks, runs tests, builds with `npm run build:sandbox`, deploys the `dist` folder to Cloudflare Pages, and comments the preview URL on the PR.
+
+Repository configuration required:
+
+| Name | Type | Purpose |
+| --- | --- | --- |
+| `CLOUDFLARE_API_TOKEN` | GitHub secret | Cloudflare token with permission to deploy the Pages project. |
+| `CLOUDFLARE_ACCOUNT_ID` | GitHub secret | Cloudflare account that owns the Pages project. |
+| `VITE_SANDBOX_SUPABASE_URL` | GitHub secret | Hosted sandbox Supabase URL for PR previews. Must not be the production Supabase URL. |
+| `VITE_SANDBOX_SUPABASE_PUBLISHABLE_KEY` | GitHub secret | Hosted sandbox Supabase publishable/anon key for PR previews. |
+| `SUPABASE_ACCESS_TOKEN` | GitHub secret | Supabase access token used to deploy invite edge functions to the hosted sandbox project. |
+| `RESEND_API_KEY` | GitHub secret | Resend key used by sandbox invite edge functions to send invite emails. |
+| `CLOUDFLARE_PAGES_PROJECT_NAME` | GitHub variable | Optional. Defaults to `inlight` when unset. |
+
+The application still locks normal production and local development builds to the production Supabase URL. Hosted PR previews must set `VITE_SUPABASE_ENV=sandbox` and `VITE_SUPABASE_ALLOW_REMOTE_SANDBOX=true`, which the workflow does automatically.
 
 ## Troubleshooting
 

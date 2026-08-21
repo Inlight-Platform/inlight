@@ -44,6 +44,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [positionX, setPositionX] = useState<number>(50);
   const [positionY, setPositionY] = useState<number>(50);
+  const [imageZoom, setImageZoom] = useState<number>(1);
   const [showImageUploader, setShowImageUploader] = useState(false);
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
       // We'll need to fetch position from the database for posts
       setPositionX(50);
       setPositionY(50);
+      setImageZoom(1);
       setShowImageUploader(false);
     }
   }, [open, item]);
@@ -64,16 +66,18 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   // Fetch current image position for posts
   useEffect(() => {
     const fetchPosition = async () => {
-      if (open && (item.type === 'post' || item.type === 'job') && item.image_url) {
+      if (open && (item.type === 'post' || item.type === 'job' || item.type === 'event') && item.image_url) {
+        const table = item.type === 'event' ? 'events' : 'posts';
         const { data } = await supabase
-          .from('posts')
-          .select('image_position_x, image_position_y')
+          .from(table)
+          .select('image_position_x, image_position_y, image_zoom')
           .eq('id', item.id)
           .single();
         
         if (data) {
           setPositionX(data.image_position_x ?? 50);
           setPositionY(data.image_position_y ?? 50);
+          setImageZoom(data.image_zoom ?? 1);
         }
       }
     };
@@ -99,6 +103,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
             image_url: imageUrl,
             image_position_x: positionX,
             image_position_y: positionY,
+            image_zoom: imageZoom,
           })
           .eq('id', item.id));
       } else if (item.type === 'event') {
@@ -111,6 +116,9 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
             link_title: linkTitle || null,
             location: location || null,
             image_url: imageUrl,
+            image_position_x: positionX,
+            image_position_y: positionY,
+            image_zoom: imageZoom,
           })
           .eq('id', item.id));
       } else if (item.type === 'project') {
@@ -147,6 +155,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
     setImageUrl(url);
     setPositionX(50);
     setPositionY(50);
+    setImageZoom(1);
     setShowImageUploader(false);
   };
 
@@ -154,11 +163,13 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
     setImageUrl(null);
     setPositionX(50);
     setPositionY(50);
+    setImageZoom(1);
   };
 
-  const handlePositionSave = (x: number, y: number) => {
+  const handlePositionSave = (x: number, y: number, zoom: number) => {
     setPositionX(x);
     setPositionY(y);
+    setImageZoom(zoom);
   };
 
   const isEvent = item.type === 'event';
@@ -211,20 +222,36 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
                 <Label>Image</Label>
                 
                 {imageUrl ? (
-                  <div className="relative rounded-lg overflow-hidden border border-border">
-                    <img
-                      src={imageUrl}
-                      alt="Post image"
-                      className="w-full max-h-48 object-cover"
+                  <div className="relative rounded-lg overflow-hidden border border-border aspect-video bg-muted">
+                    <div
                       style={{
-                        objectPosition: `${positionX}% ${positionY}%`,
+                        position: 'absolute',
+                        left: `${positionX * (1 - imageZoom)}%`,
+                        top: `${positionY * (1 - imageZoom)}%`,
+                        right: `${(100 - positionX) * (1 - imageZoom)}%`,
+                        bottom: `${(100 - positionY) * (1 - imageZoom)}%`,
                       }}
-                    />
+                    >
+                      <img
+                        src={imageUrl}
+                        alt="Post image"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          objectPosition: `${positionX}% ${positionY}%`,
+                        }}
+                      />
+                    </div>
                     <div className="absolute top-2 right-2 flex gap-2">
                       <ImagePositioner
                         imageUrl={imageUrl}
                         initialPositionX={positionX}
                         initialPositionY={positionY}
+                        initialZoom={imageZoom}
                         aspectRatio={16 / 9}
                         onSave={handlePositionSave}
                         trigger={

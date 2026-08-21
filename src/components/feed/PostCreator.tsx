@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -56,26 +56,11 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const { data: myGroups = [] } = useMyGroups();
   const [linkTitle, setLinkTitle] = useState('');
   const [customQuestion, setCustomQuestion] = useState('');
-  const [imagePositions, setImagePositions] = useState<{x: number; y: number; zoom: number}[]>([]);
-
-  // Composer carousel state
+  const [imagePositions, setImagePositions] = useState<{ x: number; y: number; zoom: number }[]>([]);
   const [composerEmblaRef, composerEmblaApi] = useEmblaCarousel({ loop: false });
   const [composerIndex, setComposerIndex] = useState(0);
   const [composerCanPrev, setComposerCanPrev] = useState(false);
   const [composerCanNext, setComposerCanNext] = useState(false);
-  const onComposerSelect = useCallback(() => {
-    if (!composerEmblaApi) return;
-    setComposerIndex(composerEmblaApi.selectedScrollSnap());
-    setComposerCanPrev(composerEmblaApi.canScrollPrev());
-    setComposerCanNext(composerEmblaApi.canScrollNext());
-  }, [composerEmblaApi]);
-  useEffect(() => {
-    if (!composerEmblaApi) return;
-    onComposerSelect();
-    composerEmblaApi.on('select', onComposerSelect);
-    composerEmblaApi.on('reInit', onComposerSelect);
-    return () => { composerEmblaApi.off('select', onComposerSelect); };
-  }, [composerEmblaApi, onComposerSelect]);
   const [isPaid, setIsPaid] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
   const [serviceCategory, setServiceCategory] = useState<string>('');
@@ -88,6 +73,24 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       onClose?.();
     }
   }, [defaultPostType]);
+
+  const onComposerSelect = useCallback(() => {
+    if (!composerEmblaApi) return;
+    setComposerIndex(composerEmblaApi.selectedScrollSnap());
+    setComposerCanPrev(composerEmblaApi.canScrollPrev());
+    setComposerCanNext(composerEmblaApi.canScrollNext());
+  }, [composerEmblaApi]);
+
+  useEffect(() => {
+    if (!composerEmblaApi) return;
+    onComposerSelect();
+    composerEmblaApi.on('select', onComposerSelect);
+    composerEmblaApi.on('reInit', onComposerSelect);
+    return () => {
+      composerEmblaApi.off('select', onComposerSelect);
+      composerEmblaApi.off('reInit', onComposerSelect);
+    };
+  }, [composerEmblaApi, onComposerSelect]);
 
   const resetForm = () => {
     setContent('');
@@ -126,7 +129,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             image_urls: imageUrls.length > 0 ? imageUrls : null,
             image_position_x: imagePositions[0]?.x ?? 50,
             image_position_y: imagePositions[0]?.y ?? 50,
-            image_position_zoom: imagePositions[0]?.zoom ?? 1,
+            image_zoom: imagePositions[0]?.zoom ?? 1,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -170,7 +173,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
         // Tag to a group for group visibility
         if (visibility === 'group' && selectedGroupId && postData) {
-          const { error: gErr } = await (supabase.from as any)('post_groups')
+          const { error: gErr } = await supabase
+            .from('post_groups' as never)
             .insert({ post_id: postData.id, group_id: selectedGroupId });
           if (gErr) console.error('Failed to tag post group:', gErr);
         }
@@ -198,6 +202,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             event_type: eventType.trim() || 'general',
             image_url: imageUrls[0] || null,
             image_urls: imageUrls.length > 0 ? imageUrls : null,
+            image_position_x: imagePositions[0]?.x ?? 50,
+            image_position_y: imagePositions[0]?.y ?? 50,
+            image_zoom: imagePositions[0]?.zoom ?? 1,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             custom_question: customQuestion.trim() || null,
@@ -239,7 +246,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             image_urls: imageUrls.length > 0 ? imageUrls : null,
             image_position_x: imagePositions[0]?.x ?? 50,
             image_position_y: imagePositions[0]?.y ?? 50,
-            image_position_zoom: imagePositions[0]?.zoom ?? 1,
+            image_zoom: imagePositions[0]?.zoom ?? 1,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -263,7 +270,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
         // Tag to a group for group visibility
         if (visibility === 'group' && selectedGroupId && jobData) {
-          const { error: gErr } = await (supabase.from as any)('post_groups')
+          const { error: gErr } = await supabase
+            .from('post_groups' as never)
             .insert({ post_id: jobData.id, group_id: selectedGroupId });
           if (gErr) console.error('Failed to tag post group:', gErr);
         }
@@ -292,12 +300,15 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       console.log('Update validation failed');
       return;
     }
-    if (postType === 'event' && (!title.trim() || !eventDate || imageUrls.length === 0)) {
-      if (imageUrls.length === 0) toast.error('Please add an image for your event');
-      else toast.error('Please fill in the event title and date');
+    if (postType === 'event' && (!title.trim() || !eventDate.trim() || imageUrls.length === 0)) {
+      console.log('Event validation failed', { title: title.trim(), eventDate, imageUrls });
+      if (!title.trim()) toast.error('Please add an event title');
+      else if (!eventDate.trim()) toast.error('Please select a date and time');
+      else toast.error('Please add an image for your event');
       return;
     }
     if (postType === 'job' && (!title.trim() || !content.trim() || imageUrls.length === 0)) {
+      console.log('Job validation failed');
       if (imageUrls.length === 0) toast.error('Please add an image for your opportunity');
       return;
     }
@@ -308,9 +319,18 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const isValid = () => {
     if (visibility === 'specific' && selectedRecipients.length === 0 && (postType === 'update' || postType === 'job')) return false;
     if (postType === 'update') return content.trim().length > 0;
-    if (postType === 'event') return title.trim().length > 0 && eventDate.length > 0 && imageUrls.length > 0;
+    if (postType === 'event') return title.trim().length > 0 && eventDate.trim().length > 0 && imageUrls.length > 0;
     if (postType === 'job') return title.trim().length > 0 && content.trim().length > 0 && imageUrls.length > 0;
     return false;
+  };
+
+  const getEventValidationMessage = () => {
+    if (postType !== 'event' || isValid() || (!title.trim() && !eventDate.trim() && imageUrls.length === 0)) return null;
+    if (!title.trim() && !eventDate.trim()) return 'Please add a title and date';
+    if (!title.trim()) return 'Please add an event title';
+    if (!eventDate.trim()) return 'Please select a date and time';
+    if (imageUrls.length === 0) return 'Please add an event image';
+    return null;
   };
 
   const handlePostTypeChange = (value: string) => {
@@ -323,6 +343,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   };
 
   if (!user) return null;
+
+  const eventValidationMessage = getEventValidationMessage();
 
   return (
     <>
@@ -560,43 +582,42 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                             {imageUrls.map((url, idx) => {
                               const pos = imagePositions[idx] ?? { x: 50, y: 50, zoom: 1 };
                               const zoom = pos.zoom ?? 1;
+
                               return (
                                 <div key={url} className="flex-none w-full relative h-64">
-                                  {zoom > 1 ? (
-                                    <div style={{ position: 'absolute', inset: 0 }}>
-                                      <div style={{
-                                        position: 'absolute',
-                                        left: `${pos.x * (1 - zoom)}%`,
-                                        top: `${pos.y * (1 - zoom)}%`,
-                                        right: `${(100 - pos.x) * (1 - zoom)}%`,
-                                        bottom: `${(100 - pos.y) * (1 - zoom)}%`,
-                                      }}>
-                                        <img
-                                          src={url}
-                                          alt={`Image ${idx + 1}`}
-                                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${pos.x}% ${pos.y}%` }}
-                                        />
-                                      </div>
-                                    </div>
-                                  ) : (
+                                  <div
+                                    style={{
+                                      position: 'absolute',
+                                      left: `${pos.x * (1 - zoom)}%`,
+                                      top: `${pos.y * (1 - zoom)}%`,
+                                      right: `${(100 - pos.x) * (1 - zoom)}%`,
+                                      bottom: `${(100 - pos.y) * (1 - zoom)}%`,
+                                    }}
+                                  >
                                     <img
                                       src={url}
                                       alt={`Image ${idx + 1}`}
-                                      className="w-full h-64 object-cover"
-                                      style={{ objectPosition: `${pos.x}% ${pos.y}%` }}
+                                      style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        objectPosition: `${pos.x}% ${pos.y}%`,
+                                      }}
                                     />
-                                  )}
-                                  {/* Per-image controls */}
+                                  </div>
                                   <div className="absolute top-1.5 right-1.5 flex gap-1">
                                     <ImagePositioner
                                       imageUrl={url}
                                       initialPositionX={pos.x}
                                       initialPositionY={pos.y}
-                                      initialZoom={(pos.zoom ?? 1) * 100}
+                                      initialZoom={pos.zoom ?? 1}
                                       aspectRatio={16 / 9}
-                                      onSave={(x, y, zoomPct) => setImagePositions((prev) => {
+                                      onSave={(x, y, zoomValue) => setImagePositions((prev) => {
                                         const next = [...prev];
-                                        next[idx] = { x, y, zoom: (zoomPct ?? 100) / 100 };
+                                        next[idx] = { x, y, zoom: zoomValue ?? 1 };
                                         return next;
                                       })}
                                       trigger={
@@ -610,14 +631,13 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                                       size="icon"
                                       className="h-7 w-7"
                                       onClick={() => {
-                                        setImageUrls((p) => p.filter((_, i) => i !== idx));
-                                        setImagePositions((p) => p.filter((_, i) => i !== idx));
+                                        setImageUrls((prev) => prev.filter((_, i) => i !== idx));
+                                        setImagePositions((prev) => prev.filter((_, i) => i !== idx));
                                       }}
                                     >
                                       <X className="h-3.5 w-3.5" />
                                     </Button>
                                   </div>
-                                  {/* Slide counter */}
                                   <div className="absolute bottom-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                                     {idx + 1} / {imageUrls.length}
                                   </div>
@@ -647,7 +667,6 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                         )}
                       </div>
 
-                      {/* Dot indicators */}
                       {imageUrls.length > 1 && (
                         <div className="flex justify-center gap-1.5">
                           {imageUrls.map((_, i) => (
@@ -675,13 +694,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   )}
 
                   {/* Validation helper */}
-                  {postType === 'event' && !isValid() && (title.trim() || eventDate) && (
+                  {eventValidationMessage && (
                     <p className="text-sm text-amber-500">
-                      {!title.trim() && !eventDate 
-                        ? 'Please add a title and date' 
-                        : !title.trim() 
-                          ? 'Please add an event title' 
-                          : 'Please select a date and time'}
+                      {eventValidationMessage}
                     </p>
                   )}
 
@@ -705,10 +720,19 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                       userId={user.id}
                       onImageUploaded={(url) => {
                         setImageUrls((prev) => [...prev, url]);
-                        setImagePositions((prev) => [...prev, { x: 50, y: 50 }]);
+                        setImagePositions((prev) => [...prev, { x: 50, y: 50, zoom: 1 }]);
                       }}
                       compact
                       currentCount={imageUrls.length}
+                      compactLabel={
+                        postType === 'event' || postType === 'job' ? (
+                          <>
+                            Image <span className="text-destructive">*</span>
+                          </>
+                        ) : (
+                          'Image'
+                        )
+                      }
                     />
                     <div className="flex items-center gap-2">
                       {onClose && (

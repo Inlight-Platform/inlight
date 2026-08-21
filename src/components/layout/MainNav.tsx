@@ -69,9 +69,10 @@ export const MainNav: React.FC = () => {
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const { isDark, toggleTheme } = useTheme();
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     setShowSignOutDialog(false);
-    signOut();
+    await signOut();
+    window.location.replace('/auth');
   };
 
   const { data: profile } = useQuery({
