@@ -121,10 +121,10 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               className="absolute inset-0 rounded-none"
               imageClassName="h-full max-h-none object-cover opacity-60 grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[hsl(222_45%_5%)] via-[hsl(222_45%_5%)]/60 to-transparent" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[hsl(222_45%_5%)] via-[hsl(222_45%_5%)]/60 to-transparent" />
           </>
         )}
-        <div className="relative flex h-full flex-col justify-end p-6 sm:p-10">
+        <div className="pointer-events-none relative flex h-full flex-col justify-end p-6 sm:p-10">
           <div className="mb-4 flex items-center gap-3">
             <span className={cn(labelPillClass, meta.pillClass)}>{meta.label}</span>
             <span className={cn('text-xs font-semibold', meta.accent)}>{timeAgo}</span>
@@ -166,7 +166,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
             : 'bg-gradient-to-br from-[hsl(222_40%_10%)] to-[hsl(222_45%_6%)] border border-primary/30 text-white hover:-translate-y-1'
         )}
       >
-        <div className="absolute right-6 top-6 z-10">
+        <div className="pointer-events-none absolute right-6 top-6 z-10">
           <span className={cn(labelPillClass, meta.pillClass)}>{meta.label}</span>
         </div>
         <div className="flex h-full flex-col p-6 sm:p-8">

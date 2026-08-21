@@ -80,7 +80,11 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
   }
 
   return (
-    <div className={cn('relative rounded-lg overflow-hidden', className)}>
+    <div
+      className={cn('relative rounded-lg overflow-hidden', className)}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       <div ref={emblaRef} className={cn('overflow-hidden', className && 'h-full')}>
         <div className={cn('flex', className && 'h-full')}>
           {urls.map((url, i) => (
@@ -98,7 +102,8 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
       {canScrollPrev && (
         <button
           onClick={(e) => { e.stopPropagation(); emblaApi?.scrollPrev(); }}
-          className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+          className="absolute left-2 top-1/2 z-20 -translate-y-1/2 h-8 w-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+          aria-label="Previous image"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -106,17 +111,19 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
       {canScrollNext && (
         <button
           onClick={(e) => { e.stopPropagation(); emblaApi?.scrollNext(); }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+          className="absolute right-2 top-1/2 z-20 -translate-y-1/2 h-8 w-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+          aria-label="Next image"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       )}
 
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+      <div className="absolute bottom-2 left-1/2 z-20 -translate-x-1/2 flex gap-1.5">
         {urls.map((_, i) => (
           <button
             key={i}
             onClick={(e) => { e.stopPropagation(); emblaApi?.scrollTo(i); }}
+            aria-label={`Show image ${i + 1}`}
             className={cn(
               'h-1.5 rounded-full transition-all duration-200',
               i === selectedIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/75'
