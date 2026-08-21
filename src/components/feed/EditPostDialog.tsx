@@ -21,6 +21,63 @@ import { FeedItemData } from './FeedItem';
 import { ImageUploader } from './ImageUploader';
 import { ImagePositioner } from '@/components/profile/ImagePositioner';
 
+type ImagePosition = { x: number; y: number; zoom: number };
+
+const DEFAULT_IMAGE_POSITION: ImagePosition = { x: 50, y: 50, zoom: 1 };
+const MAX_IMAGES = 4;
+
+const normalizeImagePositions = (
+  positions: FeedItemData['image_positions'] | unknown,
+  count: number,
+  fallback: ImagePosition,
+): ImagePosition[] => {
+  const source = Array.isArray(positions) ? positions : [];
+  return Array.from({ length: count }, (_, index) => {
+    const position = source[index] as Partial<ImagePosition> | undefined;
+    return {
+      x: typeof position?.x === 'number' ? position.x : fallback.x,
+      y: typeof position?.y === 'number' ? position.y : fallback.y,
+      zoom: typeof position?.zoom === 'number' ? position.zoom : fallback.zoom,
+    };
+  });
+};
+
+const PositionedImagePreview: React.FC<{
+  url: string;
+  position: ImagePosition;
+  alt: string;
+}> = ({ url, position, alt }) => {
+  const zoom = position.zoom ?? 1;
+
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-muted">
+      <div
+        style={{
+          position: 'absolute',
+          left: `${position.x * (1 - zoom)}%`,
+          top: `${position.y * (1 - zoom)}%`,
+          right: `${(100 - position.x) * (1 - zoom)}%`,
+          bottom: `${(100 - position.y) * (1 - zoom)}%`,
+        }}
+      >
+        <img
+          src={url}
+          alt={alt}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: `${position.x}% ${position.y}%`,
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
 interface EditPostDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -41,10 +98,8 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
   const [location, setLocation] = useState('');
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [positionX, setPositionX] = useState<number>(50);
-  const [positionY, setPositionY] = useState<number>(50);
-  const [imageZoom, setImageZoom] = useState<number>(1);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imagePositions, setImagePositions] = useState<ImagePosition[]>([]);
   const [showImageUploader, setShowImageUploader] = useState(false);
 
   useEffect(() => {
@@ -54,35 +109,43 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
       setLinkUrl(item.link_url || '');
       setLinkTitle(item.link_title || '');
       setLocation(item.location || '');
-      setImageUrl(item.image_url || null);
-      // We'll need to fetch position from the database for posts
-      setPositionX(50);
-      setPositionY(50);
-      setImageZoom(1);
+      const urls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
+      const fallback = {
+        x: item.image_position_x ?? DEFAULT_IMAGE_POSITION.x,
+        y: item.image_position_y ?? DEFAULT_IMAGE_POSITION.y,
+        zoom: item.image_zoom ?? DEFAULT_IMAGE_POSITION.zoom,
+      };
+      setImageUrls(urls);
+      setImagePositions(normalizeImagePositions(item.image_positions, urls.length, fallback));
       setShowImageUploader(false);
     }
   }, [open, item]);
 
-  // Fetch current image position for posts
+  // Fetch current image metadata for posts/events so edit mode reflects the saved carousel.
   useEffect(() => {
-    const fetchPosition = async () => {
-      if (open && (item.type === 'post' || item.type === 'job' || item.type === 'event') && item.image_url) {
+    const fetchImageMetadata = async () => {
+      if (open && (item.type === 'post' || item.type === 'job' || item.type === 'event')) {
         const table = item.type === 'event' ? 'events' : 'posts';
         const { data } = await supabase
           .from(table)
-          .select('image_position_x, image_position_y, image_zoom')
+          .select('image_url, image_urls, image_position_x, image_position_y, image_zoom, image_positions')
           .eq('id', item.id)
           .single();
         
         if (data) {
-          setPositionX(data.image_position_x ?? 50);
-          setPositionY(data.image_position_y ?? 50);
-          setImageZoom(data.image_zoom ?? 1);
+          const urls = data.image_urls?.length ? data.image_urls : data.image_url ? [data.image_url] : [];
+          const fallback = {
+            x: data.image_position_x ?? DEFAULT_IMAGE_POSITION.x,
+            y: data.image_position_y ?? DEFAULT_IMAGE_POSITION.y,
+            zoom: data.image_zoom ?? DEFAULT_IMAGE_POSITION.zoom,
+          };
+          setImageUrls(urls);
+          setImagePositions(normalizeImagePositions(data.image_positions, urls.length, fallback));
         }
       }
     };
-    fetchPosition();
-  }, [open, item.id, item.type, item.image_url]);
+    fetchImageMetadata();
+  }, [open, item.id, item.type]);
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -100,10 +163,12 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
             content,
             link_url: linkUrl || null,
             link_title: linkTitle || null,
-            image_url: imageUrl,
-            image_position_x: positionX,
-            image_position_y: positionY,
-            image_zoom: imageZoom,
+            image_url: imageUrls[0] || null,
+            image_urls: imageUrls.length > 0 ? imageUrls : null,
+            image_position_x: imagePositions[0]?.x ?? DEFAULT_IMAGE_POSITION.x,
+            image_position_y: imagePositions[0]?.y ?? DEFAULT_IMAGE_POSITION.y,
+            image_zoom: imagePositions[0]?.zoom ?? DEFAULT_IMAGE_POSITION.zoom,
+            image_positions: imagePositions.length > 0 ? imagePositions : null,
           })
           .eq('id', item.id));
       } else if (item.type === 'event') {
@@ -115,10 +180,12 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
             link_url: linkUrl || null,
             link_title: linkTitle || null,
             location: location || null,
-            image_url: imageUrl,
-            image_position_x: positionX,
-            image_position_y: positionY,
-            image_zoom: imageZoom,
+            image_url: imageUrls[0] || null,
+            image_urls: imageUrls.length > 0 ? imageUrls : null,
+            image_position_x: imagePositions[0]?.x ?? DEFAULT_IMAGE_POSITION.x,
+            image_position_y: imagePositions[0]?.y ?? DEFAULT_IMAGE_POSITION.y,
+            image_zoom: imagePositions[0]?.zoom ?? DEFAULT_IMAGE_POSITION.zoom,
+            image_positions: imagePositions.length > 0 ? imagePositions : null,
           })
           .eq('id', item.id));
       } else if (item.type === 'project') {
@@ -152,24 +219,28 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   };
 
   const handleImageUploaded = (url: string) => {
-    setImageUrl(url);
-    setPositionX(50);
-    setPositionY(50);
-    setImageZoom(1);
-    setShowImageUploader(false);
+    setImageUrls((current) => {
+      if (current.length >= MAX_IMAGES) return current;
+      return [...current, url].slice(0, MAX_IMAGES);
+    });
+    setImagePositions((current) => {
+      if (current.length >= MAX_IMAGES) return current;
+      return [...current, DEFAULT_IMAGE_POSITION].slice(0, MAX_IMAGES);
+    });
+    setShowImageUploader(imageUrls.length + 1 < MAX_IMAGES);
   };
 
-  const handleRemoveImage = () => {
-    setImageUrl(null);
-    setPositionX(50);
-    setPositionY(50);
-    setImageZoom(1);
+  const handleRemoveImage = (index: number) => {
+    setImageUrls((current) => current.filter((_, i) => i !== index));
+    setImagePositions((current) => current.filter((_, i) => i !== index));
   };
 
-  const handlePositionSave = (x: number, y: number, zoom: number) => {
-    setPositionX(x);
-    setPositionY(y);
-    setImageZoom(zoom);
+  const handlePositionSave = (index: number, x: number, y: number, zoom: number) => {
+    setImagePositions((current) => {
+      const next = [...current];
+      next[index] = { x, y, zoom };
+      return next;
+    });
   };
 
   const isEvent = item.type === 'event';
@@ -179,6 +250,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const showLink = item.type === 'post' || isJob || isEvent;
   const showLocation = isEvent;
   const showImage = item.type === 'post' || isJob || isEvent;
+  const atImageLimit = imageUrls.length >= MAX_IMAGES;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -221,85 +293,85 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
               <div className="space-y-2">
                 <Label>Image</Label>
                 
-                {imageUrl ? (
-                  <div className="relative rounded-lg overflow-hidden border border-border aspect-video bg-muted">
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: `${positionX * (1 - imageZoom)}%`,
-                        top: `${positionY * (1 - imageZoom)}%`,
-                        right: `${(100 - positionX) * (1 - imageZoom)}%`,
-                        bottom: `${(100 - positionY) * (1 - imageZoom)}%`,
-                      }}
+                {imageUrls.length > 0 ? (
+                  <div className="space-y-3">
+                    {imageUrls.map((url, index) => {
+                      const position = imagePositions[index] ?? DEFAULT_IMAGE_POSITION;
+
+                      return (
+                        <div key={`${url}-${index}`} className="relative overflow-hidden rounded-lg border border-border bg-muted">
+                          <div className="relative aspect-video">
+                            <PositionedImagePreview
+                              url={url}
+                              position={position}
+                              alt={`Post image ${index + 1}`}
+                            />
+                          </div>
+                          <div className="absolute left-2 top-2 rounded-full bg-background/80 px-2 py-0.5 text-xs font-medium backdrop-blur-sm">
+                            {index + 1} / {imageUrls.length}
+                          </div>
+                          <div className="absolute right-2 top-2 flex gap-2">
+                            <ImagePositioner
+                              imageUrl={url}
+                              initialPositionX={position.x}
+                              initialPositionY={position.y}
+                              initialZoom={position.zoom}
+                              aspectRatio={16 / 9}
+                              onSave={(x, y, zoom) => handlePositionSave(index, x, y, zoom)}
+                              trigger={
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="icon"
+                                  className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+                                >
+                                  <Move className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleRemoveImage(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowImageUploader(true)}
+                      disabled={atImageLimit}
+                      className="w-full"
                     >
-                      <img
-                        src={imageUrl}
-                        alt="Post image"
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          objectPosition: `${positionX}% ${positionY}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="absolute top-2 right-2 flex gap-2">
-                      <ImagePositioner
-                        imageUrl={imageUrl}
-                        initialPositionX={positionX}
-                        initialPositionY={positionY}
-                        initialZoom={imageZoom}
-                        aspectRatio={16 / 9}
-                        onSave={handlePositionSave}
-                        trigger={
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="icon"
-                            className="h-8 w-8 bg-background/80 backdrop-blur-sm"
-                          >
-                            <Move className="h-4 w-4" />
-                          </Button>
-                        }
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="icon"
-                        className="h-8 w-8 bg-background/80 backdrop-blur-sm"
-                        onClick={() => setShowImageUploader(true)}
-                      >
-                        <ImagePlus className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={handleRemoveImage}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      <ImagePlus className="h-4 w-4 mr-2" />
+                      {atImageLimit ? 'Max images' : `Add image (${MAX_IMAGES - imageUrls.length} remaining)`}
+                    </Button>
                   </div>
-                ) : showImageUploader || !imageUrl ? (
+                ) : showImageUploader || imageUrls.length === 0 ? (
                   user && (
                     <ImageUploader
                       userId={user.id}
                       onImageUploaded={handleImageUploaded}
+                      currentCount={imageUrls.length}
                       className="w-full"
                     />
                   )
                 ) : null}
 
-                {imageUrl && showImageUploader && user && (
+                {imageUrls.length > 0 && showImageUploader && user && !atImageLimit && (
                   <div className="mt-2">
                     <ImageUploader
                       userId={user.id}
                       onImageUploaded={handleImageUploaded}
+                      currentCount={imageUrls.length}
                       className="w-full"
                     />
                     <Button
@@ -314,7 +386,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
                   </div>
                 )}
 
-                {!imageUrl && !showImageUploader && (
+                {imageUrls.length === 0 && !showImageUploader && (
                   <Button
                     type="button"
                     variant="outline"
