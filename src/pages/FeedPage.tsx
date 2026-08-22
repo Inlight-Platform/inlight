@@ -954,7 +954,7 @@ const FeedPage: React.FC = () => {
             ) : contentFilter === 'projects' ? (
               renderProjectsContent()
             ) : isGroupContentFilter(contentFilter) ? (
-              <div className="space-y-4 max-w-2xl mx-auto">
+              <div className={`space-y-4 ${viewMode === 'scroll' ? 'max-w-2xl mx-auto' : ''}`}>
                 {(() => {
                   if (groupsLoading) {
                     return (
