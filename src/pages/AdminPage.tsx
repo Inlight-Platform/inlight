@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv, ShieldCheck, Calendar, Globe, BookOpen, Music, Mic2, BarChart3, Building2, MailPlus, Copy, GraduationCap } from 'lucide-react';
+import { Plus, Trash2, Edit, Shield, Newspaper, Image, Film, Theater, Upload, X, Loader2, Tv, ShieldCheck, Calendar, Globe, BookOpen, Music, Mic2, BarChart3, Building2, MailPlus, Copy, GraduationCap, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import BroadwayShowsManager from '@/components/admin/BroadwayShowsManager';
 import FilmContentManager from '@/components/admin/FilmContentManager';
@@ -25,6 +25,7 @@ import MusicShowsManager from '@/components/admin/MusicShowsManager';
 import ProductInsightsManager from '@/components/admin/ProductInsightsManager';
 import CompanyRequestsManager from '@/components/admin/CompanyRequestsManager';
 import AffiliationRequestsManager from '@/components/admin/AffiliationRequestsManager';
+import AdminGroupsManager from '@/components/admin/AdminGroupsManager';
 
 const AdminPage: React.FC = () => {
   const navigate = useNavigate();
@@ -87,6 +88,10 @@ const AdminPage: React.FC = () => {
                 <TabsTrigger value="company-requests" className="gap-2 whitespace-nowrap">
                   <Building2 className="w-4 h-4" />
                   <span className="hidden sm:inline">Companies</span>
+                </TabsTrigger>
+                <TabsTrigger value="groups" className="gap-2 whitespace-nowrap">
+                  <Users className="w-4 h-4" />
+                  <span className="hidden sm:inline">Groups</span>
                 </TabsTrigger>
                 <TabsTrigger value="insights" className="gap-2 whitespace-nowrap">
                   <BarChart3 className="w-4 h-4" />
@@ -161,6 +166,10 @@ const AdminPage: React.FC = () => {
 
         <TabsContent value="company-requests">
           <CompanyRequestsManager />
+        </TabsContent>
+
+        <TabsContent value="groups">
+          <AdminGroupsManager />
         </TabsContent>
 
         <TabsContent value="insights">

@@ -2880,6 +2880,37 @@ export type Database = {
         Args: { _email: string; _group_id: string }
         Returns: Database["public"]["Tables"]["group_admins"]["Row"]
       }
+      admin_create_group: {
+        Args: {
+          _description?: string
+          _initial_admin_email?: string
+          _name: string
+          _slug: string
+        }
+        Returns: Json
+      }
+      admin_list_groups: {
+        Args: never
+        Returns: {
+          active_admin_count: number
+          active_member_count: number
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }[]
+      }
+      admin_update_group: {
+        Args: {
+          _description?: string
+          _group_id: string
+          _name: string
+          _slug: string
+        }
+        Returns: Json
+      }
       get_profile_attendance: {
         Args: { _user_id: string }
         Returns: {

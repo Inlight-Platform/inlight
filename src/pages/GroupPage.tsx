@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Users, Trash2, Globe, Lock, Send, Shield, MailPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { useGroupBySlug, useMyGroups } from '@/hooks/useGroups';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -65,11 +66,13 @@ const GroupPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { isAdmin: isPlatformAdmin } = useAdmin();
   const queryClient = useQueryClient();
   const { data: group, isLoading: groupLoading } = useGroupBySlug(slug);
   const { data: myGroups = [] } = useMyGroups();
 
   const isFaculty = !!user && !!group && (
+    isPlatformAdmin ||
     group.faculty_owner_id === user.id ||
     myGroups.some((g) => g.id === group.id && g.is_faculty)
   );
