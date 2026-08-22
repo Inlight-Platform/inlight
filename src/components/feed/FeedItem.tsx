@@ -361,10 +361,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     : capitalizeName(item.creator_profile?.display_name || '') || 'Inlight Member';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
   const bodyText = item.content || item.description;
-  const compactCollapsed = compactSquare && !compactTextExpanded;
+  const compactEventMedia = compactSquare && item.type === 'event';
+  const compactCollapsed = compactSquare && !compactTextExpanded && !compactEventMedia;
   const compactBodyLineCount = bodyText?.split('\n').filter((line) => line.trim()).length || 0;
   const showCompactTextToggle = compactSquare && Boolean(bodyText && (bodyText.length > 90 || compactBodyLineCount > 2));
-  const compactEventMedia = compactSquare && item.type === 'event';
   const compactSquareMedia = compactSquare && !compactEventMedia;
 
   return (
