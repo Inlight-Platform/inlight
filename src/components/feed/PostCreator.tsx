@@ -313,8 +313,10 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
   const handleSubmit = () => {
     console.log('handleSubmit called', { postType, title, eventDate, content });
-    if (postType === 'update' && !content.trim()) {
+    if (postType === 'update' && (!content.trim() || imageUrls.length === 0)) {
       console.log('Update validation failed');
+      if (!content.trim()) toast.error('Please add post content');
+      else toast.error('Please add an image for your post');
       return;
     }
     if (postType === 'event' && (!title.trim() || !eventDate.trim() || imageUrls.length === 0)) {
@@ -335,7 +337,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
   const isValid = () => {
     if (visibility === 'specific' && selectedRecipients.length === 0 && (postType === 'update' || postType === 'job')) return false;
-    if (postType === 'update') return content.trim().length > 0;
+    if (postType === 'update') return content.trim().length > 0 && imageUrls.length > 0;
     if (postType === 'event') return title.trim().length > 0 && eventDate.trim().length > 0 && imageUrls.length > 0;
     if (postType === 'job') return title.trim().length > 0 && content.trim().length > 0 && imageUrls.length > 0;
     return false;
@@ -742,7 +744,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                       compact
                       currentCount={imageUrls.length}
                       compactLabel={
-                        postType === 'event' || postType === 'job' ? (
+                        postType === 'update' || postType === 'event' || postType === 'job' ? (
                           <>
                             Image <span className="text-destructive">*</span>
                           </>
