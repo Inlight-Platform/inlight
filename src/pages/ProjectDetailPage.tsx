@@ -811,11 +811,11 @@ const ProjectDetailPage: React.FC = () => {
 
           {/* Cover Image */}
           {(project.main_image_url || project.header_image_url) && (
-            <div className="relative rounded-lg overflow-hidden mb-4">
+            <div className="relative aspect-[4/3] rounded-lg overflow-hidden mb-4 bg-muted">
               <img
                 src={project.header_image_url || project.main_image_url}
                 alt={project.title}
-                className="w-full max-h-96 object-cover"
+                className="w-full h-full object-cover"
               />
               {canEditProject && (
                 <>

@@ -537,9 +537,9 @@ const MySavesPage: React.FC = () => {
                   {savedProjects.map(project => (
                     <Card key={project.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/projects/${project.id}`)}>
                       {project.header_image_url || project.main_image_url ? (
-                        <img src={project.header_image_url || project.main_image_url || undefined} alt={project.title} className="w-full h-36 object-cover" />
+                        <img src={project.header_image_url || project.main_image_url || undefined} alt={project.title} className="w-full aspect-[4/3] object-cover" />
                       ) : (
-                        <div className="w-full h-36 bg-muted flex items-center justify-center">
+                        <div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
                           <span className="text-muted-foreground text-sm">No image</span>
                         </div>
                       )}

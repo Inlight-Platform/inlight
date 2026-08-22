@@ -1362,9 +1362,9 @@ const CompanyProfilePage: React.FC = () => {
                 {currentProjects.map((project) => (
                   <Card key={project.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border" onClick={() => navigate(`/projects/${project.id}`)}>
                     {project.header_image_url || project.main_image_url ? (
-                      <img src={project.header_image_url || project.main_image_url} alt={project.title} className="w-full h-32 object-cover" />
+                      <img src={project.header_image_url || project.main_image_url} alt={project.title} className="w-full aspect-[4/3] object-cover" />
                     ) : (
-                      <div className="w-full h-32 bg-muted flex items-center justify-center">
+                      <div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
                         <FolderKanban className="w-8 h-8 text-muted-foreground" />
                       </div>
                     )}
@@ -1412,9 +1412,9 @@ const CompanyProfilePage: React.FC = () => {
                 {pastProjects.map((project) => (
                   <Card key={project.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border" onClick={() => navigate(`/projects/${project.id}`)}>
                     {project.header_image_url || project.main_image_url ? (
-                      <img src={project.header_image_url || project.main_image_url} alt={project.title} className="w-full h-32 object-cover" />
+                      <img src={project.header_image_url || project.main_image_url} alt={project.title} className="w-full aspect-[4/3] object-cover" />
                     ) : (
-                      <div className="w-full h-32 bg-muted flex items-center justify-center">
+                      <div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
                         <FolderKanban className="w-8 h-8 text-muted-foreground" />
                       </div>
                     )}

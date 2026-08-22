@@ -271,7 +271,7 @@ const PublicCompanyPage: React.FC = () => {
               <Link key={p.id} to={`/c/${companyId}/project/${p.id}`}>
                 <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full">
                   {(p.header_image_url || p.main_image_url) && (
-                    <img src={p.header_image_url || p.main_image_url!} alt="" className="w-full h-32 object-cover" />
+                    <img src={p.header_image_url || p.main_image_url!} alt="" className="w-full aspect-[4/3] object-cover" />
                   )}
                   <CardContent className="p-4">
                     <h3 className="font-display font-semibold text-sm mb-1 line-clamp-1">{p.title}</h3>
@@ -297,7 +297,7 @@ const PublicCompanyPage: React.FC = () => {
               <Link key={p.id} to={`/c/${companyId}/project/${p.id}`}>
                 <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full opacity-90">
                   {(p.header_image_url || p.main_image_url) && (
-                    <img src={p.header_image_url || p.main_image_url!} alt="" className="w-full h-32 object-cover" />
+                    <img src={p.header_image_url || p.main_image_url!} alt="" className="w-full aspect-[4/3] object-cover" />
                   )}
                   <CardContent className="p-4">
                     <h3 className="font-display font-semibold text-sm mb-1 line-clamp-1">{p.title}</h3>
