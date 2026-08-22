@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import type { Json } from '@/integrations/supabase/types';
 import { FeedItemData } from './FeedItem';
 import { ImageUploader } from './ImageUploader';
 import { ImagePositioner } from '@/components/profile/ImagePositioner';
@@ -38,6 +39,19 @@ const normalizeImagePositions = (
       x: typeof position?.x === 'number' ? position.x : fallback.x,
       y: typeof position?.y === 'number' ? position.y : fallback.y,
       zoom: typeof position?.zoom === 'number' ? position.zoom : fallback.zoom,
+    };
+  });
+};
+
+const serializeImagePositions = (positions: ImagePosition[], count: number): Json | null => {
+  if (count === 0) return null;
+
+  return Array.from({ length: count }, (_, index) => {
+    const position = positions[index] ?? DEFAULT_IMAGE_POSITION;
+    return {
+      x: Number.isFinite(position.x) ? position.x : DEFAULT_IMAGE_POSITION.x,
+      y: Number.isFinite(position.y) ? position.y : DEFAULT_IMAGE_POSITION.y,
+      zoom: Number.isFinite(position.zoom) ? position.zoom : DEFAULT_IMAGE_POSITION.zoom,
     };
   });
 };
@@ -153,6 +167,8 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const updateMutation = useMutation({
     mutationFn: async () => {
       let error;
+      const primaryPosition = imagePositions[0] ?? DEFAULT_IMAGE_POSITION;
+      const serializedPositions = serializeImagePositions(imagePositions, imageUrls.length);
       if (!isAdmin) {
         if (item.type === 'event' && !canManageEvents) throw new Error('This beta group cannot edit events.');
         if (item.type === 'job' && !canManageJobs) throw new Error('This beta group cannot edit jobs.');
@@ -168,10 +184,10 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
             link_title: linkTitle || null,
             image_url: imageUrls[0] || null,
             image_urls: imageUrls.length > 0 ? imageUrls : null,
-            image_position_x: imagePositions[0]?.x ?? DEFAULT_IMAGE_POSITION.x,
-            image_position_y: imagePositions[0]?.y ?? DEFAULT_IMAGE_POSITION.y,
-            image_zoom: imagePositions[0]?.zoom ?? DEFAULT_IMAGE_POSITION.zoom,
-            image_positions: imagePositions.length > 0 ? imagePositions : null,
+            image_position_x: primaryPosition.x,
+            image_position_y: primaryPosition.y,
+            image_zoom: primaryPosition.zoom,
+            image_positions: serializedPositions,
           })
           .eq('id', item.id));
       } else if (item.type === 'event') {
@@ -185,10 +201,10 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
             location: location || null,
             image_url: imageUrls[0] || null,
             image_urls: imageUrls.length > 0 ? imageUrls : null,
-            image_position_x: imagePositions[0]?.x ?? DEFAULT_IMAGE_POSITION.x,
-            image_position_y: imagePositions[0]?.y ?? DEFAULT_IMAGE_POSITION.y,
-            image_zoom: imagePositions[0]?.zoom ?? DEFAULT_IMAGE_POSITION.zoom,
-            image_positions: imagePositions.length > 0 ? imagePositions : null,
+            image_position_x: primaryPosition.x,
+            image_position_y: primaryPosition.y,
+            image_zoom: primaryPosition.zoom,
+            image_positions: serializedPositions,
           })
           .eq('id', item.id));
       } else if (item.type === 'project') {
@@ -211,8 +227,9 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
       toast.success('Post updated successfully');
       onOpenChange(false);
     },
-    onError: () => {
-      toast.error('Failed to update. Please try again.');
+    onError: (error: Error) => {
+      console.error('Failed to update post:', error);
+      toast.error(error.message || 'Failed to update. Please try again.');
     },
   });
 
