@@ -1010,7 +1010,7 @@ const FeedPage: React.FC = () => {
                             </Button>
                           )}
                         </div>
-                      ) : (
+                      ) : viewMode === 'scroll' ? (
                         <div className="flex flex-col gap-4">
                           {groupFeedItems.map((item) => (
                             <FeedItem
@@ -1018,6 +1018,26 @@ const FeedPage: React.FC = () => {
                               item={item}
                               networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
                               onOpenDetails={setSelectedItem}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div
+                          className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-5 sm:auto-rows-[220px]"
+                          style={{ gridAutoFlow: 'dense' }}
+                        >
+                          {groupFeedItems.map((item, idx) => (
+                            <FeedBentoCard
+                              key={`group-grid-${item.type}-${item.id}`}
+                              item={item}
+                              size={getBentoSize(idx)}
+                              onClick={() => {
+                                if (item.type === 'project') {
+                                  navigate(`/projects/${item.id}`, { state: { returnTo: feedReturnTo } });
+                                } else {
+                                  setSelectedItem(item);
+                                }
+                              }}
                             />
                           ))}
                         </div>

@@ -31,12 +31,16 @@ interface MockFeedItem {
 }
 
 vi.mock('@/components/feed/FeedBentoCard', () => ({
-  FeedBentoCard: ({ item }: { item: MockFeedItem }) => <article>{item.content || item.title}</article>,
+  FeedBentoCard: ({ item }: { item: MockFeedItem }) => (
+    <article data-testid="bento-card">{item.content || item.title}</article>
+  ),
   getBentoSize: () => 'medium',
 }));
 
 vi.mock('@/components/feed/FeedItem', () => ({
-  FeedItem: ({ item }: { item: MockFeedItem }) => <article>{item.content || item.title}</article>,
+  FeedItem: ({ item }: { item: MockFeedItem }) => (
+    <article data-testid="list-card">{item.content || item.title}</article>
+  ),
 }));
 
 vi.mock('@/components/feed/WelcomeMessage', () => ({
@@ -64,10 +68,24 @@ vi.mock('@/integrations/supabase/client', () => {
     { id: 'p1', content: 'Visible Post', user_id: 'u1', visibility: 'public', created_at: '2026-01-02T00:00:00Z' },
     { id: 'p2', content: 'Orphan Post', user_id: 'missing', visibility: 'public', created_at: '2026-01-01T00:00:00Z' },
   ];
+  const groupPostLinks = [
+    {
+      post_id: 'gp1',
+      posts: {
+        id: 'gp1',
+        content: 'Private Group Post',
+        user_id: 'u1',
+        visibility: 'group',
+        created_at: '2026-01-03T00:00:00Z',
+      },
+    },
+  ];
   const profiles = [{ user_id: 'u1', display_name: 'Alice', avatar_url: null }];
 
   const resultFor = (table: string) => {
     if (table === 'posts') return posts;
+    if (table === 'post_groups') return groupPostLinks;
+    if (table === 'project_groups') return [];
     if (table === 'profiles_public') return profiles;
     return [];
   };
@@ -148,5 +166,16 @@ describe('FeedPage (filtered posts)', () => {
 
     expect(await screen.findByText('Visible Post')).toBeDefined();
     expect(screen.queryByText('You do not have access to this private group feed.')).toBeNull();
+  });
+
+  it('uses the grid renderer for group feed items when grid view is selected', async () => {
+    mockMyGroups.push({ id: 'group-1', slug: 'film', name: 'Film Dept', is_faculty: false });
+
+    const FeedPage = (await import('@/pages/FeedPage')).default;
+    renderFeed(FeedPage ? <FeedPage /> : null, ['/?tab=group%3Agroup-1']);
+
+    expect(await screen.findByText('Private Group Post')).toBeDefined();
+    expect(screen.getByTestId('bento-card')).toBeDefined();
+    expect(screen.queryByTestId('list-card')).toBeNull();
   });
 });
