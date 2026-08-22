@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ImageCarousel } from './ImageCarousel';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -27,6 +28,7 @@ import { Label } from '@/components/ui/label';
 import { useEventRsvps } from '@/hooks/useEventRsvps';
 import { cn, capitalizeName } from '@/lib/utils';
 import { isEventPast } from '@/lib/eventDates';
+import { getFeedItemDestination } from '@/lib/feedDestinations';
 
 export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show' | 'open_role';
 
@@ -38,9 +40,11 @@ export interface FeedItemData {
   title?: string;
   description?: string;
   image_url?: string | null;
+  image_urls?: string[] | null;
   image_position_x?: number | null;
   image_position_y?: number | null;
   image_zoom?: number | null;
+  image_positions?: Array<{ x?: number | null; y?: number | null; zoom?: number | null }> | null;
   link_url?: string | null;
   link_title?: string | null;
   created_at: string;
@@ -81,6 +85,7 @@ interface FeedItemProps {
   imageContainerClassName?: string;
   imageClassName?: string;
   compactSquare?: boolean;
+  onOpenDetails?: (item: FeedItemData) => void;
 }
 
 export const FeedItem: React.FC<FeedItemProps> = ({
@@ -91,6 +96,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   imageContainerClassName,
   imageClassName,
   compactSquare = false,
+  onOpenDetails,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -246,14 +252,27 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   };
 
   const handleClick = () => {
-    if (item.type === 'project') {
-      navigate(`/projects/${item.id}`);
-    } else if (item.type === 'event') {
+    if (item.type === 'event') {
       navigate('/events');
-    } else if (item.type === 'show') {
-      navigate('/stage-whisper');
-    } else if (item.type === 'open_role' && item.project_id) {
-      navigate(`/projects/${item.project_id}`);
+      return;
+    }
+
+    if (item.type === 'post') {
+      if (onOpenDetails) {
+        onOpenDetails(item);
+      }
+      return;
+    }
+
+    const destination = getFeedItemDestination(item);
+    if (destination?.kind === 'internal') {
+      navigate(destination.to);
+      return;
+    }
+
+    if (destination?.kind === 'external') {
+      window.open(destination.url, '_blank', 'noopener,noreferrer');
+      return;
     }
   };
 
@@ -330,7 +349,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     }
   };
 
-  const isClickable = item.type === 'project' || item.type === 'event' || item.type === 'show' || item.type === 'open_role';
+  const isClickable =
+    item.type === 'event' ||
+    item.type === 'post' ||
+    Boolean(getFeedItemDestination(item));
   
   // For anonymous shows, hide the creator info
   const showAnonymous = item.type === 'show' && item.is_anonymous;
@@ -471,36 +493,33 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Image - skip for open roles */}
-        {item.image_url && item.type !== 'open_role' && (
-          <div
-            className={cn(
-              'rounded-lg overflow-hidden mb-3 bg-muted flex items-center justify-center',
-              compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1',
-              compactSquare && compactTextExpanded && 'aspect-square mb-0',
-              imageContainerClassName
-            )}
-          >
-            <img
-              src={item.image_url}
-              alt={item.title || 'Post image'}
+        {item.type !== 'open_role' && (() => {
+          const urls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
+          if (!urls.length) return null;
+
+          return (
+            <div
               className={cn(
-                'w-full max-h-[32rem] object-contain',
-                compactSquare && 'h-full max-h-none object-cover',
-                imageClassName
+                'rounded-lg overflow-hidden mb-3 relative bg-muted',
+                !compactSquare && 'aspect-video',
+                compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1',
+                compactSquare && compactTextExpanded && 'aspect-square mb-0',
+                compactSquare && !compactTextExpanded && 'aspect-square',
+                imageContainerClassName
               )}
-              style={compactSquare ? (() => {
-                const iz = (item.image_zoom ?? 100) / 100;
-                const ix = item.image_position_x ?? 50;
-                const iy = item.image_position_y ?? 50;
-                return {
-                  transform: `translate(${(50 - ix) * (iz - 1)}%, ${(50 - iy) * (iz - 1)}%) scale(${iz})`,
-                  transformOrigin: 'center center',
-                };
-              })() : undefined}
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-            />
-          </div>
-        )}
+            >
+              <ImageCarousel
+                urls={urls}
+                positionX={item.image_position_x ?? 50}
+                positionY={item.image_position_y ?? 50}
+                positionZoom={item.image_zoom ?? 1}
+                positions={item.image_positions}
+                className="h-full rounded-lg"
+                imageClassName={cn(compactSquare && 'h-full max-h-none object-cover', imageClassName)}
+              />
+            </div>
+          );
+        })()}
 
         {/* Link display for posts */}
         {item.link_url && !eventLinkClosed && (
@@ -550,8 +569,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
           </div>
         )}
 
-        {/* Event details — hidden in compact thumbnail mode */}
-        {item.type === 'event' && !compactSquare && (
+        {/* Event details */}
+        {item.type === 'event' && !compactCollapsed && (
           <div className="space-y-3 mt-2">
             <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-muted/50">
               {item.event_date && (

@@ -283,6 +283,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
                 e.stopPropagation();
                 toggleSave({
                   item_type: 'job',
+                  item_id: opportunity.id,
                   item_title: opportunity.title,
                   item_metadata: {
                     company: opportunity.company,
@@ -290,6 +291,13 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
                     location: opportunity.isRemote ? 'Remote' : opportunity.location,
                     description: opportunity.description?.slice(0, 200),
                     compensation: opportunity.compensation,
+                    deadline: opportunity.deadline,
+                    status: opportunity.status,
+                    image_url: opportunity.imageUrl || null,
+                    link_url: opportunity.linkUrl || null,
+                    link_title: opportunity.linkTitle || null,
+                    action_type: opportunity.actionType,
+                    created_at: opportunity.createdAt,
                   },
                 });
               }}

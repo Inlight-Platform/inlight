@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Move, Check, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { Move, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +15,7 @@ interface ImagePositionerProps {
   initialPositionY?: number;
   initialZoom?: number;
   aspectRatio?: number;
-  onSave: (positionX: number, positionY: number, zoom?: number) => void;
+  onSave: (positionX: number, positionY: number, zoom: number) => void;
   onCancel?: () => void;
   trigger?: React.ReactNode;
 }
@@ -25,7 +24,7 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   imageUrl,
   initialPositionX = 50,
   initialPositionY = 50,
-  initialZoom = 100,
+  initialZoom = 1,
   aspectRatio = 16 / 9,
   onSave,
   onCancel,
@@ -34,15 +33,11 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
   const [open, setOpen] = useState(false);
   const [positionX, setPositionX] = useState(initialPositionX);
   const [positionY, setPositionY] = useState(initialPositionY);
-  const [zoom, setZoom] = useState(initialZoom);
-  const [isDragging, setIsDragging] = useState(false);
+  const [zoom, setZoom] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
-  // Ref keeps drag handler free of stale closures without re-attaching the listener
-  const stateRef = useRef({ positionX, positionY, zoom });
-
-  useEffect(() => {
-    stateRef.current = { positionX, positionY, zoom };
-  }, [positionX, positionY, zoom]);
+  const dragRef = useRef<{
+    startX: number; startY: number; startPosX: number; startPosY: number;
+  } | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -52,53 +47,32 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
     }
   }, [open, initialPositionX, initialPositionY, initialZoom]);
 
-  // Attach via native DOM so Radix event interception is bypassed entirely.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el || !open) return;
-
-    const handleDown = (e: PointerEvent) => {
-      e.preventDefault();
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const startPosX = stateRef.current.positionX;
-      const startPosY = stateRef.current.positionY;
-      const z = stateRef.current.zoom / 100;
-      setIsDragging(true);
-
-      const onMove = (ev: PointerEvent) => {
-        if (!containerRef.current || z <= 1) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        const dxNorm = (ev.clientX - startX) / rect.width;
-        const dyNorm = (ev.clientY - startY) / rect.height;
-        // 1:1 pixel tracking matched to translate(tx%, ty%) scale(z) formula
-        setPositionX(Math.max(0, Math.min(100, startPosX - (dxNorm * 100) / (z - 1))));
-        setPositionY(Math.max(0, Math.min(100, startPosY - (dyNorm * 100) / (z - 1))));
-      };
-
-      const onUp = () => {
-        setIsDragging(false);
-        document.removeEventListener('pointermove', onMove);
-        document.removeEventListener('pointerup', onUp);
-        document.removeEventListener('pointercancel', onUp);
-      };
-
-      document.addEventListener('pointermove', onMove);
-      document.addEventListener('pointerup', onUp);
-      document.addEventListener('pointercancel', onUp);
-    };
-
-    el.addEventListener('pointerdown', handleDown);
-    return () => el.removeEventListener('pointerdown', handleDown);
-  }, [open]);
-
-  const handleWheel = (e: React.WheelEvent) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setZoom(prev => Math.max(100, Math.min(300, prev - e.deltaY * 0.5)));
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: positionX,
+      startPosY: positionY,
+    };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const dx = ((e.clientX - dragRef.current.startX) / rect.width) * (100 / zoom);
+    const dy = ((e.clientY - dragRef.current.startY) / rect.height) * (100 / zoom);
+    setPositionX(Math.max(0, Math.min(100, dragRef.current.startPosX - dx)));
+    setPositionY(Math.max(0, Math.min(100, dragRef.current.startPosY - dy)));
+  };
+
+  const handlePointerUp = () => {
+    dragRef.current = null;
   };
 
   const handleSave = () => {
-    onSave(Math.round(positionX), Math.round(positionY), Math.round(zoom));
+    onSave(Math.round(positionX), Math.round(positionY), parseFloat(zoom.toFixed(2)));
     setOpen(false);
   };
 
@@ -107,9 +81,7 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
     onCancel?.();
   };
 
-  const z = zoom / 100;
-  const tx = (50 - positionX) * (z - 1);
-  const ty = (50 - positionY) * (z - 1);
+  const objectPosition = `${positionX}% ${positionY}%`;
 
   return (
     <>
@@ -136,52 +108,82 @@ export const ImagePositioner: React.FC<ImagePositionerProps> = ({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="py-4 space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Zoom in, then drag to reposition.
-            </p>
-
+          <div className="py-2 space-y-3">
+            {/* Drag + zoom area */}
             <div
               ref={containerRef}
-              className={`w-full overflow-hidden rounded-lg border border-border bg-muted select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-              style={{ aspectRatio: String(aspectRatio), touchAction: 'none' }}
-              onWheel={handleWheel}
+              className="relative w-full overflow-hidden rounded-lg border border-border cursor-grab active:cursor-grabbing bg-muted select-none"
+              style={{ aspectRatio: String(aspectRatio) }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
             >
-              <img
-                src={imageUrl}
-                alt="Position preview"
-                className="w-full h-full select-none pointer-events-none"
+              <div
                 style={{
-                  display: 'block',
-                  objectFit: 'cover',
-                  transform: `translate(${tx}%, ${ty}%) scale(${z})`,
-                  transformOrigin: 'center center',
+                  position: 'absolute',
+                  left: `${positionX * (1 - zoom)}%`,
+                  top: `${positionY * (1 - zoom)}%`,
+                  right: `${(100 - positionX) * (1 - zoom)}%`,
+                  bottom: `${(100 - positionY) * (1 - zoom)}%`,
                 }}
-                draggable={false}
-              />
+              >
+                <img
+                  src={imageUrl}
+                  alt="Positioning view"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition,
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                  draggable={false}
+                />
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <ZoomOut className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <Slider
-                value={[zoom]}
-                onValueChange={([val]) => setZoom(val)}
-                min={100}
-                max={300}
-                step={5}
-                className="flex-1"
-              />
-              <ZoomIn className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs text-muted-foreground w-10 text-right">{zoom}%</span>
+            {/* Zoom controls */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Zoom: {Math.round(zoom * 100)}%</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-3"
+                  disabled={zoom <= 1}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setZoom((z) => Math.max(1, parseFloat((z - 0.25).toFixed(2))))}
+                >
+                  − Zoom out
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-3"
+                  disabled={zoom >= 3}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setZoom((z) => Math.min(3, parseFloat((z + 0.25).toFixed(2))))}
+                >
+                  + Zoom in
+                </Button>
+              </div>
             </div>
+
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={handleCancel}>
+            <Button type="button" variant="outline" onClick={handleCancel}>
               <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
-            <Button onClick={handleSave}>
+            <Button type="button" onClick={handleSave}>
               <Check className="w-4 h-4 mr-2" />
               Save Position
             </Button>

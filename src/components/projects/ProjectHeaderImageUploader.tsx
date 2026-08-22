@@ -137,8 +137,6 @@ export const ProjectHeaderImageUploader: React.FC<ProjectHeaderImageUploaderProp
   const [cropperOpen, setCropperOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [cropperImageSrc, setCropperImageSrc] = useState('');
-  // Local preview shown immediately after crop, before the CDN URL is available
-  const [localPreviewUrl, setLocalPreviewUrl] = useState('');
 
   const validateFile = (file: File): string | null => {
     if (file.size > MAX_FILE_SIZE) {
@@ -188,7 +186,7 @@ export const ProjectHeaderImageUploader: React.FC<ProjectHeaderImageUploaderProp
         .getPublicUrl(filePath);
 
       onImageUploaded(urlData.publicUrl);
-      toast.success('Image uploaded!');
+      toast.success('Header image uploaded!');
     } catch (error: any) {
       console.error('Upload failed:', error);
       toast.error(error.message || 'Failed to upload image');
@@ -246,51 +244,26 @@ export const ProjectHeaderImageUploader: React.FC<ProjectHeaderImageUploaderProp
   };
 
   const handleCropComplete = async (blob: Blob) => {
-    // Show the crop result immediately — convert to data URL so it renders
-    // before the Supabase upload finishes (data URLs are strings, no cleanup needed).
-    const reader = new FileReader();
-    const dataUrl = await new Promise<string>((resolve) => {
-      reader.onload = () => resolve(reader.result as string);
-      reader.readAsDataURL(blob);
-    });
-    setLocalPreviewUrl(dataUrl);
-
     const sourceFile = selectedFile ?? new File([blob], `${imageKind}.jpg`, { type: 'image/jpeg' });
     const croppedFile = new File([blob], sourceFile.name.replace(/\.[^.]+$/, '.jpg'), {
       type: 'image/jpeg',
       lastModified: Date.now(),
     });
-
-    try {
-      await uploadFile(croppedFile);
-    } finally {
-      setSelectedFile(null);
-      setCropperImageSrc('');
-      setLocalPreviewUrl('');
-    }
+    await uploadFile(croppedFile);
+    setSelectedFile(null);
+    setCropperImageSrc('');
   };
 
-  const previewUrl = localPreviewUrl || currentImageUrl;
-  const isUploading = !!localPreviewUrl;
-
-  if (previewUrl) {
+  if (currentImageUrl) {
     return (
-      <div
-        className={cn("relative rounded-lg overflow-hidden", className)}
-        style={{ aspectRatio: `${outputWidth} / ${outputHeight}` }}
-      >
+      <div className={cn("relative rounded-lg overflow-hidden", className)}>
         <img
-          src={previewUrl}
-          alt="Preview"
-          className="w-full h-full object-cover"
+          src={currentImageUrl}
+          alt="Header preview"
+          className="w-full object-cover"
+          style={{ aspectRatio: `${aspect}` }}
         />
-        {isUploading && (
-          <div className="absolute inset-0 bg-background/60 flex items-center justify-center gap-2">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <span className="text-sm text-foreground">Uploading…</span>
-          </div>
-        )}
-        {!isUploading && onRemoveImage && (
+        {onRemoveImage && (
           <Button
             variant="destructive"
             size="icon"

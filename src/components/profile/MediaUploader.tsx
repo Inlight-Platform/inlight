@@ -44,7 +44,7 @@ interface MediaUploaderProps {
 }
 
 const acceptTypes: Record<MediaType, string> = {
-  photo: 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/avif,image/heic,image/heif',
+  photo: 'image/jpeg,image/png,image/gif,image/webp',
   video: 'video/mp4,video/webm,video/quicktime',
   audio: 'audio/mpeg,audio/wav,audio/mp3',
   document: 'application/pdf',
@@ -80,61 +80,40 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   const { uploadFile, uploading, progress } = useMediaUpload();
   const [lightboxItem, setLightboxItem] = useState<MediaItem | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-
-  // Photo crop queue
-  const pendingCropFilesRef = useRef<File[]>([]);
-  const cropCompletedRef = useRef(false);
-  const [cropperImageSrc, setCropperImageSrc] = useState('');
-  const [cropperOpen, setCropperOpen] = useState(false);
-
-  const loadFileAsDataUrl = (file: File): Promise<string> =>
-    new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.readAsDataURL(file);
-    });
-
-  const startNextCrop = async () => {
-    if (pendingCropFilesRef.current.length === 0) {
-      setCropperOpen(false);
-      setCropperImageSrc('');
-      await queryClient.invalidateQueries({ queryKey: ['user-media', userId] });
-      onUploadComplete();
-      return;
-    }
-    const nextFile = pendingCropFilesRef.current[0];
-    const dataUrl = await loadFileAsDataUrl(nextFile);
-    setCropperImageSrc(dataUrl);
-    setCropperOpen(true);
-  };
-
-  const handlePhotoCropComplete = async (blob: Blob) => {
-    cropCompletedRef.current = true;
-    const croppedFile = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
-    await uploadFile(croppedFile, userId, 'public');
-    pendingCropFilesRef.current = pendingCropFilesRef.current.slice(1);
-  };
+  const [photoCropperOpen, setPhotoCropperOpen] = useState(false);
+  const [photoCropperSrc, setPhotoCropperSrc] = useState('');
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Snapshot into array BEFORE clearing the input — clearing input.value
-    // invalidates the FileList in most browsers.
-    const fileArray = Array.from(files);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-
-    if (mediaType !== 'photo') {
-      const uploadPromises = fileArray.map(file => uploadFile(file, userId, 'public'));
-      await Promise.all(uploadPromises);
-      await queryClient.invalidateQueries({ queryKey: ['user-media', userId] });
-      onUploadComplete();
+    if (mediaType === 'photo' && files.length === 1) {
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPhotoCropperSrc(reader.result as string);
+        setPhotoCropperOpen(true);
+      };
+      reader.readAsDataURL(file);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
-    // Photos: crop each file one by one
-    pendingCropFilesRef.current = fileArray;
-    await startNextCrop();
+    const uploadPromises = Array.from(files).map(file =>
+      uploadFile(file, userId, 'public')
+    );
+    await Promise.all(uploadPromises);
+    await queryClient.invalidateQueries({ queryKey: ['user-media', userId] });
+    onUploadComplete();
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handlePhotoCropComplete = async (blob: Blob) => {
+    const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+    await uploadFile(file, userId, 'public');
+    await queryClient.invalidateQueries({ queryKey: ['user-media', userId] });
+    onUploadComplete();
+    setPhotoCropperSrc('');
   };
 
   const handleDelete = async (item: MediaItem) => {
@@ -425,27 +404,6 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
         </div>
       )}
 
-      {/* Photo crop dialog */}
-      <ProjectImageCropper
-        open={cropperOpen}
-        onClose={() => {
-          if (cropCompletedRef.current) {
-            cropCompletedRef.current = false;
-            startNextCrop();
-          } else {
-            pendingCropFilesRef.current = [];
-            setCropperOpen(false);
-            setCropperImageSrc('');
-          }
-        }}
-        imageSrc={cropperImageSrc}
-        onCropComplete={handlePhotoCropComplete}
-        title="Crop photo"
-        aspect={1}
-        outputWidth={1000}
-        outputHeight={1000}
-      />
-
       {/* Lightbox */}
       <Dialog open={!!lightboxItem} onOpenChange={() => setLightboxItem(null)}>
         <DialogContent className="max-w-4xl bg-card border-border">
@@ -510,6 +468,19 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {mediaType === 'photo' && (
+        <ProjectImageCropper
+          open={photoCropperOpen}
+          onClose={() => { setPhotoCropperOpen(false); setPhotoCropperSrc(''); }}
+          imageSrc={photoCropperSrc}
+          onCropComplete={handlePhotoCropComplete}
+          title="Crop photo"
+          aspect={1}
+          outputWidth={800}
+          outputHeight={800}
+        />
+      )}
     </>
   );
 };

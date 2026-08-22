@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ExternalLink, FolderKanban, Theater, BookOpen, Briefcase } from 'lucide-react';
+import { ExternalLink, FolderKanban, Theater, BookOpen, Briefcase, Film, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface SharedItemData {
@@ -14,10 +14,14 @@ export interface SharedItemData {
 export const SHARED_ITEM_PREFIX = '__SHARED_ITEM__';
 export const SHARED_ITEM_SUFFIX = '__END__';
 
-export function parseSharedItem(content: string): SharedItemData | null {
-  if (!content.startsWith(SHARED_ITEM_PREFIX)) return null;
+export function parseSharedItem(content: string | null | undefined): SharedItemData | null {
+  if (!content) return null;
+  const trimmed = content.trim();
+  if (!trimmed.startsWith(SHARED_ITEM_PREFIX)) return null;
   try {
-    const jsonStr = content.slice(SHARED_ITEM_PREFIX.length, content.indexOf(SHARED_ITEM_SUFFIX));
+    const endIdx = trimmed.lastIndexOf(SHARED_ITEM_SUFFIX);
+    if (endIdx === -1) return null;
+    const jsonStr = trimmed.slice(SHARED_ITEM_PREFIX.length, endIdx);
     return JSON.parse(jsonStr);
   } catch {
     return null;
@@ -28,16 +32,13 @@ export function buildSharedItemMessage(data: SharedItemData): string {
   return `${SHARED_ITEM_PREFIX}${JSON.stringify(data)}${SHARED_ITEM_SUFFIX}`;
 }
 
-export function formatMessagePreview(content: string): string {
-  const shared = parseSharedItem(content);
-  return shared ? `Shared: ${shared.title}` : content;
-}
-
 const typeIcons: Record<string, React.ElementType> = {
   Project: FolderKanban,
   Show: Theater,
   Resource: BookOpen,
   Job: Briefcase,
+  Film: Film,
+  Profile: User,
 };
 
 interface SharedItemCardProps {
@@ -51,11 +52,13 @@ const SharedItemCard: React.FC<SharedItemCardProps> = ({ data, isOwn, onCardClic
   const Icon = typeIcons[data.type] || ExternalLink;
 
   const handleClick = () => {
+    if (!data.url) return;
+    // Non-project types with a custom handler: let the parent open an in-place sheet
     if (onCardClick && data.type !== 'Project') {
       onCardClick(data);
       return;
     }
-    if (!data.url) return;
+    // Internal links navigate, external links open in new tab
     if (data.url.startsWith('/') || data.url.startsWith(window.location.origin)) {
       const path = data.url.startsWith('http') ? new URL(data.url).pathname : data.url;
       navigate(path);
@@ -64,14 +67,24 @@ const SharedItemCard: React.FC<SharedItemCardProps> = ({ data, isOwn, onCardClic
     }
   };
 
+  const hasUrl = !!data.url;
+
   return (
     <button
       onClick={handleClick}
       className={cn(
-        'block w-full text-left rounded-xl overflow-hidden border transition-all hover:shadow-md',
-        isOwn
-          ? 'border-primary-foreground/20 hover:border-primary-foreground/40'
-          : 'border-border hover:border-primary/30'
+        'block w-full text-left rounded-xl overflow-hidden border transition-all',
+        hasUrl
+          ? cn(
+              'hover:shadow-md',
+              isOwn
+                ? 'border-primary-foreground/20 hover:border-primary-foreground/40'
+                : 'border-border hover:border-primary/30'
+            )
+          : cn(
+              'cursor-default',
+              isOwn ? 'border-primary-foreground/20' : 'border-border'
+            )
       )}
     >
       {data.image_url && (
@@ -100,7 +113,7 @@ const SharedItemCard: React.FC<SharedItemCardProps> = ({ data, isOwn, onCardClic
             'text-xs',
             isOwn ? 'text-primary-foreground/60' : 'text-muted-foreground'
           )}>
-            {data.type} · Tap to view
+            {hasUrl ? `${data.type} · Tap to view` : data.type}
           </p>
         </div>
       </div>

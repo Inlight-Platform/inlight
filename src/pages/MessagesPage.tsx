@@ -10,10 +10,9 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import GroupChatThread from '@/components/messages/GroupChatThread';
 import NewGroupMessageDialog from '@/components/messages/NewGroupMessageDialog';
-import SharedItemCard, { parseSharedItem, formatMessagePreview, SharedItemData } from '@/components/messages/SharedItemCard';
+import SharedItemCard, { parseSharedItem, SharedItemData } from '@/components/messages/SharedItemCard';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useMinimizedChat } from '@/hooks/useMinimizedChat';
 import { Show } from '@/components/stage-whisper/ShowCard';
 import { ShowDetailSheet } from '@/components/stage-whisper/ShowDetailSheet';
 import { FilmDetailSheet } from '@/components/stage-whisper/FilmDetailSheet';
@@ -22,6 +21,7 @@ import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
 import { OpportunityView } from '@/hooks/useOpportunities';
 import { useSavedShows } from '@/hooks/useSavedShows';
 import { useSavedFilms } from '@/hooks/useSavedFilms';
+import { useMinimizedChat } from '@/hooks/useMinimizedChat';
 
 type ChatType = 'dm' | 'group';
 
@@ -46,58 +46,6 @@ const MessagesPage: React.FC = () => {
 
   const { isSaved: isShowSaved, saveShow, unsaveShow } = useSavedShows();
   const { isFilmSaved, saveFilm, unsaveFilm } = useSavedFilms();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const { 
-    conversations, 
-    loadingConversations, 
-    useConversation, 
-    sendMessage, 
-    markAsRead 
-  } = useMessages();
-
-  const { groupChats, loadingGroupChats } = useGroupChats();
-
-  const { data: messages = [], isLoading: messagesLoading } = useConversation(
-    chatType === 'dm' ? selectedId : undefined
-  );
-  
-  const existingConversation = conversations.find(c => c.user_id === selectedId);
-  const selectedGroupChat = groupChats.find(gc => gc.id === selectedId);
-  
-  // Fetch profile for new DM conversations not in list yet
-  const { data: newUserProfile } = useQuery({
-    queryKey: ['message-partner-profile', selectedId],
-    queryFn: async () => {
-      if (!selectedId) return null;
-      const { data } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .eq('user_id', selectedId)
-        .maybeSingle();
-      return data;
-    },
-    enabled: !!selectedId && !existingConversation && chatType === 'dm',
-  });
-
-  const selectedConversation = existingConversation || (newUserProfile ? {
-    user_id: newUserProfile.user_id,
-    display_name: newUserProfile.display_name,
-    avatar_url: newUserProfile.avatar_url,
-    unread_count: 0,
-  } : null);
-
-  // Check connection status for selected DM partner
-  const { data: isConnectedToPartner } = useQuery({
-    queryKey: ['dm-connection-check', user?.id, selectedId],
-    queryFn: async () => {
-      if (!user?.id || !selectedId) return false;
-      const { data } = await supabase
-        .rpc('get_mutual_connections', { target_user_id: user.id });
-      return data?.some((m: { user_id: string }) => m.user_id === selectedId) || false;
-    },
-    enabled: !!user?.id && !!selectedId && chatType === 'dm',
-  });
 
   const { data: detailShow } = useQuery<Show | null>({
     queryKey: ['msg-detail-show', detailShowId],
@@ -171,6 +119,58 @@ const MessagesPage: React.FC = () => {
     if (filmMatch) { setDetailFilmId(filmMatch[1]); return; }
     if (jobMatch) { setDetailJobShared(item); setDetailJobId(jobMatch[1]); return; }
   };
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const {
+    conversations,
+    loadingConversations,
+    useConversation,
+    sendMessage,
+    markAsRead
+  } = useMessages();
+
+  const { groupChats, loadingGroupChats } = useGroupChats();
+
+  const { data: messages = [], isLoading: messagesLoading } = useConversation(
+    chatType === 'dm' ? selectedId : undefined
+  );
+
+  const existingConversation = conversations.find(c => c.user_id === selectedId);
+  const selectedGroupChat = groupChats.find(gc => gc.id === selectedId);
+
+  // Fetch profile for new DM conversations not in list yet
+  const { data: newUserProfile } = useQuery({
+    queryKey: ['message-partner-profile', selectedId],
+    queryFn: async () => {
+      if (!selectedId) return null;
+      const { data } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .eq('user_id', selectedId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!selectedId && !existingConversation && chatType === 'dm',
+  });
+
+  const selectedConversation = existingConversation || (newUserProfile ? {
+    user_id: newUserProfile.user_id,
+    display_name: newUserProfile.display_name,
+    avatar_url: newUserProfile.avatar_url,
+    unread_count: 0,
+  } : null);
+
+  // Check connection status for selected DM partner
+  const { data: isConnectedToPartner } = useQuery({
+    queryKey: ['dm-connection-check', user?.id, selectedId],
+    queryFn: async () => {
+      if (!user?.id || !selectedId) return false;
+      const { data } = await supabase
+        .rpc('get_mutual_connections', { target_user_id: user.id });
+      return data?.some((m: { user_id: string }) => m.user_id === selectedId) || false;
+    },
+    enabled: !!user?.id && !!selectedId && chatType === 'dm',
+  });
 
   // Handle route params for auto-opening conversations
   useEffect(() => {
@@ -224,10 +224,10 @@ const MessagesPage: React.FC = () => {
 
   const handleMinimize = () => {
     if (originRoute) {
-      const currentChatRoute = routeUserId 
-        ? `/messages/direct/${routeUserId}` 
-        : routeProjectId 
-        ? `/messages/group/${routeProjectId}` 
+      const currentChatRoute = routeUserId
+        ? `/messages/direct/${routeUserId}`
+        : routeProjectId
+        ? `/messages/group/${routeProjectId}`
         : '/messages';
       minimize(originRoute, currentChatRoute);
       navigate(originRoute);
@@ -334,7 +334,10 @@ const MessagesPage: React.FC = () => {
                         c.unread_count > 0 ? 'text-foreground' : 'text-muted-foreground'
                       )}>
                         {c.last_message.sender_id === user?.id && 'You: '}
-                        {formatMessagePreview(c.last_message.content)}
+                        {(() => {
+                          const shared = parseSharedItem(c.last_message.content);
+                          return shared ? `Shared a ${shared.type}` : c.last_message.content;
+                        })()}
                       </p>
                     )}
                   </div>
@@ -361,9 +364,9 @@ const MessagesPage: React.FC = () => {
             <h1 className="font-semibold">{selectedGroupChat.name}</h1>
             <p className="text-xs text-muted-foreground">Team Chat</p>
           </div>
-          <NewGroupMessageDialog 
-            groupChatId={selectedGroupChat.id} 
-            projectId={selectedGroupChat.project_id} 
+          <NewGroupMessageDialog
+            groupChatId={selectedGroupChat.id}
+            projectId={selectedGroupChat.project_id}
           />
           <Button variant="ghost" size="icon" onClick={handleMinimize}>
             <Minimize2 className="w-4 h-4" />
@@ -373,15 +376,15 @@ const MessagesPage: React.FC = () => {
     } else if (chatType === 'dm' && selectedConversation) {
       return (
         <div className="flex items-center gap-3 flex-1">
-          <Avatar 
-            className="w-10 h-10 cursor-pointer" 
+          <Avatar
+            className="w-10 h-10 cursor-pointer"
             onClick={() => navigate(`/profile/${selectedId}`)}
           >
             <AvatarImage src={selectedConversation.avatar_url || undefined} />
             <AvatarFallback>{selectedConversation.display_name?.[0] || 'U'}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
-            <h1 
+            <h1
               className="font-semibold cursor-pointer hover:underline"
               onClick={() => navigate(`/profile/${selectedId}`)}
             >
@@ -400,9 +403,9 @@ const MessagesPage: React.FC = () => {
   const renderChatArea = () => {
     if (chatType === 'group' && selectedGroupChat) {
       return (
-        <GroupChatThread 
-          groupChatId={selectedGroupChat.id} 
-          groupName={selectedGroupChat.name} 
+        <GroupChatThread
+          groupChatId={selectedGroupChat.id}
+          groupName={selectedGroupChat.name}
         />
       );
     }
@@ -454,7 +457,7 @@ const MessagesPage: React.FC = () => {
         {/* Send input - disabled if not connected */}
         <div className="p-4 border-t border-border">
           {canSendDm ? (
-            <form 
+            <form
               onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
               className="flex gap-2"
             >
@@ -464,8 +467,8 @@ const MessagesPage: React.FC = () => {
                 placeholder="Type a message..."
                 className="flex-1"
               />
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 size="icon"
                 disabled={!messageText.trim() || sendMessage.isPending}
               >

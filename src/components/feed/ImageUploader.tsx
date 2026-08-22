@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { ImagePlus, X, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +29,7 @@ const COMPRESSION_MAX_HEIGHT = 1920;
 const COMPRESSION_QUALITY = 0.85;
 const COMPRESSION_THRESHOLD = 500 * 1024; // Compress if > 500KB
 const TARGET_MAX_SIZE = 8 * 1024 * 1024; // Target max 8MB after compression
+const MAX_IMAGES = 4;
 
 interface ImageUploaderProps {
   userId: string;
@@ -38,6 +39,11 @@ interface ImageUploaderProps {
   className?: string;
   compact?: boolean;
   compactLabel?: React.ReactNode;
+  currentCount?: number;
+}
+
+export interface ImageUploaderHandle {
+  trigger: () => void;
 }
 
 /**
@@ -64,7 +70,7 @@ const compressImage = async (file: File): Promise<File> => {
 
       // Calculate new dimensions maintaining aspect ratio
       let { width, height } = img;
-      
+
       // For very large files, be more aggressive with resizing
       let maxDimension = COMPRESSION_MAX_WIDTH;
       if (file.size > 20 * 1024 * 1024) {
@@ -72,12 +78,12 @@ const compressImage = async (file: File): Promise<File> => {
       } else if (file.size > 10 * 1024 * 1024) {
         maxDimension = 1800;
       }
-      
+
       if (width > maxDimension) {
         height = (height * maxDimension) / width;
         width = maxDimension;
       }
-      
+
       if (height > maxDimension) {
         width = (width * maxDimension) / height;
         height = maxDimension;
@@ -86,7 +92,7 @@ const compressImage = async (file: File): Promise<File> => {
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
-      
+
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         resolve(file);
@@ -127,7 +133,7 @@ const compressImage = async (file: File): Promise<File> => {
             const compressedMB = (blob.size / 1024 / 1024).toFixed(2);
             const savings = Math.round((1 - blob.size / file.size) * 100);
             console.log(`Image compressed: ${originalMB}MB → ${compressedMB}MB (${savings}% smaller, quality: ${quality})`);
-            
+
             resolve(compressedFile);
           },
           'image/jpeg',
@@ -147,7 +153,7 @@ const compressImage = async (file: File): Promise<File> => {
   });
 };
 
-export const ImageUploader: React.FC<ImageUploaderProps> = ({
+export const ImageUploader = forwardRef<ImageUploaderHandle, ImageUploaderProps>(({
   userId,
   onImageUploaded,
   currentImageUrl,
@@ -155,11 +161,15 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   className,
   compact = false,
   compactLabel = 'Image',
-}) => {
+  currentCount = 0,
+}, ref) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  useImperativeHandle(ref, () => ({ trigger: () => fileInputRef.current?.click() }));
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
+  const remaining = MAX_IMAGES - currentCount;
+  const atLimit = remaining <= 0;
 
   const validateFile = (file: File): string | null => {
     // Check file size - allow up to 50MB, will be compressed
@@ -170,16 +180,16 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     // Check file type - be more permissive
     const fileType = file.type.toLowerCase();
     const fileName = file.name.toLowerCase();
-    
+
     // Check by MIME type first
     if (SUPPORTED_IMAGE_TYPES.includes(fileType)) {
       return null;
     }
-    
+
     // Fallback: check by extension for edge cases where MIME type is empty
     const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff', '.tif', '.avif', '.heic', '.heif'];
     const hasValidExtension = supportedExtensions.some(ext => fileName.endsWith(ext));
-    
+
     if (hasValidExtension) {
       return null;
     }
@@ -187,20 +197,17 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     return 'Please upload an image file (JPG, PNG, GIF, WebP, SVG, etc.)';
   };
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = async (file: File): Promise<string | null> => {
     const validationError = validateFile(file);
     if (validationError) {
       toast.error(validationError);
-      return;
+      return null;
     }
-
-    setUploading(true);
-    setUploadStatus('Compressing...');
 
     try {
       // Compress the image first
       const processedFile = await compressImage(file);
-      
+
       setUploadStatus('Uploading...');
 
       // Generate unique file path
@@ -229,21 +236,47 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         .from('profile-media')
         .getPublicUrl(filePath);
 
-      onImageUploaded(urlData.publicUrl);
-      toast.success('Image uploaded!');
+      return urlData.publicUrl;
     } catch (error: unknown) {
       console.error('Upload failed:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to upload image');
-    } finally {
-      setUploading(false);
-      setUploadStatus('');
+      return null;
+    }
+  };
+
+  const handleFiles = async (files: FileList | File[]) => {
+    if (atLimit) {
+      toast.error(`Maximum ${MAX_IMAGES} images per post.`);
+      return;
+    }
+
+    const selected = Array.from(files).slice(0, remaining);
+    if (!selected.length) return;
+
+    setUploading(true);
+    let uploaded = 0;
+
+    for (let i = 0; i < selected.length; i++) {
+      setUploadStatus(`Uploading ${i + 1} of ${selected.length}...`);
+      const publicUrl = await uploadFile(selected[i]);
+      if (publicUrl) {
+        onImageUploaded(publicUrl);
+        uploaded++;
+      }
+    }
+
+    setUploading(false);
+    setUploadStatus('');
+
+    if (uploaded > 0) {
+      toast.success(uploaded === 1 ? 'Image uploaded!' : `${uploaded} images uploaded!`);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      uploadFile(file);
+    const files = e.target.files;
+    if (files?.length) {
+      void handleFiles(files);
     }
     // Reset input so the same file can be selected again
     if (fileInputRef.current) {
@@ -266,9 +299,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     e.stopPropagation();
     setDragActive(false);
 
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      uploadFile(file);
+    const files = e.dataTransfer.files;
+    if (files?.length) {
+      void handleFiles(files);
     }
   };
 
@@ -279,9 +312,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   if (currentImageUrl) {
     return (
       <div className={cn("relative rounded-lg overflow-hidden", className)}>
-        <img 
-          src={currentImageUrl} 
-          alt="Uploaded preview" 
+        <img
+          src={currentImageUrl}
+          alt="Uploaded preview"
           className="w-full max-h-64 object-cover"
         />
         {onRemoveImage && (
@@ -305,6 +338,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           onChange={handleFileChange}
           className="hidden"
         />
@@ -312,14 +346,14 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           variant="ghost"
           size="sm"
           onClick={handleClick}
-          disabled={uploading}
+          disabled={uploading || atLimit}
         >
           {uploading ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
           ) : (
             <ImagePlus className="h-4 w-4 mr-2" />
           )}
-          {uploading ? uploadStatus || 'Uploading...' : compactLabel}
+          {uploading ? uploadStatus || 'Uploading...' : atLimit ? 'Max images' : compactLabel}
         </Button>
       </>
     );
@@ -331,19 +365,21 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         onChange={handleFileChange}
         className="hidden"
       />
       <div
-        onClick={handleClick}
+        onClick={() => !atLimit && handleClick()}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
         className={cn(
-          "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
-          dragActive 
-            ? "border-primary bg-primary/5" 
+          "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
+          atLimit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+          dragActive
+            ? "border-primary bg-primary/5"
             : "border-border hover:border-primary/50 hover:bg-accent/50",
           uploading && "pointer-events-none opacity-50"
         )}
@@ -360,11 +396,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               Drag and drop or click to upload
             </p>
             <p className="text-xs text-muted-foreground/70">
-              Images auto-compressed for fast uploads
+              Images auto-compressed for fast uploads · {remaining} of {MAX_IMAGES} slots remaining
             </p>
           </div>
         )}
       </div>
     </div>
   );
-};
+});

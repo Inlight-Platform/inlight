@@ -112,6 +112,7 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
     if (jobMatch) { setDetailJobShared(item); setDetailJobId(jobMatch[1]); return; }
   };
 
+  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -123,7 +124,10 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
   };
 
   const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(date).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const formatDate = (date: string) => {
@@ -131,11 +135,13 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+
     if (d.toDateString() === today.toDateString()) return 'Today';
     if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
+  // Group messages by date
   const groupedMessages = messages.reduce((groups, msg) => {
     const date = formatDate(msg.created_at);
     if (!groups[date]) groups[date] = [];
@@ -145,6 +151,7 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
 
   return (
     <div className="flex flex-col h-full">
+      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
@@ -173,14 +180,19 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
                   return (
                     <div
                       key={msg.id}
-                      className={cn('flex items-end gap-2', isOwn ? 'justify-end' : 'justify-start')}
+                      className={cn(
+                        'flex items-end gap-2',
+                        isOwn ? 'justify-end' : 'justify-start'
+                      )}
                     >
                       {!isOwn && (
                         <div className="w-8">
                           {showAvatar && (
                             <Avatar className="w-8 h-8">
                               <AvatarImage src={msg.sender?.avatar_url || undefined} />
-                              <AvatarFallback>{msg.sender?.display_name?.[0] || 'U'}</AvatarFallback>
+                              <AvatarFallback>
+                                {msg.sender?.display_name?.[0] || 'U'}
+                              </AvatarFallback>
                             </Avatar>
                           )}
                         </div>
@@ -268,6 +280,7 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
         onApplicationSubmitted={() => { setShowApplyDialog(false); setDetailJobId(null); }}
       />
 
+      {/* Input Area */}
       <div className="border-t border-border p-4">
         <form
           onSubmit={(e) => { e.preventDefault(); handleSend(); }}
