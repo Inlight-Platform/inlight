@@ -24,8 +24,26 @@ import { ImagePositioner } from '@/components/profile/ImagePositioner';
 import { useMyGroups } from '@/hooks/useGroups';
 import { SERVICE_CATEGORIES } from '@/data/services';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { Json } from '@/integrations/supabase/types';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
+
+type ImagePosition = { x: number; y: number; zoom: number };
+
+const DEFAULT_IMAGE_POSITION: ImagePosition = { x: 50, y: 50, zoom: 1 };
+
+const serializeImagePositions = (positions: ImagePosition[], count: number): Json | null => {
+  if (count === 0) return null;
+
+  return Array.from({ length: count }, (_, index) => {
+    const position = positions[index] ?? DEFAULT_IMAGE_POSITION;
+    return {
+      x: Number.isFinite(position.x) ? position.x : DEFAULT_IMAGE_POSITION.x,
+      y: Number.isFinite(position.y) ? position.y : DEFAULT_IMAGE_POSITION.y,
+      zoom: Number.isFinite(position.zoom) ? position.zoom : DEFAULT_IMAGE_POSITION.zoom,
+    };
+  });
+};
 
 interface PostCreatorProps {
   userProfile?: {
@@ -114,6 +132,17 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const createPostMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error('Must be logged in');
+
+      const imageFields = imageUrls.length > 0
+        ? {
+            image_url: imageUrls[0],
+            image_urls: imageUrls,
+            image_position_x: imagePositions[0]?.x ?? DEFAULT_IMAGE_POSITION.x,
+            image_position_y: imagePositions[0]?.y ?? DEFAULT_IMAGE_POSITION.y,
+            image_zoom: imagePositions[0]?.zoom ?? DEFAULT_IMAGE_POSITION.zoom,
+            image_positions: serializeImagePositions(imagePositions, imageUrls.length),
+          }
+        : {};
       
       if (postType === 'update') {
         const categoryLabel = SERVICE_CATEGORIES.find((c) => c.slug === serviceCategory)?.label;
@@ -125,12 +154,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           .insert({
             user_id: user.id,
             content: prefixedContent,
-            image_url: imageUrls[0] || null,
-            image_urls: imageUrls.length > 0 ? imageUrls : null,
-            image_position_x: imagePositions[0]?.x ?? 50,
-            image_position_y: imagePositions[0]?.y ?? 50,
-            image_zoom: imagePositions[0]?.zoom ?? 1,
-            image_positions: imagePositions.length > 0 ? imagePositions : null,
+            ...imageFields,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
@@ -201,12 +225,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
             event_date: eventDateValue,
             location: location.trim() || null,
             event_type: eventType.trim() || 'general',
-            image_url: imageUrls[0] || null,
-            image_urls: imageUrls.length > 0 ? imageUrls : null,
-            image_position_x: imagePositions[0]?.x ?? 50,
-            image_position_y: imagePositions[0]?.y ?? 50,
-            image_zoom: imagePositions[0]?.zoom ?? 1,
-            image_positions: imagePositions.length > 0 ? imagePositions : null,
+            ...imageFields,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             custom_question: customQuestion.trim() || null,
@@ -244,12 +263,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           .insert({
             user_id: user.id,
             content: `🎯 **${title.trim()}**\n\n${content.trim()}${location ? `\n\n📍 ${location}` : ''}`,
-            image_url: imageUrls[0] || null,
-            image_urls: imageUrls.length > 0 ? imageUrls : null,
-            image_position_x: imagePositions[0]?.x ?? 50,
-            image_position_y: imagePositions[0]?.y ?? 50,
-            image_zoom: imagePositions[0]?.zoom ?? 1,
-            image_positions: imagePositions.length > 0 ? imagePositions : null,
+            ...imageFields,
             link_url: linkUrl.trim() || null,
             link_title: linkTitle.trim() || null,
             visibility,
