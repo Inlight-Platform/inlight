@@ -147,7 +147,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
           .select('image_url, image_urls, image_position_x, image_position_y, image_zoom, image_positions')
           .eq('id', item.id)
           .single();
-        
+
         if (data) {
           const urls = data.image_urls?.length ? data.image_urls : data.image_url ? [data.image_url] : [];
           const fallback = {
@@ -174,7 +174,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
         if (item.type === 'job' && !canManageJobs) throw new Error('This beta group cannot edit jobs.');
         if (item.type === 'project' && !canManageProjects) throw new Error('This beta group cannot edit projects.');
       }
-      
+
       if (item.type === 'post' || item.type === 'job') {
         ({ error } = await supabase
           .from('posts')
@@ -216,7 +216,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
           })
           .eq('id', item.id));
       }
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -290,7 +290,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
               Edit {item.type === 'job' ? 'Opportunity' : item.type.charAt(0).toUpperCase() + item.type.slice(1)}
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             {showTitle && (
               <div className="space-y-2">
@@ -303,7 +303,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
                 />
               </div>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="content">
                 {isEvent || isProject ? 'Description' : 'Content'}
@@ -321,7 +321,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
             {showImage && (
               <div className="space-y-2">
                 <Label>Image</Label>
-                
+
                 {imageUrls.length > 0 ? (
                   <div className="space-y-3">
                     {selectedImageUrl && (

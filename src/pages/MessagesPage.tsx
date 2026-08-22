@@ -121,12 +121,12 @@ const MessagesPage: React.FC = () => {
   };
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { 
-    conversations, 
-    loadingConversations, 
-    useConversation, 
-    sendMessage, 
-    markAsRead 
+  const {
+    conversations,
+    loadingConversations,
+    useConversation,
+    sendMessage,
+    markAsRead
   } = useMessages();
 
   const { groupChats, loadingGroupChats } = useGroupChats();
@@ -134,10 +134,10 @@ const MessagesPage: React.FC = () => {
   const { data: messages = [], isLoading: messagesLoading } = useConversation(
     chatType === 'dm' ? selectedId : undefined
   );
-  
+
   const existingConversation = conversations.find(c => c.user_id === selectedId);
   const selectedGroupChat = groupChats.find(gc => gc.id === selectedId);
-  
+
   // Fetch profile for new DM conversations not in list yet
   const { data: newUserProfile } = useQuery({
     queryKey: ['message-partner-profile', selectedId],
@@ -224,10 +224,10 @@ const MessagesPage: React.FC = () => {
 
   const handleMinimize = () => {
     if (originRoute) {
-      const currentChatRoute = routeUserId 
-        ? `/messages/direct/${routeUserId}` 
-        : routeProjectId 
-        ? `/messages/group/${routeProjectId}` 
+      const currentChatRoute = routeUserId
+        ? `/messages/direct/${routeUserId}`
+        : routeProjectId
+        ? `/messages/group/${routeProjectId}`
         : '/messages';
       minimize(originRoute, currentChatRoute);
       navigate(originRoute);
@@ -364,9 +364,9 @@ const MessagesPage: React.FC = () => {
             <h1 className="font-semibold">{selectedGroupChat.name}</h1>
             <p className="text-xs text-muted-foreground">Team Chat</p>
           </div>
-          <NewGroupMessageDialog 
-            groupChatId={selectedGroupChat.id} 
-            projectId={selectedGroupChat.project_id} 
+          <NewGroupMessageDialog
+            groupChatId={selectedGroupChat.id}
+            projectId={selectedGroupChat.project_id}
           />
           <Button variant="ghost" size="icon" onClick={handleMinimize}>
             <Minimize2 className="w-4 h-4" />
@@ -376,15 +376,15 @@ const MessagesPage: React.FC = () => {
     } else if (chatType === 'dm' && selectedConversation) {
       return (
         <div className="flex items-center gap-3 flex-1">
-          <Avatar 
-            className="w-10 h-10 cursor-pointer" 
+          <Avatar
+            className="w-10 h-10 cursor-pointer"
             onClick={() => navigate(`/profile/${selectedId}`)}
           >
             <AvatarImage src={selectedConversation.avatar_url || undefined} />
             <AvatarFallback>{selectedConversation.display_name?.[0] || 'U'}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
-            <h1 
+            <h1
               className="font-semibold cursor-pointer hover:underline"
               onClick={() => navigate(`/profile/${selectedId}`)}
             >
@@ -403,9 +403,9 @@ const MessagesPage: React.FC = () => {
   const renderChatArea = () => {
     if (chatType === 'group' && selectedGroupChat) {
       return (
-        <GroupChatThread 
-          groupChatId={selectedGroupChat.id} 
-          groupName={selectedGroupChat.name} 
+        <GroupChatThread
+          groupChatId={selectedGroupChat.id}
+          groupName={selectedGroupChat.name}
         />
       );
     }
@@ -457,7 +457,7 @@ const MessagesPage: React.FC = () => {
         {/* Send input - disabled if not connected */}
         <div className="p-4 border-t border-border">
           {canSendDm ? (
-            <form 
+            <form
               onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
               className="flex gap-2"
             >
@@ -467,8 +467,8 @@ const MessagesPage: React.FC = () => {
                 placeholder="Type a message..."
                 className="flex-1"
               />
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 size="icon"
                 disabled={!messageText.trim() || sendMessage.isPending}
               >

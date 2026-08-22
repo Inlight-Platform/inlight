@@ -96,6 +96,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
   const posX = item.image_position_x ?? 50;
   const posY = item.image_position_y ?? 50;
   const zoom = item.image_zoom ?? 1;
+  const imageFitClass = item.type === 'project' ? 'object-contain' : 'object-cover';
 
   const baseShell =
     'group relative col-span-1 overflow-hidden rounded-3xl cursor-pointer transition-all duration-500 sm:col-span-12';
@@ -120,7 +121,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               positionZoom={zoom}
               positions={item.image_positions}
               className="absolute inset-0 rounded-none"
-              imageClassName="h-full max-h-none object-cover opacity-60 grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80"
+              imageClassName={cn('h-full max-h-none opacity-60 grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80', imageFitClass)}
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[hsl(222_45%_5%)] via-[hsl(222_45%_5%)]/60 to-transparent" />
           </>
@@ -180,7 +181,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                 positionZoom={zoom}
                 positions={item.image_positions}
                 className="h-full rounded-2xl"
-                imageClassName="h-full max-h-none object-cover"
+                imageClassName={cn('h-full max-h-none', imageFitClass)}
               />
             </div>
           )}
@@ -255,7 +256,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                 positionZoom={zoom}
                 positions={item.image_positions}
                 className="h-full rounded-xl"
-                imageClassName="h-full max-h-none object-cover"
+                imageClassName={cn('h-full max-h-none', imageFitClass)}
               />
             </div>
           ) : subtitle ? (
@@ -301,7 +302,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                 positionZoom={zoom}
                 positions={item.image_positions}
                 className="h-full rounded-2xl"
-                imageClassName="h-full max-h-none object-cover"
+                imageClassName={cn('h-full max-h-none', imageFitClass)}
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-foreground/60">{meta.icon}</div>

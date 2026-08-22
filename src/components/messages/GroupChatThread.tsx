@@ -124,9 +124,9 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
   };
 
   const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return new Date(date).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -282,7 +282,7 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
 
       {/* Input Area */}
       <div className="border-t border-border p-4">
-        <form 
+        <form
           onSubmit={(e) => { e.preventDefault(); handleSend(); }}
           className="flex gap-2"
         >
@@ -292,8 +292,8 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
             placeholder="Type a message..."
             className="flex-1"
           />
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             size="icon"
             disabled={!messageText.trim() || sendGroupMessage.isPending}
           >

@@ -106,7 +106,7 @@ const PersonCard: React.FC<PersonCardProps> = ({
                   {user.role}
                 </p>
               ) : null}
-              
+
             </div>
           </div>
 

@@ -361,9 +361,13 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     : capitalizeName(item.creator_profile?.display_name || '') || 'Inlight Member';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
   const bodyText = item.content || item.description;
-  const compactCollapsed = compactSquare && !compactTextExpanded;
+  const compactEventMedia = compactSquare && item.type === 'event';
+  const compactProjectMedia = compactSquare && item.type === 'project';
+  const compactWideMedia = compactEventMedia || compactProjectMedia;
+  const compactCollapsed = compactSquare && !compactTextExpanded && !compactWideMedia;
   const compactBodyLineCount = bodyText?.split('\n').filter((line) => line.trim()).length || 0;
   const showCompactTextToggle = compactSquare && Boolean(bodyText && (bodyText.length > 90 || compactBodyLineCount > 2));
+  const compactSquareMedia = compactSquare && !compactWideMedia;
 
   return (
     <Card 
@@ -501,10 +505,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
             <div
               className={cn(
                 'rounded-lg overflow-hidden mb-3 relative bg-muted',
-                !compactSquare && 'aspect-video',
-                compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1',
-                compactSquare && compactTextExpanded && 'aspect-square mb-0',
-                compactSquare && !compactTextExpanded && 'aspect-square',
+                (!compactSquare || compactEventMedia) && 'aspect-video',
+                compactProjectMedia && 'aspect-[4/3]',
+                compactCollapsed && !compactWideMedia && 'mb-0 mt-auto min-h-0 flex-1',
+                compactSquareMedia && compactTextExpanded && 'aspect-square mb-0',
+                compactSquareMedia && !compactTextExpanded && 'aspect-square',
                 imageContainerClassName
               )}
             >
@@ -515,7 +520,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 positionZoom={item.image_zoom ?? 1}
                 positions={item.image_positions}
                 className="h-full rounded-lg"
-                imageClassName={cn(compactSquare && 'h-full max-h-none object-cover', imageClassName)}
+                imageClassName={cn((compactSquareMedia || compactWideMedia) && 'h-full max-h-none object-cover', imageClassName)}
               />
             </div>
           );

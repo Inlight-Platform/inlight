@@ -56,7 +56,7 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
     >
       {/* Image header - shown whenever the item has an image_url, with a placeholder icon for project/event/show without one */}
       {showImage && (
-        <div className="relative w-full h-32 overflow-hidden flex-shrink-0 bg-muted">
+        <div className={cn("relative w-full overflow-hidden flex-shrink-0 bg-muted", item.type === 'project' ? 'aspect-[4/3]' : 'h-32')}>
           {hasImage ? (
             <div className="w-full h-full" onClick={(e) => e.stopPropagation()}>
               <ImageCarousel
@@ -65,8 +65,11 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
                 positionY={item.image_position_y ?? 50}
                 positionZoom={item.image_zoom ?? 1}
                 positions={item.image_positions}
-                className="w-full h-32 rounded-none"
-                imageClassName="h-32 max-h-none object-cover group-hover:scale-105 transition-transform duration-300"
+                className={cn("w-full rounded-none", item.type === 'project' ? 'h-full' : 'h-32')}
+                imageClassName={cn(
+                  "max-h-none group-hover:scale-105 transition-transform duration-300",
+                  item.type === 'project' ? 'h-full object-cover' : 'h-32 object-cover'
+                )}
               />
             </div>
           ) : (

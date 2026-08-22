@@ -69,4 +69,3 @@ export const getFeedItemDestination = (item: FeedDestinationItem): FeedDestinati
 
   return null;
 };
-
