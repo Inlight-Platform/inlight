@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { FeedItemData } from './FeedItem';
+import { ImageCarousel } from './ImageCarousel';
 
 export type BentoSize = 'hero' | 'tall' | 'compact' | 'wide';
 
@@ -82,7 +83,8 @@ const sizeClasses: Record<BentoSize, string> = {
 
 export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClick }) => {
   const meta = typeMeta(item);
-  const hasImage = !!item.image_url;
+  const imageUrls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
+  const hasImage = imageUrls.length > 0;
   const showAnonymous = item.type === 'show' && item.is_anonymous;
   const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
@@ -94,23 +96,6 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
   const posX = item.image_position_x ?? 50;
   const posY = item.image_position_y ?? 50;
   const zoom = item.image_zoom ?? 1;
-  const objectPosition = `${posX}% ${posY}%`;
-  const zoomStyle = {
-    position: 'absolute' as const,
-    left: `${posX * (1 - zoom)}%`,
-    top: `${posY * (1 - zoom)}%`,
-    right: `${(100 - posX) * (1 - zoom)}%`,
-    bottom: `${(100 - posY) * (1 - zoom)}%`,
-  };
-  const imgFillStyle = {
-    position: 'absolute' as const,
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover' as const,
-    objectPosition,
-  };
 
   const baseShell =
     'group relative col-span-1 overflow-hidden rounded-3xl cursor-pointer transition-all duration-500 sm:col-span-12';
@@ -128,19 +113,19 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
       >
         {hasImage && (
           <>
-            <div style={zoomStyle}>
-              <img
-                src={item.image_url!}
-                alt={title}
-                loading="lazy"
-                style={{ ...imgFillStyle, opacity: 0.6 }}
-                className="grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80"
-              />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-[hsl(222_45%_5%)] via-[hsl(222_45%_5%)]/60 to-transparent" />
+            <ImageCarousel
+              urls={imageUrls}
+              positionX={posX}
+              positionY={posY}
+              positionZoom={zoom}
+              positions={item.image_positions}
+              className="absolute inset-0 rounded-none"
+              imageClassName="h-full max-h-none object-cover opacity-60 grayscale-[20%] transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-80"
+            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[hsl(222_45%_5%)] via-[hsl(222_45%_5%)]/60 to-transparent" />
           </>
         )}
-        <div className="relative flex h-full flex-col justify-end p-6 sm:p-10">
+        <div className="pointer-events-none relative flex h-full flex-col justify-end p-6 sm:p-10">
           <div className="mb-4 flex items-center gap-3">
             <span className={cn(labelPillClass, meta.pillClass)}>{meta.label}</span>
             <span className={cn('text-xs font-semibold', meta.accent)}>{timeAgo}</span>
@@ -182,20 +167,21 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
             : 'bg-gradient-to-br from-[hsl(222_40%_10%)] to-[hsl(222_45%_6%)] border border-primary/30 text-white hover:-translate-y-1'
         )}
       >
-        <div className="absolute right-6 top-6 z-10">
+        <div className="pointer-events-none absolute right-6 top-6 z-10">
           <span className={cn(labelPillClass, meta.pillClass)}>{meta.label}</span>
         </div>
         <div className="flex h-full flex-col p-6 sm:p-8">
           {hasImage && (
             <div className="relative mb-6 h-40 overflow-hidden rounded-2xl transition-transform duration-500 group-hover:scale-[0.97]">
-              <div style={zoomStyle}>
-                <img
-                  src={item.image_url!}
-                  alt={title}
-                  style={imgFillStyle}
-                  loading="lazy"
-                />
-              </div>
+              <ImageCarousel
+                urls={imageUrls}
+                positionX={posX}
+                positionY={posY}
+                positionZoom={zoom}
+                positions={item.image_positions}
+                className="h-full rounded-2xl"
+                imageClassName="h-full max-h-none object-cover"
+              />
             </div>
           )}
           <div className="flex flex-1 flex-col justify-center">
@@ -262,14 +248,15 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
           </div>
           {hasImage ? (
             <div className="relative mb-3 flex-1 overflow-hidden rounded-xl opacity-80 transition-opacity group-hover:opacity-100">
-              <div style={zoomStyle}>
-                <img
-                  src={item.image_url!}
-                  alt={title}
-                  style={imgFillStyle}
-                  loading="lazy"
-                />
-              </div>
+              <ImageCarousel
+                urls={imageUrls}
+                positionX={posX}
+                positionY={posY}
+                positionZoom={zoom}
+                positions={item.image_positions}
+                className="h-full rounded-xl"
+                imageClassName="h-full max-h-none object-cover"
+              />
             </div>
           ) : subtitle ? (
             <p className="mb-3 flex-1 text-sm text-muted-foreground line-clamp-3">{subtitle}</p>
@@ -307,13 +294,15 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
         <div className="flex items-start gap-4">
           <div className="relative h-20 w-20 flex-shrink-0 -rotate-3 overflow-hidden rounded-2xl bg-muted transition-transform duration-500 group-hover:rotate-0">
             {hasImage ? (
-              <div style={zoomStyle}>
-                <img
-                  src={item.image_url!}
-                  alt={title}
-                  style={imgFillStyle}
-                  loading="lazy"
-                /></div>
+              <ImageCarousel
+                urls={imageUrls}
+                positionX={posX}
+                positionY={posY}
+                positionZoom={zoom}
+                positions={item.image_positions}
+                className="h-full rounded-2xl"
+                imageClassName="h-full max-h-none object-cover"
+              />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-foreground/60">{meta.icon}</div>
             )}

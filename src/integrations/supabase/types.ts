@@ -539,7 +539,12 @@ export type Database = {
           event_date: string
           event_type: string | null
           id: string
+          image_position_x: number | null
+          image_position_y: number | null
+          image_positions: Json | null
           image_url: string | null
+          image_urls: string[] | null
+          image_zoom: number | null
           is_paid: boolean
           link_title: string | null
           link_url: string | null
@@ -559,7 +564,12 @@ export type Database = {
           event_date: string
           event_type?: string | null
           id?: string
+          image_position_x?: number | null
+          image_position_y?: number | null
+          image_positions?: Json | null
           image_url?: string | null
+          image_urls?: string[] | null
+          image_zoom?: number | null
           is_paid?: boolean
           link_title?: string | null
           link_url?: string | null
@@ -579,7 +589,12 @@ export type Database = {
           event_date?: string
           event_type?: string | null
           id?: string
+          image_position_x?: number | null
+          image_position_y?: number | null
+          image_positions?: Json | null
           image_url?: string | null
+          image_urls?: string[] | null
+          image_zoom?: number | null
           is_paid?: boolean
           link_title?: string | null
           link_url?: string | null
@@ -1210,7 +1225,10 @@ export type Database = {
           id: string
           image_position_x: number | null
           image_position_y: number | null
+          image_positions: Json | null
+          image_zoom: number | null
           image_url: string | null
+          image_urls: string[] | null
           link_title: string | null
           link_url: string | null
           updated_at: string
@@ -1223,7 +1241,10 @@ export type Database = {
           id?: string
           image_position_x?: number | null
           image_position_y?: number | null
+          image_positions?: Json | null
+          image_zoom?: number | null
           image_url?: string | null
+          image_urls?: string[] | null
           link_title?: string | null
           link_url?: string | null
           updated_at?: string
@@ -1236,7 +1257,10 @@ export type Database = {
           id?: string
           image_position_x?: number | null
           image_position_y?: number | null
+          image_positions?: Json | null
+          image_zoom?: number | null
           image_url?: string | null
+          image_urls?: string[] | null
           link_title?: string | null
           link_url?: string | null
           updated_at?: string

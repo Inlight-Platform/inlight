@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ImageCarousel } from './ImageCarousel';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -39,9 +40,11 @@ export interface FeedItemData {
   title?: string;
   description?: string;
   image_url?: string | null;
+  image_urls?: string[] | null;
   image_position_x?: number | null;
   image_position_y?: number | null;
   image_zoom?: number | null;
+  image_positions?: Array<{ x?: number | null; y?: number | null; zoom?: number | null }> | null;
   link_url?: string | null;
   link_title?: string | null;
   created_at: string;
@@ -490,11 +493,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Image - skip for open roles */}
-        {item.image_url && item.type !== 'open_role' && (() => {
-          const posX = item.image_position_x ?? 50;
-          const posY = item.image_position_y ?? 50;
-          const zoom = item.image_zoom ?? 1;
-          const hasPosition = item.image_position_x != null || item.image_position_y != null || (item.image_zoom != null && item.image_zoom !== 1);
+        {item.type !== 'open_role' && (() => {
+          const urls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
+          if (!urls.length) return null;
+
           return (
             <div
               className={cn(
@@ -506,30 +508,15 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 imageContainerClassName
               )}
             >
-              <div
-                style={{
-                  position: 'absolute',
-                  left: `${posX * (1 - zoom)}%`,
-                  top: `${posY * (1 - zoom)}%`,
-                  right: `${(100 - posX) * (1 - zoom)}%`,
-                  bottom: `${(100 - posY) * (1 - zoom)}%`,
-                }}
-              >
-                <img
-                  src={item.image_url}
-                  alt={item.title || 'Post image'}
-                  className={imageClassName}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    objectPosition: `${posX}% ${posY}%`,
-                  }}
-                />
-              </div>
+              <ImageCarousel
+                urls={urls}
+                positionX={item.image_position_x ?? 50}
+                positionY={item.image_position_y ?? 50}
+                positionZoom={item.image_zoom ?? 1}
+                positions={item.image_positions}
+                className="h-full rounded-lg"
+                imageClassName={cn(compactSquare && 'h-full max-h-none object-cover', imageClassName)}
+              />
             </div>
           );
         })()}
