@@ -954,7 +954,7 @@ const FeedPage: React.FC = () => {
             ) : contentFilter === 'projects' ? (
               renderProjectsContent()
             ) : isGroupContentFilter(contentFilter) ? (
-              <div className={`space-y-4 ${viewMode === 'scroll' ? 'max-w-2xl mx-auto' : ''}`}>
+              <div className="space-y-4">
                 {(() => {
                   if (groupsLoading) {
                     return (
@@ -1011,7 +1011,7 @@ const FeedPage: React.FC = () => {
                           )}
                         </div>
                       ) : viewMode === 'scroll' ? (
-                        <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-4 max-w-2xl mx-auto">
                           {groupFeedItems.map((item) => (
                             <FeedItem
                               key={`group-${item.type}-${item.id}`}
