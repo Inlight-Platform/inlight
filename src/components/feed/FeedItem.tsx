@@ -364,6 +364,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const compactCollapsed = compactSquare && !compactTextExpanded;
   const compactBodyLineCount = bodyText?.split('\n').filter((line) => line.trim()).length || 0;
   const showCompactTextToggle = compactSquare && Boolean(bodyText && (bodyText.length > 90 || compactBodyLineCount > 2));
+  const compactEventMedia = compactSquare && item.type === 'event';
+  const compactSquareMedia = compactSquare && !compactEventMedia;
 
   return (
     <Card 
@@ -501,10 +503,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
             <div
               className={cn(
                 'rounded-lg overflow-hidden mb-3 relative bg-muted',
-                !compactSquare && 'aspect-video',
-                compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1',
-                compactSquare && compactTextExpanded && 'aspect-square mb-0',
-                compactSquare && !compactTextExpanded && 'aspect-square',
+                (!compactSquare || compactEventMedia) && 'aspect-video',
+                compactCollapsed && !compactEventMedia && 'mb-0 mt-auto min-h-0 flex-1',
+                compactSquareMedia && compactTextExpanded && 'aspect-square mb-0',
+                compactSquareMedia && !compactTextExpanded && 'aspect-square',
                 imageContainerClassName
               )}
             >
@@ -515,7 +517,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 positionZoom={item.image_zoom ?? 1}
                 positions={item.image_positions}
                 className="h-full rounded-lg"
-                imageClassName={cn(compactSquare && 'h-full max-h-none object-cover', imageClassName)}
+                imageClassName={cn((compactSquareMedia || compactEventMedia) && 'h-full max-h-none object-cover', imageClassName)}
               />
             </div>
           );
