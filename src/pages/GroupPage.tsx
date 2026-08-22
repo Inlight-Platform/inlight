@@ -69,7 +69,7 @@ const GroupPage: React.FC = () => {
   const { isAdmin: isPlatformAdmin } = useAdmin();
   const queryClient = useQueryClient();
   const { data: group, isLoading: groupLoading } = useGroupBySlug(slug);
-  const { data: myGroups = [] } = useMyGroups();
+  const { data: myGroups = [], isLoading: myGroupsLoading } = useMyGroups();
 
   const isFaculty = !!user && !!group && (
     isPlatformAdmin ||
@@ -80,6 +80,36 @@ const GroupPage: React.FC = () => {
     isFaculty ||
     myGroups.some((g) => g.id === group.id)
   );
+
+  const { data: myMembership } = useQuery<GroupMember | null>({
+    queryKey: ['my-group-membership', group?.id, user?.id],
+    enabled: !!group?.id && !!user?.id && !canViewPrivateGroup && !myGroupsLoading,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('group_members')
+        .select('id, user_id, status, joined_at')
+        .eq('group_id', group!.id)
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? ({ ...data, status: data.status as GroupMember['status'] }) : null;
+    },
+  });
+
+  const requestJoin = useMutation({
+    mutationFn: async () => {
+      if (!user || !group) throw new Error('Log in to request access');
+      const { error } = await supabase
+        .from('group_members')
+        .insert({ group_id: group.id, user_id: user.id, status: 'pending' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-group-membership', group?.id, user?.id] });
+      toast.success('Request sent');
+    },
+    onError: (error) => toast.error(getErrorMessage(error, 'Failed to request access')),
+  });
 
   const { data: groupMemberCount } = useQuery({
     queryKey: ['group-active-member-count', group?.id],
@@ -305,7 +335,7 @@ const GroupPage: React.FC = () => {
     onError: (error) => toast.error(getErrorMessage(error, 'Failed to remove admin')),
   });
 
-  if (groupLoading) {
+  if (groupLoading || myGroupsLoading) {
     return <div className="p-12 text-center text-muted-foreground">Loading group…</div>;
   }
   if (!group) {
@@ -345,6 +375,31 @@ const GroupPage: React.FC = () => {
           <Users className="h-3 w-3" /> {visibleMemberCount} member{visibleMemberCount === 1 ? '' : 's'}
         </p>
       </header>
+
+      {!canViewPrivateGroup && (
+        <Card>
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Lock className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold">Private group</h2>
+              <p className="text-sm text-muted-foreground">
+                Posts, projects, and member details are only available to active members and group admins.
+              </p>
+            </div>
+            {!user ? (
+              <Button onClick={() => navigate('/auth')}>Log in to request access</Button>
+            ) : myMembership?.status === 'pending' ? (
+              <Badge variant="secondary">Request pending</Badge>
+            ) : (
+              <Button onClick={() => requestJoin.mutate()} disabled={requestJoin.isPending}>
+                {requestJoin.isPending ? 'Sending…' : 'Request to join'}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {canViewPrivateGroup && (
         <>

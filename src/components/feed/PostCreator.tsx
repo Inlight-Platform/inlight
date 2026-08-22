@@ -52,10 +52,11 @@ interface PostCreatorProps {
   };
   defaultOpen?: boolean;
   defaultPostType?: PostType;
+  defaultGroupId?: string | null;
   onClose?: () => void;
 }
 
-export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOpen = false, defaultPostType = 'update', onClose }) => {
+export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOpen = false, defaultPostType = 'update', defaultGroupId = null, onClose }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -90,7 +91,15 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       navigate('/projects/new');
       onClose?.();
     }
-  }, [defaultPostType]);
+  }, [defaultPostType, navigate, onClose]);
+
+  useEffect(() => {
+    if (defaultGroupId && (defaultPostType === 'update' || defaultPostType === 'job')) {
+      setVisibility('group');
+      setSelectedGroupId(defaultGroupId);
+      setSelectedRecipients([]);
+    }
+  }, [defaultGroupId, defaultPostType]);
 
   const onComposerSelect = useCallback(() => {
     if (!composerEmblaApi) return;
@@ -123,6 +132,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setPostType('update');
     setVisibility('public');
     setSelectedRecipients([]);
+    setSelectedGroupId(null);
     setImagePositions([]);
     setIsPaid(false);
     setTicketPrice('');
@@ -297,6 +307,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     onSuccess: () => {
       resetForm();
       queryClient.invalidateQueries({ queryKey: ['feed-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-group-posts'] });
       queryClient.invalidateQueries({ queryKey: ['feed-events'] });
       toast.success(
         postType === 'update' ? 'Post created!' : 

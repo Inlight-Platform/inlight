@@ -1,8 +1,12 @@
 // NOTE: This is a focused, minimal test outline for FeedPage behavior. Adjust selects/rpc calls to match your implementation.
-import { describe, it, vi, expect } from 'vitest';
+import { beforeEach, describe, it, vi, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+
+const { mockMyGroups } = vi.hoisted(() => ({
+  mockMyGroups: [] as { id: string; slug: string; name: string; is_faculty: boolean }[],
+}));
 
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 'viewer' }, loading: false }),
@@ -18,16 +22,21 @@ vi.mock('@/hooks/useNetworkConnections', () => ({
 }));
 
 vi.mock('@/hooks/useGroups', () => ({
-  useMyGroups: () => ({ data: [] }),
+  useMyGroups: () => ({ data: mockMyGroups, isLoading: false }),
 }));
 
+interface MockFeedItem {
+  content?: string;
+  title?: string;
+}
+
 vi.mock('@/components/feed/FeedBentoCard', () => ({
-  FeedBentoCard: ({ item }: any) => <article>{item.content || item.title}</article>,
+  FeedBentoCard: ({ item }: { item: MockFeedItem }) => <article>{item.content || item.title}</article>,
   getBentoSize: () => 'medium',
 }));
 
 vi.mock('@/components/feed/FeedItem', () => ({
-  FeedItem: ({ item }: any) => <article>{item.content || item.title}</article>,
+  FeedItem: ({ item }: { item: MockFeedItem }) => <article>{item.content || item.title}</article>,
 }));
 
 vi.mock('@/components/feed/WelcomeMessage', () => ({
@@ -66,7 +75,16 @@ vi.mock('@/integrations/supabase/client', () => {
   return {
     supabase: {
       from: (table: string) => {
-        const chain: any = {
+        const chain: {
+          select: ReturnType<typeof vi.fn>;
+          not: ReturnType<typeof vi.fn>;
+          order: ReturnType<typeof vi.fn>;
+          limit: ReturnType<typeof vi.fn>;
+          in: ReturnType<typeof vi.fn>;
+          eq: ReturnType<typeof vi.fn>;
+          maybeSingle: ReturnType<typeof vi.fn>;
+          update: ReturnType<typeof vi.fn>;
+        } = {
           select: vi.fn(() => chain),
           not: vi.fn(() => chain),
           order: vi.fn(() => chain),
@@ -83,19 +101,23 @@ vi.mock('@/integrations/supabase/client', () => {
   };
 });
 
-const renderFeed = (ui: React.ReactElement) => {
+const renderFeed = (ui: React.ReactElement, initialEntries = ['/']) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
     </MemoryRouter>
   );
 };
 
 describe('FeedPage (filtered posts)', () => {
+  beforeEach(() => {
+    mockMyGroups.length = 0;
+  });
+
   it('shows posts with visible creator profiles and filters out orphan posts', async () => {
     // Lazy: import FeedPage to exercise rendering
     const FeedPage = (await import('@/pages/FeedPage')).default;
@@ -105,5 +127,26 @@ describe('FeedPage (filtered posts)', () => {
     // Ensure 'Visible Post' is rendered and 'Orphan Post' is not
     expect(await screen.findByText('Visible Post')).toBeDefined();
     expect(screen.queryByText('Orphan Post')).toBeNull();
+  });
+
+  it('renders a private tab for each accessible group', async () => {
+    mockMyGroups.push(
+      { id: 'group-1', slug: 'film', name: 'Film Dept', is_faculty: false },
+      { id: 'group-2', slug: 'acting', name: 'Acting Lab', is_faculty: true }
+    );
+
+    const FeedPage = (await import('@/pages/FeedPage')).default;
+    renderFeed(FeedPage ? <FeedPage /> : null);
+
+    expect(await screen.findByRole('button', { name: /Film Dept/i })).toBeDefined();
+    expect(await screen.findByRole('button', { name: /Acting Lab/i })).toBeDefined();
+  });
+
+  it('falls back to the normal feed when a no-group user has a stale group tab URL', async () => {
+    const FeedPage = (await import('@/pages/FeedPage')).default;
+    renderFeed(FeedPage ? <FeedPage /> : null, ['/?tab=group%3Astale-group']);
+
+    expect(await screen.findByText('Visible Post')).toBeDefined();
+    expect(screen.queryByText('You do not have access to this private group feed.')).toBeNull();
   });
 });
