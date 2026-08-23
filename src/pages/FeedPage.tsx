@@ -8,6 +8,7 @@ import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import { Button } from '@/components/ui/button';
 import { PostCreator, PostType } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
+import { PostComments } from '@/components/feed/PostComments';
 import { FeedBentoCard, getBentoSize } from '@/components/feed/FeedBentoCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { WelcomeMessage } from '@/components/feed/WelcomeMessage';
@@ -1145,11 +1146,14 @@ const FeedPage: React.FC = () => {
             <SheetTitle className="text-left">Details</SheetTitle>
           </SheetHeader>
           {selectedItem && (
-            <div className="mt-4">
+            <div className="mt-4 space-y-4 pb-8">
               <FeedItem
                 item={selectedItem}
                 networkDegree={selectedItem.user_id === user?.id ? null : getConnectionDegree(selectedItem.user_id)}
               />
+              {(selectedItem.type === 'post' || selectedItem.type === 'job') && (
+                <PostComments postId={selectedItem.id} postOwnerId={selectedItem.user_id} />
+              )}
             </div>
           )}
         </SheetContent>
