@@ -128,7 +128,7 @@ describe('OpenRolesDisplay', () => {
     await renderOpenRoles({ isProjectMember: false });
 
     expect(await screen.findByText('Gaffer')).toBeInTheDocument();
-    expect(screen.getByText(/Apply to an open role, or share it with someone who would be a great fit/i)).toBeInTheDocument();
+    expect(screen.getByText(/Interested in joining\? Apply to an open role now\./i)).toBeInTheDocument();
     expect(screen.queryByText('Director')).not.toBeInTheDocument();
     expect(screen.queryByText('Invitation pending')).not.toBeInTheDocument();
     expect(screen.queryByText('Role filled')).not.toBeInTheDocument();
