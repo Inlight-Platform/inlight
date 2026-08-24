@@ -425,12 +425,28 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
     return isProjectMember && isAcceptedAssignedRole(role);
   });
 
-  if (visibleRoles.length === 0) return null;
+  const hasVisibleOpenRoles = visibleRoles.some((role) => !role.assigned_user_id);
+  const projectTitle = projectData?.title?.trim() || 'this';
+
+  if (visibleRoles.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No open roles in {projectTitle} Project. Check back later.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Open Roles</h3>
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold">Open Roles</h3>
+          {!isCreator && hasVisibleOpenRoles && (
+            <p className="text-sm text-muted-foreground">
+              Interested in joining? Apply to an open role, or share it with someone who would be a great fit.
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-3">

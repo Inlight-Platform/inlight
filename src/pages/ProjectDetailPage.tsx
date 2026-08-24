@@ -1049,9 +1049,11 @@ const ProjectDetailPage: React.FC = () => {
                       <ChevronDown className="w-5 h-5 text-muted-foreground" />
                     )}
                   </button>
-                  <p className="text-sm text-muted-foreground font-normal">
-                    Add roles needed for this project. Open roles on public projects appear on Jobs.
-                  </p>
+                  {isCreator && (
+                    <p className="text-sm text-muted-foreground font-normal">
+                      Add roles needed for this project. Open roles on public projects appear on Jobs.
+                    </p>
+                  )}
                 </div>
               </CollapsibleTrigger>
               {canEditProject && (

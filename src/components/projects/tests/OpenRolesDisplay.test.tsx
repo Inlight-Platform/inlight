@@ -128,8 +128,34 @@ describe('OpenRolesDisplay', () => {
     await renderOpenRoles({ isProjectMember: false });
 
     expect(await screen.findByText('Gaffer')).toBeInTheDocument();
+    expect(screen.getByText(/Apply to an open role, or share it with someone who would be a great fit/i)).toBeInTheDocument();
     expect(screen.queryByText('Director')).not.toBeInTheDocument();
     expect(screen.queryByText('Invitation pending')).not.toBeInTheDocument();
     expect(screen.queryByText('Role filled')).not.toBeInTheDocument();
+  });
+
+  it('shows a friendly empty state when no roles are visible to the viewer', async () => {
+    mockRows.projectRoles = [
+      {
+        id: 'role_director',
+        role_name: 'Director',
+        assigned_user_id: 'invitee_a',
+        project_id: 'project_123',
+      },
+    ];
+    mockRows.projectInvitations = [
+      {
+        project_role_id: 'role_director',
+        receiver_id: 'invitee_a',
+        status: 'pending',
+      },
+    ];
+    mockRows.projectMembers = [];
+
+    await renderOpenRoles({ isProjectMember: false });
+
+    expect(await screen.findByText('No open roles in Test Project. Check back later.')).toBeInTheDocument();
+    expect(screen.queryByText('Director')).not.toBeInTheDocument();
+    expect(screen.queryByText('Invitation pending')).not.toBeInTheDocument();
   });
 });
