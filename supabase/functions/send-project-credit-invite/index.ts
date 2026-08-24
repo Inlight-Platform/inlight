@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     }
     // Use strict equality — null/undefined (RPC error) falls back to signup mode
     const authMode = emailExists === true ? "signin" : "signup";
-    const inviteUrl = `${getSiteUrl()}/auth?mode=${authMode}&credit_invite=${encodeURIComponent(token)}`;
+    const inviteUrl = `${getSiteUrl()}/auth?mode=${authMode}&credit_invite=${encodeURIComponent(token)}&project_id=${encodeURIComponent(normalizedProjectId)}`;
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
 
     if (!resendApiKey) {
