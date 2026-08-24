@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, Mail, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { ensureAcceptedProjectCredit } from '@/lib/projectInvitationCredits';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -69,10 +70,19 @@ export const ProjectInvitationPrompt: React.FC<ProjectInvitationPromptProps> = (
       });
 
       if (error) throw error;
+
+      if (user?.id) {
+        await ensureAcceptedProjectCredit({
+          userId: user.id,
+          projectTitle,
+          roleName: invitation.roleName,
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-pending-invitation', projectId, user?.id] });
       queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-role-members', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-role-invitations', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
       queryClient.invalidateQueries({ queryKey: ['my-invitations', user?.id] });

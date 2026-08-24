@@ -2,6 +2,8 @@ import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { ensureAcceptedProjectCredit } from '@/lib/projectInvitationCredits';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -38,6 +40,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const acceptMutation = useMutation({
     mutationFn: async () => {
@@ -46,10 +49,19 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
       });
 
       if (error) throw error;
+
+      if (user?.id) {
+        await ensureAcceptedProjectCredit({
+          userId: user.id,
+          projectTitle: invitation.project_role.project.title,
+          roleName: invitation.project_role.role_name,
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-invitations'] });
       queryClient.invalidateQueries({ queryKey: ['open-roles', invitation.project_role.project.id] });
+      queryClient.invalidateQueries({ queryKey: ['project-role-members', invitation.project_role.project.id] });
       queryClient.invalidateQueries({ queryKey: ['project-members', invitation.project_role.project.id] });
       queryClient.invalidateQueries({ queryKey: ['credits'] });
       toast.success(`You've joined "${invitation.project_role.project.title}" as ${invitation.project_role.role_name}!`);

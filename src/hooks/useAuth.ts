@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { emailNotConfirmedMessage, isUserEmailConfirmed } from '@/lib/authVerification';
+import { claimStoredInvites, storeInviteTokens } from '@/lib/inviteClaims';
 
 export const accountAlreadyExistsMessage =
   'Your account already exists. Try signing in or resetting your password.';
@@ -85,27 +86,7 @@ export function useAuth() {
     if (!activeSession?.user) return;
 
     try {
-      const platformToken = localStorage.getItem('inlight_platform_invite_token');
-      const creditToken = localStorage.getItem('inlight_project_credit_invite_token');
-
-      if (!platformToken && !creditToken) {
-        return;
-      }
-
-      const { data, error } = await supabase.rpc('claim_invites_on_signup', {
-        _platform_token: platformToken || undefined,
-        _credit_token: creditToken || undefined,
-      });
-
-      if (error) {
-        console.error('Invite claim failed:', error);
-        return;
-      }
-
-      localStorage.removeItem('inlight_platform_invite_token');
-      localStorage.removeItem('inlight_project_credit_invite_token');
-
-      const projectId = (data as any)?.credit_invite?.project_id;
+      const projectId = await claimStoredInvites();
       if (projectId) {
         window.location.replace(`/projects/${projectId}`);
       }
@@ -124,6 +105,7 @@ export function useAuth() {
         const type = url.searchParams.get('type');
         const inviteToken = url.searchParams.get('invite');
         const creditInviteToken = url.searchParams.get('credit_invite');
+        const creditInviteProjectId = url.searchParams.get('project_id');
         const isRecoveryFlow = type === 'recovery' || url.searchParams.get('mode') === 'reset';
         const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
         const hashAccessToken = hashParams.get('access_token');
@@ -139,12 +121,7 @@ export function useAuth() {
           );
         };
 
-        if (inviteToken) {
-          localStorage.setItem('inlight_platform_invite_token', inviteToken);
-        }
-        if (creditInviteToken) {
-          localStorage.setItem('inlight_project_credit_invite_token', creditInviteToken);
-        }
+        storeInviteTokens(inviteToken, creditInviteToken, creditInviteProjectId);
 
         if (hashAccessToken && hashRefreshToken) {
           const { data, error } = await supabase.auth.setSession({
