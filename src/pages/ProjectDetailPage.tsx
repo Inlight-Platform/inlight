@@ -70,6 +70,12 @@ interface ProjectMember {
   };
 }
 
+interface ProjectRoleVisibility {
+  id: string;
+  role_name: string;
+  assigned_user_id: string | null;
+}
+
 interface ProjectPhoto {
   id: string;
   image_url: string;
@@ -212,6 +218,9 @@ const ProjectDetailPage: React.FC = () => {
     enabled: !!projectId,
   });
 
+  const isCreator = project?.creator_id === user?.id;
+  const isMember = members.some(m => m.user_id === user?.id) || isCreator;
+
   // Fetch project photos
   const { data: photos = [] } = useQuery({
     queryKey: ['project-photos', projectId],
@@ -229,19 +238,35 @@ const ProjectDetailPage: React.FC = () => {
     enabled: !!projectId,
   });
 
-  const { data: roleCount = 0 } = useQuery({
-    queryKey: ['project-role-count', projectId],
+  const memberRoleVisibilityKey = members
+    .map((member) => `${member.user_id}:${member.role?.trim().toLowerCase() || ''}`)
+    .sort()
+    .join(',');
+
+  const { data: visibleRoleCount = 0 } = useQuery({
+    queryKey: ['project-visible-role-count', projectId, isCreator, isMember, memberRoleVisibilityKey],
     queryFn: async () => {
       if (!projectId) return 0;
-      const { count, error } = await supabase
+      const { data, error } = await supabase
         .from('project_roles')
-        .select('id', { count: 'exact', head: true })
+        .select('id, role_name, assigned_user_id')
         .eq('project_id', projectId);
 
       if (error) throw error;
-      return count ?? 0;
+      const roles = (data || []) as ProjectRoleVisibility[];
+      if (isCreator) return roles.length;
+
+      return roles.filter((role) => {
+        if (!role.assigned_user_id) return true;
+        if (!isMember) return false;
+
+        return members.some((member) =>
+          member.user_id === role.assigned_user_id &&
+          member.role?.trim().toLowerCase() === role.role_name.trim().toLowerCase()
+        );
+      }).length;
     },
-    enabled: !!projectId,
+    enabled: !!projectId && !!project,
   });
 
   // Fetch project links
@@ -277,8 +302,6 @@ const ProjectDetailPage: React.FC = () => {
     enabled: !!projectId && !!user?.id,
   });
 
-  const isCreator = project?.creator_id === user?.id;
-  const isMember = members.some(m => m.user_id === user?.id) || isCreator;
   const canEditProject = canManageProjects && isCreator;
   const canManageProjectContent = canManageProjects && isMember;
 
@@ -289,9 +312,9 @@ const ProjectDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (!rolesManuallyToggled) {
-      setRolesOpen(roleCount > 0);
+      setRolesOpen(visibleRoleCount > 0);
     }
-  }, [roleCount, rolesManuallyToggled]);
+  }, [visibleRoleCount, rolesManuallyToggled]);
 
   useEffect(() => {
     if (!photosManuallyToggled) {
@@ -571,7 +594,7 @@ const ProjectDetailPage: React.FC = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project-role-count', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-visible-role-count', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-role-invitations', projectId] });
       setNewRoleName('');
       setSelectedRoleInvitee(null);
@@ -595,7 +618,7 @@ const ProjectDetailPage: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['open-roles', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project-role-count', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-visible-role-count', projectId] });
       toast.success('Role removed');
     },
     onError: () => toast.error('Failed to remove role'),
