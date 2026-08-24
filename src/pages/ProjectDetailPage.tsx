@@ -1111,6 +1111,7 @@ const ProjectDetailPage: React.FC = () => {
                 <OpenRolesDisplay 
                   projectId={projectId!} 
                   creatorId={project.creator_id}
+                  isProjectMember={isMember}
                   onDeleteRole={canEditProject ? (roleId) => deleteRoleMutation.mutate(roleId) : undefined}
                 />
               </CardContent>

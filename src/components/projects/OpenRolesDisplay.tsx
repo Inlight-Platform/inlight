@@ -59,10 +59,11 @@ interface RoleApplication {
 interface OpenRolesDisplayProps {
   projectId: string;
   creatorId: string;
+  isProjectMember?: boolean;
   onDeleteRole?: (roleId: string) => void;
 }
 
-export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, creatorId, onDeleteRole }) => {
+export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, creatorId, isProjectMember = false, onDeleteRole }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -410,7 +411,21 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
     }
   };
 
-  if (openRoles.length === 0) return null;
+  const isAcceptedAssignedRole = (role: OpenRole) => Boolean(
+    role.assigned_user_id &&
+    projectRoleMembers.some((member) =>
+      member.user_id === role.assigned_user_id &&
+      member.role?.trim().toLowerCase() === role.role_name.trim().toLowerCase()
+    )
+  );
+
+  const visibleRoles = openRoles.filter((role) => {
+    if (isCreator) return true;
+    if (!role.assigned_user_id) return true;
+    return isProjectMember && isAcceptedAssignedRole(role);
+  });
+
+  if (visibleRoles.length === 0) return null;
 
   return (
     <div className="space-y-4">
@@ -419,20 +434,14 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
       </div>
 
       <div className="grid gap-3">
-        {openRoles.map((role) => {
+        {visibleRoles.map((role) => {
           const applicationStatus = getApplicationStatus(role.id);
           const roleApplications = allApplications.filter(a => a.project_role_id === role.id);
           const assignedProfile = role.assigned_user_id ? assignedProfiles.get(role.assigned_user_id) : null;
           const roleInvitation = roleInvitations.find((invitation) => invitation.project_role_id === role.id);
-          const canSeeAssignedDetails = isCreator || role.assigned_user_id === user?.id || roleInvitation?.receiver_id === user?.id;
+          const canSeeAssignedDetails = isCreator;
           const canApplyToRole = !isCreator && user && !role.assigned_user_id;
-          const isRoleAcceptedByMember = Boolean(
-            role.assigned_user_id &&
-            projectRoleMembers.some((member) =>
-              member.user_id === role.assigned_user_id &&
-              member.role?.trim().toLowerCase() === role.role_name.trim().toLowerCase()
-            )
-          );
+          const isRoleAcceptedByMember = isAcceptedAssignedRole(role);
           const visibleRoleStatus = roleInvitation?.status === 'accepted' || isRoleAcceptedByMember
             ? 'accepted'
             : roleInvitation?.status;
