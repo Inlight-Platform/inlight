@@ -431,23 +431,18 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
   if (visibleRoles.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No open roles in {projectTitle} Project. Check back later.
+        No open roles in {projectTitle} Project. Check back soon.
       </p>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h3 className="text-lg font-semibold">Open Roles</h3>
-          {!isCreator && hasVisibleOpenRoles && (
-            <p className="text-sm text-muted-foreground">
-              Interested in joining? Apply to an open role, or share it with someone who would be a great fit.
-            </p>
-          )}
-        </div>
-      </div>
+      {!isCreator && hasVisibleOpenRoles && (
+        <p className="text-sm text-muted-foreground">
+          Interested in joining? Apply to an open role, or share it with someone who would be a great fit.
+        </p>
+      )}
 
       <div className="grid gap-3">
         {visibleRoles.map((role) => {
