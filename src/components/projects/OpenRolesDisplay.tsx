@@ -440,7 +440,7 @@ export const OpenRolesDisplay: React.FC<OpenRolesDisplayProps> = ({ projectId, c
     <div className="space-y-4">
       {!isCreator && hasVisibleOpenRoles && (
         <p className="text-sm text-muted-foreground">
-          Interested in joining? Apply to an open role, or share it with someone who would be a great fit.
+          Interested in joining? Apply to an open role now, or share this project with someone who would be a great fit.
         </p>
       )}
 
