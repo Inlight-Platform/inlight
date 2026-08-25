@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 import { EditPostDialog } from './EditPostDialog';
+import { usePostCommentCount } from '@/hooks/usePostComments';
 import { toast } from 'sonner';
 import { NetworkDegree } from '@/hooks/useNetworkConnections';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -163,6 +164,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const canDelete = (isOwner || isAdmin) && canManageFeedItem;
   const supportsInlineEdit = item.type !== 'show' && item.type !== 'open_role' && item.source !== 'opportunity';
   const canEdit = (isOwner || isAdmin) && supportsInlineEdit && canManageFeedItem; // Shows have their own edit flow
+
+  const supportsComments = item.type === 'post' || item.type === 'job';
+  // Only show the comment affordance where the detail sheet is reachable.
+  const showCommentAction = supportsComments && Boolean(onOpenDetails);
+  const { data: commentCount = 0 } = usePostCommentCount(showCommentAction ? item.id : null);
 
   useEffect(() => {
     setRsvpSubmitted(false);
@@ -885,6 +891,24 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 Apply Now
               </Button>
             </div>
+          </div>
+        )}
+
+        {/* Comment action (posts & jobs) — opens the detail sheet where the thread lives */}
+        {showCommentAction && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={commentCount > 0 ? `View ${commentCount} ${commentCount === 1 ? 'comment' : 'comments'}` : 'Add a comment'}
+              className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
+              onClick={() => onOpenDetails?.(item)}
+            >
+              <MessageCircle className="h-4 w-4" />
+              {commentCount > 0
+                ? `${commentCount} ${commentCount === 1 ? 'comment' : 'comments'}`
+                : 'Comment'}
+            </Button>
           </div>
         )}
       </CardContent>
