@@ -1,0 +1,59 @@
+name: Supabase Database Migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/config.toml'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Apply migrations after the dry run'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-migrations-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Push Supabase migrations
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'piofmmawwnermvaysonw' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Supabase migration secrets
+        run: |
+          missing=0
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is required to run production Supabase migrations."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Install Supabase CLI
+        run: npx --yes supabase@latest --version
+
+      - name: Link production Supabase project
+        run: npx --yes supabase@latest link --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Preview pending migrations
+        run: npx --yes supabase@latest db push --dry-run
+
+      - name: Apply pending migrations
+        if: ${{ github.event_name == 'push' || inputs.apply }}
+        run: npx --yes supabase@latest db push
