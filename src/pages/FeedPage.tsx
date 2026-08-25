@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { PostCreator, PostType } from '@/components/feed/PostCreator';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
 import { PostComments } from '@/components/feed/PostComments';
-import { FeedBentoCard, getBentoSize } from '@/components/feed/FeedBentoCard';
+import { FeedBentoCardWithComments, getBentoSize } from '@/components/feed/FeedBentoCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { WelcomeMessage } from '@/components/feed/WelcomeMessage';
 import { YouTab } from '@/components/feed/YouTab';
@@ -815,7 +815,7 @@ const FeedPage: React.FC = () => {
         style={{ gridAutoFlow: 'dense' }}
       >
         {items.map((item, idx) => (
-          <FeedBentoCard
+          <FeedBentoCardWithComments
             key={`project-${item.id}`}
             item={item}
             size={getBentoSize(idx)}
@@ -1338,7 +1338,7 @@ const FeedPage: React.FC = () => {
                           style={{ gridAutoFlow: 'dense' }}
                         >
                           {groupFeedItems.map((item, idx) => (
-                            <FeedBentoCard
+                            <FeedBentoCardWithComments
                               key={`group-grid-${item.type}-${item.id}`}
                               item={item}
                               size={getBentoSize(idx)}
@@ -1404,7 +1404,7 @@ const FeedPage: React.FC = () => {
                     style={{ gridAutoFlow: 'dense' }}
                   >
                     {feedItems.map((item, idx) => (
-                      <FeedBentoCard
+                      <FeedBentoCardWithComments
                         key={`${item.type}-${item.id}`}
                         item={item}
                         size={getBentoSize(idx)}
