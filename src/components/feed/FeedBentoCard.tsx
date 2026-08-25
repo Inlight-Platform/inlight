@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { FeedItemData } from './FeedItem';
 import { ImageCarousel } from './ImageCarousel';
+import { usePostCommentCount } from '@/hooks/usePostComments';
 
 export type BentoSize = 'hero' | 'tall' | 'compact' | 'wide';
 
@@ -20,6 +21,7 @@ interface FeedBentoCardProps {
   item: FeedItemData;
   size: BentoSize;
   onClick: () => void;
+  commentCount?: number;
 }
 
 const typeMeta = (item: FeedItemData) => {
@@ -81,7 +83,7 @@ const sizeClasses: Record<BentoSize, string> = {
   wide: 'min-h-[220px] sm:col-span-4 sm:row-span-1',
 };
 
-export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClick }) => {
+export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClick, commentCount = 0 }) => {
   const meta = typeMeta(item);
   const imageUrls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
   const hasImage = imageUrls.length > 0;
@@ -144,6 +146,12 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                 <AvatarFallback>{displayName[0]}</AvatarFallback>
               </Avatar>
               <p className="text-sm font-bold text-white">{displayName}</p>
+              {(item.type === 'post' || item.type === 'job') && (
+                <span className="flex items-center gap-1 text-xs text-white/60">
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  {commentCount > 0 ? `${commentCount}` : 'Comment'}
+                </span>
+              )}
             </div>
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-background transition-transform group-hover:scale-110">
               <ArrowRight className="h-5 w-5" />
@@ -216,6 +224,12 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               </p>
               <p className={cn('text-[10px]', isLight ? 'text-slate-500' : 'text-white/50')}>{timeAgo}</p>
             </div>
+            {(item.type === 'post' || item.type === 'job') && (
+              <span className={cn('flex items-center gap-1 text-[10px] font-semibold', isLight ? 'text-slate-500' : 'text-white/50')}>
+                <MessageCircle className="h-3.5 w-3.5" />
+                {commentCount > 0 ? `${commentCount}` : 'Comment'}
+              </span>
+            )}
           </div>
         </div>
       </article>
@@ -272,9 +286,17 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               </Avatar>
               <span className="truncate font-semibold text-muted-foreground">{displayName}</span>
             </div>
-            <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-              {timeAgo}
-            </span>
+            <div className="flex items-center gap-2.5">
+              {(item.type === 'post' || item.type === 'job') && (
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground/70">
+                  <MessageCircle className="h-3 w-3" />
+                  {commentCount > 0 ? `${commentCount}` : 'Comment'}
+                </span>
+              )}
+              <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                {timeAgo}
+              </span>
+            </div>
           </div>
         </div>
       </article>
@@ -328,9 +350,17 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
             </Avatar>
             <span className="truncate text-xs font-semibold text-white/80">{displayName}</span>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-white/60">
-            {timeAgo}
-          </span>
+          <div className="flex items-center gap-2.5">
+            {(item.type === 'post' || item.type === 'job') && (
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-white/50">
+                <MessageCircle className="h-3 w-3" />
+                {commentCount > 0 ? `${commentCount}` : 'Comment'}
+              </span>
+            )}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-white/60">
+              {timeAgo}
+            </span>
+          </div>
         </div>
       </div>
     </article>
@@ -344,3 +374,13 @@ export const getBentoSize = (index: number): BentoSize => {
 };
 
 export default FeedBentoCard;
+
+/**
+ * Wraps FeedBentoCard and fetches the comment count for posts/jobs.
+ * Required because React hooks can't be called inside .map().
+ */
+export const FeedBentoCardWithComments: React.FC<Omit<FeedBentoCardProps, 'commentCount'>> = (props) => {
+  const supportsComments = props.item.type === 'post' || props.item.type === 'job';
+  const { data: count = 0 } = usePostCommentCount(supportsComments ? props.item.id : null);
+  return <FeedBentoCard {...props} commentCount={count} />;
+};

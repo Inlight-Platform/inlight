@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { AlertCircle, Loader2, MessageCircle, Send, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useMyGroups } from '@/hooks/useGroups';
 import { MAX_COMMENT_LENGTH, usePostComments } from '@/hooks/usePostComments';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,26 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, postOwnerId,
 
   const commentsQuery = usePostComments(postId);
   const comments = commentsQuery.data ?? [];
+
+  const { data: myGroups } = useMyGroups();
+  const facultyGroupIds = new Set(
+    (myGroups ?? []).filter((g) => g.is_faculty).map((g) => g.id),
+  );
+
+  const postGroupsQuery = useQuery({
+    queryKey: ['post-groups', postId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('post_groups')
+        .select('group_id')
+        .eq('post_id', postId);
+      if (error) throw error;
+      return (data ?? []) as { group_id: string }[];
+    },
+    enabled: !!postId,
+  });
+  const postGroupIds = (postGroupsQuery.data ?? []).map((r) => r.group_id);
+  const isGroupFacultyForPost = postGroupIds.some((gid) => facultyGroupIds.has(gid));
 
   const invalidateCommentCaches = () => {
     queryClient.invalidateQueries({ queryKey: ['post-comments', postId] });
@@ -85,7 +106,10 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, postOwnerId,
   };
 
   const canModerateComment = (commentUserId: string) =>
-    user?.id === commentUserId || user?.id === postOwnerId || isAdmin;
+    user?.id === commentUserId ||
+    user?.id === postOwnerId ||
+    isAdmin ||
+    isGroupFacultyForPost;
 
   return (
     <section

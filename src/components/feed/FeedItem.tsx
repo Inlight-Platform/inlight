@@ -900,12 +900,14 @@ export const FeedItem: React.FC<FeedItemProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              aria-label={commentCount > 0 ? `View ${commentCount} comments` : 'Add a comment'}
+              aria-label={commentCount > 0 ? `View ${commentCount} ${commentCount === 1 ? 'comment' : 'comments'}` : 'Add a comment'}
               className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
               onClick={() => onOpenDetails?.(item)}
             >
               <MessageCircle className="h-4 w-4" />
-              {commentCount > 0 ? commentCount : 'Comment'}
+              {commentCount > 0
+                ? `${commentCount} ${commentCount === 1 ? 'comment' : 'comments'}`
+                : 'Comment'}
             </Button>
           </div>
         )}

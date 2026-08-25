@@ -9,6 +9,8 @@ const insertedRows: { table: string; payload: unknown }[] = [];
 let commentsData: unknown[] = [];
 let profilesData: unknown[] = [];
 let commentsOrder: { column: string; ascending: boolean } | null = null;
+let postGroupsData: unknown[] = [];
+let myGroupsData: { id: string; slug: string; name: string; is_faculty: boolean }[] = [];
 
 const makeProxy = (table: string) => {
   const result = () => {
@@ -20,11 +22,29 @@ const makeProxy = (table: string) => {
             new Date((a as { created_at: string }).created_at).getTime() -
             new Date((b as { created_at: string }).created_at).getTime();
           return commentsOrder?.ascending ? diff : -diff;
-        });
+  it('shows delete controls when the current user is group faculty for the post', async () => {
+    commentsData = [
+      { id: 'c1', post_id: 'p1', user_id: 'u2', content: 'Another user', created_at: '2026-08-01T10:00:00Z' },
+      { id: 'c2', post_id: 'p1', user_id: 'user-me', content: 'Mine', created_at: '2026-08-02T10:00:00Z' },
+    ];
+    profilesData = [
+      { user_id: 'u2', display_name: 'alice', avatar_url: null },
+      { user_id: 'user-me', display_name: null, avatar_url: null },
+    ];
+    postGroupsData = [{ group_id: 'group-1' }];
+    myGroupsData = [{ id: 'group-1', slug: 'g', name: 'G', is_faculty: true }];
+
+    renderComments();
+
+    const deleteButtons = await screen.findAllByRole('button', { name: /delete comment/i });
+    expect(deleteButtons).toHaveLength(2);
+  });
+});
       }
       return { data: rows, error: null };
     }
     if (table === 'profiles_public') return { data: profilesData, error: null };
+    if (table === 'post_groups') return { data: postGroupsData, error: null };
     return { data: [], error: null };
   };
 
@@ -50,6 +70,9 @@ const makeProxy = (table: string) => {
           return proxy;
         };
       }
+      if (prop === 'eq' && table === 'post_groups') {
+        return (_col: string, _val: unknown) => proxy;
+      }
       return () => proxy;
     },
   };
@@ -70,6 +93,10 @@ vi.mock('@/hooks/useAuth', () => ({
 
 vi.mock('@/hooks/useAdmin', () => ({
   useAdmin: () => ({ isAdmin: false, isLoading: false }),
+}));
+
+vi.mock('@/hooks/useGroups', () => ({
+  useMyGroups: () => ({ data: myGroupsData, isLoading: false }),
 }));
 
 vi.mock('sonner', () => ({
@@ -96,6 +123,8 @@ describe('PostComments', () => {
     commentsData = [];
     profilesData = [];
     commentsOrder = null;
+    postGroupsData = [];
+    myGroupsData = [];
   });
 
   it('renders the thread oldest-to-newest with author names and a count', async () => {
@@ -173,5 +202,23 @@ describe('PostComments', () => {
     await waitFor(() => {
       expect(input.value).toBe('');
     });
+  });
+
+  it('shows delete controls when the current user is group faculty for the post', async () => {
+    commentsData = [
+      { id: 'c1', post_id: 'p1', user_id: 'u2', content: 'Another user', created_at: '2026-08-01T10:00:00Z' },
+      { id: 'c2', post_id: 'p1', user_id: 'user-me', content: 'Mine', created_at: '2026-08-02T10:00:00Z' },
+    ];
+    profilesData = [
+      { user_id: 'u2', display_name: 'alice', avatar_url: null },
+      { user_id: 'user-me', display_name: null, avatar_url: null },
+    ];
+    postGroupsData = [{ group_id: 'group-1' }];
+    myGroupsData = [{ id: 'group-1', slug: 'g', name: 'G', is_faculty: true }];
+
+    renderComments();
+
+    const deleteButtons = await screen.findAllByRole('button', { name: /delete comment/i });
+    expect(deleteButtons).toHaveLength(2);
   });
 });
