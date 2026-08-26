@@ -92,6 +92,19 @@ type EventPanelist = {
   reel_url: string | null;
   public_slug: string;
 };
+
+const PANELIST_BIO_PREVIEW_LENGTH = 180;
+
+const getPanelistBioPreview = (bio: string) => {
+  const normalizedBio = bio.replace(/\s+/g, ' ').trim();
+
+  if (normalizedBio.length <= PANELIST_BIO_PREVIEW_LENGTH) {
+    return normalizedBio;
+  }
+
+  return `${normalizedBio.slice(0, PANELIST_BIO_PREVIEW_LENGTH).trimEnd()}...`;
+};
+
 interface FeedItemProps {
   item: FeedItemData;
   networkDegree: NetworkDegree | null;
@@ -770,7 +783,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                           </span>
                           {panelist.bio && (
                             <span className="line-clamp-2 block text-xs leading-relaxed text-muted-foreground">
-                              {panelist.bio}
+                              {getPanelistBioPreview(panelist.bio)}
                             </span>
                           )}
                           {canOpenPanelist && (
