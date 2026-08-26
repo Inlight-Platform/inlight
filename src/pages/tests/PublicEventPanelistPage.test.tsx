@@ -95,5 +95,6 @@ describe('PublicEventPanelistPage', () => {
     expect(await screen.findByRole('heading', { name: 'Shy\'Peria Brown' })).toBeInTheDocument();
     expect(screen.queryByAltText('HOT SEAT cover image')).not.toBeInTheDocument();
     expect(screen.queryByRole('img', { name: 'HOT SEAT cover image' })).not.toBeInTheDocument();
+    expect(screen.queryByAltText('Shy\'Peria Brown cover image')).not.toBeInTheDocument();
   });
 });
