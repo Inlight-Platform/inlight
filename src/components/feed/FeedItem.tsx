@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp, Ticket, BarChart3 } from 'lucide-react';
@@ -112,7 +112,6 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   onRequireAuth,
 }) => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const { canManageEvents, canManageJobs, canManageProjects } = useFeatureAccess();
@@ -131,9 +130,6 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const isEventItem = item.type === 'event';
   const isPaidEvent = isEventItem && !!item.is_paid;
   const directTicketUrl = isPaidEvent ? item.payment_link_url || item.link_url || null : null;
-  const ticketStatus = searchParams.get('ticket');
-  const checkoutSessionId = searchParams.get('session_id');
-  const hasTicketSuccess = ticketStatus === 'success';
   const eventHasPassed = isEventPast(item.event_date);
   const eventLinkClosed = isEventItem && eventHasPassed;
   const { rsvps, goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
@@ -158,24 +154,6 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   });
   const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
   const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
-  const { data: latestTicket } = useQuery({
-    queryKey: ['event-ticket', item.id, user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('tickets')
-        .select('id, ticket_code, amount_paid, status, stripe_session_id')
-        .eq('event_id', item.id)
-        .eq('user_id', user.id)
-        .in('status', ['confirmed', 'pending'])
-        .order('created_at', { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return data?.find((ticket) => ticket.status === 'confirmed') || data?.[0] || null;
-    },
-    enabled: isPaidEvent && !!user?.id,
-  });
-  const ticketConfirmed = isPaidEvent && (hasTicketSuccess || latestTicket?.status === 'confirmed');
 
   const attendeeUserIds = goingRsvps
     .filter((r) => !r.is_anonymous)
@@ -216,32 +194,6 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     ((item.type !== 'event' || canManageEvents) &&
       (item.type !== 'job' || canManageJobs) &&
       (item.type !== 'project' || canManageProjects));
-
-  useEffect(() => {
-    const sessionIdToVerify = checkoutSessionId || (latestTicket?.status === 'pending' ? latestTicket.stripe_session_id : null);
-    if (!isPaidEvent || (!hasTicketSuccess && latestTicket?.status !== 'pending') || !sessionIdToVerify || !user?.id) return;
-
-    let cancelled = false;
-
-    supabase.functions.invoke('verify-ticket-checkout', {
-      body: { event_id: item.id, session_id: sessionIdToVerify },
-    }).then(({ data, error }) => {
-      if (cancelled) return;
-      if (error) throw error;
-      if (data?.status === 'confirmed') {
-        queryClient.invalidateQueries({ queryKey: ['event-ticket', item.id, user.id] });
-        toast.success('Ticket confirmed');
-      }
-    }).catch((error) => {
-      if (cancelled) return;
-      console.error('Ticket verification error:', error);
-      toast.error('Payment received. Ticket confirmation is still processing.');
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [checkoutSessionId, hasTicketSuccess, isPaidEvent, item.id, latestTicket?.status, latestTicket?.stripe_session_id, queryClient, user?.id]);
   const canDelete = (isOwner || isAdmin) && canManageFeedItem;
   const supportsInlineEdit = item.type !== 'show' && item.type !== 'open_role' && item.source !== 'opportunity';
   const canEdit = (isOwner || isAdmin) && supportsInlineEdit && canManageFeedItem; // Shows have their own edit flow
@@ -421,33 +373,6 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         console.error('Auto-RSVP error:', e);
       }
       window.open(directTicketUrl, '_blank', 'noopener,noreferrer');
-      return;
-    }
-
-    if (item.stripe_price_id) {
-      setBuyingTicket(true);
-      try {
-        const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {
-          body: {
-            event_id: item.id,
-          },
-        });
-
-        if (error) throw error;
-        if (data?.status === 'confirmed') {
-          queryClient.invalidateQueries({ queryKey: ['event-ticket', item.id, user.id] });
-          toast.success('Ticket confirmed');
-          setBuyingTicket(false);
-          navigate(`/events/${item.id}?ticket=success`);
-          return;
-        }
-        if (!data?.url) throw new Error('Checkout link unavailable');
-
-        window.location.href = data.url;
-      } catch (error: unknown) {
-        toast.error(error instanceof Error ? error.message : 'Failed to start checkout');
-        setBuyingTicket(false);
-      }
       return;
     }
 
@@ -858,11 +783,6 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                   <BarChart3 className="h-4 w-4 mr-2" />
                   View Dashboard
                 </Button>
-              ) : ticketConfirmed ? (
-                <div className="flex flex-1 items-center gap-2 text-sm font-semibold text-primary">
-                  <Check className="h-4 w-4" />
-                  You're on the list!
-                </div>
               ) : isPaidEvent ? (
                 <Button
                   size="sm"

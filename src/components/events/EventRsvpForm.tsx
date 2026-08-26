@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,7 +42,6 @@ type RsvpMutationError = {
 const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, isPaid, price, currency = 'usd', stripePriceId, paymentLinkUrl, eventDate }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const queryClient = useQueryClient();
   const { rsvps, goingRsvps, goingCount, cantMakeItCount, submitRsvp } = useEventRsvps(eventId);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -61,29 +59,10 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
 
   // Check for ticket success from Stripe redirect
   const ticketStatus = searchParams.get('ticket');
-  const checkoutSessionId = searchParams.get('session_id');
   const hasTicketSuccess = ticketStatus === 'success';
   const eventHasPassed = isEventPast(eventDate);
   const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
   const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
-  const { data: latestTicket } = useQuery({
-    queryKey: ['event-ticket', eventId, currentUserId],
-    queryFn: async () => {
-      if (!currentUserId) return null;
-      const { data, error } = await supabase
-        .from('tickets')
-        .select('id, ticket_code, amount_paid, status, stripe_session_id')
-        .eq('event_id', eventId)
-        .eq('user_id', currentUserId)
-        .in('status', ['confirmed', 'pending'])
-        .order('created_at', { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return data?.find((ticket) => ticket.status === 'confirmed') || data?.[0] || null;
-    },
-    enabled: !!isPaid && !!currentUserId,
-  });
-  const ticketConfirmed = hasTicketSuccess || latestTicket?.status === 'confirmed';
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -122,32 +101,6 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
     setName((currentName) => currentName.trim() || currentUserDisplayName);
     setEmail(currentUserEmail);
   }, [dialogOpen, currentUserDisplayName, currentUserEmail]);
-
-  useEffect(() => {
-    const sessionIdToVerify = checkoutSessionId || (latestTicket?.status === 'pending' ? latestTicket.stripe_session_id : null);
-    if ((!hasTicketSuccess && latestTicket?.status !== 'pending') || !sessionIdToVerify || !currentUserId) return;
-
-    let cancelled = false;
-
-    supabase.functions.invoke('verify-ticket-checkout', {
-      body: { event_id: eventId, session_id: sessionIdToVerify },
-    }).then(({ data, error }) => {
-      if (cancelled) return;
-      if (error) throw error;
-      if (data?.status === 'confirmed') {
-        queryClient.invalidateQueries({ queryKey: ['event-ticket', eventId, currentUserId] });
-        toast.success('Ticket confirmed');
-      }
-    }).catch((error) => {
-      if (cancelled) return;
-      console.error('Ticket verification error:', error);
-      toast.error('Payment received. Ticket confirmation is still processing.');
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [checkoutSessionId, currentUserId, eventId, hasTicketSuccess, latestTicket?.status, latestTicket?.stripe_session_id, queryClient]);
 
   // Check if user already RSVP'd (any status — going or can't make it)
   const userRsvp = currentUserId ? rsvps.find(r => r.user_id === currentUserId) : null;
@@ -246,29 +199,6 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
       return;
     }
 
-    if (stripePriceId) {
-      setBuyingTicket(true);
-      try {
-        const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {
-          body: { event_id: eventId },
-        });
-        if (error) throw error;
-        if (data?.status === 'confirmed') {
-          queryClient.invalidateQueries({ queryKey: ['event-ticket', eventId, currentUserId] });
-          toast.success('Ticket confirmed');
-          setBuyingTicket(false);
-          navigate(`/events/${eventId}?ticket=success`);
-          return;
-        }
-        if (!data?.url) throw new Error('Checkout link unavailable');
-        window.location.href = data.url;
-      } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : 'Failed to start checkout');
-        setBuyingTicket(false);
-      }
-      return;
-    }
-
     toast.error('Tickets are not yet available for this event.');
   };
 
@@ -300,16 +230,19 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
         </div>,
         document.body,
       )}
-      {/* Ticket confirmed state */}
-      {isPaid && ticketConfirmed && (
-        <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-          <Check className="h-4 w-4" />
-          You're on the list!
+      {/* Ticket confirmed state (from Stripe redirect) */}
+      {hasTicketSuccess && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5 text-center space-y-2">
+          <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto">
+            <Ticket className="w-6 h-6 text-emerald-500" />
+          </div>
+          <p className="font-semibold text-emerald-400">Ticket Confirmed! 🎟️</p>
+          <p className="text-sm text-muted-foreground">Your ticket has been purchased. See you there!</p>
         </div>
       )}
 
       {/* Paid event: Buy Ticket button */}
-      {isPaid && !ticketConfirmed && (
+      {isPaid && !hasTicketSuccess && (
         <div className="space-y-3">
           {price && (
             <div className="text-center">
