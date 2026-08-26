@@ -1,68 +1,59 @@
-name: Supabase Migrations
+name: Supabase Database Migrations
 
 on:
-  workflow_dispatch:
-    inputs:
-      target:
-        description: Supabase environment to migrate
-        required: true
-        default: sandbox
-        type: choice
-        options:
-          - sandbox
-          - production
-      dry_run:
-        description: Preview pending migrations without applying them
-        required: true
-        default: true
-        type: boolean
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'supabase/migrations/**'
+      - 'supabase/config.toml'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Apply migrations after the dry run'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
+concurrency:
+  group: supabase-migrations-production
+  cancel-in-progress: false
+
 jobs:
   migrate:
-    name: Apply Supabase migrations
+    name: Push Supabase migrations
     runs-on: ubuntu-latest
+    environment: production
     env:
-      TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'production' }}
-      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
-      SANDBOX_DB_URL: ${{ secrets.SANDBOX_SUPABASE_DB_URL }}
-      PRODUCTION_DB_URL: ${{ secrets.PRODUCTION_SUPABASE_DB_URL }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'piofmmawwnermvaysonw' }}
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select database URL
+      - name: Validate Supabase migration secrets
         run: |
-          if [ "$TARGET" = "sandbox" ]; then
-            db_url="$SANDBOX_DB_URL"
-          else
-            db_url="$PRODUCTION_DB_URL"
-          fi
+          missing=0
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is required to run production Supabase migrations."
+              missing=1
+            fi
+          done
+          exit "$missing"
 
-          if [ -z "$db_url" ]; then
-            echo "::error::Missing database URL secret for target '$TARGET'. Configure SANDBOX_SUPABASE_DB_URL or PRODUCTION_SUPABASE_DB_URL."
-            exit 1
-          fi
+      - name: Install Supabase CLI
+        run: npx --yes supabase@latest --version
 
-          echo "::add-mask::$db_url"
-          echo "SUPABASE_DB_URL=$db_url" >> "$GITHUB_ENV"
+      - name: Link production Supabase project
+        run: npx --yes supabase@latest link --project-ref "$SUPABASE_PROJECT_REF"
 
-      - name: Set up Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
+      - name: Preview pending migrations
+        run: npx --yes supabase@latest db push --dry-run
 
-      - name: Show pending migrations
-        if: ${{ env.DRY_RUN == 'true' }}
-        run: supabase db push --db-url "$SUPABASE_DB_URL" --dry-run --skip-vault
-
-      - name: Apply migrations
-        if: ${{ env.DRY_RUN != 'true' }}
-        run: supabase db push --db-url "$SUPABASE_DB_URL" --yes --skip-vault
+      - name: Apply pending migrations
+        if: ${{ github.event_name == 'push' || inputs.apply }}
+        run: npx --yes supabase@latest db push

@@ -24,26 +24,19 @@ import { ImagePositioner } from '@/components/profile/ImagePositioner';
 import { useMyGroups } from '@/hooks/useGroups';
 import { SERVICE_CATEGORIES } from '@/data/services';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Json } from '@/integrations/supabase/types';
+import {
+  DEFAULT_FEED_IMAGE_POSITION,
+  buildFeedImageFields,
+  getMissingFeedImageColumn,
+  omitFeedImageColumn,
+} from '@/lib/feedImagePayload';
+import type { Database } from '@/integrations/supabase/types';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
 
-type ImagePosition = { x: number; y: number; zoom: number };
-
-const DEFAULT_IMAGE_POSITION: ImagePosition = { x: 50, y: 50, zoom: 1 };
-
-const serializeImagePositions = (positions: ImagePosition[], count: number): Json | null => {
-  if (count === 0) return null;
-
-  return Array.from({ length: count }, (_, index) => {
-    const position = positions[index] ?? DEFAULT_IMAGE_POSITION;
-    return {
-      x: Number.isFinite(position.x) ? position.x : DEFAULT_IMAGE_POSITION.x,
-      y: Number.isFinite(position.y) ? position.y : DEFAULT_IMAGE_POSITION.y,
-      zoom: Number.isFinite(position.zoom) ? position.zoom : DEFAULT_IMAGE_POSITION.zoom,
-    };
-  });
-};
+type PostInsert = Database['public']['Tables']['posts']['Insert'];
+type EventInsert = Database['public']['Tables']['events']['Insert'];
+type InsertableFeedImagePayload = PostInsert | EventInsert;
 
 interface PostCreatorProps {
   userProfile?: {
@@ -55,6 +48,33 @@ interface PostCreatorProps {
   defaultGroupId?: string | null;
   onClose?: () => void;
 }
+
+const insertWithImageColumnFallback = async <TPayload extends InsertableFeedImagePayload>(
+  table: 'posts' | 'events',
+  payload: TPayload,
+) => {
+  let nextPayload: Record<string, unknown> = { ...payload };
+  const omittedColumns = new Set<string>();
+
+  for (let attempt = 0; attempt <= 5; attempt += 1) {
+    const query = table === 'posts'
+      ? supabase.from('posts').insert(nextPayload as PostInsert)
+      : supabase.from('events').insert(nextPayload as EventInsert);
+    const { data, error } = await query.select('id').single();
+
+    if (!error) return data;
+
+    const missingColumn = getMissingFeedImageColumn(error);
+    if (!missingColumn || omittedColumns.has(missingColumn) || !(missingColumn in nextPayload)) {
+      throw error;
+    }
+
+    omittedColumns.add(missingColumn);
+    nextPayload = omitFeedImageColumn(nextPayload, missingColumn);
+  }
+
+  throw new Error('Unable to create post with the available image fields.');
+};
 
 export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOpen = false, defaultPostType = 'update', defaultGroupId = null, onClose }) => {
   const { user } = useAuth();
@@ -143,35 +163,21 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     mutationFn: async () => {
       if (!user?.id) throw new Error('Must be logged in');
 
-      const imageFields = imageUrls.length > 0
-        ? {
-            image_url: imageUrls[0],
-            image_urls: imageUrls,
-            image_position_x: imagePositions[0]?.x ?? DEFAULT_IMAGE_POSITION.x,
-            image_position_y: imagePositions[0]?.y ?? DEFAULT_IMAGE_POSITION.y,
-            image_zoom: imagePositions[0]?.zoom ?? DEFAULT_IMAGE_POSITION.zoom,
-            image_positions: serializeImagePositions(imagePositions, imageUrls.length),
-          }
-        : {};
+      const imageFields = buildFeedImageFields(imageUrls, imagePositions);
       
       if (postType === 'update') {
         const categoryLabel = SERVICE_CATEGORIES.find((c) => c.slug === serviceCategory)?.label;
         const prefixedContent = categoryLabel
           ? `[${categoryLabel}] ${content.trim()}`
           : content.trim();
-        const { data: postData, error } = await supabase
-          .from('posts')
-          .insert({
-            user_id: user.id,
-            content: prefixedContent,
-            ...imageFields,
-            link_url: linkUrl.trim() || null,
-            link_title: linkTitle.trim() || null,
-            visibility,
-          })
-          .select('id')
-          .single();
-        if (error) throw error;
+        const postData = await insertWithImageColumnFallback('posts', {
+          user_id: user.id,
+          content: prefixedContent,
+          ...imageFields,
+          link_url: linkUrl.trim() || null,
+          link_title: linkTitle.trim() || null,
+          visibility,
+        });
 
         // Also tag the user's profile with the chosen service so they appear
         // in the Services discovery tab.
@@ -222,49 +228,52 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
         }
         
         const parsedPrice = isPaid && ticketPrice ? parseFloat(ticketPrice) : null;
-        const normalizedLinkUrl = linkUrl.trim();
         const defaultPaymentLink = isPaid && parsedPrice === 10
           ? 'https://buy.stripe.com/5kQcN4fsA37B9Br4yjco001'
           : null;
-        const paymentLinkUrl = isPaid ? normalizedLinkUrl || defaultPaymentLink : null;
 
-        const { error } = await supabase
-          .from('events')
-          .insert({
-            user_id: user.id,
-            title: title.trim(),
-            description: content.trim() || null,
-            event_date: eventDateValue,
-            location: location.trim() || null,
-            event_type: eventType.trim() || 'general',
-            ...imageFields,
-            link_url: normalizedLinkUrl || null,
-            link_title: linkTitle.trim() || null,
-            custom_question: customQuestion.trim() || null,
-            is_paid: isPaid,
-            price: parsedPrice,
-            currency: 'usd',
-            payment_link_url: paymentLinkUrl,
+        const eventData = await insertWithImageColumnFallback('events', {
+          user_id: user.id,
+          title: title.trim(),
+          description: content.trim() || null,
+          event_date: eventDateValue,
+          location: location.trim() || null,
+          event_type: eventType.trim() || 'general',
+          ...imageFields,
+          link_url: linkUrl.trim() || null,
+          link_title: linkTitle.trim() || null,
+          custom_question: customQuestion.trim() || null,
+          is_paid: isPaid,
+          price: parsedPrice,
+          currency: 'usd',
+          payment_link_url: defaultPaymentLink,
+        });
+
+        // If paid event, create Stripe price
+        if (isPaid && ticketPrice && eventData) {
+          const { error: priceError } = await supabase.functions.invoke('create-event-price', {
+            body: {
+              event_id: eventData.id,
+              title: title.trim(),
+              price: parseFloat(ticketPrice),
+              currency: 'usd',
+            },
           });
-        if (error) {
-          console.error('Event creation error:', error);
-          throw error;
+          if (priceError) {
+            console.error('Stripe price creation error:', priceError);
+            // Non-fatal: event is created, price can be retried
+          }
         }
       } else if (postType === 'job') {
         // Jobs are stored as posts with a special format and optional link
-        const { data: jobData, error } = await supabase
-          .from('posts')
-          .insert({
-            user_id: user.id,
-            content: `🎯 **${title.trim()}**\n\n${content.trim()}${location ? `\n\n📍 ${location}` : ''}`,
-            ...imageFields,
-            link_url: linkUrl.trim() || null,
-            link_title: linkTitle.trim() || null,
-            visibility,
-          })
-          .select('id')
-          .single();
-        if (error) throw error;
+        const jobData = await insertWithImageColumnFallback('posts', {
+          user_id: user.id,
+          content: `🎯 **${title.trim()}**\n\n${content.trim()}${location ? `\n\n📍 ${location}` : ''}`,
+          ...imageFields,
+          link_url: linkUrl.trim() || null,
+          link_title: linkTitle.trim() || null,
+          visibility,
+        });
 
         // Insert recipients for specific visibility
         if (visibility === 'specific' && selectedRecipients.length > 0 && jobData) {
