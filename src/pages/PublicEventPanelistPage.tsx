@@ -137,6 +137,7 @@ const PublicEventPanelistPage = () => {
     : panelist.headline || null;
   const backToEvent = event ? eventPath(event) : '/feed?tab=events';
   const inlightProfilePath = panelist.user_id ? `/profile/${panelist.user_id}` : null;
+  const coverAlt = event?.title ? `${event.title} cover image` : `${displayName} cover image`;
 
   const openInlightProfile = () => {
     if (!inlightProfilePath) return;
@@ -158,8 +159,8 @@ const PublicEventPanelistPage = () => {
       </Button>
 
       <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-        <div className="relative h-36 overflow-hidden bg-gradient-to-br from-primary/25 via-background to-background sm:h-44">
-          {coverUrl && <img src={coverUrl} alt="" className="h-full w-full object-cover" />}
+        <div className="relative flex h-36 items-center justify-center overflow-hidden bg-gradient-to-br from-primary/25 via-background to-background sm:h-44">
+          {coverUrl && <img src={coverUrl} alt={coverAlt} className="h-full w-full object-contain" />}
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/35 to-transparent" />
         </div>
 
