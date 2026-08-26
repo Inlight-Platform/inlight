@@ -126,7 +126,7 @@ const PublicEventPanelistPage = () => {
   const title = panelist.title;
   const bio = panelist.bio;
   const avatarUrl = panelist.headshot_url;
-  const coverUrl = panelist.cover_url || event?.image_url;
+  const coverUrl = panelist.cover_url;
   const location = panelist.location || event?.location;
   const badges = panelist.badges || [];
   const websiteUrl = panelist.website_url;
@@ -137,7 +137,7 @@ const PublicEventPanelistPage = () => {
     : panelist.headline || null;
   const backToEvent = event ? eventPath(event) : '/feed?tab=events';
   const inlightProfilePath = panelist.user_id ? `/profile/${panelist.user_id}` : null;
-  const coverAlt = event?.title ? `${event.title} cover image` : `${displayName} cover image`;
+  const coverAlt = `${displayName} cover image`;
 
   const openInlightProfile = () => {
     if (!inlightProfilePath) return;

@@ -87,14 +87,13 @@ const renderPanelistPage = (PublicEventPanelistPage: React.ComponentType) => {
 };
 
 describe('PublicEventPanelistPage', () => {
-  it('renders the event cover image without cropping when the panelist has no custom cover', async () => {
+  it('does not use the event image as the panelist cover fallback', async () => {
     const PublicEventPanelistPage = (await import('@/pages/PublicEventPanelistPage')).default;
 
     renderPanelistPage(PublicEventPanelistPage);
 
-    const coverImage = await screen.findByAltText('HOT SEAT cover image');
-    expect(coverImage).toHaveAttribute('src', 'https://example.com/hot-seat.jpg');
-    expect(coverImage.className).toContain('object-contain');
-    expect(coverImage.className).not.toContain('object-cover');
+    expect(await screen.findByRole('heading', { name: 'Shy\'Peria Brown' })).toBeInTheDocument();
+    expect(screen.queryByAltText('HOT SEAT cover image')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'HOT SEAT cover image' })).not.toBeInTheDocument();
   });
 });
