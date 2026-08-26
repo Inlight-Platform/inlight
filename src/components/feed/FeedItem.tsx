@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -77,16 +77,6 @@ export interface FeedItemData {
   };
 }
 
-type PublicTicketAttendee = {
-  id: string;
-  event_id: string;
-  user_id: string | null;
-  name: string;
-  avatar_url: string | null;
-  created_at: string;
-  is_anonymous?: boolean | null;
-};
-
 type EventPanelist = {
   id: string;
   user_id: string | null;
@@ -98,7 +88,6 @@ type EventPanelist = {
   reel_url: string | null;
   public_slug: string;
 };
-
 interface FeedItemProps {
   item: FeedItemData;
   networkDegree: NetworkDegree | null;
@@ -169,51 +158,6 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   });
   const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
   const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
-  const { data: ticketAttendees = [] } = useQuery({
-    queryKey: ['public-event-ticket-attendees', item.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_public_event_ticket_attendees', {
-        target_event_id: item.id,
-      });
-      if (error) throw error;
-      return (data || []) as PublicTicketAttendee[];
-    },
-    enabled: isPaidEvent,
-  });
-  const visibleTicketAttendees = ticketAttendees.filter((ticket) => !ticket.is_anonymous);
-  const anonymousTicketCount = ticketAttendees.length - visibleTicketAttendees.length;
-  const attendeeRows = useMemo(() => {
-    const rsvpKeys = new Set(
-      visibleGoingRsvps
-        .flatMap((rsvp) => [rsvp.user_id ? `user:${rsvp.user_id}` : null, rsvp.email ? `email:${rsvp.email.toLowerCase()}` : null])
-        .filter((value): value is string => Boolean(value))
-    );
-
-    const rsvpRows = visibleGoingRsvps.map((rsvp) => ({
-      id: rsvp.id,
-      user_id: rsvp.user_id,
-      name: rsvp.name || 'Inlight Member',
-      avatar_url: null as string | null,
-      source: 'rsvp' as const,
-    }));
-
-    const ticketRows = visibleTicketAttendees
-      .filter((ticket) => {
-        const userKey = ticket.user_id ? `user:${ticket.user_id}` : null;
-        return !(userKey && rsvpKeys.has(userKey));
-      })
-      .map((ticket) => ({
-        id: ticket.id,
-        user_id: ticket.user_id,
-        name: ticket.name || 'Inlight Member',
-        avatar_url: ticket.avatar_url,
-        source: 'ticket' as const,
-      }));
-
-    return [...rsvpRows, ...ticketRows];
-  }, [visibleTicketAttendees, visibleGoingRsvps]);
-  const anonymousAttendeeCount = anonymousGoingCount + anonymousTicketCount;
-  const attendeeCount = attendeeRows.length + anonymousAttendeeCount;
   const { data: latestTicket } = useQuery({
     queryKey: ['event-ticket', item.id, user?.id],
     queryFn: async () => {
@@ -233,13 +177,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   });
   const ticketConfirmed = isPaidEvent && (hasTicketSuccess || latestTicket?.status === 'confirmed');
 
-  const attendeeUserIds = [
-    ...goingRsvps
+  const attendeeUserIds = goingRsvps
     .filter((r) => !r.is_anonymous)
     .map((r) => r.user_id)
-    .filter((id): id is string => !!id),
-    ...visibleTicketAttendees.map((attendee) => attendee.user_id).filter((id): id is string => !!id),
-  ];
+    .filter((id): id is string => !!id);
   const { data: currentUserProfile } = useQuery({
     queryKey: ['current-user-rsvp-profile', user?.id],
     queryFn: async () => {
@@ -993,7 +934,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
             </div>
 
             {/* Attendees dropdown */}
-            {user && attendeeCount > 0 && (
+            {user && goingCount > 0 && (
               <div className="rounded-lg border border-border overflow-hidden mt-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowAttendees(!showAttendees); }}
@@ -1001,43 +942,42 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-primary" />
-                    <span className="font-medium text-xs">Attendees ({attendeeCount})</span>
+                    <span className="font-medium text-xs">Attendees ({goingCount})</span>
                   </div>
                   {showAttendees ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
                 </button>
                 {showAttendees && (
                   <div className="border-t border-border max-h-40 overflow-y-auto divide-y divide-border">
-                    {attendeeRows.map((attendee) => {
-                      const avatarUrl = attendee.avatar_url || (attendee.user_id && avatarByUserId.get(attendee.user_id)) || undefined;
-                      const canOpenProfile = !!attendee.user_id && (attendee.source === 'ticket' || avatarByUserId.has(attendee.user_id));
+                    {visibleGoingRsvps.map((rsvp) => {
+                      const canOpenProfile = !!rsvp.user_id && avatarByUserId.has(rsvp.user_id);
                       return (
                       <div
-                        key={`${attendee.source}-${attendee.id}`}
+                        key={rsvp.id}
                         className={cn(
                           'flex items-center gap-2 p-2',
                           canOpenProfile ? 'cursor-pointer hover:bg-accent/50 transition-colors' : 'cursor-default'
                         )}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (canOpenProfile) navigate(`/profile/${attendee.user_id}`);
+                          if (canOpenProfile) navigate(`/profile/${rsvp.user_id}`);
                         }}
                       >
                         <Avatar className="w-6 h-6">
-                          <AvatarImage src={avatarUrl} />
+                          <AvatarImage src={(rsvp.user_id && avatarByUserId.get(rsvp.user_id)) || undefined} />
                           <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
-                            {attendee.name[0]?.toUpperCase() || 'IM'}
+                            {rsvp.name[0]?.toUpperCase() || 'IM'}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-xs font-medium truncate">{attendee.name || 'Inlight Member'}</span>
+                        <span className="text-xs font-medium truncate">{rsvp.name || 'Inlight Member'}</span>
                       </div>
                       );
                     })}
-                    {anonymousAttendeeCount > 0 && (
+                    {anonymousGoingCount > 0 && (
                       <div className="p-2 text-xs text-muted-foreground">
                         <span>
-                          {attendeeRows.length > 0
-                            ? `and ${anonymousAttendeeCount} ${anonymousAttendeeCount === 1 ? 'member' : 'members'} more`
-                            : `${anonymousAttendeeCount} ${anonymousAttendeeCount === 1 ? 'member' : 'members'} attending`}
+                          {visibleGoingRsvps.length > 0
+                            ? `and ${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} more`
+                            : `${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} attending`}
                         </span>
                       </div>
                     )}
