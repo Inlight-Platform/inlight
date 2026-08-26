@@ -165,10 +165,10 @@ export const SavedProjects: React.FC = () => {
                   <img
                     src={project.header_image_url || project.main_image_url || undefined}
                     alt={project.title}
-                    className="w-full h-40 object-cover"
+                    className="w-full aspect-[4/3] object-cover"
                   />
                 ) : (
-                  <div className="w-full h-40 bg-muted flex items-center justify-center">
+                  <div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
                     <span className="text-muted-foreground text-sm">No image</span>
                   </div>
                 )}

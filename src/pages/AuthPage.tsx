@@ -17,6 +17,7 @@ import { formatSignInErrorMessage } from '@/lib/authPolicy';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthRestoreState, readAuthRestore, readAuthReturnTo, saveAuthReturnTo } from '@/lib/authRestore';
 import { isUserEmailConfirmed } from '@/lib/authVerification';
+import { claimStoredInvites, hasStoredInviteTokens, storeInviteTokens } from '@/lib/inviteClaims';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset' | 'confirm';
 
@@ -247,6 +248,7 @@ const AuthPage: React.FC = () => {
   const mode = searchParams.get('mode');
   const inviteToken = searchParams.get('invite')?.trim() || null;
   const creditInviteToken = searchParams.get('credit_invite')?.trim() || null;
+  const creditInviteProjectId = searchParams.get('project_id')?.trim() || null;
   const authRedirectTo = useMemo(() => {
     const params = new URLSearchParams();
     params.set('returnTo', redirectPath);
@@ -286,6 +288,24 @@ const AuthPage: React.FC = () => {
     recoveryError,
   } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    storeInviteTokens(inviteToken, creditInviteToken, creditInviteProjectId);
+  }, [inviteToken, creditInviteToken, creditInviteProjectId]);
+
+  const redirectToClaimedInviteProject = async () => {
+    try {
+      const claimedProjectId = await claimStoredInvites();
+      if (claimedProjectId) {
+        navigate(`/projects/${claimedProjectId}`, { replace: true });
+        return true;
+      }
+    } catch (error) {
+      console.error('Invite claim failed:', error);
+    }
+
+    return false;
+  };
 
   useEffect(() => {
     console.log('[Inlight Auth Debug] AuthPage mounted/updated', {
@@ -345,13 +365,23 @@ const AuthPage: React.FC = () => {
       willRedirect: !forceAuth && !loading && !isLoading && Boolean(user) && view !== 'reset' && !isPasswordRecovery,
     });
     if (!forceAuth && !loading && !isLoading && user && view !== 'reset' && !isPasswordRecovery) {
+      if (inviteToken || creditInviteToken || hasStoredInviteTokens()) {
+        void (async () => {
+          const redirected = await redirectToClaimedInviteProject();
+          if (!redirected) {
+            navigate(redirectPath, redirectOptions);
+          }
+        })();
+        return;
+      }
+
       console.log('[Inlight Auth Debug] AuthPage redirecting authenticated user', {
         redirectPath,
         redirectOptions,
       });
       navigate(redirectPath, redirectOptions);
     }
-  }, [forceAuth, user, loading, isLoading, navigate, view, isPasswordRecovery, redirectPath, redirectOptions]);
+  }, [forceAuth, user, loading, isLoading, navigate, view, isPasswordRecovery, redirectPath, redirectOptions, inviteToken, creditInviteToken]);
 
   useEffect(() => {
     if (mode === 'reset') {
@@ -389,6 +419,10 @@ const AuthPage: React.FC = () => {
         navigate(redirectPath, redirectOptions);
         return;
       }
+      if (await redirectToClaimedInviteProject()) {
+        return;
+      }
+
       try {
         const { data: facultyGroup } = await (supabase.rpc as unknown as FacultyGroupRpc)('get_my_faculty_group');
         const first = Array.isArray(facultyGroup) ? facultyGroup[0] : facultyGroup;
@@ -463,6 +497,10 @@ const AuthPage: React.FC = () => {
         setView('confirm');
       } else {
         toast.success('Account created! Welcome to Inlight.');
+        if (await redirectToClaimedInviteProject()) {
+          return;
+        }
+
         navigate(redirectPath, redirectOptions);
       }
     } catch (error) {

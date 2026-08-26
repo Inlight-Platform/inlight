@@ -542,7 +542,12 @@ export type Database = {
           event_date: string
           event_type: string | null
           id: string
+          image_position_x: number | null
+          image_position_y: number | null
+          image_positions: Json | null
           image_url: string | null
+          image_urls: string[] | null
+          image_zoom: number | null
           is_paid: boolean
           link_title: string | null
           link_url: string | null
@@ -563,7 +568,12 @@ export type Database = {
           event_date: string
           event_type?: string | null
           id?: string
+          image_position_x?: number | null
+          image_position_y?: number | null
+          image_positions?: Json | null
           image_url?: string | null
+          image_urls?: string[] | null
+          image_zoom?: number | null
           is_paid?: boolean
           link_title?: string | null
           link_url?: string | null
@@ -584,7 +594,12 @@ export type Database = {
           event_date?: string
           event_type?: string | null
           id?: string
+          image_position_x?: number | null
+          image_position_y?: number | null
+          image_positions?: Json | null
           image_url?: string | null
+          image_urls?: string[] | null
+          image_zoom?: number | null
           is_paid?: boolean
           link_title?: string | null
           link_url?: string | null
@@ -1299,7 +1314,10 @@ export type Database = {
           id: string
           image_position_x: number | null
           image_position_y: number | null
+          image_positions: Json | null
+          image_zoom: number | null
           image_url: string | null
+          image_urls: string[] | null
           link_title: string | null
           link_url: string | null
           updated_at: string
@@ -1312,7 +1330,10 @@ export type Database = {
           id?: string
           image_position_x?: number | null
           image_position_y?: number | null
+          image_positions?: Json | null
+          image_zoom?: number | null
           image_url?: string | null
+          image_urls?: string[] | null
           link_title?: string | null
           link_url?: string | null
           updated_at?: string
@@ -1325,7 +1346,10 @@ export type Database = {
           id?: string
           image_position_x?: number | null
           image_position_y?: number | null
+          image_positions?: Json | null
+          image_zoom?: number | null
           image_url?: string | null
+          image_urls?: string[] | null
           link_title?: string | null
           link_url?: string | null
           updated_at?: string
@@ -2986,6 +3010,37 @@ export type Database = {
       add_group_admin_by_email: {
         Args: { _email: string; _group_id: string }
         Returns: Database["public"]["Tables"]["group_admins"]["Row"]
+      }
+      admin_create_group: {
+        Args: {
+          _description?: string
+          _initial_admin_email?: string
+          _name: string
+          _slug: string
+        }
+        Returns: Json
+      }
+      admin_list_groups: {
+        Args: never
+        Returns: {
+          active_admin_count: number
+          active_member_count: number
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }[]
+      }
+      admin_update_group: {
+        Args: {
+          _description?: string
+          _group_id: string
+          _name: string
+          _slug: string
+        }
+        Returns: Json
       }
       get_profile_attendance: {
         Args: { _user_id: string }

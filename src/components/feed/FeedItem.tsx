@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ImageCarousel } from './ImageCarousel';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -43,8 +44,11 @@ export interface FeedItemData {
   title?: string;
   description?: string;
   image_url?: string | null;
+  image_urls?: string[] | null;
   image_position_x?: number | null;
   image_position_y?: number | null;
+  image_zoom?: number | null;
+  image_positions?: Array<{ x?: number | null; y?: number | null; zoom?: number | null }> | null;
   link_url?: string | null;
   link_title?: string | null;
   created_at: string;
@@ -403,9 +407,13 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
   const canOpenCreatorProfile = !!user && !showAnonymous;
   const bodyText = item.content || item.description;
-  const compactCollapsed = compactSquare && !compactTextExpanded;
+  const compactEventMedia = compactSquare && item.type === 'event';
+  const compactProjectMedia = compactSquare && item.type === 'project';
+  const compactWideMedia = compactEventMedia || compactProjectMedia;
+  const compactCollapsed = compactSquare && !compactTextExpanded && !compactWideMedia;
   const compactBodyLineCount = bodyText?.split('\n').filter((line) => line.trim()).length || 0;
   const showCompactTextToggle = compactSquare && Boolean(bodyText && (bodyText.length > 90 || compactBodyLineCount > 2));
+  const compactSquareMedia = compactSquare && !compactWideMedia;
   const visitorPromptCopy = isEventItem
     ? {
         title: isPaidEvent ? 'Buy tickets on Inlight' : 'RSVP on Inlight',
@@ -585,26 +593,34 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Image - skip for open roles */}
-        {item.image_url && item.type !== 'open_role' && (
-          <div
-            className={cn(
-              'rounded-lg overflow-hidden mb-3 bg-muted flex items-center justify-center',
-              compactCollapsed && 'mb-0 mt-auto min-h-0 flex-1',
-              compactSquare && compactTextExpanded && 'aspect-square mb-0',
-              imageContainerClassName
-            )}
-          >
-            <img
-              src={item.image_url}
-              alt={item.title || 'Post image'}
+        {item.type !== 'open_role' && (() => {
+          const urls = item.image_urls?.length ? item.image_urls : item.image_url ? [item.image_url] : [];
+          if (!urls.length) return null;
+
+          return (
+            <div
               className={cn(
-                'w-full max-h-[32rem] object-contain',
-                compactSquare && 'h-full max-h-none object-cover',
-                imageClassName
+                'rounded-lg overflow-hidden mb-3 relative bg-muted',
+                (!compactSquare || compactEventMedia) && 'aspect-video',
+                compactProjectMedia && 'aspect-[4/3]',
+                compactCollapsed && !compactWideMedia && 'mb-0 mt-auto min-h-0 flex-1',
+                compactSquareMedia && compactTextExpanded && 'aspect-square mb-0',
+                compactSquareMedia && !compactTextExpanded && 'aspect-square',
+                imageContainerClassName
               )}
-            />
-          </div>
-        )}
+            >
+              <ImageCarousel
+                urls={urls}
+                positionX={item.image_position_x ?? 50}
+                positionY={item.image_position_y ?? 50}
+                positionZoom={item.image_zoom ?? 1}
+                positions={item.image_positions}
+                className="h-full rounded-lg"
+                imageClassName={cn((compactSquareMedia || compactWideMedia) && 'h-full max-h-none object-cover', imageClassName)}
+              />
+            </div>
+          );
+        })()}
 
         {/* Link display for posts */}
         {item.link_url && !eventLinkClosed && (
@@ -655,7 +671,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Event details */}
-        {item.type === 'event' && (
+        {item.type === 'event' && !compactCollapsed && (
           <div className="space-y-3 mt-2">
             <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-muted/50">
               {item.event_date && (

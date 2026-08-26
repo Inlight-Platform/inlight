@@ -41,6 +41,8 @@ const typeIcons: Record<string, React.ElementType> = {
   Profile: User,
 };
 
+const sheetBackedTypes = new Set(['Show', 'Film', 'Job']);
+
 interface SharedItemCardProps {
   data: SharedItemData;
   isOwn: boolean;
@@ -53,8 +55,8 @@ const SharedItemCard: React.FC<SharedItemCardProps> = ({ data, isOwn, onCardClic
 
   const handleClick = () => {
     if (!data.url) return;
-    // Non-project types with a custom handler: let the parent open an in-place sheet
-    if (onCardClick && data.type !== 'Project') {
+    // Sheet-backed items use the parent handler; route-backed shares navigate normally.
+    if (onCardClick && sheetBackedTypes.has(data.type)) {
       onCardClick(data);
       return;
     }
