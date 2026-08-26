@@ -1,12 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Event, useStore } from '@/store/useStore';
+import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Users, Video, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isEventPast } from '@/lib/eventDates';
+import inlightLogo from '@/assets/inlight-logo.jpeg';
+import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
+import { eventPath } from '@/lib/publicPaths';
 
 interface EventCardProps {
   event: Event;
@@ -24,13 +29,18 @@ const eventTypeColors: Record<string, string> = {
 
 const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { getUser, currentUserId, rsvpToEvent, get1stDegree } = useStore();
+  const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
   
   const host = getUser(event.hostId);
-  const myRsvp = event.attendees.find(a => a.userId === currentUserId);
+  const hostName = host?.name || 'Inlight creator';
+  const hostInitial = hostName[0] || 'I';
+  const coverImage = event.coverImage || inlightLogo;
+  const myRsvp = user ? event.attendees.find(a => a.userId === currentUserId) : undefined;
   const goingCount = event.attendees.filter(a => a.status === 'going').length;
   const eventHasPassed = isEventPast(event.date);
-  const connections = get1stDegree(currentUserId);
+  const connections = user ? get1stDegree(currentUserId) : [];
   const connectionsGoing = event.attendees.filter(
     a => a.status === 'going' && connections.some(c => c.id === a.userId)
   );
@@ -55,13 +65,41 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
 
   const handleRsvp = (status: 'going' | 'interested') => {
     if (eventHasPassed) return;
+    if (!user) {
+      setShowVisitorAuthPrompt(true);
+      return;
+    }
     rsvpToEvent(event.id, currentUserId, status);
   };
 
+  const visitorAuthOverlay = showVisitorAuthPrompt
+    ? createPortal(
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowVisitorAuthPrompt(false);
+          }}
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) setShowVisitorAuthPrompt(false);
+          }}
+        >
+          <VisitorAuthPrompt
+            compact
+            title="RSVP on Inlight"
+            description="Sign in or create an account to RSVP."
+            features={['RSVP tracking', 'Event updates', 'Saved event access']}
+            restore={{ type: 'event', id: event.id }}
+          />
+        </div>,
+        document.body,
+      )
+    : null;
+
   if (compact) {
     return (
-      <div 
-        className="flex items-center gap-3 p-3 rounded-lg bg-card transition-colors"
+      <div
+        className="flex cursor-pointer items-center gap-3 rounded-lg bg-card p-3 transition-colors"
+        onClick={() => navigate(eventPath(event))}
       >
         <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center shrink-0">
           <span className="text-xs font-medium text-primary">
@@ -85,11 +123,15 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
   }
 
   return (
-    <div className="rounded-xl overflow-hidden bg-card border border-border transition-colors">
+    <>
+    <div
+      className="cursor-pointer overflow-hidden rounded-xl border border-border bg-card transition-colors"
+      onClick={() => navigate(eventPath(event))}
+    >
       {/* Cover Image */}
       <div className="relative h-40 overflow-hidden">
         <img 
-          src={event.coverImage} 
+          src={coverImage} 
           alt={event.title}
           className="w-full h-full object-cover"
         />
@@ -139,10 +181,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
         <div className="flex items-center gap-2">
           <Avatar className="w-6 h-6">
             <AvatarImage src={host?.avatar} />
-            <AvatarFallback>{host?.name?.[0]}</AvatarFallback>
+            <AvatarFallback>{hostInitial}</AvatarFallback>
           </Avatar>
           <span className="text-sm text-muted-foreground">
-            Hosted by <span className="text-foreground">{host?.name}</span>
+            Hosted by <span className="text-foreground">{hostName}</span>
           </span>
         </div>
 
@@ -185,15 +227,21 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
             size="sm"
             variant={myRsvp?.status === 'going' ? 'default' : 'outline'}
             className="flex-1"
-            onClick={() => handleRsvp('going')}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRsvp('going');
+            }}
             disabled={eventHasPassed}
           >
-            {eventHasPassed ? 'RSVP Closed' : myRsvp?.status === 'going' ? '✓ Going' : 'RSVP'}
+            {!user && !eventHasPassed ? 'Sign in to RSVP' : eventHasPassed ? 'RSVP Closed' : myRsvp?.status === 'going' ? '✓ Going' : 'RSVP'}
           </Button>
           <Button
             size="sm"
             variant={myRsvp?.status === 'interested' ? 'secondary' : 'ghost'}
-            onClick={() => handleRsvp('interested')}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRsvp('interested');
+            }}
             disabled={eventHasPassed}
           >
             {myRsvp?.status === 'interested' ? '★ Interested' : '☆'}
@@ -201,6 +249,8 @@ const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
         </div>
       </div>
     </div>
+    {visitorAuthOverlay}
+    </>
   );
 };
 

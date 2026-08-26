@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, Network, Sun, Moon, MessageSquare, UserRound, MoreHorizontal } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/hooks/useNotifications';
 import { SignOutDialog } from '@/components/ui/sign-out-dialog';
 import { useTheme } from '@/hooks/useTheme';
+import { AuthSegmentedButton } from '@/components/auth/AuthSegmentedButton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,12 +63,16 @@ export const MainNav: React.FC = () => {
   const settingsReturnTo = `${location.pathname}${location.search}${location.hash}`;
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
-  const { collapsed, toggleCollapsed } = useSidebarState();
+  const { collapsed, setCollapsed, toggleCollapsed } = useSidebarState();
   const { totalUnread } = useMessages();
   const { unreadCount: notifUnreadCount } = useNotifications();
   const combinedUnread = notifUnreadCount + totalUnread;
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const { isDark, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    setCollapsed(!user);
+  }, [setCollapsed, user]);
 
   const handleSignOut = async () => {
     setShowSignOutDialog(false);
@@ -386,7 +391,21 @@ export const MainNav: React.FC = () => {
             </div> :
 
           collapsed ?
-          <Tooltip>
+          <div className="space-y-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={toggleTheme}
+                  aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                  className="w-full flex items-center justify-center py-3 rounded-xl text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-white transition-colors">
+                  {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
+                {isDark ? 'Light mode' : 'Dark mode'}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
                 <TooltipTrigger asChild>
                   <Link
                 to="/auth"
@@ -396,15 +415,19 @@ export const MainNav: React.FC = () => {
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">Sign in</TooltipContent>
-              </Tooltip> :
+              </Tooltip>
+          </div> :
 
-          <Link
-            to="/auth"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-[hsl(220_85%_55%)] to-[hsl(240_70%_50%)] text-white font-medium shadow-lg shadow-[hsl(220_85%_55%/0.25)] hover:shadow-[hsl(220_85%_55%/0.4)] transition-shadow">
-
-                <LogIn className="w-5 h-5" />
-                Sign in
-              </Link>
+          <div className="space-y-2">
+            <button
+              onClick={toggleTheme}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(220_15%_60%)] hover:bg-[hsl(220_30%_15%)] hover:text-white transition-colors">
+              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {isDark ? 'Light mode' : 'Dark mode'}
+            </button>
+            <AuthSegmentedButton size="md" fullWidth showIcons />
+          </div>
 
           }
         </div>
@@ -548,13 +571,31 @@ export const MainNav: React.FC = () => {
             </DropdownMenuContent>
           </DropdownMenu> :
 
-          <Link
-            to="/auth"
-            className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 text-[hsl(45_95%_58%)]">
-
-              <LogIn className="w-5 h-5" />
-              <span className="max-w-full truncate text-[10px] leading-none font-medium">Sign in</span>
-            </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Open visitor menu"
+                className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 text-[hsl(45_95%_58%)]">
+                <MoreHorizontal className="w-5 h-5" />
+                <span className="max-w-full truncate text-[10px] leading-none font-medium">More</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              side="top"
+              sideOffset={10}
+              className="mb-1 w-56 border-[hsl(45_95%_58%/0.16)] bg-popover p-2 text-popover-foreground shadow-xl">
+              <div className="px-2 py-2">
+                <AuthSegmentedButton size="sm" fullWidth showIcons />
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={toggleTheme} className="gap-3 rounded-md px-3 py-2.5">
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                <span>{isDark ? 'Light mode' : 'Dark mode'}</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           }
 
         </div>

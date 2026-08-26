@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { SUPABASE_URL } from '@/integrations/supabase/config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +39,7 @@ interface Profile {
   website_url: string | null;
   instagram_url: string | null;
   message_privacy: string;
+  anonymous_event_rsvps?: boolean;
   email_notifications: boolean;
   union_status: string | null;
   representation: string | null;
@@ -69,6 +71,21 @@ const PROFILE_SETTINGS_FIELDS = `
   show_representation,
   show_gear_list
 `;
+
+const EVENT_PRIVACY_DEBUG_PREFIX = '[Inlight Event Privacy Debug]';
+
+const getEventPrivacyDebugContext = (userId?: string) => ({
+  userId,
+  path:
+    typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}${window.location.hash}`
+      : undefined,
+  origin: typeof window !== 'undefined' ? window.location.origin : undefined,
+  supabaseUrl: SUPABASE_URL,
+  viteMode: import.meta.env.MODE,
+  supabaseEnv: import.meta.env.VITE_SUPABASE_ENV,
+  allowRemoteSandbox: import.meta.env.VITE_SUPABASE_ALLOW_REMOTE_SANDBOX,
+});
 
 const AFFILIATION_OPTIONS = [
   { tag: "etw", label: "Experimental Theatre Wing" },
@@ -249,6 +266,7 @@ const ProfileSettingsPage: React.FC = () => {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [instagramUrl, setInstagramUrl] = useState('');
   const [messagePrivacy, setMessagePrivacy] = useState('mutuals_only');
+  const [anonymousEventRsvps, setAnonymousEventRsvps] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
@@ -273,6 +291,9 @@ const ProfileSettingsPage: React.FC = () => {
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
+      const debugContext = getEventPrivacyDebugContext(user.id);
+      console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Profile settings load started', debugContext);
+
       const { data: profileByUserId, error: profileByUserIdError } = await supabase
         .from('profiles')
         .select(PROFILE_SETTINGS_FIELDS)
@@ -280,10 +301,23 @@ const ProfileSettingsPage: React.FC = () => {
         .maybeSingle();
 
       if (profileByUserIdError) {
+        console.error(EVENT_PRIVACY_DEBUG_PREFIX, 'Profile row load failed', {
+          ...debugContext,
+          error: profileByUserIdError,
+        });
         console.error('ProfileSettingsPage: failed loading profile by user id', profileByUserIdError);
       }
 
-      if (!profileByUserId) return null;
+      console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Profile row load finished', {
+        ...debugContext,
+        hasProfile: Boolean(profileByUserId),
+        profileUserId: profileByUserId?.user_id,
+      });
+
+      if (!profileByUserId) {
+        console.warn(EVENT_PRIVACY_DEBUG_PREFIX, 'Stopping settings load because no profile row was returned', debugContext);
+        return null;
+      }
 
       const { data: notificationSettings, error: notificationSettingsError } = await supabase
         .from('profiles')
@@ -295,9 +329,32 @@ const ProfileSettingsPage: React.FC = () => {
         console.error('ProfileSettingsPage: failed loading notification settings', notificationSettingsError);
       }
 
+      console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Loading anonymous_event_rsvps directly from profiles', debugContext);
+      const { data: eventPrivacyProfile, error: eventPrivacyPreferenceError } = await supabase
+        .from('profiles')
+        .select('anonymous_event_rsvps')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (eventPrivacyPreferenceError) {
+        console.error(EVENT_PRIVACY_DEBUG_PREFIX, 'Direct anonymous_event_rsvps load failed', {
+          ...debugContext,
+          error: eventPrivacyPreferenceError,
+        });
+        console.error('ProfileSettingsPage: failed loading event privacy preference', eventPrivacyPreferenceError);
+      } else {
+        console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Direct anonymous_event_rsvps load succeeded', {
+          ...debugContext,
+          value: eventPrivacyProfile?.anonymous_event_rsvps,
+          normalizedValue: Boolean(eventPrivacyProfile?.anonymous_event_rsvps),
+        });
+        setAnonymousEventRsvps(Boolean(eventPrivacyProfile?.anonymous_event_rsvps));
+      }
+
       return {
         ...(profileByUserId as Profile),
         email_notifications: notificationSettings?.email_notifications ?? true,
+        anonymous_event_rsvps: Boolean(eventPrivacyProfile?.anonymous_event_rsvps),
       };
     },
     enabled: !!user?.id,
@@ -319,6 +376,10 @@ const ProfileSettingsPage: React.FC = () => {
   // Populate form when profile loads
   useEffect(() => {
     if (profile) {
+      console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Hydrating settings form from profile query', {
+        ...getEventPrivacyDebugContext(user?.id),
+        anonymousEventRsvpsFromProfile: profile.anonymous_event_rsvps,
+      });
       setDisplayName(profile.display_name || '');
       setStageName(profile.stage_name || '');
       setAvatarUrl(profile.avatar_url || '');
@@ -328,6 +389,7 @@ const ProfileSettingsPage: React.FC = () => {
       setWebsiteUrl(((profile as unknown as { website_url?: string | null }).website_url) || '');
       setInstagramUrl(((profile as unknown as { instagram_url?: string | null }).instagram_url) || '');
       setMessagePrivacy(profile.message_privacy || 'mutuals_only');
+      setAnonymousEventRsvps(profile.anonymous_event_rsvps ?? false);
       setEmailNotifications(profile.email_notifications ?? true);
       // Professional details
       setUnionStatus(profile.union_status || '');
@@ -360,6 +422,62 @@ const ProfileSettingsPage: React.FC = () => {
       toast.error(error.message || 'Failed to update profile');
     },
   });
+
+  const updateAnonymousEventRsvpPreference = async (checked: boolean) => {
+    const debugContext = getEventPrivacyDebugContext(user?.id);
+    console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Toggle requested', {
+      ...debugContext,
+      checked,
+      previousValue: anonymousEventRsvps,
+      hasUser: Boolean(user?.id),
+    });
+
+    if (!user?.id) {
+      console.warn(EVENT_PRIVACY_DEBUG_PREFIX, 'Toggle ignored because no authenticated user is available', debugContext);
+      return;
+    }
+
+    const previousValue = anonymousEventRsvps;
+    setAnonymousEventRsvps(checked);
+
+    console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Updating profiles.anonymous_event_rsvps directly', {
+      ...debugContext,
+      shouldAttendAnonymously: checked,
+    });
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ anonymous_event_rsvps: checked })
+      .eq('user_id', user.id);
+
+    if (error) {
+      setAnonymousEventRsvps(previousValue);
+      console.error(EVENT_PRIVACY_DEBUG_PREFIX, 'Direct profiles.anonymous_event_rsvps update failed', {
+        ...debugContext,
+        requestedValue: checked,
+        rolledBackTo: previousValue,
+        error,
+      });
+      console.error('ProfileSettingsPage: failed updating event privacy preference', error);
+      if (/anonymous_event_rsvps|schema cache|column/i.test(error.message)) {
+        toast.error('Event privacy setting is not available until the latest database migration is applied.');
+        return;
+      }
+
+      toast.error(error.message || 'Failed to update event privacy setting');
+      return;
+    }
+
+    console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Direct profiles.anonymous_event_rsvps update succeeded', {
+      ...debugContext,
+      requestedValue: checked,
+      savedPreference: checked,
+    });
+    console.log(EVENT_PRIVACY_DEBUG_PREFIX, 'Invalidating event privacy related queries', debugContext);
+    queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['event-rsvps'] });
+    toast.success('Event privacy updated successfully!');
+  };
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -763,6 +881,38 @@ const ProfileSettingsPage: React.FC = () => {
                 </div>
               </div>
             </RadioGroup>
+          </CardContent>
+        </Card>
+
+        {/* Event Privacy Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <EyeOff className="h-5 w-5" />
+              Event Privacy
+            </CardTitle>
+            <CardDescription>
+              Choose how your RSVP appears on event attendee lists
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-muted">
+                  <EyeOff className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-medium">Attend events anonymously</p>
+                  <p className="text-sm text-muted-foreground">
+                    Hide your name from public attendee lists and include your RSVP in the anonymous count
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={anonymousEventRsvps}
+                onCheckedChange={updateAnonymousEventRsvpPreference}
+              />
+            </div>
           </CardContent>
         </Card>
 

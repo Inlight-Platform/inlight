@@ -16,6 +16,7 @@ import CompanyCard from '@/components/people/CompanyCard';
 import { useCompanyFollows } from '@/hooks/useCompanyFollows';
 import { useAuth } from '@/hooks/useAuth';
 import { InviteFriendDialog } from '@/components/invitations/InviteFriendDialog';
+import { VisitorAuthOverlay } from '@/components/auth/VisitorAuthPrompt';
 
 interface Studio {
   id: string;
@@ -88,6 +89,67 @@ const GroupsSection: React.FC<{
     </section>
   );
 };
+
+const PeopleVisitorPreview: React.FC = () => (
+  <div className="space-y-4">
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <UserRound className="h-5 w-5 text-primary" />
+          <span className="font-display text-base sm:text-lg font-semibold">People</span>
+        </div>
+        <ChevronDown className="h-5 w-5 text-muted-foreground rotate-180" />
+      </div>
+      <div className="p-4 border-t border-border space-y-6">
+        <div className="overflow-hidden">
+          <Tabs value="explore">
+            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
+              <TabsTrigger value="explore" className="flex items-center gap-1.5">
+                <Compass className="w-4 h-4" />
+                Explore
+              </TabsTrigger>
+              <TabsTrigger value="network" className="flex items-center gap-1.5">
+                <Users className="w-4 h-4" />
+                Community
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        <div>
+          <h2 className="text-xl font-display font-semibold">Creators to Connect With</h2>
+          <p className="text-sm text-muted-foreground">Explore performers, filmmakers, musicians, and collaborators.</p>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <Card key={index} className="overflow-hidden">
+              <Skeleton className="h-24 w-full" />
+              <CardContent className="p-4 space-y-3">
+                <Skeleton className="h-16 w-16 rounded-full mx-auto -mt-10" />
+                <Skeleton className="h-4 w-24 mx-auto" />
+                <Skeleton className="h-3 w-20 mx-auto" />
+                <Skeleton className="h-9 w-full rounded-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <GraduationCap className="h-5 w-5 text-primary" />
+        <span className="font-display text-base sm:text-lg font-semibold">Groups</span>
+      </div>
+    </div>
+
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <Building2 className="h-5 w-5 text-primary" />
+        <span className="font-display text-base sm:text-lg font-semibold">Companies</span>
+      </div>
+    </div>
+  </div>
+);
 
 const PeoplePage: React.FC = () => {
   const navigate = useNavigate();
@@ -302,18 +364,31 @@ const PeoplePage: React.FC = () => {
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-display font-bold">People</h1>
             </div>
-            <InviteFriendDialog>
-              <Button size="sm" className="gap-2">
-                <UserPlus className="h-4 w-4" />
-                <span className="hidden sm:inline">Invite a friend</span>
-                <span className="sm:hidden">Invite</span>
-              </Button>
-            </InviteFriendDialog>
+            {authUser && (
+              <InviteFriendDialog>
+                <Button size="sm" className="gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Invite a friend</span>
+                  <span className="sm:hidden">Invite</span>
+                </Button>
+              </InviteFriendDialog>
+            )}
           </div>
         </div>
       </header>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
+        {!authUser ? (
+          <VisitorAuthOverlay
+            title="People"
+            description="People is where you explore creators and build your creative community."
+            features={['Explore', 'Community']}
+          >
+            <PeopleVisitorPreview />
+          </VisitorAuthOverlay>
+        ) : (
+          <>
+
         {/* People dropdown */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <button
@@ -582,6 +657,8 @@ const PeoplePage: React.FC = () => {
             </div>
           )}
         </div>
+          </>
+        )}
       </div>
     </div>
   );

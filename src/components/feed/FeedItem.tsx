@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ImageCarousel } from './ImageCarousel';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp, Ticket } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp, Ticket, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -29,11 +30,14 @@ import { useEventRsvps } from '@/hooks/useEventRsvps';
 import { cn, capitalizeName } from '@/lib/utils';
 import { isEventPast } from '@/lib/eventDates';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
+import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
+import { eventPath } from '@/lib/publicPaths';
 
 export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show' | 'open_role';
 
 export interface FeedItemData {
   id: string;
+  slug?: string | null;
   type: FeedItemType;
   user_id: string;
   content?: string;
@@ -77,6 +81,17 @@ export interface FeedItemData {
   };
 }
 
+type EventPanelist = {
+  id: string;
+  user_id: string | null;
+  display_name: string;
+  title: string | null;
+  bio: string | null;
+  headshot_url: string | null;
+  website_url: string | null;
+  reel_url: string | null;
+  public_slug: string;
+};
 interface FeedItemProps {
   item: FeedItemData;
   networkDegree: NetworkDegree | null;
@@ -86,6 +101,7 @@ interface FeedItemProps {
   imageClassName?: string;
   compactSquare?: boolean;
   onOpenDetails?: (item: FeedItemData) => void;
+  onRequireAuth?: (item: FeedItemData, action: 'rsvp' | 'ticket') => void;
 }
 
 export const FeedItem: React.FC<FeedItemProps> = ({
@@ -97,6 +113,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   imageClassName,
   compactSquare = false,
   onOpenDetails,
+  onRequireAuth,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -110,11 +127,13 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const [rsvpEmail, setRsvpEmail] = useState('');
   const [rsvpSubmitted, setRsvpSubmitted] = useState(false);
   const [showAttendees, setShowAttendees] = useState(false);
+  const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
   const [buyingTicket, setBuyingTicket] = useState(false);
   const [compactTextExpanded, setCompactTextExpanded] = useState(false);
 
   const isEventItem = item.type === 'event';
   const isPaidEvent = isEventItem && !!item.is_paid;
+  const directTicketUrl = isPaidEvent ? item.payment_link_url || item.link_url || null : null;
   const eventHasPassed = isEventPast(item.event_date);
   const eventLinkClosed = isEventItem && eventHasPassed;
   const { rsvps, goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
@@ -122,8 +141,26 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const alreadyRsvpd = !!userRsvp || rsvpSubmitted;
   const alreadyGoing = rsvpSubmitted || userRsvp?.status === 'going';
   const userEmail = user?.email ?? '';
+  const { data: eventPanelists = [] } = useQuery({
+    queryKey: ['event-panelists-public', item.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('event_panelists')
+        .select('id, user_id, display_name, title, bio, headshot_url, website_url, reel_url, public_slug')
+        .eq('event_id', item.id)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('display_name', { ascending: true });
+      if (error) throw error;
+      return (data || []) as EventPanelist[];
+    },
+    enabled: isEventItem,
+  });
+  const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
+  const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
 
   const attendeeUserIds = goingRsvps
+    .filter((r) => !r.is_anonymous)
     .map((r) => r.user_id)
     .filter((id): id is string => !!id);
   const { data: currentUserProfile } = useQuery({
@@ -155,6 +192,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const avatarByUserId = new Map(attendeeProfiles.map((p) => [p.user_id, p.avatar_url]));
 
   const isOwner = user?.id === item.user_id;
+  const canOpenEventDashboard = isEventItem && isOwner;
   const canManageFeedItem =
     isAdmin ||
     ((item.type !== 'event' || canManageEvents) &&
@@ -217,6 +255,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     deleteMutation.mutate();
   };
 
+  const openEventDashboard = () => {
+    navigate(`/events/${item.id}/dashboard`, { state: { event: item } });
+  };
+
   const getTypeIcon = () => {
     switch (item.type) {
       case 'project':
@@ -252,8 +294,17 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   };
 
   const handleClick = () => {
+    if (!user && (item.type === 'post' || item.type === 'project')) {
+      setShowVisitorAuthPrompt(true);
+      return;
+    }
+
     if (item.type === 'event') {
-      navigate('/events');
+      if (onOpenDetails) {
+        onOpenDetails(item);
+      } else {
+        navigate(eventPath(item));
+      }
       return;
     }
 
@@ -285,57 +336,51 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       return;
     }
 
-    // If a direct payment link exists, auto-RSVP and open it
-    if (item.payment_link_url) {
-      // Auto-RSVP the logged-in user as "going"
-      if (user) {
-        try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name')
-            .eq('user_id', user.id)
-            .single();
-          const ownerEmail = user.email ?? '';
-          if (profile && ownerEmail) {
-            submitRsvp.mutate({
-              event_id: item.id,
-              name: profile.display_name || ownerEmail.split('@')[0],
-              email: ownerEmail,
-              role_type: 'attendee',
-              status: 'going',
-            });
-          }
-        } catch (e) {
-          // Don't block checkout if RSVP fails
-          console.error('Auto-RSVP error:', e);
-        }
-      }
-      window.open(item.payment_link_url, '_blank');
-      return;
-    }
-
-    if (!isPaidEvent || !item.stripe_price_id) {
-      toast.error('Tickets are not yet available for this event.');
-      return;
-    }
-
-    setBuyingTicket(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {
-        body: {
-          event_id: item.id,
-        },
+    if (!user) {
+      console.log('[Inlight Auth Debug] Logged-out Buy Ticket clicked', {
+        eventId: item.id,
+        title: item.title,
+        currentUrl: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+        isPaidEvent,
+        hasPaymentLink: Boolean(directTicketUrl),
+        hasStripePrice: Boolean(item.stripe_price_id),
+        handledByParent: Boolean(onRequireAuth),
       });
-
-      if (error) throw error;
-      if (!data?.url) throw new Error('Checkout link unavailable');
-
-      window.location.href = data.url;
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : 'Failed to start checkout');
-      setBuyingTicket(false);
+      if (onRequireAuth) {
+        onRequireAuth(item, 'ticket');
+      } else {
+        setShowVisitorAuthPrompt(true);
+      }
+      return;
     }
+
+    if (directTicketUrl) {
+      // Auto-RSVP the logged-in user as "going"
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('user_id', user.id)
+          .single();
+        const ownerEmail = user.email ?? '';
+        if (profile && ownerEmail) {
+          submitRsvp.mutate({
+            event_id: item.id,
+            name: profile.display_name || ownerEmail.split('@')[0],
+            email: ownerEmail,
+            role_type: 'attendee',
+            status: 'going',
+          });
+        }
+      } catch (e) {
+        // Don't block checkout if RSVP fails
+        console.error('Auto-RSVP error:', e);
+      }
+      window.open(directTicketUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    toast.error('Tickets are not yet available for this event.');
   };
 
   const getDegreeColor = () => {
@@ -360,6 +405,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     ? 'Anonymous'
     : capitalizeName(item.creator_profile?.display_name || '') || 'Inlight Member';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
+  const canOpenCreatorProfile = !!user && !showAnonymous;
   const bodyText = item.content || item.description;
   const compactEventMedia = compactSquare && item.type === 'event';
   const compactProjectMedia = compactSquare && item.type === 'project';
@@ -368,9 +414,53 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const compactBodyLineCount = bodyText?.split('\n').filter((line) => line.trim()).length || 0;
   const showCompactTextToggle = compactSquare && Boolean(bodyText && (bodyText.length > 90 || compactBodyLineCount > 2));
   const compactSquareMedia = compactSquare && !compactWideMedia;
+  const visitorPromptCopy = isEventItem
+    ? {
+        title: isPaidEvent ? 'Buy tickets on Inlight' : 'RSVP on Inlight',
+        description: isPaidEvent ? 'Sign in or create an account to buy tickets.' : 'Sign in or create an account to RSVP.',
+        features: isPaidEvent ? ['Ticket checkout', 'Event updates', 'Saved event access'] : ['RSVP tracking', 'Event updates', 'Saved event access'],
+        restore: { type: 'event' as const, id: item.id },
+      }
+    : item.type === 'project'
+      ? {
+          title: 'View project on Inlight',
+          description: 'Sign in or create an account to view project details.',
+          features: ['Project details', 'Creator context', 'Saved project access'],
+          restore: undefined,
+        }
+      : {
+          title: 'View update on Inlight',
+          description: 'Sign in or create an account to view this update.',
+          features: ['Creator updates', 'Community context', 'Saved access'],
+          restore: undefined,
+        };
+
+  const visitorAuthOverlay = showVisitorAuthPrompt && (isEventItem || item.type === 'post' || item.type === 'project')
+    ? createPortal(
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowVisitorAuthPrompt(false);
+          }}
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) setShowVisitorAuthPrompt(false);
+          }}
+        >
+          <VisitorAuthPrompt
+            compact
+            title={visitorPromptCopy.title}
+            description={visitorPromptCopy.description}
+            features={visitorPromptCopy.features}
+            restore={visitorPromptCopy.restore}
+          />
+        </div>,
+        document.body,
+      )
+    : null;
 
   return (
-    <Card 
+    <>
+    <Card
       className={cn(
         'bg-card border-border',
         isClickable && 'cursor-pointer hover:shadow-md transition-shadow',
@@ -393,10 +483,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
           <Avatar 
-            className={`h-10 w-10 ${showAnonymous ? '' : 'cursor-pointer'}`}
+            className={`h-10 w-10 ${canOpenCreatorProfile ? 'cursor-pointer' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
-              if (!showAnonymous) {
+              if (canOpenCreatorProfile) {
                 navigate(`/profile/${item.user_id}`);
               }
             }}
@@ -407,10 +497,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span 
-                className={`font-medium text-foreground ${showAnonymous ? 'italic text-muted-foreground' : 'cursor-pointer hover:underline'}`}
+                className={`font-medium text-foreground ${showAnonymous ? 'italic text-muted-foreground' : ''} ${canOpenCreatorProfile ? 'cursor-pointer hover:underline' : ''}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!showAnonymous) {
+                  if (canOpenCreatorProfile) {
                     navigate(`/profile/${item.user_id}`);
                   }
                 }}
@@ -432,7 +522,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
             <div className="p-1.5 rounded-full bg-muted">
               {getTypeIcon()}
             </div>
-            {canDelete && (
+            {(canDelete || canOpenEventDashboard) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -445,6 +535,12 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  {canOpenEventDashboard && (
+                    <DropdownMenuItem onClick={openEventDashboard}>
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Creator Dashboard
+                    </DropdownMenuItem>
+                  )}
                   {canEdit && (
                     <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
                       <Pencil className="h-4 w-4 mr-2" />
@@ -617,8 +713,93 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 </p>
               </div>
             )}
+            {eventPanelists.length > 0 && (
+              <div className="rounded-xl border border-border bg-card/80 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Panelists
+                    </h3>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {eventPanelists.length}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {eventPanelists.map((panelist) => {
+                    const eventIdentifier = item.slug || item.id;
+                    const panelistUrl = `/events/${eventIdentifier}/panelists/${panelist.public_slug}`;
+                    const canOpenPanelist = Boolean(panelistUrl);
+
+                    return (
+                      <button
+                        key={panelist.id}
+                        type="button"
+                        className={cn(
+                          'group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-background/70 p-3 text-left shadow-sm',
+                          canOpenPanelist && 'transition-colors hover:border-primary/40 hover:bg-accent/40'
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(panelistUrl);
+                        }}
+                        disabled={!canOpenPanelist}
+                      >
+                        <Avatar className="h-16 w-16 shrink-0 rounded-xl">
+                          <AvatarImage src={panelist.headshot_url || undefined} />
+                          <AvatarFallback className="rounded-xl bg-primary/10 text-lg font-semibold text-primary">
+                            {panelist.display_name[0]?.toUpperCase() || 'P'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="min-w-0 flex-1 space-y-1">
+                          <span className="flex items-start justify-between gap-3">
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-semibold leading-tight text-foreground">
+                              {panelist.display_name}
+                              </span>
+                              {panelist.title && (
+                                <span className="mt-1 block truncate text-xs leading-tight text-muted-foreground">
+                                  {panelist.title}
+                                </span>
+                              )}
+                            </span>
+                            {canOpenPanelist && (
+                              <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+                            )}
+                          </span>
+                          {panelist.bio && (
+                            <span className="line-clamp-2 block text-xs leading-relaxed text-muted-foreground">
+                              {panelist.bio}
+                            </span>
+                          )}
+                          {canOpenPanelist && (
+                            <span className="inline-flex text-xs font-medium text-primary">
+                              View profile
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="flex gap-2">
-              {isPaidEvent ? (
+              {canOpenEventDashboard ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEventDashboard();
+                  }}
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  View Dashboard
+                </Button>
+              ) : isPaidEvent ? (
                 <Button
                   size="sm"
                   className="flex-1"
@@ -637,6 +818,20 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!user) {
+                      console.log('[Inlight Auth Debug] Logged-out RSVP clicked', {
+                        eventId: item.id,
+                        title: item.title,
+                        currentUrl: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+                        handledByParent: Boolean(onRequireAuth),
+                      });
+                      if (onRequireAuth) {
+                        onRequireAuth(item, 'rsvp');
+                      } else {
+                        setShowVisitorAuthPrompt(true);
+                      }
+                      return;
+                    }
                     setRsvpDialogOpen(true);
                   }}
                   disabled={eventHasPassed}
@@ -675,7 +870,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
             </div>
 
             {/* Attendees dropdown */}
-            {goingCount > 0 && (
+            {user && goingCount > 0 && (
               <div className="rounded-lg border border-border overflow-hidden mt-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowAttendees(!showAttendees); }}
@@ -689,7 +884,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 </button>
                 {showAttendees && (
                   <div className="border-t border-border max-h-40 overflow-y-auto divide-y divide-border">
-                    {goingRsvps.map((rsvp) => {
+                    {visibleGoingRsvps.map((rsvp) => {
                       const canOpenProfile = !!rsvp.user_id && avatarByUserId.has(rsvp.user_id);
                       return (
                       <div
@@ -713,6 +908,15 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                       </div>
                       );
                     })}
+                    {anonymousGoingCount > 0 && (
+                      <div className="p-2 text-xs text-muted-foreground">
+                        <span>
+                          {visibleGoingRsvps.length > 0
+                            ? `and ${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} more`
+                            : `${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} attending`}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -733,6 +937,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
+                  if (!user) {
+                    setRsvpDialogOpen(false);
+                    setShowVisitorAuthPrompt(true);
+                    return;
+                  }
                   if (eventHasPassed) {
                     toast.error('RSVPs are closed for this past event.');
                     return;
@@ -906,5 +1115,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         item={item}
       />
     </Card>
+    {visitorAuthOverlay}
+    </>
   );
 };

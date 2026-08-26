@@ -8,6 +8,7 @@ export interface EventRsvp {
   user_id: string | null;
   name: string;
   email?: string | null;
+  is_anonymous?: boolean | null;
   role_type: string;
   status: string;
   custom_answer?: string | null;
@@ -37,7 +38,10 @@ export function useEventRsvps(eventId: string, options: UseEventRsvpsOptions = {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as EventRsvp[];
+      return (data || []).map((rsvp) => ({
+        ...rsvp,
+        is_anonymous: (rsvp as EventRsvp).is_anonymous ?? false,
+      })) as EventRsvp[];
     },
     enabled: !!eventId,
   });
@@ -80,10 +84,35 @@ export function useEventRsvps(eventId: string, options: UseEventRsvpsOptions = {
       custom_answer?: string | null;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from('event_rsvps').insert({
+      let isAnonymous = false;
+
+      if (user?.id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('anonymous_event_rsvps')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        isAnonymous = Boolean((profile as { anonymous_event_rsvps?: boolean } | null)?.anonymous_event_rsvps);
+      }
+
+      const insertPayload = {
         ...payload,
         user_id: user?.id ?? null,
-      });
+        is_anonymous: isAnonymous,
+      };
+
+      const eventRsvpsTable = supabase.from('event_rsvps') as ReturnType<typeof supabase.from> & {
+        insert: (values: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      };
+
+      const { error } = await eventRsvpsTable.insert(insertPayload);
+      if (error && /is_anonymous|anonymous_event_rsvps|schema cache|column/i.test(error.message)) {
+        const { is_anonymous: _isAnonymous, ...legacyPayload } = insertPayload;
+        const { error: retryError } = await eventRsvpsTable.insert(legacyPayload);
+        if (retryError) throw retryError;
+        return;
+      }
       if (error) throw error;
     },
     onSuccess: () => {

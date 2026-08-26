@@ -13,6 +13,18 @@ interface FeedGridCardProps {
   onClick: () => void;
 }
 
+const formatEventSchedule = (eventDate?: string | null) => {
+  if (!eventDate) return null;
+
+  return new Date(eventDate).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
+
 export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => {
   const getTypeIcon = () => {
     switch (item.type) {
@@ -45,6 +57,9 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
   const title = item.title || item.content?.slice(0, 80) + (item.content && item.content.length > 80 ? '…' : '');
   const subtitle = item.description || item.content;
+  const displayTime = item.type === 'event'
+    ? formatEventSchedule(item.event_date) || formatDistanceToNow(new Date(item.created_at), { addSuffix: true })
+    : formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
 
   return (
     <Card
@@ -101,7 +116,7 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
             )}
           </div>
           <span className="text-[10px] text-muted-foreground">
-            {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+            {displayTime}
           </span>
         </div>
 

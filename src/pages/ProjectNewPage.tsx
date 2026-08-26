@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { PROJECT_CATEGORIES, ProjectCategory } from '@/components/projects/ProjectCreator';
 import { RoleSlotBuilder, RoleSlot } from '@/components/projects/RoleSlotBuilder';
 import { ProjectHeaderImageUploader } from '@/components/projects/ProjectHeaderImageUploader';
+import { projectPath } from '@/lib/publicPaths';
 
 const PROJECT_STATUSES = [
   { value: 'planning', label: 'Planning' },
@@ -161,7 +162,7 @@ const ProjectNewPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['my-projects'] });
       queryClient.invalidateQueries({ queryKey: ['feed-group-projects', primaryGroup?.id] });
       toast.success('Project created! Invitations sent to assigned team members.');
-      navigate(`/projects/${project.id}`);
+      navigate(projectPath(project));
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to create project');

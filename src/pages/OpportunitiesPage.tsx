@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, addMonths, isPast } from 'date-fns';
-import { Plus, Briefcase, TrendingUp, Clock, Loader2, Calendar, Trash2, Users, ExternalLink, FileText, ArrowLeft, ChevronRight, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Plus, Briefcase, TrendingUp, Clock, Loader2, Users, ExternalLink, FileText, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,14 +10,12 @@ import OpportunityCard from '@/components/opportunities/OpportunityCard';
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters';
 import OpportunityCreator from '@/components/opportunities/OpportunityCreator';
 import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
-import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 import { AcceptApplicationDialog } from '@/components/projects/AcceptApplicationDialog';
 import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
-import { useSavedItems } from '@/hooks/useSavedItems';
 import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -63,142 +61,6 @@ interface PostedJobListing {
   createdAt: string;
   projectId?: string;
 }
-
-/** Compact card matching the Open Roles style — title, company, deadline */
-const OpportunityCompactCard: React.FC<{
-  opportunity: OpportunityView;
-  hasApplied: boolean;
-  applicationStatus?: string;
-}> = ({ opportunity, hasApplied: hasAppliedPersisted, applicationStatus }) => {
-  const { user } = useAuth();
-  const { isAdmin } = useAdmin();
-  const { canManageJobs } = useFeatureAccess();
-  const { deleteOpportunity } = useOpportunities();
-  const { isSaved, toggleSave } = useSavedItems();
-  const queryClient = useQueryClient();
-  const [showDetail, setShowDetail] = useState(false);
-  const [showApply, setShowApply] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-  const [hasAppliedLocally, setHasAppliedLocally] = useState(false);
-
-  const canDelete = canManageJobs && !!user && (user.id === opportunity.postedBy || isAdmin);
-  const hasApplied = hasAppliedPersisted || hasAppliedLocally;
-  const saved = user ? isSaved('job', opportunity.title) : false;
-
-  const deadlineDate = opportunity.deadline ? new Date(opportunity.deadline) : null;
-  const applyBy = deadlineDate && !isNaN(deadlineDate.getTime())
-    ? deadlineDate
-    : addMonths(new Date(opportunity.createdAt), 1);
-
-  return (
-    <>
-      <div
-        onClick={() => setShowDetail(true)}
-        className="relative flex flex-col justify-between gap-2 p-4 rounded-lg border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all cursor-pointer"
-      >
-        {canDelete && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowDelete(true); }}
-            className="absolute top-2 right-2 p-1 rounded-full hover:bg-destructive/20 transition-colors"
-            title="Delete opportunity"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-          </button>
-        )}
-        <div className="space-y-1 pr-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-semibold text-foreground text-sm leading-tight">
-              {opportunity.title}
-            </h3>
-            {hasApplied && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                {applicationStatus === 'accepted' ? 'Accepted' :
-                 applicationStatus === 'reviewed' ? 'Under Review' :
-                 applicationStatus === 'rejected' ? 'Not Selected' : 'Applied'}
-              </Badge>
-            )}
-          </div>
-          {opportunity.roles?.[0] && (
-            <p className="text-xs text-muted-foreground truncate">
-              {opportunity.roles[0]}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center justify-between mt-1">
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Calendar className="w-3 h-3 flex-shrink-0" />
-            <span>
-              {isPast(applyBy) ? 'Deadline passed' : `Apply by ${format(applyBy, 'MMM d, yyyy')}`}
-            </span>
-          </div>
-          {user && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleSave({
-                  item_type: 'job',
-                  item_id: opportunity.id,
-                  item_title: opportunity.title,
-                  item_metadata: {
-                    company: opportunity.company,
-                    type: opportunity.type,
-                    location: opportunity.isRemote ? 'Remote' : opportunity.location,
-                    description: opportunity.description?.slice(0, 200),
-                    compensation: opportunity.compensation,
-                    deadline: opportunity.deadline,
-                    status: opportunity.status,
-                    image_url: opportunity.imageUrl || null,
-                    link_url: opportunity.linkUrl || null,
-                    link_title: opportunity.linkTitle || null,
-                    action_type: opportunity.actionType,
-                    created_at: opportunity.createdAt,
-                  },
-                });
-              }}
-              className="p-1 rounded-full hover:bg-accent transition-colors"
-            >
-              {saved ? (
-                <BookmarkCheck className="w-3.5 h-3.5 text-primary" />
-              ) : (
-                <Bookmark className="w-3.5 h-3.5 text-muted-foreground" />
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <OpportunityDetailSheet
-        opportunity={opportunity}
-        open={showDetail}
-        onOpenChange={setShowDetail}
-        posterProfile={null}
-        hasApplied={hasApplied}
-        applicationStatus={applicationStatus}
-        onApply={() => { setShowDetail(false); setShowApply(true); }}
-      />
-
-      <ApplicationDialog
-        open={showApply}
-        onOpenChange={setShowApply}
-        opportunityId={opportunity.id}
-        opportunityTitle={opportunity.title}
-        onApplicationSubmitted={() => {
-          setHasAppliedLocally(true);
-          queryClient.invalidateQueries({ queryKey: ['my-job-applications'] });
-        }}
-      />
-
-      <DeleteConfirmDialog
-        open={showDelete}
-        onOpenChange={setShowDelete}
-        onConfirm={() => deleteOpportunity.mutate({ id: opportunity.id, source: opportunity.source })}
-        title="Delete Opportunity"
-        description="Are you sure you want to delete this opportunity? This action cannot be undone."
-        isPending={deleteOpportunity.isPending}
-      />
-    </>
-  );
-};
 
 const PostedJobApplications: React.FC<{
   postedJobs: PostedJobListing[];
@@ -631,7 +493,7 @@ const OpportunitiesPage: React.FC = () => {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const { canManageJobs, showRestrictedToast } = useFeatureAccess();
-  const { opportunities: allOpportunities, isLoading } = useOpportunities();
+  const { opportunities: allOpportunities, isLoading, isError } = useOpportunities();
   
   const [showCreator, setShowCreator] = useState(false);
   const [search, setSearch] = useState('');
@@ -1006,10 +868,6 @@ const OpportunitiesPage: React.FC = () => {
   const reviewApplicationsLoading = applicationsLoading || roleApplicationsLoading || postedOpenRolesLoading;
   const canReviewApplications = canManageJobs && !!user && (isAdmin || credits > 0 || postedJobsForReview.length > 0 || allPostedApplications.length > 0);
   const canViewMyApplications = !!user;
-  const myApplicationStatusByOpportunity = useMemo(
-    () => new Map(myJobApplications.map((application) => [application.jobId, application.status])),
-    [myJobApplications]
-  );
 
   const handleViewAppliedJob = (application: MyJobApplication) => {
     if (application.source === 'project_role' && application.projectId) {
@@ -1026,14 +884,6 @@ const OpportunitiesPage: React.FC = () => {
     setSelectedLocation('all');
     setActiveTab('discover');
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="w-full">
@@ -1119,31 +969,14 @@ const OpportunitiesPage: React.FC = () => {
 
           {/* Discover Tab */}
           <TabsContent value="discover" className="space-y-3">
-            {/* Unified grid — posted opportunities + open roles */}
-            <OpenRolesFeed
-              prependItems={openOpportunities.map((opportunity) => (
-                <OpportunityCompactCard
-                  key={opportunity.id}
-                  opportunity={opportunity}
-                  hasApplied={myApplicationStatusByOpportunity.has(opportunity.id)}
-                  applicationStatus={myApplicationStatusByOpportunity.get(opportunity.id)}
-                />
-              ))}
-            />
-
-            {openOpportunities.length === 0 && (
-              <div className="text-center py-12">
-                <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No opportunities found</h3>
-                <p className="text-muted-foreground mb-4">
-                  Try adjusting your filters or check back later
-                </p>
-                 {isAdmin && (
-                   <Button onClick={handlePostJobClick}>
-                     Post A Job
-                   </Button>
-                 )}
+            {isLoading && (
+              <div className="flex items-center justify-center rounded-lg border border-border bg-card/60 py-10">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
+            )}
+
+            {!isLoading && (
+              <OpenRolesFeed prependOpportunities={openOpportunities} restoreOpportunities={allOpportunities} />
             )}
           </TabsContent>
 

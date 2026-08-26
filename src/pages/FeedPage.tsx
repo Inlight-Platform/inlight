@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,8 +23,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { VisitorAuthOverlay, VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 import { toast } from 'sonner';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
+import { clearAuthRestore, readAuthRestore } from '@/lib/authRestore';
+import { eventIdentifier as publicEventIdentifier, eventPath, identifierFallbackUuid, projectPath } from '@/lib/publicPaths';
 
 type NetworkFilter = 'all' | '1st';
 type BaseContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates';
@@ -69,24 +72,192 @@ interface GroupProjectLink {
   } | null;
 }
 
+const fetchPublicProfileMap = async (userIds: string[]) => {
+  const uniqueUserIds = [...new Set(userIds)].filter(Boolean);
+  if (!uniqueUserIds.length) {
+    return new Map<string, { user_id: string; display_name: string | null; avatar_url: string | null }>();
+  }
+
+  const { data, error } = await supabase.rpc('get_public_profiles', { _user_ids: uniqueUserIds });
+
+  if (!error) {
+    return new Map((data || []).map((profile) => [profile.user_id, {
+      user_id: profile.user_id,
+      display_name: profile.display_name,
+      avatar_url: profile.avatar_url,
+    }]));
+  }
+
+  console.warn('[Inlight Public Profile Debug] get_public_profiles failed, falling back to profiles_public', {
+    userIds: uniqueUserIds,
+    error,
+  });
+
+  const { data: fallbackProfiles, error: fallbackError } = await supabase
+    .from('profiles_public')
+    .select('user_id, display_name, avatar_url')
+    .in('user_id', uniqueUserIds);
+
+  if (fallbackError) {
+    console.warn('[Inlight Public Profile Debug] profiles_public fallback failed', {
+      userIds: uniqueUserIds,
+      error: fallbackError,
+    });
+  }
+
+  return new Map((fallbackProfiles || []).map((profile) => [profile.user_id, profile]));
+};
+
+const compareEventsBySchedule = <T extends { event_date?: string | null; created_at: string }>(a: T, b: T) => {
+  const now = Date.now();
+
+  const aEventTime = a.event_date ? new Date(a.event_date).getTime() : Number.NaN;
+  const bEventTime = b.event_date ? new Date(b.event_date).getTime() : Number.NaN;
+  const aHasEventDate = Number.isFinite(aEventTime);
+  const bHasEventDate = Number.isFinite(bEventTime);
+
+  if (aHasEventDate && bHasEventDate) {
+    const aIsUpcoming = aEventTime >= now;
+    const bIsUpcoming = bEventTime >= now;
+
+    if (aIsUpcoming !== bIsUpcoming) {
+      return aIsUpcoming ? -1 : 1;
+    }
+
+    return aIsUpcoming
+      ? aEventTime - bEventTime
+      : bEventTime - aEventTime;
+  }
+
+  if (aHasEventDate !== bHasEventDate) {
+    return aHasEventDate ? -1 : 1;
+  }
+
+  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+};
+
+const sortEventsBySchedule = <T extends { event_date?: string | null; created_at: string }>(items: T[]) =>
+  [...items].sort(compareEventsBySchedule);
+
+const compareFeedItemsForDisplay = (a: FeedItemData, b: FeedItemData) => {
+  if (a.type === 'event' && b.type === 'event') {
+    return compareEventsBySchedule(a, b);
+  }
+
+  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+};
+
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { eventId: routeEventIdentifier } = useParams<{ eventId?: string }>();
+  const routeState = location.state as {
+    event?: FeedItemData;
+    returnTab?: ContentFilter;
+    scrollToTop?: boolean;
+    restore?: ReturnType<typeof readAuthRestore>;
+  } | null;
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
+  const routeStateEvent = routeState?.event?.type === 'event' ? routeState.event : null;
   const [searchParamsInit] = [new URLSearchParams(window.location.search)];
   const _initialTab = searchParamsInit.get('tab');
   const [contentFilter, setContentFilter] = useState<ContentFilter>(
-    _initialTab && (BASE_CONTENT_FILTERS.includes(_initialTab as BaseContentFilter) || _initialTab.startsWith('group:'))
+    routeEventIdentifier
+      ? 'events'
+      : _initialTab && (BASE_CONTENT_FILTERS.includes(_initialTab as BaseContentFilter) || _initialTab.startsWith('group:'))
       ? (_initialTab as ContentFilter)
       : 'all'
   );
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [composePostType, setComposePostType] = useState<PostType>('update');
   const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
+  const [eventAuthPrompt, setEventAuthPrompt] = useState<{
+    item: FeedItemData;
+    action: 'rsvp' | 'ticket';
+  } | null>(null);
+  const [contentAuthPrompt, setContentAuthPrompt] = useState<FeedItemData | null>(null);
+  const isClosingDetailsRef = useRef(false);
+  const eventDetailsReturnTabRef = useRef<ContentFilter | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: myGroups = [], isLoading: groupsLoading } = useMyGroups();
+  const showVisitorFeedGate = (contentFilter === 'you' || contentFilter === 'updates') && !user;
+
+  const updateEventSearchParam = useCallback((event?: FeedItemData, returnTab?: ContentFilter | null) => {
+    if (event) {
+      navigate(eventPath(event), {
+        replace: true,
+        state: returnTab ? { ...(location.state || {}), returnTab } : location.state,
+      });
+      isClosingDetailsRef.current = false;
+      return;
+    }
+
+    if (location.pathname.startsWith('/events/')) {
+      const tab = eventDetailsReturnTabRef.current || 'events';
+      eventDetailsReturnTabRef.current = null;
+      navigate(`/feed?tab=${encodeURIComponent(tab)}`, {
+        replace: true,
+        state: undefined,
+      });
+      return;
+    }
+
+    const nextParams = new URLSearchParams(location.search);
+    nextParams.delete('event');
+
+    const nextSearch = nextParams.toString();
+    navigate(`${location.pathname}${nextSearch ? `?${nextSearch}` : ''}${location.hash}`, {
+      replace: true,
+      state: undefined,
+    });
+  }, [location.hash, location.pathname, location.search, location.state, navigate]);
+
+  const openFeedDetails = useCallback((item: FeedItemData) => {
+    if (!user && (item.type === 'post' || item.type === 'project')) {
+      setContentAuthPrompt(item);
+      return;
+    }
+
+    isClosingDetailsRef.current = false;
+    setSelectedItem(item);
+    if (item.type === 'event') {
+      eventDetailsReturnTabRef.current = contentFilter;
+      updateEventSearchParam(item, contentFilter);
+    }
+  }, [contentFilter, updateEventSearchParam, user]);
+
+  const openEventAuthPrompt = useCallback((item: FeedItemData, action: 'rsvp' | 'ticket') => {
+    console.log('[Inlight Auth Debug] FeedPage opening page-level event auth prompt', {
+      eventId: item.id,
+      title: item.title,
+      action,
+      currentUrl: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    });
+    setEventAuthPrompt({ item, action });
+  }, []);
+
+  const closeFeedDetails = useCallback(() => {
+    const wasEvent = selectedItem?.type === 'event';
+    isClosingDetailsRef.current = true;
+    setSelectedItem(null);
+    setEventAuthPrompt(null);
+    setContentAuthPrompt(null);
+    if (wasEvent) {
+      updateEventSearchParam();
+    }
+  }, [selectedItem?.type, updateEventSearchParam]);
+
+  useEffect(() => {
+    if (!routeState?.scrollToTop) return;
+
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    navigate(`${location.pathname}${location.search}${location.hash}`, {
+      replace: true,
+      state: undefined,
+    });
+  }, [routeState?.scrollToTop, navigate, location.pathname, location.search, location.hash]);
 
   // Honor ?tab=you and ?compose=update|event|job|project URL params
   useEffect(() => {
@@ -148,11 +319,7 @@ const FeedPage: React.FC = () => {
         .filter((post): post is FeedItemData & { user_id: string; created_at: string } => Boolean(post));
       const uids = [...new Set(rows.map((p) => p.user_id))];
       if (!uids.length) return [] as FeedItemData[];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', uids);
-      const map = new Map((profiles || []).map((p) => [p.user_id, p]));
+      const map = await fetchPublicProfileMap(uids);
       return rows
         .map((p) => ({
           ...p,
@@ -178,11 +345,7 @@ const FeedPage: React.FC = () => {
         .filter((project): project is NonNullable<GroupProjectLink['projects']> => Boolean(project));
       const uids = [...new Set(rows.map((p) => p.creator_id))];
       if (!uids.length) return [] as FeedItemData[];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', uids);
-      const map = new Map((profiles || []).map((p) => [p.user_id, p]));
+      const map = await fetchPublicProfileMap(uids);
       return rows
         .map((p) => ({
           id: p.id,
@@ -270,22 +433,22 @@ const FeedPage: React.FC = () => {
 
   // Fetch posts
   const { data: posts = [], isLoading: postsLoading } = useQuery({
-    queryKey: ['feed-posts'],
+    queryKey: ['feed-posts', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('posts')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .not('content', 'like', '🎯%')
+        .order('created_at', { ascending: false });
+
+      if (!user) {
+        query = query.eq('visibility', 'public');
+      }
+
+      const { data, error } = await query.limit(100);
       if (error) throw error;
 
-      const userIds = [...new Set(data.map((p) => p.user_id))];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
-
-      const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
+      const profileMap = await fetchPublicProfileMap(data.map((p) => p.user_id));
 
       return data.map((post) => ({
         ...post,
@@ -294,32 +457,40 @@ const FeedPage: React.FC = () => {
         image_zoom: post.image_zoom ?? 1,
         creator_profile: profileMap.get(post.user_id)
       }));
-    }
+    },
+    placeholderData: keepPreviousData,
+    retry: 1,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch projects (all, including archived for the archive tab)
   const { data: allProjects = [], isLoading: projectsLoading } = useQuery({
-    queryKey: ['feed-projects-all'],
+    queryKey: ['feed-projects-all', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('projects')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (!user) {
+        query = query.eq('is_public', true);
+      }
+
+      const { data, error } = await query.limit(100);
       if (error) throw error;
 
-      const userIds = [...new Set(data.map((p) => p.creator_id))];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
-
-      const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
+      const profileMap = await fetchPublicProfileMap(data.map((p) => p.creator_id));
 
       return data.map((project) => ({
         ...project,
         creator_profile: profileMap.get(project.creator_id)
       }));
-    }
+    },
+    placeholderData: keepPreviousData,
+    retry: 1,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch events
@@ -329,20 +500,15 @@ const FeedPage: React.FC = () => {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('event_date', { ascending: true })
         .limit(100);
       if (error) throw error;
 
-      const userIds = [...new Set(data.map((e) => e.user_id))];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
+      const profileMap = await fetchPublicProfileMap(data.map((e) => e.user_id));
 
-      const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
-
-      return data.map((event) => ({
+      return sortEventsBySchedule(data.map((event) => ({
         id: event.id,
+        slug: event.slug,
         type: 'event' as const,
         user_id: event.user_id,
         title: event.title,
@@ -365,9 +531,69 @@ const FeedPage: React.FC = () => {
         image_position_y: event.image_position_y,
         image_zoom: event.image_zoom,
         creator_profile: profileMap.get(event.user_id)
-      }));
-    }
+      })));
+    },
+    placeholderData: keepPreviousData,
+    retry: 1,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
+
+  useEffect(() => {
+    const storedRestore = routeState?.restore || readAuthRestore();
+    const rawEventIdentifier = storedRestore?.type === 'event'
+      ? storedRestore.id
+      : routeEventIdentifier || searchParams.get('event');
+    const fallbackEventId = identifierFallbackUuid(rawEventIdentifier);
+    const eventIdentifier = fallbackEventId || rawEventIdentifier;
+
+    if (!eventIdentifier) {
+      isClosingDetailsRef.current = false;
+      return;
+    }
+
+    if (isClosingDetailsRef.current) return;
+
+    if (
+      rawEventIdentifier &&
+      routeStateEvent &&
+      routeStateEvent.id !== selectedItem?.id &&
+      (
+        routeStateEvent.id === eventIdentifier ||
+        routeStateEvent.slug === eventIdentifier ||
+        publicEventIdentifier(routeStateEvent) === rawEventIdentifier
+      )
+    ) {
+      eventDetailsReturnTabRef.current = routeState?.returnTab || 'events';
+      setSelectedItem(routeStateEvent);
+      return;
+    }
+
+    if (
+      !eventIdentifier ||
+      selectedItem?.id === eventIdentifier ||
+      selectedItem?.slug === eventIdentifier ||
+      (selectedItem && publicEventIdentifier(selectedItem) === rawEventIdentifier)
+    ) return;
+
+    const restoredEvent = events.find((event) =>
+      event.id === eventIdentifier ||
+      event.slug === eventIdentifier ||
+      publicEventIdentifier(event) === rawEventIdentifier
+    );
+    if (!restoredEvent) return;
+
+    setContentFilter('events');
+    eventDetailsReturnTabRef.current = routeState?.returnTab || 'events';
+    setSelectedItem(restoredEvent);
+    clearAuthRestore();
+    if (routeState?.restore) {
+      navigate(`${location.pathname}${location.search}${location.hash}`, {
+        replace: true,
+        state: routeState.scrollToTop ? { scrollToTop: routeState.scrollToTop } : undefined,
+      });
+    }
+  }, [events, location.hash, location.pathname, location.search, navigate, routeEventIdentifier, routeState, routeStateEvent, searchParams, selectedItem?.id, selectedItem?.slug]);
 
   // Fetch saved projects
   const { data: savedProjects = [] } = useQuery({
@@ -480,9 +706,10 @@ const FeedPage: React.FC = () => {
   }, [firstDegree, secondDegree, user?.id]);
 
   const hasVisibleCreator = useCallback((item: { user_id?: string | null; creator_id?: string | null; creator_profile?: unknown }) => {
+    if (!user) return true;
     const ownerId = item.user_id || item.creator_id;
-    return ownerId === user?.id || Boolean(item.creator_profile);
-  }, [user?.id]);
+    return ownerId === user.id || Boolean(item.creator_profile);
+  }, [user]);
 
   // Filtered project lists for sub-tabs
   const visibleProjects = allProjects.filter(hasVisibleCreator);
@@ -503,6 +730,7 @@ const FeedPage: React.FC = () => {
   const projectsToFeedItems = (list: typeof allProjects): FeedItemData[] =>
     list.map((project) => ({
       id: project.id,
+      slug: project.slug,
       type: 'project' as const,
       user_id: project.creator_id,
       title: project.title,
@@ -526,7 +754,7 @@ const FeedPage: React.FC = () => {
               key={`project-list-${item.id}`}
               item={item}
               networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
-              onOpenDetails={setSelectedItem}
+              onOpenDetails={openFeedDetails}
             />
           ))}
         </div>
@@ -542,7 +770,13 @@ const FeedPage: React.FC = () => {
             key={`project-${item.id}`}
             item={item}
             size={getBentoSize(idx)}
-            onClick={() => navigate(`/projects/${item.id}`, { state: { returnTo: feedReturnTo } })}
+            onClick={() => {
+              if (!user) {
+                setContentAuthPrompt(item);
+                return;
+              }
+              navigate(projectPath(item), { state: { returnTo: feedReturnTo } });
+            }}
           />
         ))}
       </div>
@@ -580,9 +814,9 @@ const FeedPage: React.FC = () => {
       });
     }
 
-    allItems.sort((a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    allItems = contentFilter === 'events'
+      ? sortEventsBySchedule(allItems)
+      : allItems.sort(compareFeedItemsForDisplay);
 
     if (networkFilter !== 'all') {
       allItems = allItems.filter((item) => {
@@ -640,7 +874,13 @@ const FeedPage: React.FC = () => {
     return (
       <Card
         className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border"
-        onClick={() => navigate(`/projects/${project.id}`, { state: { returnTo: feedReturnTo } })}
+        onClick={() => {
+          if (!user) {
+            setContentAuthPrompt(projectsToFeedItems([project])[0]);
+            return;
+          }
+          navigate(projectPath(project), { state: { returnTo: feedReturnTo } });
+        }}
       >
         <div className="relative">
           <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1">
@@ -884,7 +1124,7 @@ const FeedPage: React.FC = () => {
             )}
 
             {/* Content Type Filters */}
-            <div className="mb-4">
+            <div className={`mb-4 ${showVisitorFeedGate ? 'relative z-[80]' : ''}`}>
               <div className="relative">
                 <div className="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-2">
                 {contentFilters.map((filter) => (
@@ -948,9 +1188,31 @@ const FeedPage: React.FC = () => {
 
             {/* Show project sub-content when on projects tab */}
             {contentFilter === 'you' ? (
-              <YouTab />
+              user ? (
+                <YouTab />
+              ) : (
+                <VisitorAuthOverlay
+                  title="You"
+                  description="The You tab becomes a personalized daily surface."
+                  features={['Your daily picks', 'Connect today', '3 Explorations', 'Match of the day']}
+                  className="mt-8"
+                >
+                  <YouTab />
+                </VisitorAuthOverlay>
+              )
             ) : contentFilter === 'updates' ? (
-              <ServicesTab />
+              user ? (
+                <ServicesTab />
+              ) : (
+                <VisitorAuthOverlay
+                  title="Services"
+                  description="Services is where you discover creative collaborators by skill."
+                  features={['Creative services', 'Skills', 'Collaborators']}
+                  className="mt-8"
+                >
+                  <ServicesTab />
+                </VisitorAuthOverlay>
+              )
             ) : contentFilter === 'projects' ? (
               renderProjectsContent()
             ) : isGroupContentFilter(contentFilter) ? (
@@ -1017,7 +1279,7 @@ const FeedPage: React.FC = () => {
                               key={`group-${item.type}-${item.id}`}
                               item={item}
                               networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
-                              onOpenDetails={setSelectedItem}
+                              onOpenDetails={openFeedDetails}
                             />
                           ))}
                         </div>
@@ -1033,9 +1295,9 @@ const FeedPage: React.FC = () => {
                               size={getBentoSize(idx)}
                               onClick={() => {
                                 if (item.type === 'project') {
-                                  navigate(`/projects/${item.id}`, { state: { returnTo: feedReturnTo } });
+                                  navigate(projectPath(item), { state: { returnTo: feedReturnTo } });
                                 } else {
-                                  setSelectedItem(item);
+                                  openFeedDetails(item);
                                 }
                               }}
                             />
@@ -1082,7 +1344,8 @@ const FeedPage: React.FC = () => {
                         key={`list-${item.type}-${item.id}`}
                         item={item}
                         networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
-                        onOpenDetails={setSelectedItem}
+                        onOpenDetails={openFeedDetails}
+                        onRequireAuth={openEventAuthPrompt}
                       />
                     ))}
                   </div>
@@ -1098,11 +1361,15 @@ const FeedPage: React.FC = () => {
                         size={getBentoSize(idx)}
                         onClick={() => {
                           if (item.type === 'project') {
-                            navigate(`/projects/${item.id}`, { state: { returnTo: feedReturnTo } });
+                            if (!user) {
+                              setContentAuthPrompt(item);
+                              return;
+                            }
+                            navigate(projectPath(item), { state: { returnTo: feedReturnTo } });
                           } else if (item.type === 'event') {
-                            setSelectedItem(item);
+                            openFeedDetails(item);
                           } else if (item.type === 'post') {
-                            setSelectedItem(item);
+                            openFeedDetails(item);
                           } else {
                             const destination = getFeedItemDestination(item);
                             if (destination?.kind === 'internal') {
@@ -1139,7 +1406,7 @@ const FeedPage: React.FC = () => {
       </Dialog>
 
       {/* Expanded Item Sheet */}
-      <Sheet open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
+      <Sheet open={!!selectedItem} onOpenChange={(open) => !open && closeFeedDetails()}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="text-left">Details</SheetTitle>
@@ -1149,11 +1416,39 @@ const FeedPage: React.FC = () => {
               <FeedItem
                 item={selectedItem}
                 networkDegree={selectedItem.user_id === user?.id ? null : getConnectionDegree(selectedItem.user_id)}
+                onRequireAuth={openEventAuthPrompt}
               />
             </div>
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={!!eventAuthPrompt} onOpenChange={(open) => !open && setEventAuthPrompt(null)}>
+        <DialogContent className="z-[220] border-0 bg-transparent p-0 shadow-none sm:max-w-md [&>button]:hidden">
+          {eventAuthPrompt && (
+          <VisitorAuthPrompt
+            compact
+            title={eventAuthPrompt.action === 'ticket' ? 'Buy tickets on Inlight' : 'RSVP on Inlight'}
+            description={eventAuthPrompt.action === 'ticket' ? 'Sign in or create an account to buy tickets.' : 'Sign in or create an account to RSVP.'}
+            features={eventAuthPrompt.action === 'ticket' ? ['Ticket checkout', 'Event updates', 'Saved event access'] : ['RSVP tracking', 'Event updates', 'Saved event access']}
+            restore={{ type: 'event', id: eventAuthPrompt.item.id }}
+          />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!contentAuthPrompt} onOpenChange={(open) => !open && setContentAuthPrompt(null)}>
+        <DialogContent className="z-[220] border-0 bg-transparent p-0 shadow-none sm:max-w-md [&>button]:hidden">
+          {contentAuthPrompt && (
+            <VisitorAuthPrompt
+              compact
+              title={contentAuthPrompt.type === 'project' ? 'View project on Inlight' : 'View update on Inlight'}
+              description={contentAuthPrompt.type === 'project' ? 'Sign in or create an account to view project details.' : 'Sign in or create an account to view this update.'}
+              features={contentAuthPrompt.type === 'project' ? ['Project details', 'Creator context', 'Saved project access'] : ['Creator updates', 'Community context', 'Saved access']}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

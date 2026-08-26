@@ -486,6 +486,7 @@ export type Database = {
           email: string
           event_id: string
           id: string
+          is_anonymous: boolean
           name: string
           role_type: string
           status: string
@@ -500,6 +501,7 @@ export type Database = {
           email: string
           event_id: string
           id?: string
+          is_anonymous?: boolean
           name: string
           role_type?: string
           status?: string
@@ -514,6 +516,7 @@ export type Database = {
           email?: string
           event_id?: string
           id?: string
+          is_anonymous?: boolean
           name?: string
           role_type?: string
           status?: string
@@ -551,6 +554,7 @@ export type Database = {
           location: string | null
           payment_link_url: string | null
           price: number | null
+          slug: string
           stripe_price_id: string | null
           title: string
           updated_at: string
@@ -576,6 +580,7 @@ export type Database = {
           location?: string | null
           payment_link_url?: string | null
           price?: number | null
+          slug?: string
           stripe_price_id?: string | null
           title: string
           updated_at?: string
@@ -601,12 +606,93 @@ export type Database = {
           location?: string | null
           payment_link_url?: string | null
           price?: number | null
+          slug?: string
           stripe_price_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      event_panelists: {
+        Row: {
+          badges: string[]
+          bio: string | null
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          display_name: string
+          event_id: string
+          headline: string | null
+          headshot_url: string | null
+          id: string
+          is_active: boolean
+          instagram_url: string | null
+          location: string | null
+          public_slug: string
+          reel_url: string | null
+          skills: string[]
+          sort_order: number
+          title: string | null
+          updated_at: string
+          user_id: string | null
+          website_url: string | null
+        }
+        Insert: {
+          badges?: string[]
+          bio?: string | null
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_name: string
+          event_id: string
+          headline?: string | null
+          headshot_url?: string | null
+          id?: string
+          is_active?: boolean
+          instagram_url?: string | null
+          location?: string | null
+          public_slug: string
+          reel_url?: string | null
+          skills?: string[]
+          sort_order?: number
+          title?: string | null
+          updated_at?: string
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          badges?: string[]
+          bio?: string | null
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_name?: string
+          event_id?: string
+          headline?: string | null
+          headshot_url?: string | null
+          id?: string
+          is_active?: boolean
+          instagram_url?: string | null
+          location?: string | null
+          public_slug?: string
+          reel_url?: string | null
+          skills?: string[]
+          sort_order?: number
+          title?: string | null
+          updated_at?: string
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_panelists_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       film_metrics: {
         Row: {
@@ -1013,6 +1099,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_featured: boolean
+          is_public: boolean
           is_remote: boolean
           link_title: string | null
           link_url: string | null
@@ -1039,6 +1126,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_featured?: boolean
+          is_public?: boolean
           is_remote?: boolean
           link_title?: string | null
           link_url?: string | null
@@ -1065,6 +1153,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_featured?: boolean
+          is_public?: boolean
           is_remote?: boolean
           link_title?: string | null
           link_url?: string | null
@@ -1333,6 +1422,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           email: string
+          anonymous_event_rsvps: boolean
           email_notifications: boolean | null
           favorite_artist: string | null
           favorite_movie: string | null
@@ -1381,6 +1471,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email: string
+          anonymous_event_rsvps?: boolean
           email_notifications?: boolean | null
           favorite_artist?: string | null
           favorite_movie?: string | null
@@ -1429,6 +1520,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string
+          anonymous_event_rsvps?: boolean
           email_notifications?: boolean | null
           favorite_artist?: string | null
           favorite_movie?: string | null
@@ -1768,6 +1860,7 @@ export type Database = {
           link_url: string | null
           main_image_url: string | null
           post_approval_required: boolean
+          slug: string
           start_date: string | null
           status: string | null
           title: string
@@ -1788,6 +1881,7 @@ export type Database = {
           link_url?: string | null
           main_image_url?: string | null
           post_approval_required?: boolean
+          slug?: string
           start_date?: string | null
           status?: string | null
           title: string
@@ -1808,6 +1902,7 @@ export type Database = {
           link_url?: string | null
           main_image_url?: string | null
           post_approval_required?: boolean
+          slug?: string
           start_date?: string | null
           status?: string | null
           title?: string
@@ -2860,6 +2955,18 @@ export type Database = {
         Returns: string
       }
       generate_ticket_code: { Args: never; Returns: string }
+      get_public_event_ticket_attendees: {
+        Args: { target_event_id: string }
+        Returns: {
+          id: string
+          event_id: string
+          user_id: string | null
+          name: string
+          avatar_url: string | null
+          created_at: string
+          is_anonymous: boolean | null
+        }[]
+      }
       get_2nd_degree_connections: {
         Args: { target_user_id: string }
         Returns: {
@@ -2961,6 +3068,7 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          is_anonymous: boolean
           name: string
           role_type: string
           status: string

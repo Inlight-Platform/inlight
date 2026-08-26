@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { isEventPast } from '@/lib/eventDates';
+import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 
 interface EventRsvpFormProps {
   eventId: string;
@@ -49,6 +51,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   const [showAttendees, setShowAttendees] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [showVisitorAuthPrompt, setShowVisitorAuthPrompt] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState('');
   const [currentUserDisplayName, setCurrentUserDisplayName] = useState('');
@@ -58,6 +61,8 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
   const ticketStatus = searchParams.get('ticket');
   const hasTicketSuccess = ticketStatus === 'success';
   const eventHasPassed = isEventPast(eventDate);
+  const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
+  const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -104,6 +109,11 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUserId) {
+      setDialogOpen(false);
+      setShowVisitorAuthPrompt(true);
+      return;
+    }
     if (eventHasPassed) {
       toast.error('RSVPs are closed for this past event.');
       return;
@@ -156,6 +166,11 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
       return;
     }
 
+    if (!currentUserId) {
+      setShowVisitorAuthPrompt(true);
+      return;
+    }
+
     if (paymentLinkUrl) {
       // Auto-RSVP the logged-in user as "going"
       const { data: { user } } = await supabase.auth.getUser();
@@ -180,26 +195,11 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
           console.error('Auto-RSVP error:', e);
         }
       }
-      window.open(paymentLinkUrl, '_blank');
+      window.open(paymentLinkUrl, '_blank', 'noopener,noreferrer');
       return;
     }
-    if (!stripePriceId) {
-      toast.error('Tickets are not yet available for this event.');
-      return;
-    }
-    setBuyingTicket(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {
-        body: { event_id: eventId },
-      });
-      if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to start checkout');
-      setBuyingTicket(false);
-    }
+
+    toast.error('Tickets are not yet available for this event.');
   };
 
   const totalCount = goingCount + cantMakeItCount;
@@ -210,6 +210,26 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
 
   return (
     <div className="space-y-5">
+      {showVisitorAuthPrompt && createPortal(
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-background/45 px-4 py-8 backdrop-blur-md sm:px-6"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowVisitorAuthPrompt(false);
+          }}
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) setShowVisitorAuthPrompt(false);
+          }}
+        >
+          <VisitorAuthPrompt
+            compact
+            title={isPaid ? 'Buy tickets on Inlight' : 'RSVP on Inlight'}
+            description={isPaid ? 'Sign in or create an account to buy tickets.' : 'Sign in or create an account to RSVP.'}
+            features={isPaid ? ['Ticket checkout', 'Event updates', 'Saved event access'] : ['RSVP tracking', 'Event updates', 'Saved event access']}
+            restore={{ type: 'event', id: eventId }}
+          />
+        </div>,
+        document.body,
+      )}
       {/* Ticket confirmed state (from Stripe redirect) */}
       {hasTicketSuccess && (
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5 text-center space-y-2">
@@ -247,11 +267,17 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
         <Button
           className="w-full gap-2 text-base py-6"
           size="lg"
-          onClick={() => setDialogOpen(true)}
+          onClick={() => {
+            if (!currentUserId) {
+              setShowVisitorAuthPrompt(true);
+              return;
+            }
+            setDialogOpen(true);
+          }}
           disabled={eventHasPassed}
         >
           <PartyPopper className="w-5 h-5" />
-          {eventHasPassed ? 'RSVP Closed' : 'RSVP to this Event'}
+          {!currentUserId && !eventHasPassed ? 'Sign in to RSVP' : eventHasPassed ? 'RSVP Closed' : 'RSVP to this Event'}
         </Button>
       ) : !isPaid ? (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 text-center space-y-2">
@@ -289,65 +315,76 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
       </div>
 
       {/* Attendees dropdown */}
-      <div className="rounded-xl border border-border overflow-hidden">
-        <button
-          onClick={() => setShowAttendees(!showAttendees)}
-          className="w-full flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" />
-            <span className="font-medium text-sm">Attendees ({goingCount})</span>
-          </div>
-          {showAttendees ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-          )}
-        </button>
-
-        {showAttendees && (
-          <div className="border-t border-border max-h-60 overflow-y-auto">
-            {goingRsvps.length === 0 ? (
-              <p className="p-4 text-sm text-muted-foreground text-center">
-                No RSVPs yet — be the first!
-              </p>
+      {currentUserId && (
+        <div className="rounded-xl border border-border overflow-hidden">
+          <button
+            onClick={() => setShowAttendees(!showAttendees)}
+            className="w-full flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" />
+              <span className="font-medium text-sm">Attendees ({goingCount})</span>
+            </div>
+            {showAttendees ? (
+              <ChevronUp className="w-4 h-4 text-muted-foreground" />
             ) : (
-              <div className="divide-y divide-border">
-                {goingRsvps.map((rsvp) => (
-                  <div
-                    key={rsvp.id}
-                    className={cn(
-                      'flex items-center gap-3 p-3',
-                      rsvp.user_id && 'cursor-pointer hover:bg-accent/50 transition-colors'
-                    )}
-                    onClick={() => rsvp.user_id && navigate(`/profile/${rsvp.user_id}`)}
-                  >
-                    <Avatar className="w-8 h-8">
-                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                        {rsvp.name[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{rsvp.name}</p>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        'text-xs shrink-0',
-                        rsvp.role_type === 'actor'
-                          ? 'border-rose-400/40 text-rose-400'
-                          : 'border-cyan-400/40 text-cyan-400'
-                      )}
-                    >
-                      {rsvp.role_type === 'actor' ? 'Actor' : 'Filmmaker'}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
             )}
-          </div>
-        )}
-      </div>
+          </button>
+
+          {showAttendees && (
+            <div className="border-t border-border max-h-60 overflow-y-auto">
+              {goingRsvps.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground text-center">
+                  No RSVPs yet — be the first!
+                </p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {visibleGoingRsvps.map((rsvp) => (
+                    <div
+                      key={rsvp.id}
+                      className={cn(
+                        'flex items-center gap-3 p-3',
+                        rsvp.user_id && 'cursor-pointer hover:bg-accent/50 transition-colors'
+                      )}
+                      onClick={() => rsvp.user_id && navigate(`/profile/${rsvp.user_id}`)}
+                    >
+                      <Avatar className="w-8 h-8">
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                          {rsvp.name[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{rsvp.name}</p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'text-xs shrink-0',
+                          rsvp.role_type === 'actor'
+                            ? 'border-rose-400/40 text-rose-400'
+                            : 'border-cyan-400/40 text-cyan-400'
+                        )}
+                      >
+                        {rsvp.role_type === 'actor' ? 'Actor' : 'Filmmaker'}
+                      </Badge>
+                    </div>
+                ))}
+                {anonymousGoingCount > 0 && (
+                    <div className="p-3 text-sm text-muted-foreground">
+                      <span>
+                        {visibleGoingRsvps.length > 0
+                          ? `and ${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} more`
+                          : `${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} attending`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* RSVP Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

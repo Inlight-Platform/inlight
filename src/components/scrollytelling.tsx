@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, useScroll, useTransform, MotionValue, useSpring } from "framer-motion";
 import { Sparkle } from "./Sparkle";
 import { Button } from "@/components/ui/button";
+import { AuthSegmentedButton } from "@/components/auth/AuthSegmentedButton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/inlight-logo.jpeg";
@@ -848,31 +849,25 @@ export function CTAStop() {
           Claim your place in the network built by — and for — the next generation of entertainment.
         </p>
 
-        <div className="mt-12 rounded-3xl border border-border bg-card/60 backdrop-blur-xl p-6 sm:p-8 shadow-soft">
-          <div className="space-y-4">
+        <div className="mx-auto mt-14 flex w-full max-w-sm flex-col items-center">
             <Button
               type="button"
-              className={cn("w-full", authPrimaryButtonClass)}
-              onClick={() => navigate("/auth")}
+              className="group !h-14 w-full !rounded-full !bg-none !bg-foreground px-8 !text-background font-medium tracking-wide shadow-glow transition-transform hover:!bg-none hover:!bg-foreground/90 hover:scale-[1.02]"
+              onClick={() => navigate("/feed", { state: { scrollToTop: true } })}
             >
-              Sign in
+              <Sparkle size={14} />
+              Explore Inlight
+              <span className="transition-transform group-hover:translate-x-1">→</span>
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="!h-12 !rounded-xl !border-border !bg-none !bg-secondary/30 !text-muted-foreground hover:!bg-none hover:!bg-secondary/50 hover:!text-white w-full"
-              onClick={() => navigate("/auth?mode=signup")}
-            >
-              Create account
-            </Button>
-          </div>
 
-          <p className="mt-5 text-center text-[11px] text-muted-foreground">
+          <AuthSegmentedButton size="md" fullWidth className="mt-6 max-w-xs" />
+
+          <p className="mt-3 max-w-xs text-center text-[11px] leading-5 text-muted-foreground">
             By continuing you agree to Inlight's Terms & Privacy.
           </p>
         </div>
 
-        <div className="mt-16 flex items-center justify-center gap-3 opacity-60">
+        <div className="mt-14 flex items-center justify-center gap-3 opacity-60">
           <img src={logo} alt="Inlight" className="h-6 w-auto invert" />
         </div>
         <p className="mt-3 text-[11px] tracking-widest uppercase text-muted-foreground">

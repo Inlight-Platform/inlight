@@ -22,6 +22,9 @@ import { ProjectHeaderImageUploader } from '@/components/projects/ProjectHeaderI
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { compressImage, isCompressibleImage } from '@/lib/imageCompression';
+import { CoverImageCropper } from '@/components/profile/CoverImageCropper';
+import { AvatarCropper } from '@/components/profile/AvatarCropper';
+import { projectPath } from '@/lib/publicPaths';
 import { ProjectImageCropper } from '@/components/projects/ProjectImageCropper';
 
 const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
@@ -1360,7 +1363,7 @@ const CompanyProfilePage: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {currentProjects.map((project) => (
-                  <Card key={project.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border" onClick={() => navigate(`/projects/${project.id}`)}>
+                  <Card key={project.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border" onClick={() => navigate(projectPath(project))}>
                     {project.header_image_url || project.main_image_url ? (
                       <img src={project.header_image_url || project.main_image_url} alt={project.title} className="w-full aspect-[4/3] object-cover" />
                     ) : (
@@ -1410,7 +1413,7 @@ const CompanyProfilePage: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {pastProjects.map((project) => (
-                  <Card key={project.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border" onClick={() => navigate(`/projects/${project.id}`)}>
+                  <Card key={project.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border" onClick={() => navigate(projectPath(project))}>
                     {project.header_image_url || project.main_image_url ? (
                       <img src={project.header_image_url || project.main_image_url} alt={project.title} className="w-full aspect-[4/3] object-cover" />
                     ) : (

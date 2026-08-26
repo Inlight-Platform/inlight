@@ -267,7 +267,8 @@ export function useAuth() {
     password: string,
     displayName?: string,
     platformInviteToken?: string | null,
-    projectCreditInviteToken?: string | null
+    projectCreditInviteToken?: string | null,
+    authRedirectTo?: string
   ) => {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedInviteToken = platformInviteToken?.trim() || null;
@@ -277,7 +278,7 @@ export function useAuth() {
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: authRedirectTo || window.location.origin,
         data: {
           display_name: displayName || normalizedEmail.split('@')[0],
           ...(normalizedInviteToken ? { platform_invite_token: normalizedInviteToken } : {}),
