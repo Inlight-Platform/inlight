@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { type CSSProperties, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Starfield } from "@/components/Starfield";
@@ -17,15 +17,24 @@ import logo from "@/assets/inlight-logo.jpeg";
 function SectionWrapper({
   children,
   height = "120vh",
+  mobileHeight = "135svh",
 }: {
   children: (p: ReturnType<typeof useScroll>["scrollYProgress"]) => React.ReactNode;
   height?: string;
+  mobileHeight?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
   return (
-    <div ref={ref} style={{ height }} className="relative">
-      <div className="sticky top-0 h-screen w-full">{children(scrollYProgress)}</div>
+    <div
+      ref={ref}
+      style={{
+        "--landing-stop-height": height,
+        "--landing-stop-mobile-height": mobileHeight,
+      } as CSSProperties}
+      className="relative h-[var(--landing-stop-mobile-height)] sm:h-[var(--landing-stop-height)]"
+    >
+      <div className="sticky top-0 h-[100svh] w-full sm:h-screen">{children(scrollYProgress)}</div>
     </div>
   );
 }
@@ -89,9 +98,9 @@ export default function LandingPage() {
 
       {/* Scroll stops */}
       <SectionWrapper>{(p) => <EventsStop progress={p} />}</SectionWrapper>
-      <SectionWrapper>{(p) => <ProjectsStop progress={p} />}</SectionWrapper>
+      <SectionWrapper height="145vh" mobileHeight="300svh">{(p) => <ProjectsStop progress={p} />}</SectionWrapper>
       <SectionWrapper>{(p) => <NetworkStop progress={p} />}</SectionWrapper>
-      <SectionWrapper>{(p) => <TrackStop progress={p} />}</SectionWrapper>
+      <SectionWrapper height="145vh" mobileHeight="300svh">{(p) => <TrackStop progress={p} />}</SectionWrapper>
 
       <div id="cta">
         <CTAStop />
