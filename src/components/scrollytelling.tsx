@@ -539,7 +539,11 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
   const isMobile = useIsMobile();
   const opacity = useTransform(progress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
   const rotateX = useTransform(progress, [0, 0.5, 1], [20, 0, -10]);
-  const y = useTransform(progress, [0, 0.5, 1], [120, 0, -80]);
+  const y = useTransform(
+    progress,
+    [0, 0.5, 1],
+    isMobile ? [120, 0, 0] : [120, 0, -80],
+  );
   const x = useTransform(
     progress,
     isMobile ? [0, 0.5, 0.88, 1] : [0, 0.5, 1],
