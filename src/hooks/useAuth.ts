@@ -295,7 +295,7 @@ export function useAuth() {
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
         data: {
           display_name: displayName || normalizedEmail.split('@')[0],
           ...(normalizedInviteToken ? { platform_invite_token: normalizedInviteToken } : {}),
