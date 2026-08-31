@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, useScroll, useTransform, MotionValue, useSpring } from "framer-motion";
@@ -21,32 +21,7 @@ const authPrimaryButtonClass =
   "!h-12 !rounded-xl !bg-none !bg-foreground !text-background font-medium tracking-wide hover:!bg-none hover:!bg-foreground/90";
 
 const mobileStopShellClass =
-  "relative flex h-[100svh] flex-col items-center justify-start overflow-hidden px-0 pb-10 pt-28 sm:h-screen sm:justify-center sm:px-0 sm:py-12";
-
-const mobileRailGap = 12;
-const mobileRailEndPadding = 24;
-const mobileProjectCardWidth = 184;
-const mobileProfileCardWidth = 208;
-
-const useViewportWidth = () => {
-  const [viewportWidth, setViewportWidth] = useState(() =>
-    typeof window === "undefined" ? 390 : window.innerWidth,
-  );
-
-  useEffect(() => {
-    const updateViewportWidth = () => setViewportWidth(window.innerWidth);
-    updateViewportWidth();
-    window.addEventListener("resize", updateViewportWidth);
-    return () => window.removeEventListener("resize", updateViewportWidth);
-  }, []);
-
-  return viewportWidth;
-};
-
-const getMobileRailFinalX = (viewportWidth: number, cardWidth: number) => {
-  const railWidth = cardWidth * 4 + mobileRailGap * 3 + mobileRailEndPadding;
-  return Math.min(0, viewportWidth - railWidth);
-};
+  "relative h-screen flex flex-col items-center justify-center overflow-hidden py-12";
 
 type LandingProfile = {
   user_id: string;
@@ -406,27 +381,23 @@ function StopHeader({
   caption,
   progress,
   range,
-  mobileRange,
 }: {
   number: string;
   title: React.ReactNode;
   caption: string;
   progress: MotionValue<number>;
   range: [number, number, number, number];
-  mobileRange?: [number, number, number, number];
 }) {
-  const isMobile = useIsMobile();
-  const activeRange = isMobile && mobileRange ? mobileRange : range;
-  const opacity = useTransform(progress, activeRange, [0, 1, 1, 0]);
-  const y = useTransform(progress, activeRange, isMobile ? [36, 0, 0, 24] : [60, 0, 0, -60]);
+  const opacity = useTransform(progress, range, [0, 1, 1, 0]);
+  const y = useTransform(progress, range, [60, 0, 0, -60]);
   return (
     <motion.div style={{ opacity, y }} className="text-center max-w-4xl mx-auto px-6">
-      <div className="flex items-center justify-center gap-3 mb-4 text-[10px] uppercase tracking-[0.32em] text-muted-foreground sm:mb-6 sm:text-xs sm:tracking-[0.4em]">
-        <span className="h-px w-6 bg-border sm:w-8" />
+      <div className="flex items-center justify-center gap-3 mb-6 text-xs uppercase tracking-[0.4em] text-muted-foreground">
+        <span className="h-px w-8 bg-border" />
         {number}
-        <span className="h-px w-6 bg-border sm:w-8" />
+        <span className="h-px w-8 bg-border" />
       </div>
-      <h2 className="font-editorial text-3xl leading-[1.08] tracking-tight text-white sm:text-5xl sm:leading-[1.05] md:text-6xl">
+      <h2 className="font-editorial text-white text-4xl sm:text-5xl md:text-6xl leading-[1.05] tracking-tight">
         {title}
       </h2>
       <p className="mt-4 text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">{caption}</p>
@@ -436,22 +407,9 @@ function StopHeader({
 
 /* ---------- STOP 1 — EVENTS ---------- */
 export function EventsStop({ progress }: { progress: MotionValue<number> }) {
-  const isMobile = useIsMobile();
-  const cardY = useTransform(
-    progress,
-    isMobile ? [0, 0.24, 0.52, 0.64] : [0, 0.5, 1],
-    isMobile ? [64, 0, 0, -48] : [200, 0, -100],
-  );
-  const cardScale = useTransform(
-    progress,
-    isMobile ? [0, 0.24, 0.64] : [0, 0.5, 1],
-    isMobile ? [0.96, 1, 0.98] : [0.85, 1, 1.05],
-  );
-  const cardOpacity = useTransform(
-    progress,
-    isMobile ? [0, 0.22, 1] : [0, 0.3, 0.8, 1],
-    isMobile ? [0, 1, 1] : [0, 1, 1, 0],
-  );
+  const cardY = useTransform(progress, [0, 0.5, 1], [200, 0, -100]);
+  const cardScale = useTransform(progress, [0, 0.5, 1], [0.85, 1, 1.05]);
+  const cardOpacity = useTransform(progress, [0, 0.3, 0.8, 1], [0, 1, 1, 0]);
   const { data, isLoading } = useLandingPreviewData();
 
   const events = data?.events.length
@@ -509,11 +467,10 @@ export function EventsStop({ progress }: { progress: MotionValue<number> }) {
         caption="From senior thesis screenings to industry talkbacks — every showcase, workshop, and self-tape night, in one calendar."
         progress={progress}
         range={[0, 0.15, 0.85, 1]}
-        mobileRange={[0, 0.12, 0.48, 0.62]}
       />
       <motion.div
         style={{ y: cardY, scale: cardScale, opacity: cardOpacity }}
-        className="mt-7 w-full max-w-4xl px-6 sm:mt-6"
+        className="mt-6 w-full max-w-4xl px-6"
       >
         <div className="rounded-3xl border border-border bg-card/60 backdrop-blur-xl shadow-soft overflow-hidden">
           {eventGroups.map((group, groupIndex) => (
@@ -580,16 +537,13 @@ export function EventsStop({ progress }: { progress: MotionValue<number> }) {
 /* ---------- STOP 2 — PROJECTS ---------- */
 export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
   const isMobile = useIsMobile();
-  const viewportWidth = useViewportWidth();
-  const finalX = getMobileRailFinalX(viewportWidth, mobileProjectCardWidth);
-  const stepX = mobileProjectCardWidth + mobileRailGap;
-  const opacity = useTransform(progress, isMobile ? [0, 0.12, 0.92, 1] : [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
+  const opacity = useTransform(progress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
   const rotateX = useTransform(progress, [0, 0.5, 1], [20, 0, -10]);
-  const y = useTransform(progress, [0, 0.5, 1], isMobile ? [0, 0, 0] : [120, 0, -80]);
+  const y = useTransform(progress, [0, 0.5, 1], [120, 0, -80]);
   const x = useTransform(
     progress,
-    isMobile ? [0, 0.25, 0.34, 0.41, 0.49, 0.56, 0.64, 0.7, 1] : [0, 1],
-    isMobile ? [0, 0, 0, -stepX, -stepX, -stepX * 2, -stepX * 2, finalX, finalX] : [0, 0],
+    isMobile ? [0, 0.18, 0.82, 1] : [0, 1],
+    isMobile ? ["0%", "0%", "-58%", "-58%"] : ["0%", "0%"],
   );
   const { data, isLoading } = useLandingPreviewData();
 
@@ -629,11 +583,10 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
         caption="Crew calls, casting boards, songwriting rooms. Reputation-verified tags, gathered by craft."
         progress={progress}
         range={[0, 0.15, 0.85, 1]}
-        mobileRange={[0, 0.12, 0.62, 0.78]}
       />
       <motion.div
         style={{ opacity, x, y, rotateX, perspective: 1200 }}
-        className="mt-7 flex w-max max-w-none self-start gap-3 pl-0 pr-6 sm:mt-6 sm:grid sm:w-full sm:max-w-5xl sm:self-auto sm:grid-cols-2 sm:px-6 md:grid-cols-4"
+        className="mt-6 flex w-max max-w-none self-start gap-3 pl-0 pr-6 sm:grid sm:w-full sm:max-w-5xl sm:self-auto sm:grid-cols-2 sm:px-6 md:grid-cols-4"
       >
         {projects.map((p, i) => (
           <motion.div
@@ -693,12 +646,7 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
 
 /* ---------- STOP 3 — NETWORK ---------- */
 export function NetworkStop({ progress }: { progress: MotionValue<number> }) {
-  const isMobile = useIsMobile();
-  const opacity = useTransform(
-    progress,
-    isMobile ? [0, 0.24, 1] : [0, 0.3, 0.7, 1],
-    isMobile ? [0, 1, 1] : [0, 1, 1, 0],
-  );
+  const opacity = useTransform(progress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
   const scale = useTransform(progress, [0, 0.5, 1], [0.7, 1, 1.1]);
   const fieldNames = [
     "Photography",
@@ -737,11 +685,10 @@ export function NetworkStop({ progress }: { progress: MotionValue<number> }) {
         caption="Actors, composers, writers, designers, producers, and crew connected by the work they are already making."
         progress={progress}
         range={[0, 0.15, 0.85, 1]}
-        mobileRange={[0, 0.12, 0.42, 0.56]}
       />
       <motion.div
         style={{ opacity, scale }}
-        className="relative mx-auto mt-7 aspect-[16/9] w-full max-w-3xl px-6 sm:mt-6"
+        className="mt-6 relative w-full max-w-3xl aspect-[16/9] mx-auto px-6"
       >
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 62" preserveAspectRatio="none">
           {fields.map((a, i) =>
@@ -790,14 +737,11 @@ export function NetworkStop({ progress }: { progress: MotionValue<number> }) {
 /* ---------- STOP 4 — TRACK ---------- */
 export function TrackStop({ progress }: { progress: MotionValue<number> }) {
   const isMobile = useIsMobile();
-  const viewportWidth = useViewportWidth();
-  const finalX = getMobileRailFinalX(viewportWidth, mobileProfileCardWidth);
-  const stepX = mobileProfileCardWidth + mobileRailGap;
-  const opacity = useTransform(progress, isMobile ? [0, 0.12, 0.92, 1] : [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
+  const opacity = useTransform(progress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
   const x = useTransform(
     progress,
-    isMobile ? [0, 0.25, 0.34, 0.41, 0.49, 0.56, 0.64, 0.7, 1] : [0, 0.5, 1],
-    isMobile ? [0, 0, 0, -stepX, -stepX, -stepX * 2, -stepX * 2, finalX, finalX] : [200, 0, -150],
+    isMobile ? [0, 0.18, 0.82, 1] : [0, 0.5, 1],
+    isMobile ? ["0%", "0%", "-62%", "-62%"] : [200, 0, -150],
   );
   const { data, isLoading } = useLandingPreviewData();
 
@@ -839,11 +783,10 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
         caption="Rolling, real-time credits. New roles, singles, productions — surfaced from your circle the moment they happen."
         progress={progress}
         range={[0, 0.15, 0.85, 1]}
-        mobileRange={[0, 0.12, 0.62, 0.78]}
       />
       <motion.div
         style={{ opacity, x }}
-        className="mt-7 flex w-max max-w-none self-start gap-3 pl-0 pr-6 sm:mt-6 sm:grid sm:w-full sm:max-w-5xl sm:self-auto sm:grid-cols-2 sm:px-6 md:grid-cols-4"
+        className="mt-6 flex w-max max-w-none self-start gap-3 pl-0 pr-6 sm:grid sm:w-full sm:max-w-5xl sm:self-auto sm:grid-cols-2 sm:px-6 md:grid-cols-4"
       >
         {people.map((p, i) => (
           <motion.div
