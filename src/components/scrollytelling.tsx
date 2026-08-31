@@ -546,7 +546,7 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
   );
   const x = useTransform(
     progress,
-    isMobile ? [0, 0.35, 0.88, 1] : [0, 0.5, 1],
+    isMobile ? [0, 0.4, 0.9, 1] : [0, 0.5, 1],
     isMobile ? ["0%", "0%", "-58%", "-58%"] : [200, 0, -150],
   );
   const { data, isLoading } = useLandingPreviewData();
@@ -744,7 +744,7 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
   const opacity = useTransform(progress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
   const x = useTransform(
     progress,
-    isMobile ? [0, 0.35, 0.88, 1] : [0, 0.5, 1],
+    isMobile ? [0, 0.4, 0.9, 1] : [0, 0.5, 1],
     isMobile ? ["0%", "0%", "-62%", "-62%"] : [200, 0, -150],
   );
   const { data, isLoading } = useLandingPreviewData();
