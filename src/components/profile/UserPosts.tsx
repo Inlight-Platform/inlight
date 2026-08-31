@@ -2,22 +2,31 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UserPostsProps {
   userId: string;
 }
 
 export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
+  const { user } = useAuth();
+
   // Fetch all posts by this user
   const { data: posts = [], isLoading } = useQuery({
-    queryKey: ['user-posts', userId],
+    queryKey: ['user-posts', userId, user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
       // Fetch regular posts
-      const { data: postsData, error: postsError } = await supabase
+      let postsQuery = supabase
         .from('posts')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
+
+      if (!user) {
+        postsQuery = postsQuery.eq('visibility', 'public');
+      }
+
+      const { data: postsData, error: postsError } = await postsQuery;
 
       if (postsError) throw postsError;
 
@@ -72,6 +81,11 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
         user_id: post.user_id,
         content: post.content,
         image_url: post.image_url,
+        image_urls: post.image_urls,
+        image_position_x: post.image_position_x,
+        image_position_y: post.image_position_y,
+        image_zoom: post.image_zoom,
+        image_positions: post.image_positions,
         link_url: post.link_url,
         link_title: post.link_title,
         created_at: post.created_at,
@@ -90,6 +104,11 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
         description: event.description,
         content: event.description,
         image_url: event.image_url,
+        image_urls: (event as any).image_urls ?? (event.image_url ? [event.image_url] : undefined),
+        image_position_x: event.image_position_x,
+        image_position_y: event.image_position_y,
+        image_zoom: event.image_zoom,
+        image_positions: (event as any).image_positions,
         link_url: event.link_url,
         link_title: event.link_title,
         event_date: event.event_date,

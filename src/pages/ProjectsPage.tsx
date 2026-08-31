@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FolderKanban, Plus, Bookmark, BookmarkCheck, Filter, Search, X, ArrowUpDown, Users, Archive } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,10 +16,12 @@ import { OpenRolesFeed } from '@/components/projects/OpenRolesFeed';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { projectPath } from '@/lib/publicPaths';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 
 interface Project {
   id: string;
+  slug?: string | null;
   title: string;
   description: string | null;
   main_image_url: string | null;
@@ -54,21 +56,29 @@ const ProjectsPage: React.FC = () => {
 
   // Fetch all projects with creator info
   const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['projects-feed'],
+    queryKey: ['projects-feed', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('projects')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (!user) {
+        query = query.eq('is_public', true);
+      }
+
+      const { data, error } = await query;
       
       if (error) throw error;
 
       // Fetch creator profiles
-      const creatorIds = [...new Set(data.map(p => p.creator_id))];
-      const { data: profiles } = await supabase
-        .from('profiles_public')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', creatorIds);
+      const creatorIds = [...new Set(data.map(p => p.creator_id))].filter(Boolean);
+      const { data: profiles } = creatorIds.length
+        ? await supabase
+            .from('profiles_public')
+            .select('user_id, display_name, avatar_url')
+            .in('user_id', creatorIds)
+        : { data: [] };
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
@@ -77,6 +87,10 @@ const ProjectsPage: React.FC = () => {
         creator_profile: profileMap.get(project.creator_id)
       })) as Project[];
     },
+    placeholderData: keepPreviousData,
+    retry: 1,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch saved projects
@@ -281,7 +295,7 @@ const ProjectsPage: React.FC = () => {
     return (
       <Card 
         className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border"
-        onClick={() => navigate(`/projects/${project.id}`)}
+        onClick={() => navigate(projectPath(project))}
       >
         <div className="relative">
           {/* Creator profile in top corner */}
@@ -319,16 +333,16 @@ const ProjectsPage: React.FC = () => {
             <img
               src={project.header_image_url}
               alt={project.title}
-              className="w-full h-48 object-cover"
+              className="w-full aspect-[4/3] object-cover"
             />
           ) : project.main_image_url ? (
             <img
               src={project.main_image_url}
               alt={project.title}
-              className="w-full h-48 object-cover"
+              className="w-full aspect-[4/3] object-cover"
             />
           ) : (
-            <div className="w-full h-48 bg-muted flex items-center justify-center">
+            <div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
               <span className="text-muted-foreground text-sm">No image</span>
             </div>
           )}

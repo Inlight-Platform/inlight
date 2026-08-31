@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { PROJECT_CATEGORIES, ProjectCategory } from '@/components/projects/ProjectCreator';
 import { RoleSlotBuilder, RoleSlot } from '@/components/projects/RoleSlotBuilder';
 import { ProjectHeaderImageUploader } from '@/components/projects/ProjectHeaderImageUploader';
+import { projectPath } from '@/lib/publicPaths';
 
 const PROJECT_STATUSES = [
   { value: 'planning', label: 'Planning' },
@@ -45,7 +46,6 @@ const ProjectNewPage: React.FC = () => {
   const [companyName, setCompanyName] = useState('');
   const [description, setDescription] = useState('');
   const [mainImageUrl, setMainImageUrl] = useState('');
-  const [headerImageUrl, setHeaderImageUrl] = useState('');
   const [category, setCategory] = useState<ProjectCategory>('other');
   const [status, setStatus] = useState<ProjectStatus>('planning');
   const [isPublic, setIsPublic] = useState(false);
@@ -78,7 +78,6 @@ const ProjectNewPage: React.FC = () => {
           title: title.trim(),
           description: description.trim() || null,
           main_image_url: mainImageUrl.trim() || null,
-          header_image_url: headerImageUrl.trim() || null,
           creator_id: user.id,
           category,
           status: effectiveStatus,
@@ -163,7 +162,7 @@ const ProjectNewPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['my-projects'] });
       queryClient.invalidateQueries({ queryKey: ['feed-group-projects', primaryGroup?.id] });
       toast.success('Project created! Invitations sent to assigned team members.');
-      navigate(`/projects/${project.id}`);
+      navigate(projectPath(project));
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to create project');
@@ -180,7 +179,7 @@ const ProjectNewPage: React.FC = () => {
       toast.error('Please enter your role on this project');
       return;
     }
-    if (!mainImageUrl.trim() && !headerImageUrl.trim()) {
+    if (!mainImageUrl.trim()) {
       toast.error('Please add an image for your project');
       return;
     }
@@ -395,27 +394,6 @@ const ProjectNewPage: React.FC = () => {
                 />
               </div>
             )}
-
-            {/* Header Image Upload */}
-            <div className="space-y-2">
-              <Label>Header Image</Label>
-              <p className="text-sm text-muted-foreground">
-                This wide image appears at the top of the project detail page.
-              </p>
-              <ProjectHeaderImageUploader
-                userId={user.id}
-                currentImageUrl={headerImageUrl}
-                onImageUploaded={setHeaderImageUrl}
-                onRemoveImage={() => setHeaderImageUrl('')}
-                imageKind="header"
-                cropTitle="Crop project header image"
-                helperText="Drag and drop or click to upload header image"
-                recommendedDimensions="Recommended: 1920×480 or similar wide banner format"
-                aspect={4}
-                outputWidth={1920}
-                outputHeight={480}
-              />
-            </div>
           </div>
 
           {/* Team Roles */}

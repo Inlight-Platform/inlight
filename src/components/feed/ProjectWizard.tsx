@@ -21,6 +21,7 @@ import { PROJECT_CATEGORIES, ProjectCategory } from '@/components/projects/Proje
 import { RoleSlotBuilder, RoleSlot } from '@/components/projects/RoleSlotBuilder';
 import { ImageUploader } from './ImageUploader';
 import { cn } from '@/lib/utils';
+import { projectPath } from '@/lib/publicPaths';
 
 const STEPS = [
   { id: 'basics', label: 'Basics', icon: Calendar },
@@ -119,7 +120,7 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({ onClose }) => {
       queryClient.invalidateQueries({ queryKey: ['my-projects'] });
       toast.success('Project created! Invitations sent to team members.');
       onClose();
-      navigate(`/projects/${project.id}`);
+      navigate(projectPath(project));
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to create project');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { Location } from 'react-router-dom';
 import { accountAlreadyExistsMessage, useAuth } from '@/hooks/useAuth';
@@ -15,7 +15,9 @@ import { useForceTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 import { formatSignInErrorMessage } from '@/lib/authPolicy';
 import { supabase } from '@/integrations/supabase/client';
+import { AuthRestoreState, readAuthRestore, readAuthReturnTo, saveAuthReturnTo } from '@/lib/authRestore';
 import { isUserEmailConfirmed } from '@/lib/authVerification';
+import { claimStoredInvites, hasStoredInviteTokens, storeInviteTokens } from '@/lib/inviteClaims';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset' | 'confirm';
 
@@ -25,6 +27,7 @@ interface AuthRouteState {
   displayName?: string;
   mode?: AuthView;
   from?: Location;
+  restore?: AuthRestoreState;
 }
 
 const fieldClass =
@@ -215,12 +218,47 @@ const AuthPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const routeState = (location.state || {}) as AuthRouteState;
-  const redirectPath = routeState.from
+  const returnToParam = searchParams.get('returnTo');
+  const restoreOpportunityId = searchParams.get('restoreOpportunityId');
+  const restoreEventId = searchParams.get('restoreEventId');
+  const forceAuth = searchParams.get('forceAuth') === '1';
+  const storedReturnTo = useMemo(() => readAuthReturnTo(), []);
+  const restoreState = useMemo(() => {
+    if (routeState.restore) return routeState.restore;
+    if (restoreOpportunityId) return { type: 'opportunity', id: restoreOpportunityId } satisfies AuthRestoreState;
+    if (restoreEventId) return { type: 'event', id: restoreEventId } satisfies AuthRestoreState;
+    return readAuthRestore();
+  }, [routeState.restore, restoreOpportunityId, restoreEventId]);
+  const routeFromPath = routeState.from
     ? `${routeState.from.pathname}${routeState.from.search}${routeState.from.hash}`
-    : '/feed';
+    : null;
+  const fallbackRestorePath = restoreOpportunityId
+    ? `/opportunities?job=${encodeURIComponent(restoreOpportunityId)}`
+    : restoreEventId
+      ? `/feed?event=${encodeURIComponent(restoreEventId)}`
+      : null;
+  const redirectPath = returnToParam || storedReturnTo || fallbackRestorePath
+    ? returnToParam || storedReturnTo || fallbackRestorePath || '/feed'
+    : routeFromPath || restoreState
+      ? routeFromPath || (restoreState?.type === 'opportunity' ? '/opportunities' : '/feed')
+      : '/feed';
+  const redirectOptions = useMemo(() => restoreState
+    ? { replace: true, state: { restore: restoreState } }
+    : { replace: true }, [restoreState]);
   const mode = searchParams.get('mode');
   const inviteToken = searchParams.get('invite')?.trim() || null;
   const creditInviteToken = searchParams.get('credit_invite')?.trim() || null;
+  const creditInviteProjectId = searchParams.get('project_id')?.trim() || null;
+  const authRedirectTo = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set('returnTo', redirectPath);
+    if (restoreState?.type === 'opportunity') {
+      params.set('restoreOpportunityId', restoreState.id);
+    } else if (restoreState?.type === 'event') {
+      params.set('restoreEventId', restoreState.id);
+    }
+    return `${window.location.origin}/auth?${params.toString()}`;
+  }, [redirectPath, restoreState]);
   
   const getInitialView = (): AuthView => {
     if (routeState.mode) return routeState.mode;
@@ -251,6 +289,61 @@ const AuthPage: React.FC = () => {
   } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    storeInviteTokens(inviteToken, creditInviteToken, creditInviteProjectId);
+  }, [inviteToken, creditInviteToken, creditInviteProjectId]);
+
+  const redirectToClaimedInviteProject = async () => {
+    try {
+      const claimedProjectId = await claimStoredInvites();
+      if (claimedProjectId) {
+        navigate(`/projects/${claimedProjectId}`, { replace: true });
+        return true;
+      }
+    } catch (error) {
+      console.error('Invite claim failed:', error);
+    }
+
+    return false;
+  };
+
+  useEffect(() => {
+    console.log('[Inlight Auth Debug] AuthPage mounted/updated', {
+      path: `${location.pathname}${location.search}${location.hash}`,
+      forceAuth,
+      mode,
+      returnToParam,
+      storedReturnTo,
+      restoreOpportunityId,
+      restoreEventId,
+      restoreState,
+      redirectPath,
+      hasUser: Boolean(user),
+      userId: user?.id,
+      loading,
+      isLoading,
+      view,
+      isPasswordRecovery,
+    });
+  }, [
+    forceAuth,
+    isLoading,
+    isPasswordRecovery,
+    loading,
+    location.hash,
+    location.pathname,
+    location.search,
+    mode,
+    redirectPath,
+    restoreEventId,
+    restoreOpportunityId,
+    restoreState,
+    returnToParam,
+    storedReturnTo,
+    user,
+    view,
+  ]);
+
   // Handle password recovery mode - detect when user arrives via reset link
   useEffect(() => {
     if (isPasswordRecovery) {
@@ -260,10 +353,35 @@ const AuthPage: React.FC = () => {
 
   useEffect(() => {
     // Don't redirect if in password recovery mode
-    if (!loading && !isLoading && user && view !== 'reset' && !isPasswordRecovery) {
-      navigate(redirectPath, { replace: true });
+    console.log('[Inlight Auth Debug] AuthPage redirect check', {
+      forceAuth,
+      loading,
+      isLoading,
+      hasUser: Boolean(user),
+      userId: user?.id,
+      view,
+      isPasswordRecovery,
+      redirectPath,
+      willRedirect: !forceAuth && !loading && !isLoading && Boolean(user) && view !== 'reset' && !isPasswordRecovery,
+    });
+    if (!forceAuth && !loading && !isLoading && user && view !== 'reset' && !isPasswordRecovery) {
+      if (inviteToken || creditInviteToken || hasStoredInviteTokens()) {
+        void (async () => {
+          const redirected = await redirectToClaimedInviteProject();
+          if (!redirected) {
+            navigate(redirectPath, redirectOptions);
+          }
+        })();
+        return;
+      }
+
+      console.log('[Inlight Auth Debug] AuthPage redirecting authenticated user', {
+        redirectPath,
+        redirectOptions,
+      });
+      navigate(redirectPath, redirectOptions);
     }
-  }, [user, loading, isLoading, navigate, view, isPasswordRecovery, redirectPath]);
+  }, [forceAuth, user, loading, isLoading, navigate, view, isPasswordRecovery, redirectPath, redirectOptions, inviteToken, creditInviteToken]);
 
   useEffect(() => {
     if (mode === 'reset') {
@@ -282,6 +400,7 @@ const AuthPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    saveAuthReturnTo(redirectPath);
 
     const { error } = await signIn(email, password);
 
@@ -291,16 +410,40 @@ const AuthPage: React.FC = () => {
     } else {
       const isFirstTimeSignupWelcomePending = await consumeFirstTimeSignupWelcomePending(email);
       toast.success(isFirstTimeSignupWelcomePending ? firstTimeSignupWelcomeCopy : returningUserWelcomeCopy);
+      if (restoreState) {
+        console.log('[Inlight Auth Debug] Login success with restore state', {
+          redirectPath,
+          redirectOptions,
+          restoreState,
+        });
+        navigate(redirectPath, redirectOptions);
+        return;
+      }
+      if (await redirectToClaimedInviteProject()) {
+        return;
+      }
+
       try {
         const { data: facultyGroup } = await (supabase.rpc as unknown as FacultyGroupRpc)('get_my_faculty_group');
         const first = Array.isArray(facultyGroup) ? facultyGroup[0] : facultyGroup;
         if (first?.slug) {
+          console.log('[Inlight Auth Debug] Login success faculty redirect', {
+            groupSlug: first.slug,
+          });
           navigate(`/groups/${first.slug}`, { replace: true });
         } else {
-          navigate(redirectPath, { replace: true });
+          console.log('[Inlight Auth Debug] Login success default redirect', {
+            redirectPath,
+            redirectOptions,
+          });
+          navigate(redirectPath, redirectOptions);
         }
       } catch {
-        navigate(redirectPath, { replace: true });
+        console.log('[Inlight Auth Debug] Login success fallback redirect', {
+          redirectPath,
+          redirectOptions,
+        });
+        navigate(redirectPath, redirectOptions);
       }
     }
   };
@@ -332,7 +475,8 @@ const AuthPage: React.FC = () => {
         return;
       }
 
-      const { data, error } = await signUp(email, password, displayName, inviteToken, creditInviteToken);
+      saveAuthReturnTo(redirectPath);
+      const { data, error } = await signUp(email, password, displayName, inviteToken, creditInviteToken, authRedirectTo);
 
       if (error) {
         if (isPasswordPolicyError(error.message)) {
@@ -353,7 +497,11 @@ const AuthPage: React.FC = () => {
         setView('confirm');
       } else {
         toast.success('Account created! Welcome to Inlight.');
-        navigate(redirectPath, { replace: true });
+        if (await redirectToClaimedInviteProject()) {
+          return;
+        }
+
+        navigate(redirectPath, redirectOptions);
       }
     } catch (error) {
       console.error('Signup failed:', error);
@@ -406,7 +554,7 @@ const AuthPage: React.FC = () => {
       toast.error(error.message);
     } else {
       toast.success('Password updated successfully!');
-      navigate(redirectPath, { replace: true });
+      navigate(redirectPath, redirectOptions);
     }
 
     setIsLoading(false);

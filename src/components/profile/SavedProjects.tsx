@@ -8,9 +8,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { projectPath } from '@/lib/publicPaths';
 
 interface Project {
   id: string;
+  slug?: string | null;
   title: string;
   description: string | null;
   main_image_url: string | null;
@@ -131,7 +133,7 @@ export const SavedProjects: React.FC = () => {
             <Card 
               key={project.id}
               className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow bg-card border-border"
-              onClick={() => navigate(`/projects/${project.id}`)}
+              onClick={() => navigate(projectPath(project))}
             >
               <div className="relative">
                 {/* Creator profile */}
@@ -163,10 +165,10 @@ export const SavedProjects: React.FC = () => {
                   <img
                     src={project.header_image_url || project.main_image_url || undefined}
                     alt={project.title}
-                    className="w-full h-40 object-cover"
+                    className="w-full aspect-[4/3] object-cover"
                   />
                 ) : (
-                  <div className="w-full h-40 bg-muted flex items-center justify-center">
+                  <div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
                     <span className="text-muted-foreground text-sm">No image</span>
                   </div>
                 )}

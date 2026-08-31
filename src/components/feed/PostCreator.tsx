@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import useEmblaCarousel from 'embla-carousel-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign } from 'lucide-react';
+import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -17,14 +18,25 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ImageUploader } from './ImageUploader';
+import { ImageUploader, ImageUploaderHandle } from './ImageUploader';
 import { AudienceSelector, PostVisibility } from './AudienceSelector';
 import { ImagePositioner } from '@/components/profile/ImagePositioner';
 import { useMyGroups } from '@/hooks/useGroups';
 import { SERVICE_CATEGORIES } from '@/data/services';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DEFAULT_FEED_IMAGE_POSITION,
+  buildFeedImageFields,
+  getMissingFeedImageColumn,
+  omitFeedImageColumn,
+} from '@/lib/feedImagePayload';
+import type { Database } from '@/integrations/supabase/types';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
+
+type PostInsert = Database['public']['Tables']['posts']['Insert'];
+type EventInsert = Database['public']['Tables']['events']['Insert'];
+type InsertableFeedImagePayload = PostInsert | EventInsert;
 
 interface PostCreatorProps {
   userProfile?: {
@@ -33,17 +45,46 @@ interface PostCreatorProps {
   };
   defaultOpen?: boolean;
   defaultPostType?: PostType;
+  defaultGroupId?: string | null;
   onClose?: () => void;
 }
 
-export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOpen = false, defaultPostType = 'update', onClose }) => {
+const insertWithImageColumnFallback = async <TPayload extends InsertableFeedImagePayload>(
+  table: 'posts' | 'events',
+  payload: TPayload,
+) => {
+  let nextPayload: Record<string, unknown> = { ...payload };
+  const omittedColumns = new Set<string>();
+
+  for (let attempt = 0; attempt <= 5; attempt += 1) {
+    const query = table === 'posts'
+      ? supabase.from('posts').insert(nextPayload as PostInsert)
+      : supabase.from('events').insert(nextPayload as EventInsert);
+    const { data, error } = await query.select('id').single();
+
+    if (!error) return data;
+
+    const missingColumn = getMissingFeedImageColumn(error);
+    if (!missingColumn || omittedColumns.has(missingColumn) || !(missingColumn in nextPayload)) {
+      throw error;
+    }
+
+    omittedColumns.add(missingColumn);
+    nextPayload = omitFeedImageColumn(nextPayload, missingColumn);
+  }
+
+  throw new Error('Unable to create post with the available image fields.');
+};
+
+export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOpen = false, defaultPostType = 'update', defaultGroupId = null, onClose }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [postType, setPostType] = useState<PostType>(defaultPostType);
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const imageUploaderRef = useRef<ImageUploaderHandle>(null);
   const [location, setLocation] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventType, setEventType] = useState('');
@@ -54,8 +95,11 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const { data: myGroups = [] } = useMyGroups();
   const [linkTitle, setLinkTitle] = useState('');
   const [customQuestion, setCustomQuestion] = useState('');
-  const [positionX, setPositionX] = useState(50);
-  const [positionY, setPositionY] = useState(50);
+  const [imagePositions, setImagePositions] = useState<{ x: number; y: number; zoom: number }[]>([]);
+  const [composerEmblaRef, composerEmblaApi] = useEmblaCarousel({ loop: false });
+  const [composerIndex, setComposerIndex] = useState(0);
+  const [composerCanPrev, setComposerCanPrev] = useState(false);
+  const [composerCanNext, setComposerCanNext] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
   const [serviceCategory, setServiceCategory] = useState<string>('');
@@ -67,12 +111,38 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       navigate('/projects/new');
       onClose?.();
     }
-  }, [defaultPostType]);
+  }, [defaultPostType, navigate, onClose]);
+
+  useEffect(() => {
+    if (defaultGroupId && (defaultPostType === 'update' || defaultPostType === 'job')) {
+      setVisibility('group');
+      setSelectedGroupId(defaultGroupId);
+      setSelectedRecipients([]);
+    }
+  }, [defaultGroupId, defaultPostType]);
+
+  const onComposerSelect = useCallback(() => {
+    if (!composerEmblaApi) return;
+    setComposerIndex(composerEmblaApi.selectedScrollSnap());
+    setComposerCanPrev(composerEmblaApi.canScrollPrev());
+    setComposerCanNext(composerEmblaApi.canScrollNext());
+  }, [composerEmblaApi]);
+
+  useEffect(() => {
+    if (!composerEmblaApi) return;
+    onComposerSelect();
+    composerEmblaApi.on('select', onComposerSelect);
+    composerEmblaApi.on('reInit', onComposerSelect);
+    return () => {
+      composerEmblaApi.off('select', onComposerSelect);
+      composerEmblaApi.off('reInit', onComposerSelect);
+    };
+  }, [composerEmblaApi, onComposerSelect]);
 
   const resetForm = () => {
     setContent('');
     setTitle('');
-    setImageUrl('');
+    setImageUrls([]);
     setLocation('');
     setEventDate('');
     setEventType('');
@@ -82,8 +152,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setPostType('update');
     setVisibility('public');
     setSelectedRecipients([]);
-    setPositionX(50);
-    setPositionY(50);
+    setSelectedGroupId(null);
+    setImagePositions([]);
     setIsPaid(false);
     setTicketPrice('');
     setServiceCategory('');
@@ -92,27 +162,22 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const createPostMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error('Must be logged in');
+
+      const imageFields = buildFeedImageFields(imageUrls, imagePositions);
       
       if (postType === 'update') {
         const categoryLabel = SERVICE_CATEGORIES.find((c) => c.slug === serviceCategory)?.label;
         const prefixedContent = categoryLabel
           ? `[${categoryLabel}] ${content.trim()}`
           : content.trim();
-        const { data: postData, error } = await supabase
-          .from('posts')
-          .insert({
-            user_id: user.id,
-            content: prefixedContent,
-            image_url: imageUrl || null,
-            image_position_x: positionX,
-            image_position_y: positionY,
-            link_url: linkUrl.trim() || null,
-            link_title: linkTitle.trim() || null,
-            visibility,
-          })
-          .select('id')
-          .single();
-        if (error) throw error;
+        const postData = await insertWithImageColumnFallback('posts', {
+          user_id: user.id,
+          content: prefixedContent,
+          ...imageFields,
+          link_url: linkUrl.trim() || null,
+          link_title: linkTitle.trim() || null,
+          visibility,
+        });
 
         // Also tag the user's profile with the chosen service so they appear
         // in the Services discovery tab.
@@ -167,30 +232,22 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           ? 'https://buy.stripe.com/5kQcN4fsA37B9Br4yjco001'
           : null;
 
-        const { data: eventData, error } = await supabase
-          .from('events')
-          .insert({
-            user_id: user.id,
-            title: title.trim(),
-            description: content.trim() || null,
-            event_date: eventDateValue,
-            location: location.trim() || null,
-            event_type: eventType.trim() || 'general',
-            image_url: imageUrl || null,
-            link_url: linkUrl.trim() || null,
-            link_title: linkTitle.trim() || null,
-            custom_question: customQuestion.trim() || null,
-            is_paid: isPaid,
-            price: parsedPrice,
-            currency: 'usd',
-            payment_link_url: defaultPaymentLink,
-          })
-          .select('id')
-          .single();
-        if (error) {
-          console.error('Event creation error:', error);
-          throw error;
-        }
+        const eventData = await insertWithImageColumnFallback('events', {
+          user_id: user.id,
+          title: title.trim(),
+          description: content.trim() || null,
+          event_date: eventDateValue,
+          location: location.trim() || null,
+          event_type: eventType.trim() || 'general',
+          ...imageFields,
+          link_url: linkUrl.trim() || null,
+          link_title: linkTitle.trim() || null,
+          custom_question: customQuestion.trim() || null,
+          is_paid: isPaid,
+          price: parsedPrice,
+          currency: 'usd',
+          payment_link_url: defaultPaymentLink,
+        });
 
         // If paid event, create Stripe price
         if (isPaid && ticketPrice && eventData) {
@@ -209,22 +266,15 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
         }
       } else if (postType === 'job') {
         // Jobs are stored as posts with a special format and optional link
-        const { data: jobData, error } = await supabase
-          .from('posts')
-          .insert({
-            user_id: user.id,
-            content: `🎯 **${title.trim()}**\n\n${content.trim()}${location ? `\n\n📍 ${location}` : ''}`,
-            image_url: imageUrl || null,
-            image_position_x: positionX,
-            image_position_y: positionY,
-            link_url: linkUrl.trim() || null,
-            link_title: linkTitle.trim() || null,
-            visibility,
-          })
-          .select('id')
-          .single();
-        if (error) throw error;
-        
+        const jobData = await insertWithImageColumnFallback('posts', {
+          user_id: user.id,
+          content: `🎯 **${title.trim()}**\n\n${content.trim()}${location ? `\n\n📍 ${location}` : ''}`,
+          ...imageFields,
+          link_url: linkUrl.trim() || null,
+          link_title: linkTitle.trim() || null,
+          visibility,
+        });
+
         // Insert recipients for specific visibility
         if (visibility === 'specific' && selectedRecipients.length > 0 && jobData) {
           const { error: recError } = await supabase
@@ -250,6 +300,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     onSuccess: () => {
       resetForm();
       queryClient.invalidateQueries({ queryKey: ['feed-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-group-posts'] });
       queryClient.invalidateQueries({ queryKey: ['feed-events'] });
       toast.success(
         postType === 'update' ? 'Post created!' : 
@@ -266,20 +317,22 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
   const handleSubmit = () => {
     console.log('handleSubmit called', { postType, title, eventDate, content });
-    if (postType === 'update' && !content.trim()) {
+    if (postType === 'update' && (!content.trim() || imageUrls.length === 0)) {
       console.log('Update validation failed');
+      if (!content.trim()) toast.error('Please add post content');
+      else toast.error('Please add an image for your post');
       return;
     }
-    if (postType === 'event' && (!title.trim() || !eventDate.trim() || !imageUrl)) {
-      console.log('Event validation failed', { title: title.trim(), eventDate, imageUrl });
+    if (postType === 'event' && (!title.trim() || !eventDate.trim() || imageUrls.length === 0)) {
+      console.log('Event validation failed', { title: title.trim(), eventDate, imageUrls });
       if (!title.trim()) toast.error('Please add an event title');
       else if (!eventDate.trim()) toast.error('Please select a date and time');
       else toast.error('Please add an image for your event');
       return;
     }
-    if (postType === 'job' && (!title.trim() || !content.trim() || !imageUrl)) {
+    if (postType === 'job' && (!title.trim() || !content.trim() || imageUrls.length === 0)) {
       console.log('Job validation failed');
-      if (!imageUrl) toast.error('Please add an image for your opportunity');
+      if (imageUrls.length === 0) toast.error('Please add an image for your opportunity');
       return;
     }
     console.log('Creating post/event...');
@@ -288,18 +341,18 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
   const isValid = () => {
     if (visibility === 'specific' && selectedRecipients.length === 0 && (postType === 'update' || postType === 'job')) return false;
-    if (postType === 'update') return content.trim().length > 0;
-    if (postType === 'event') return title.trim().length > 0 && eventDate.trim().length > 0 && imageUrl.length > 0;
-    if (postType === 'job') return title.trim().length > 0 && content.trim().length > 0 && imageUrl.length > 0;
+    if (postType === 'update') return content.trim().length > 0 && imageUrls.length > 0;
+    if (postType === 'event') return title.trim().length > 0 && eventDate.trim().length > 0 && imageUrls.length > 0;
+    if (postType === 'job') return title.trim().length > 0 && content.trim().length > 0 && imageUrls.length > 0;
     return false;
   };
 
   const getEventValidationMessage = () => {
-    if (postType !== 'event' || isValid() || (!title.trim() && !eventDate.trim() && !imageUrl)) return null;
+    if (postType !== 'event' || isValid() || (!title.trim() && !eventDate.trim() && imageUrls.length === 0)) return null;
     if (!title.trim() && !eventDate.trim()) return 'Please add a title and date';
     if (!title.trim()) return 'Please add an event title';
     if (!eventDate.trim()) return 'Please select a date and time';
-    if (!imageUrl) return 'Please add an event image';
+    if (imageUrls.length === 0) return 'Please add an event image';
     return null;
   };
 
@@ -543,46 +596,125 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                     </div>
                   )}
                   
-                  {/* Image Upload Section */}
-                  {imageUrl ? (
-                    <div className="relative rounded-lg overflow-hidden max-h-48">
-                      <img
-                        src={imageUrl}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                        style={{ objectPosition: `${positionX}% ${positionY}%` }}
-                      />
-                      <div className="absolute top-2 right-2 flex gap-2">
-                        <ImagePositioner
-                          imageUrl={imageUrl}
-                          initialPositionX={positionX}
-                          initialPositionY={positionY}
-                          aspectRatio={16 / 9}
-                          onSave={(x, y) => {
-                            setPositionX(x);
-                            setPositionY(y);
-                          }}
-                          trigger={
-                            <Button variant="secondary" size="icon" className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background">
-                              <Move className="h-4 w-4" />
-                            </Button>
-                          }
-                        />
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => {
-                            setImageUrl('');
-                            setPositionX(50);
-                            setPositionY(50);
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                  {/* Image carousel preview with per-image crop + delete */}
+                  {imageUrls.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="relative rounded-lg overflow-hidden">
+                        <div ref={composerEmblaRef} className="overflow-hidden">
+                          <div className="flex">
+                            {imageUrls.map((url, idx) => {
+                              const pos = imagePositions[idx] ?? { x: 50, y: 50, zoom: 1 };
+                              const zoom = pos.zoom ?? 1;
+
+                              return (
+                                <div key={url} className="flex-none w-full relative h-64">
+                                  <div
+                                    style={{
+                                      position: 'absolute',
+                                      left: `${pos.x * (1 - zoom)}%`,
+                                      top: `${pos.y * (1 - zoom)}%`,
+                                      right: `${(100 - pos.x) * (1 - zoom)}%`,
+                                      bottom: `${(100 - pos.y) * (1 - zoom)}%`,
+                                    }}
+                                  >
+                                    <img
+                                      src={url}
+                                      alt={`Image ${idx + 1}`}
+                                      style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        objectPosition: `${pos.x}% ${pos.y}%`,
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="absolute top-1.5 right-1.5 flex gap-1">
+                                    <ImagePositioner
+                                      imageUrl={url}
+                                      initialPositionX={pos.x}
+                                      initialPositionY={pos.y}
+                                      initialZoom={pos.zoom ?? 1}
+                                      aspectRatio={16 / 9}
+                                      onSave={(x, y, zoomValue) => setImagePositions((prev) => {
+                                        const next = [...prev];
+                                        next[idx] = { x, y, zoom: zoomValue ?? 1 };
+                                        return next;
+                                      })}
+                                      trigger={
+                                        <Button variant="secondary" size="icon" className="h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-background">
+                                          <Move className="h-3.5 w-3.5" />
+                                        </Button>
+                                      }
+                                    />
+                                    <Button
+                                      variant="destructive"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setImageUrls((prev) => prev.filter((_, i) => i !== idx));
+                                        setImagePositions((prev) => prev.filter((_, i) => i !== idx));
+                                      }}
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                  <div className="absolute bottom-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                    {idx + 1} / {imageUrls.length}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {composerCanPrev && (
+                          <button
+                            type="button"
+                            onClick={() => composerEmblaApi?.scrollPrev()}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {composerCanNext && (
+                          <button
+                            type="button"
+                            onClick={() => composerEmblaApi?.scrollNext()}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
+
+                      {imageUrls.length > 1 && (
+                        <div className="flex justify-center gap-1.5">
+                          {imageUrls.map((_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => composerEmblaApi?.scrollTo(i)}
+                              className={`h-1.5 rounded-full transition-all duration-200 ${i === composerIndex ? 'w-4 bg-foreground' : 'w-1.5 bg-muted-foreground/40'}`}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {imageUrls.length < 4 && (
+                        <button
+                          type="button"
+                          onClick={() => imageUploaderRef.current?.trigger()}
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Add photo ({4 - imageUrls.length} remaining)
+                        </button>
+                      )}
                     </div>
-                  ) : null}
+                  )}
 
                   {/* Validation helper */}
                   {eventValidationMessage && (
@@ -607,11 +739,16 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
                   <div className="flex items-center justify-between">
                     <ImageUploader
+                      ref={imageUploaderRef}
                       userId={user.id}
-                      onImageUploaded={setImageUrl}
+                      onImageUploaded={(url) => {
+                        setImageUrls((prev) => [...prev, url]);
+                        setImagePositions((prev) => [...prev, { x: 50, y: 50, zoom: 1 }]);
+                      }}
                       compact
+                      currentCount={imageUrls.length}
                       compactLabel={
-                        postType === 'event' || postType === 'job' ? (
+                        postType === 'update' || postType === 'event' || postType === 'job' ? (
                           <>
                             Image <span className="text-destructive">*</span>
                           </>

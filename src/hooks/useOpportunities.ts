@@ -1,8 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { toast } from 'sonner';
+
+const QUERY_TIMEOUT_MS = 10000;
 
 export interface DBOpportunity {
   id: string;
@@ -28,6 +30,7 @@ export interface DBOpportunity {
   image_url: string | null;
   link_url: string | null;
   link_title: string | null;
+  is_public?: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -73,6 +76,10 @@ export interface OpportunityView {
 }
 
 function toView(row: DBOpportunity): OpportunityView {
+  const externalLinkUrl = row.action_type === 'external'
+    ? normalizeExternalUrl(row.link_url)
+    : row.link_url;
+
   return {
     id: row.id,
     title: row.title,
@@ -96,7 +103,7 @@ function toView(row: DBOpportunity): OpportunityView {
     isFeatured: row.is_featured,
     actionType: row.action_type || 'apply',
     imageUrl: row.image_url || undefined,
-    linkUrl: row.link_url || undefined,
+    linkUrl: externalLinkUrl || undefined,
     linkTitle: row.link_title || undefined,
     source: 'opportunity',
     applicants: [],
@@ -107,9 +114,28 @@ function extractFirstUrl(value: string) {
   return value.match(/https?:\/\/[^\s)]+/)?.[0]?.trim();
 }
 
+function normalizeExternalUrl(value?: string | null) {
+  const trimmed = value?.trim().replace(/[),.;]+$/g, '');
+  if (!trimmed) return null;
+
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  if (/^(www\.|[a-z0-9-]+\.[a-z]{2,})(\/.*)?$/i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  return trimmed;
+}
+
 function postToView(row: DBJobPost): OpportunityView {
   const titleMatch = row.content.match(/^🎯\s+\*\*(.+?)\*\*/);
-  const title = titleMatch?.[1]?.trim() || 'Job Opportunity';
+  const firstLine = row.content
+    .replace(/^🎯\s*/u, '')
+    .split('\n')
+    .find((line) => line.trim().length > 0)
+    ?.replace(/^\*\*(.+?)\*\*$/, '$1')
+    .trim();
+  const title = titleMatch?.[1]?.trim() || firstLine || row.link_title || 'Job Opportunity';
   const descriptionWithTitle = row.content.replace(/^🎯\s+\*\*.+?\*\*\s*/s, '').trim();
   const locationMatch = descriptionWithTitle.match(/\n\n📍\s*(.+)\s*$/);
   const description = locationMatch
@@ -134,7 +160,7 @@ function postToView(row: DBJobPost): OpportunityView {
     isFeatured: false,
     actionType: 'external',
     imageUrl: row.image_url || undefined,
-    linkUrl: row.link_url || extractFirstUrl(row.content) || undefined,
+    linkUrl: normalizeExternalUrl(row.link_url || extractFirstUrl(row.content)) || undefined,
     linkTitle: row.link_title || 'Apply Externally',
     source: 'post',
     applicants: [],
@@ -145,11 +171,17 @@ function normalizeOpportunityTitle(title: string) {
   return title.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+function normalizeOpportunityDedupeKey(opportunity: OpportunityView) {
+  const normalizedLink = normalizeExternalUrl(opportunity.linkUrl)?.toLowerCase();
+  return normalizedLink || normalizeOpportunityTitle(opportunity.title);
+}
+
 function isUsableExternalUrl(value?: string | null) {
-  if (!value) return false;
+  const normalized = normalizeExternalUrl(value);
+  if (!normalized) return false;
 
   try {
-    const parsed = new URL(value);
+    const parsed = new URL(normalized);
     const host = parsed.hostname.toLowerCase();
     return (
       (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
@@ -162,41 +194,115 @@ function isUsableExternalUrl(value?: string | null) {
   }
 }
 
+function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout>;
+
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out`));
+    }, QUERY_TIMEOUT_MS);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 export function useOpportunities() {
   const { user } = useAuth();
   const { canManageJobs } = useFeatureAccess();
   const queryClient = useQueryClient();
 
-  const { data: opportunities = [], isLoading } = useQuery({
-    queryKey: ['opportunities'],
+  const { data: opportunities = [], isLoading, isError, error } = useQuery({
+    queryKey: ['opportunities', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      const { data: opportunityRows, error: opportunitiesError } = await supabase
+      let opportunityQuery = supabase
         .from('opportunities')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (opportunitiesError) throw opportunitiesError;
+      if (!user) {
+        opportunityQuery = opportunityQuery.eq('is_public', true);
+      }
 
-      const { data: jobPostRows, error: jobPostsError } = await supabase
-        .from('posts')
-        .select('id, user_id, content, image_url, link_url, link_title, created_at')
-        .like('content', '🎯%')
-        .order('created_at', { ascending: false });
+      const { data: opportunityRows, error: opportunitiesError } = await withTimeout(
+        opportunityQuery,
+        'Loading opportunities'
+      ).catch((error) => {
+        console.warn('Canonical opportunities failed to load; showing public feed jobs only.', error);
+        return { data: [], error: null };
+      });
 
-      if (jobPostsError) throw jobPostsError;
+      if (opportunitiesError) {
+        console.warn('Canonical opportunities failed to load; showing public feed jobs only.', opportunitiesError);
+      }
 
-      const canonicalOpportunities = (opportunityRows as DBOpportunity[]).map(toView);
-      const canonicalTitles = new Set(canonicalOpportunities.map((row) => normalizeOpportunityTitle(row.title)));
-      const feedOnlyJobs = ((jobPostRows || []) as DBJobPost[])
+      const buildPublicPostQuery = () => {
+        let query = supabase
+          .from('posts')
+          .select('id, user_id, content, image_url, link_url, link_title, created_at')
+          .order('created_at', { ascending: false });
+
+        if (!user) {
+          query = query.eq('visibility', 'public');
+        }
+
+        return query;
+      };
+
+      const loadFeedJobPosts = async () => {
+        const [markedJobs, linkedPosts] = await Promise.all([
+          withTimeout(
+            buildPublicPostQuery().like('content', '🎯%'),
+            'Loading marked feed jobs'
+          ).catch((error) => {
+            console.warn('Marked feed job posts failed to load.', error);
+            return { data: [], error: null };
+          }),
+          withTimeout(
+            buildPublicPostQuery().not('link_url', 'is', null),
+            'Loading linked feed opportunities'
+          ).catch((error) => {
+            console.warn('Linked public posts failed to load.', error);
+            return { data: [], error: null };
+          }),
+        ]);
+
+        if (markedJobs.error) {
+          console.warn('Marked feed job posts failed to load.', markedJobs.error);
+        }
+        if (linkedPosts.error) {
+          console.warn('Linked public posts failed to load.', linkedPosts.error);
+        }
+
+        const rowsById = new Map<string, DBJobPost>();
+        [...((markedJobs.data || []) as DBJobPost[]), ...((linkedPosts.data || []) as DBJobPost[])]
+          .forEach((row) => rowsById.set(row.id, row));
+
+        return Array.from(rowsById.values());
+      };
+
+      const jobPostRows = await loadFeedJobPosts();
+
+      const canonicalOpportunities = ((opportunityRows || []) as DBOpportunity[]).map(toView);
+      const seenOpportunityKeys = new Set(canonicalOpportunities.map(normalizeOpportunityDedupeKey));
+      const feedOnlyJobs = jobPostRows
         .map(postToView)
-        .filter((row) => !canonicalTitles.has(normalizeOpportunityTitle(row.title)))
-        .filter((row) => isUsableExternalUrl(row.linkUrl));
+        .filter((row) => isUsableExternalUrl(row.linkUrl))
+        .filter((row) => {
+          const key = normalizeOpportunityDedupeKey(row);
+          if (seenOpportunityKeys.has(key)) return false;
+          seenOpportunityKeys.add(key);
+          return true;
+        });
 
       return [
         ...canonicalOpportunities,
         ...feedOnlyJobs,
       ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     },
+    placeholderData: keepPreviousData,
+    retry: 1,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const createOpportunity = useMutation({
@@ -250,6 +356,7 @@ export function useOpportunities() {
         image_url: input.image_url || null,
         link_url: input.link_url || null,
         link_title: input.link_title || null,
+        is_public: true,
       });
 
       if (error) throw error;
@@ -352,5 +459,5 @@ export function useOpportunities() {
     },
   });
 
-  return { opportunities, isLoading, createOpportunity, updateOpportunity, deleteOpportunity };
+  return { opportunities, isLoading, isError, error, createOpportunity, updateOpportunity, deleteOpportunity };
 }

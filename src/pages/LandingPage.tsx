@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Sparkle } from "@/components/Sparkle";
 import { Starfield } from "@/components/Starfield";
 import { useForceTheme } from "@/hooks/useTheme";
 import {
@@ -12,6 +11,7 @@ import {
   TrackStop,
   CTAStop,
 } from "@/components/scrollytelling";
+import { AuthSegmentedButton } from "@/components/auth/AuthSegmentedButton";
 import logo from "@/assets/inlight-logo.jpeg";
 
 function SectionWrapper({
@@ -70,19 +70,15 @@ export default function LandingPage() {
         <a href="#" className="flex items-center gap-2">
           <img src={logo} alt="Inlight" className="h-8 w-8 rounded-full object-cover" />
         </a>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
-            to="/auth"
-            className="text-xs tracking-[0.25em] uppercase px-4 py-2 rounded-full border border-border hover:border-glow hover:text-glow transition"
+            to="/feed"
+            className="inline-flex w-[8.75rem] items-center justify-center rounded-full bg-foreground px-5 py-2 text-xs font-medium uppercase tracking-[0.18em] text-background shadow-glow transition-transform hover:scale-[1.03] sm:w-[13.75rem] sm:px-7 sm:tracking-[0.22em]"
           >
-            Sign in
+            <span className="sm:hidden">Explore</span>
+            <span className="hidden sm:inline">Explore Inlight</span>
           </Link>
-          <Link
-            to="/auth?mode=signup"
-            className="text-xs tracking-[0.25em] uppercase px-4 py-2 rounded-full bg-foreground text-background hover:opacity-90 transition"
-          >
-            Sign up
-          </Link>
+          <AuthSegmentedButton size="sm" />
         </div>
       </nav>
 
@@ -96,40 +92,6 @@ export default function LandingPage() {
       <SectionWrapper>{(p) => <ProjectsStop progress={p} />}</SectionWrapper>
       <SectionWrapper>{(p) => <NetworkStop progress={p} />}</SectionWrapper>
       <SectionWrapper>{(p) => <TrackStop progress={p} />}</SectionWrapper>
-
-      {/* Live Preview invitation */}
-      <section className="relative py-40 px-6 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-20%" }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          className="relative max-w-3xl text-center"
-        >
-          <div className="flex justify-center gap-2 mb-6 text-glow">
-            <Sparkle size={16} className="opacity-60" />
-            <Sparkle size={24} />
-            <Sparkle size={12} className="opacity-40" />
-          </div>
-          <div className="text-[11px] tracking-[0.4em] uppercase text-muted-foreground mb-6">
-            No account · no commitment
-          </div>
-          <h2 className="font-editorial text-white text-5xl sm:text-7xl md:text-8xl leading-[1.05] tracking-tight">
-            Want to see it <em className="italic text-accent-blue font-normal">in motion?</em>
-          </h2>
-          <p className="mt-6 text-muted-foreground max-w-lg mx-auto">
-            Take a tailored, three-question walk through the Inlight platform — fully interactive, no sign-up.
-          </p>
-          <Link
-            to="/preview"
-            className="group inline-flex items-center gap-3 mt-12 px-8 py-5 rounded-full bg-foreground text-background font-medium tracking-wide shadow-glow hover:scale-[1.03] transition-transform"
-          >
-            <Sparkle size={14} />
-            Enter the live preview
-            <span className="transition-transform group-hover:translate-x-1">→</span>
-          </Link>
-        </motion.div>
-      </section>
 
       <div id="cta">
         <CTAStop />

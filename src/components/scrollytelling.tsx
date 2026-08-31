@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, useScroll, useTransform, MotionValue, useSpring } from "framer-motion";
 import { Sparkle } from "./Sparkle";
 import { Button } from "@/components/ui/button";
+import { AuthSegmentedButton } from "@/components/auth/AuthSegmentedButton";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/inlight-logo.jpeg";
 import audience1 from "@/assets/audience-1.jpg";
@@ -17,6 +19,9 @@ import dance from "@/assets/dance.jpg";
 
 const authPrimaryButtonClass =
   "!h-12 !rounded-xl !bg-none !bg-foreground !text-background font-medium tracking-wide hover:!bg-none hover:!bg-foreground/90";
+
+const mobileStopShellClass =
+  "relative h-screen flex flex-col items-center justify-center overflow-hidden py-12";
 
 type LandingProfile = {
   user_id: string;
@@ -387,7 +392,7 @@ function StopHeader({
   const y = useTransform(progress, range, [60, 0, 0, -60]);
   return (
     <motion.div style={{ opacity, y }} className="text-center max-w-4xl mx-auto px-6">
-      <div className="flex items-center justify-center gap-3 mb-6 text-xs tracking-[0.4em] uppercase text-muted-foreground">
+      <div className="flex items-center justify-center gap-3 mb-6 text-xs uppercase tracking-[0.4em] text-muted-foreground">
         <span className="h-px w-8 bg-border" />
         {number}
         <span className="h-px w-8 bg-border" />
@@ -451,7 +456,7 @@ export function EventsStop({ progress }: { progress: MotionValue<number> }) {
   }, []);
 
   return (
-    <div className="relative h-screen flex flex-col items-center justify-center overflow-hidden py-12">
+    <div className={mobileStopShellClass}>
       <StopHeader
         number="Stop 01 — Events"
         title={
@@ -531,9 +536,19 @@ export function EventsStop({ progress }: { progress: MotionValue<number> }) {
 
 /* ---------- STOP 2 — PROJECTS ---------- */
 export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
+  const isMobile = useIsMobile();
   const opacity = useTransform(progress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
   const rotateX = useTransform(progress, [0, 0.5, 1], [20, 0, -10]);
-  const y = useTransform(progress, [0, 0.5, 1], [120, 0, -80]);
+  const y = useTransform(
+    progress,
+    [0, 0.5, 1],
+    isMobile ? [120, 0, 0] : [120, 0, -80],
+  );
+  const x = useTransform(
+    progress,
+    isMobile ? [0, 0.4, 0.9, 1] : [0, 0.5, 1],
+    isMobile ? ["0%", "0%", "-58%", "-58%"] : [200, 0, -150],
+  );
   const { data, isLoading } = useLandingPreviewData();
 
   const projects = data?.projects.length
@@ -560,7 +575,7 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
       ];
 
   return (
-    <div className="relative h-screen flex flex-col items-center justify-center overflow-hidden py-12">
+    <div className={mobileStopShellClass}>
       <StopHeader
         number="Stop 02 — Projects"
         title={
@@ -574,14 +589,14 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
         range={[0, 0.15, 0.85, 1]}
       />
       <motion.div
-        style={{ opacity, y, rotateX, perspective: 1200 }}
-        className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-5xl px-6"
+        style={{ opacity, x, y, rotateX, perspective: 1200 }}
+        className="mt-6 flex w-max max-w-none self-start gap-3 pl-0 pr-6 sm:grid sm:w-full sm:max-w-5xl sm:self-auto sm:grid-cols-2 sm:px-6 md:grid-cols-4"
       >
         {projects.map((p, i) => (
           <motion.div
             key={i}
             whileHover={{ y: -8 }}
-            className="group rounded-2xl border border-border bg-card/60 backdrop-blur-xl overflow-hidden shadow-soft"
+            className="group w-[11.5rem] shrink-0 overflow-hidden rounded-2xl border border-border bg-card/60 shadow-soft backdrop-blur-xl sm:w-auto sm:max-w-none"
           >
             {p.isPlaceholder ? (
               <>
@@ -661,7 +676,7 @@ export function NetworkStop({ progress }: { progress: MotionValue<number> }) {
   });
 
   return (
-    <div className="relative h-screen flex flex-col items-center justify-center overflow-hidden py-12">
+    <div className={mobileStopShellClass}>
       <StopHeader
         number="Stop 03 — Network"
         title={
@@ -725,8 +740,13 @@ export function NetworkStop({ progress }: { progress: MotionValue<number> }) {
 
 /* ---------- STOP 4 — TRACK ---------- */
 export function TrackStop({ progress }: { progress: MotionValue<number> }) {
+  const isMobile = useIsMobile();
   const opacity = useTransform(progress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
-  const x = useTransform(progress, [0, 0.5, 1], [200, 0, -150]);
+  const x = useTransform(
+    progress,
+    isMobile ? [0, 0.4, 0.9, 1] : [0, 0.5, 1],
+    isMobile ? ["0%", "0%", "-62%", "-62%"] : [200, 0, -150],
+  );
   const { data, isLoading } = useLandingPreviewData();
 
   const people = data?.posts.length
@@ -755,7 +775,7 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
       ];
 
   return (
-    <div className="relative h-screen flex flex-col items-center justify-center overflow-hidden py-12">
+    <div className={mobileStopShellClass}>
       <StopHeader
         number="Stop 04 — Track"
         title={
@@ -770,7 +790,7 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
       />
       <motion.div
         style={{ opacity, x }}
-        className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-5xl px-6 w-full"
+        className="mt-6 flex w-max max-w-none self-start gap-3 pl-0 pr-6 sm:grid sm:w-full sm:max-w-5xl sm:self-auto sm:grid-cols-2 sm:px-6 md:grid-cols-4"
       >
         {people.map((p, i) => (
           <motion.div
@@ -779,7 +799,7 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: i * 0.08 }}
-            className="rounded-2xl border border-border bg-card/60 backdrop-blur-xl p-4 shadow-soft"
+            className="flex h-64 w-[13rem] shrink-0 flex-col rounded-2xl border border-border bg-card/60 p-4 shadow-soft backdrop-blur-xl sm:h-auto sm:w-auto sm:max-w-none"
           >
             {p.isPlaceholder ? (
               <>
@@ -799,22 +819,22 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
               </>
             ) : (
               <>
-                <div className="flex items-center gap-3">
-                  <img src={p.img} alt={p.name} className="h-12 w-12 rounded-full object-cover grayscale" />
-                  <div>
-                    <div className="font-medium">{p.name}</div>
-                    <div className="text-[10px] tracking-widest uppercase text-muted-foreground">
+                <div className="flex min-w-0 items-center gap-3">
+                  <img src={p.img} alt={p.name} className="h-10 w-10 rounded-full object-cover grayscale sm:h-12 sm:w-12" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium leading-snug sm:text-base">{p.name}</div>
+                    <div className="text-[10px] uppercase leading-snug tracking-widest text-muted-foreground">
                       {p.role}
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-border">
+                <div className="mt-3 flex-1 overflow-hidden border-t border-border pt-3 sm:mt-4 sm:pt-4">
                   {p.when ? (
                     <div className="text-[10px] tracking-widest uppercase text-glow mb-1.5">
                       ✦ {p.when}
                     </div>
                   ) : null}
-                  <p className="text-sm text-muted-foreground leading-snug">{p.credit}</p>
+                  <p className="text-xs leading-snug text-muted-foreground sm:text-sm">{p.credit}</p>
                 </div>
               </>
             )}
@@ -848,31 +868,25 @@ export function CTAStop() {
           Claim your place in the network built by — and for — the next generation of entertainment.
         </p>
 
-        <div className="mt-12 rounded-3xl border border-border bg-card/60 backdrop-blur-xl p-6 sm:p-8 shadow-soft">
-          <div className="space-y-4">
+        <div className="mx-auto mt-14 flex w-full max-w-sm flex-col items-center">
             <Button
               type="button"
-              className={cn("w-full", authPrimaryButtonClass)}
-              onClick={() => navigate("/auth")}
+              className="group !h-14 w-full !rounded-full !bg-none !bg-foreground px-8 !text-background font-medium tracking-wide shadow-glow transition-transform hover:!bg-none hover:!bg-foreground/90 hover:scale-[1.02]"
+              onClick={() => navigate("/feed", { state: { scrollToTop: true } })}
             >
-              Sign in
+              <Sparkle size={14} />
+              Explore Inlight
+              <span className="transition-transform group-hover:translate-x-1">→</span>
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="!h-12 !rounded-xl !border-border !bg-none !bg-secondary/30 !text-muted-foreground hover:!bg-none hover:!bg-secondary/50 hover:!text-white w-full"
-              onClick={() => navigate("/auth?mode=signup")}
-            >
-              Create account
-            </Button>
-          </div>
 
-          <p className="mt-5 text-center text-[11px] text-muted-foreground">
+          <AuthSegmentedButton size="md" fullWidth className="mt-6 max-w-xs" />
+
+          <p className="mt-3 max-w-xs text-center text-[11px] leading-5 text-muted-foreground">
             By continuing you agree to Inlight's Terms & Privacy.
           </p>
         </div>
 
-        <div className="mt-16 flex items-center justify-center gap-3 opacity-60">
+        <div className="mt-14 flex items-center justify-center gap-3 opacity-60">
           <img src={logo} alt="Inlight" className="h-6 w-auto invert" />
         </div>
         <p className="mt-3 text-[11px] tracking-widest uppercase text-muted-foreground">

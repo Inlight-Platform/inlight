@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { capitalizeName } from '@/lib/utils';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
 import PersonCard from '@/components/people/PersonCard';
+import { VisitorAuthOverlay } from '@/components/auth/VisitorAuthPrompt';
 
 const COLORS = [
   'hsl(0, 0%, 95%)',
@@ -53,7 +54,7 @@ const NetworkPieChartPage: React.FC = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: firstDegree.length > 0,
+    enabled: !!user?.id && firstDegree.length > 0,
   });
 
   // Fetch current user's profile (for role + school context)
@@ -280,6 +281,51 @@ const NetworkPieChartPage: React.FC = () => {
       .slice(0, 2)
       .map((p) => p[0]?.toUpperCase() || '')
       .join('') || '?';
+
+  if (!user) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        <VisitorAuthOverlay
+          title="Your Network"
+          description="Your Network visualizes your personal creator ecosystem."
+          features={['Connections', 'Affiliations', 'Active this week', 'Your community']}
+        >
+          <div className="space-y-8">
+            <div className="space-y-3">
+              <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+                Your ecosystem
+              </div>
+              <h1 className="font-display text-3xl sm:text-4xl leading-tight text-foreground">
+                Your network built around your craft.
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Connections, affiliations, and activity appear here after sign in.
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {['Connections', 'Affiliations', 'Active this week'].map((label) => (
+                <div key={label} className="rounded-lg bg-muted/40 px-4 py-4 text-center">
+                  <Skeleton className="mx-auto h-8 w-12" />
+                  <div className="text-[11px] text-muted-foreground mt-2">{label}</div>
+                </div>
+              ))}
+            </div>
+            <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="rounded-xl bg-muted/35 p-6">
+                <div className="mx-auto h-64 w-64 rounded-full border-[48px] border-muted" />
+              </div>
+              <div className="space-y-3 rounded-xl bg-muted/35 p-4">
+                <h2 className="text-sm font-semibold">Your community</h2>
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton key={index} className="h-12 w-full rounded-lg" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </VisitorAuthOverlay>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-8 sm:px-6 lg:px-8">

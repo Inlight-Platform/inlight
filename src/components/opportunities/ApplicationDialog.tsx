@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Upload, FileText, User, Link2, X, Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -44,7 +43,6 @@ const ApplicationDialog: React.FC<ApplicationDialogProps> = ({
   opportunityTitle,
   onApplicationSubmitted,
 }) => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [message, setMessage] = useState('');
@@ -130,7 +128,8 @@ const ApplicationDialog: React.FC<ApplicationDialogProps> = ({
 
   const handleSubmit = async () => {
     if (!user) {
-      toast.error('You must be logged in to apply');
+      onOpenChange(false);
+      toast.error('Sign in or create an account to apply.');
       return;
     }
 

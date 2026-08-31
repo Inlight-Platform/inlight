@@ -112,14 +112,15 @@ Most application behavior is controlled by Supabase tables, RLS policies, storag
 
 Edge functions configured in `supabase/config.toml` include notification email, Stripe checkout/webhooks, password reset, platform/project-credit invites, company account approval/denial, analytics, and ticket checkout.
 
-## Automated PR sandbox previews
+## Automated PR previews
 
 Pull requests run `.github/workflows/pr-sandbox-preview.yml`.
 
 The workflow has two gates:
 
 1. `main-freshness` checks that latest `origin/main` is an ancestor of the PR head. If this fails, update the PR branch with latest `main` before reviewing the preview.
-2. `sandbox-preview` typechecks, runs tests, builds with `npm run build:sandbox`, deploys the `dist` folder to Cloudflare Pages, and comments the preview URL on the PR.
+2. `sandbox-preview` typechecks, runs tests, applies sandbox migrations when configured, builds with `npm run build:sandbox`, deploys the `dist` folder to Cloudflare Pages, and comments the sandbox preview URL on the PR.
+3. `production-data-preview` typechecks, runs tests, applies production migrations when configured, builds with `npm run build`, deploys a separate Cloudflare Pages preview, and comments the production-data preview URL on the PR.
 
 Repository configuration required:
 
@@ -129,11 +130,15 @@ Repository configuration required:
 | `CLOUDFLARE_ACCOUNT_ID` | GitHub secret | Cloudflare account that owns the Pages project. |
 | `VITE_SANDBOX_SUPABASE_URL` | GitHub secret | Hosted sandbox Supabase URL for PR previews. Must not be the production Supabase URL. |
 | `VITE_SANDBOX_SUPABASE_PUBLISHABLE_KEY` | GitHub secret | Hosted sandbox Supabase publishable/anon key for PR previews. |
+| `SANDBOX_SUPABASE_DB_URL` | GitHub secret | Optional. Database connection string used to apply PR migrations to the sandbox Supabase project before preview builds. |
+| `PRODUCTION_SUPABASE_DB_URL` | GitHub secret | Optional. Database connection string used to apply PR migrations to the real Inlight Supabase project for production-data previews and main-branch migration runs. |
 | `SUPABASE_ACCESS_TOKEN` | GitHub secret | Supabase access token used to deploy invite edge functions to the hosted sandbox project. |
 | `RESEND_API_KEY` | GitHub secret | Resend key used by sandbox invite edge functions to send invite emails. |
 | `CLOUDFLARE_PAGES_PROJECT_NAME` | GitHub variable | Optional. Defaults to `inlight` when unset. |
 
-The application still locks normal production and local development builds to the production Supabase URL. Hosted PR previews must set `VITE_SUPABASE_ENV=sandbox` and `VITE_SUPABASE_ALLOW_REMOTE_SANDBOX=true`, which the workflow does automatically.
+The application still locks normal production and local development builds to the production Supabase URL. Hosted sandbox previews must set `VITE_SUPABASE_ENV=sandbox` and `VITE_SUPABASE_ALLOW_REMOTE_SANDBOX=true`, which the workflow does automatically.
+
+The production-data preview runs PR code against the real Inlight Supabase project. Treat this URL carefully because migrations and user actions there can affect real shared data.
 
 ## Troubleshooting
 
