@@ -32,7 +32,11 @@ function getSiteUrl(req: Request) {
 function normalizeResetUrl(url: string) {
   const trimmed = url.trim();
   if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed;
+    const parsed = new URL(trimmed);
+    if ((parsed.pathname === '' || parsed.pathname === '/') && !parsed.search) {
+      return `${parsed.origin}${DEFAULT_RESET_PATH}`;
+    }
+    return parsed.toString();
   }
 
   return `${trimmed.replace(/\/+$/, "")}${DEFAULT_RESET_PATH}`;
