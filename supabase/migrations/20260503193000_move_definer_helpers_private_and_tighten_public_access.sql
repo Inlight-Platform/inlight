@@ -196,6 +196,9 @@ as $$
   select * from private.get_2nd_degree_connections(target_user_id)
 $$;
 
+drop function if exists public.get_public_event_rsvps(uuid);
+drop function if exists private.get_public_event_rsvps(uuid);
+
 create or replace function private.get_public_event_rsvps(target_event_id uuid)
 returns table (
   id uuid,
