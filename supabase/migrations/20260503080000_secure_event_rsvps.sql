@@ -1,6 +1,8 @@
 -- Restrict raw RSVP rows and expose a safe public attendee feed without emails.
 
 drop policy if exists "RSVPs are publicly viewable" on public.event_rsvps;
+drop policy if exists "Users can view their own RSVP" on public.event_rsvps;
+drop policy if exists "Event creators and admins can view RSVPs for their events" on public.event_rsvps;
 
 create policy "Users can view their own RSVP"
 on public.event_rsvps
