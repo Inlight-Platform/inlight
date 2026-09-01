@@ -131,6 +131,8 @@ begin
 end;
 $$;
 
+drop function if exists public.validate_company_staff_access(text);
+
 create or replace function public.validate_company_staff_access(_token text)
 returns table(company_id uuid, email text)
 language plpgsql
