@@ -27,6 +27,7 @@ $$;
 grant execute on function public.can_access_project(uuid) to anon, authenticated;
 
 drop policy if exists "Anyone can view projects" on public.projects;
+drop policy if exists "Users can view accessible projects" on public.projects;
 create policy "Users can view accessible projects"
 on public.projects
 for select
@@ -42,18 +43,21 @@ using (
 );
 
 drop policy if exists "Anyone can view project members" on public.project_members;
+drop policy if exists "Users can view members for accessible projects" on public.project_members;
 create policy "Users can view members for accessible projects"
 on public.project_members
 for select
 using (public.can_access_project(project_id));
 
 drop policy if exists "Anyone can view project photos" on public.project_photos;
+drop policy if exists "Users can view photos for accessible projects" on public.project_photos;
 create policy "Users can view photos for accessible projects"
 on public.project_photos
 for select
 using (public.can_access_project(project_id));
 
 drop policy if exists "Anyone can view project roles" on public.project_roles;
+drop policy if exists "Users can view roles for accessible projects" on public.project_roles;
 create policy "Users can view roles for accessible projects"
 on public.project_roles
 for select
