@@ -56,4 +56,4 @@ jobs:
 
       - name: Apply pending migrations
         if: ${{ github.event_name == 'push' || inputs.apply }}
-        run: npx --yes supabase@latest db push --include-all
+        run: npx --yes supabase@latest db push --include-all --yes

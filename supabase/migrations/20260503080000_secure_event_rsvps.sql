@@ -23,6 +23,8 @@ using (
   or public.has_role(auth.uid(), 'admin'::public.app_role)
 );
 
+drop function if exists public.get_public_event_rsvps(uuid);
+
 create or replace function public.get_public_event_rsvps(target_event_id uuid)
 returns table (
   id uuid,
