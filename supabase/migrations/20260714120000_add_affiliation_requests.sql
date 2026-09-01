@@ -1,5 +1,5 @@
 -- Create affiliation_requests table
-CREATE TABLE public.affiliation_requests (
+CREATE TABLE IF NOT EXISTS public.affiliation_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   requested_name TEXT NOT NULL,
@@ -13,8 +13,8 @@ CREATE TABLE public.affiliation_requests (
 );
 
 -- Index for common queries
-CREATE INDEX affiliation_requests_user_id_idx ON public.affiliation_requests (user_id);
-CREATE INDEX affiliation_requests_status_idx ON public.affiliation_requests (status);
+CREATE INDEX IF NOT EXISTS affiliation_requests_user_id_idx ON public.affiliation_requests (user_id);
+CREATE INDEX IF NOT EXISTS affiliation_requests_status_idx ON public.affiliation_requests (status);
 
 -- Auto-update updated_at
 CREATE OR REPLACE FUNCTION public.update_affiliation_requests_updated_at()
@@ -25,6 +25,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS affiliation_requests_updated_at ON public.affiliation_requests;
+
 CREATE TRIGGER affiliation_requests_updated_at
   BEFORE UPDATE ON public.affiliation_requests
   FOR EACH ROW EXECUTE FUNCTION public.update_affiliation_requests_updated_at();
@@ -33,6 +35,9 @@ CREATE TRIGGER affiliation_requests_updated_at
 ALTER TABLE public.affiliation_requests ENABLE ROW LEVEL SECURITY;
 
 -- Users can insert their own requests
+DROP POLICY IF EXISTS "Users can create their own affiliation requests"
+  ON public.affiliation_requests;
+
 CREATE POLICY "Users can create their own affiliation requests"
   ON public.affiliation_requests
   FOR INSERT
@@ -40,6 +45,9 @@ CREATE POLICY "Users can create their own affiliation requests"
   WITH CHECK (auth.uid() = user_id);
 
 -- Users can view their own requests
+DROP POLICY IF EXISTS "Users can view their own affiliation requests"
+  ON public.affiliation_requests;
+
 CREATE POLICY "Users can view their own affiliation requests"
   ON public.affiliation_requests
   FOR SELECT
@@ -47,6 +55,9 @@ CREATE POLICY "Users can view their own affiliation requests"
   USING (auth.uid() = user_id OR public.has_role(auth.uid(), 'admin'));
 
 -- Admins can update (approve/deny) requests
+DROP POLICY IF EXISTS "Admins can update affiliation requests"
+  ON public.affiliation_requests;
+
 CREATE POLICY "Admins can update affiliation requests"
   ON public.affiliation_requests
   FOR UPDATE
