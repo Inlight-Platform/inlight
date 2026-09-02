@@ -33,10 +33,15 @@ function normalizeResetUrl(url: string) {
   const trimmed = url.trim();
   if (/^https?:\/\//i.test(trimmed)) {
     const parsed = new URL(trimmed);
+    if (parsed.searchParams.get("mode") === "reset") {
+      return parsed.toString();
+    }
+
     if ((parsed.pathname === '' || parsed.pathname === '/') && !parsed.search) {
       return `${parsed.origin}${DEFAULT_RESET_PATH}`;
     }
-    return parsed.toString();
+
+    return `${parsed.origin}${DEFAULT_RESET_PATH}`;
   }
 
   return `${trimmed.replace(/\/+$/, "")}${DEFAULT_RESET_PATH}`;
