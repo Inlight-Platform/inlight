@@ -34,6 +34,7 @@ const AuthResetContinuePage: React.FC = () => {
 
   const continueReset = () => {
     if (!confirmationUrl || !canContinue) return;
+    sessionStorage.setItem('inlight-password-recovery-pending', '1');
     window.location.assign(confirmationUrl);
   };
 

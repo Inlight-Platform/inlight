@@ -1,5 +1,5 @@
 
-CREATE TABLE public.company_account_requests (
+CREATE TABLE IF NOT EXISTS public.company_account_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   requester_id uuid NOT NULL,
   company_name text NOT NULL,
@@ -16,23 +16,64 @@ CREATE TABLE public.company_account_requests (
   CONSTRAINT company_account_requests_status_check CHECK (status IN ('pending','approved','denied'))
 );
 
+ALTER TABLE public.company_account_requests
+  ADD COLUMN IF NOT EXISTS requester_id uuid NOT NULL,
+  ADD COLUMN IF NOT EXISTS company_name text NOT NULL,
+  ADD COLUMN IF NOT EXISTS description text,
+  ADD COLUMN IF NOT EXISTS website_url text,
+  ADD COLUMN IF NOT EXISTS justification text NOT NULL,
+  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS admin_notes text,
+  ADD COLUMN IF NOT EXISTS reviewed_by uuid,
+  ADD COLUMN IF NOT EXISTS reviewed_at timestamptz,
+  ADD COLUMN IF NOT EXISTS created_company_id uuid,
+  ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'company_account_requests_status_check'
+      AND conrelid = 'public.company_account_requests'::regclass
+  ) THEN
+    ALTER TABLE public.company_account_requests
+      ADD CONSTRAINT company_account_requests_status_check
+      CHECK (status IN ('pending','approved','denied'));
+  END IF;
+END
+$$;
+
 GRANT SELECT, INSERT, UPDATE ON public.company_account_requests TO authenticated;
 GRANT ALL ON public.company_account_requests TO service_role;
 
 ALTER TABLE public.company_account_requests ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can create their own company requests"
+  ON public.company_account_requests;
+
 CREATE POLICY "Users can create their own company requests"
   ON public.company_account_requests FOR INSERT TO authenticated
   WITH CHECK (auth.uid() = requester_id);
+
+DROP POLICY IF EXISTS "Users can view their own company requests"
+  ON public.company_account_requests;
 
 CREATE POLICY "Users can view their own company requests"
   ON public.company_account_requests FOR SELECT TO authenticated
   USING (auth.uid() = requester_id OR public.has_role(auth.uid(), 'admin'));
 
+DROP POLICY IF EXISTS "Admins can update company requests"
+  ON public.company_account_requests;
+
 CREATE POLICY "Admins can update company requests"
   ON public.company_account_requests FOR UPDATE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'))
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
+
+DROP TRIGGER IF EXISTS trg_company_account_requests_updated_at
+  ON public.company_account_requests;
 
 CREATE TRIGGER trg_company_account_requests_updated_at
   BEFORE UPDATE ON public.company_account_requests
@@ -63,6 +104,9 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+DROP TRIGGER IF EXISTS trg_notify_admins_company_request
+  ON public.company_account_requests;
 
 CREATE TRIGGER trg_notify_admins_company_request
   AFTER INSERT ON public.company_account_requests
@@ -101,6 +145,9 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+DROP TRIGGER IF EXISTS trg_notify_requester_company_request_status
+  ON public.company_account_requests;
 
 CREATE TRIGGER trg_notify_requester_company_request_status
   AFTER UPDATE ON public.company_account_requests

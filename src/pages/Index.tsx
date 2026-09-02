@@ -8,7 +8,7 @@ import { Loader2 } from 'lucide-react';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, isPasswordRecovery } = useAuth();
   const users = useStore((s) => s.users);
   
   useEffect(() => {
@@ -28,9 +28,14 @@ const Index: React.FC = () => {
 
   useEffect(() => {
     if (!loading && user) {
+      if (isPasswordRecovery) {
+        navigate('/auth?mode=reset', { replace: true });
+        return;
+      }
+
       navigate('/feed', { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, isPasswordRecovery, navigate]);
 
   if (loading) {
     return (

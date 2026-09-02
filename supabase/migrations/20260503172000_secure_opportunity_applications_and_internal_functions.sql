@@ -3,6 +3,9 @@
 -- unnecessary public execute access from SECURITY DEFINER functions.
 
 -- 1) Opportunity posters can view applications for their own listings.
+DROP POLICY IF EXISTS "Opportunity posters can view received applications"
+ON public.opportunity_applications;
+
 CREATE POLICY "Opportunity posters can view received applications"
 ON public.opportunity_applications
 FOR SELECT

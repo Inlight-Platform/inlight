@@ -7,6 +7,29 @@ import { claimStoredInvites, storeInviteTokens } from '@/lib/inviteClaims';
 export const accountAlreadyExistsMessage =
   'Your account already exists. Try signing in or resetting your password.';
 
+const passwordRecoveryPendingKey = 'inlight-password-recovery-pending';
+
+const hasPendingPasswordRecovery = () => {
+  try {
+    const url = new URL(window.location.href);
+    return (
+      url.searchParams.get('mode') === 'reset' ||
+      url.searchParams.get('type') === 'recovery' ||
+      sessionStorage.getItem(passwordRecoveryPendingKey) === '1'
+    );
+  } catch {
+    return false;
+  }
+};
+
+const clearPendingPasswordRecovery = () => {
+  try {
+    sessionStorage.removeItem(passwordRecoveryPendingKey);
+  } catch {
+    // Storage can be unavailable in private/restricted browser contexts.
+  }
+};
+
 const isExistingSignupResponse = (data: Awaited<ReturnType<typeof supabase.auth.signUp>>['data']) => {
   return Boolean(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
 };
@@ -51,7 +74,7 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(hasPendingPasswordRecovery);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
   const maybeSendShowcaseWelcome = async (activeSession: Session | null) => {
@@ -106,7 +129,7 @@ export function useAuth() {
         const inviteToken = url.searchParams.get('invite');
         const creditInviteToken = url.searchParams.get('credit_invite');
         const creditInviteProjectId = url.searchParams.get('project_id');
-        const isRecoveryFlow = type === 'recovery' || url.searchParams.get('mode') === 'reset';
+        const isRecoveryFlow = type === 'recovery' || hasPendingPasswordRecovery();
         const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
         const hashAccessToken = hashParams.get('access_token');
         const hashRefreshToken = hashParams.get('refresh_token');
@@ -179,7 +202,9 @@ export function useAuth() {
           if (isUserEmailConfirmed(data.user)) {
             setSession(data.session);
             setUser(data.user);
-            void maybeClaimInvites(data.session);
+            if (!isRecoveryFlow) {
+              void maybeClaimInvites(data.session);
+            }
           } else {
             await clearUnconfirmedSession();
             setSession(null);
@@ -201,7 +226,9 @@ export function useAuth() {
         } else {
           setSession(session);
           setUser(session?.user ?? null);
-          void maybeClaimInvites(session);
+          if (!hasPendingPasswordRecovery()) {
+            void maybeClaimInvites(session);
+          }
         }
         setLoading(false);
       } catch (error) {
@@ -219,9 +246,10 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('Auth event:', event);
+        const isRecoveryEvent = event === 'PASSWORD_RECOVERY' || hasPendingPasswordRecovery();
         
         // Detect password recovery event
-        if (event === 'PASSWORD_RECOVERY') {
+        if (isRecoveryEvent) {
           setIsPasswordRecovery(true);
         }
         
@@ -237,7 +265,7 @@ export function useAuth() {
         setUser(session?.user ?? null);
         setLoading(false);
 
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && !isRecoveryEvent) {
           void maybeSendShowcaseWelcome(session);
           void maybeClaimInvites(session);
         }
@@ -345,6 +373,7 @@ export function useAuth() {
     setUser(null);
     setIsPasswordRecovery(false);
     setRecoveryError(null);
+    clearPendingPasswordRecovery();
 
     return { error: null };
   };
@@ -362,6 +391,10 @@ export function useAuth() {
     const { data, error } = await supabase.auth.updateUser({
       password: newPassword,
     });
+    if (!error) {
+      clearPendingPasswordRecovery();
+      setIsPasswordRecovery(false);
+    }
     return { data, error };
   };
 

@@ -64,6 +64,8 @@ create policy "Admins and owners can manage company staff access"
     )
   );
 
+drop trigger if exists trg_company_staff_access_updated_at on public.company_staff_access;
+
 create trigger trg_company_staff_access_updated_at
   before update on public.company_staff_access
   for each row execute function public.update_updated_at_column();
@@ -128,6 +130,8 @@ begin
   return access_company_id;
 end;
 $$;
+
+drop function if exists public.validate_company_staff_access(text);
 
 create or replace function public.validate_company_staff_access(_token text)
 returns table(company_id uuid, email text)
