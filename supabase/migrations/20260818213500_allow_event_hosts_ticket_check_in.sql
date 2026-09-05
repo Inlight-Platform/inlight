@@ -21,6 +21,8 @@ CREATE POLICY "Event hosts can update ticket check-ins"
   );
 
 -- Public attendee lists should reveal only profile-safe ticket holder details.
+DROP FUNCTION IF EXISTS public.get_public_event_ticket_attendees(uuid);
+
 CREATE OR REPLACE FUNCTION public.get_public_event_ticket_attendees(target_event_id uuid)
 RETURNS TABLE (
   id uuid,

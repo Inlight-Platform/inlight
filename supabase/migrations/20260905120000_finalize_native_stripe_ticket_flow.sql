@@ -92,6 +92,8 @@ $$;
 GRANT EXECUTE ON FUNCTION public.get_admin_ticket_revenue_totals() TO authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.tickets TO authenticated;
 
+DROP FUNCTION IF EXISTS public.get_public_event_ticket_attendees(uuid);
+
 CREATE OR REPLACE FUNCTION public.get_public_event_ticket_attendees(target_event_id uuid)
 RETURNS TABLE (
   id uuid,
