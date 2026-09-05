@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,6 @@ import { useMyGroups } from '@/hooks/useGroups';
 import { SERVICE_CATEGORIES } from '@/data/services';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  DEFAULT_FEED_IMAGE_POSITION,
   buildFeedImageFields,
   getMissingFeedImageColumn,
   omitFeedImageColumn,
@@ -78,6 +78,7 @@ const insertWithImageColumnFallback = async <TPayload extends InsertableFeedImag
 
 export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOpen = false, defaultPostType = 'update', defaultGroupId = null, onClose }) => {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [postType, setPostType] = useState<PostType>(defaultPostType);
@@ -103,6 +104,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [isPaid, setIsPaid] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
   const [serviceCategory, setServiceCategory] = useState<string>('');
+  const canCreatePaidEvents = isAdmin;
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
   useEffect(() => {
@@ -120,6 +122,13 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       setSelectedRecipients([]);
     }
   }, [defaultGroupId, defaultPostType]);
+
+  useEffect(() => {
+    if (!canCreatePaidEvents && isPaid) {
+      setIsPaid(false);
+      setTicketPrice('');
+    }
+  }, [canCreatePaidEvents, isPaid]);
 
   const onComposerSelect = useCallback(() => {
     if (!composerEmblaApi) return;
@@ -227,9 +236,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           throw new Error('Event date is required');
         }
         
-        const parsedPrice = isPaid && ticketPrice ? parseFloat(ticketPrice) : null;
+        const parsedPrice = canCreatePaidEvents && isPaid && ticketPrice ? parseFloat(ticketPrice) : null;
         const normalizedLinkUrl = linkUrl.trim();
-        const paymentLinkUrl = isPaid ? normalizedLinkUrl || null : null;
+        const paymentLinkUrl = canCreatePaidEvents && isPaid ? normalizedLinkUrl || null : null;
 
         const eventData = await insertWithImageColumnFallback('events', {
           user_id: user.id,
@@ -242,13 +251,13 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           link_url: linkUrl.trim() || null,
           link_title: linkTitle.trim() || null,
           custom_question: customQuestion.trim() || null,
-          is_paid: isPaid,
+          is_paid: canCreatePaidEvents && isPaid,
           price: parsedPrice,
           currency: 'usd',
           payment_link_url: paymentLinkUrl,
         });
 
-        if (isPaid && parsedPrice && eventData?.id && !paymentLinkUrl) {
+        if (canCreatePaidEvents && isPaid && parsedPrice && eventData?.id && !paymentLinkUrl) {
           const { error: priceError } = await supabase.functions.invoke('create-event-price', {
             body: {
               event_id: eventData.id,
@@ -327,7 +336,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       else toast.error('Please add an image for your event');
       return;
     }
-    if (postType === 'event' && isPaid && (!ticketPrice.trim() || Number(ticketPrice) <= 0)) {
+    if (postType === 'event' && canCreatePaidEvents && isPaid && (!ticketPrice.trim() || Number(ticketPrice) <= 0)) {
       toast.error('Please add a ticket price');
       return;
     }
@@ -348,7 +357,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
         title.trim().length > 0 &&
         eventDate.trim().length > 0 &&
         imageUrls.length > 0 &&
-        (!isPaid || (ticketPrice.trim().length > 0 && Number(ticketPrice) > 0))
+        (!canCreatePaidEvents || !isPaid || (ticketPrice.trim().length > 0 && Number(ticketPrice) > 0))
       );
     }
     if (postType === 'job') return title.trim().length > 0 && content.trim().length > 0 && imageUrls.length > 0;
@@ -538,35 +547,36 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                         />
                       </div>
 
-                      {/* Paid event toggle */}
-                      <div className="space-y-3 p-3 rounded-lg bg-muted/50">
-                        <div className="flex items-center justify-between">
-                          <label className="text-sm font-medium flex items-center gap-1.5">
-                            <DollarSign className="h-3.5 w-3.5" />
-                            Paid Event
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setIsPaid(!isPaid)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPaid ? 'bg-primary' : 'bg-muted-foreground/30'}`}
-                          >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPaid ? 'translate-x-6' : 'translate-x-1'}`} />
-                          </button>
-                        </div>
-                        {isPaid && (
-                          <div className="space-y-1.5">
-                            <label className="text-sm text-muted-foreground">Ticket Price (USD) <span className="text-destructive">*</span></label>
-                            <Input
-                              type="number"
-                              min="0.50"
-                              step="0.01"
-                              placeholder="10.00"
-                              value={ticketPrice}
-                              onChange={(e) => setTicketPrice(e.target.value)}
-                            />
+                      {canCreatePaidEvents && (
+                        <div className="space-y-3 p-3 rounded-lg bg-muted/50">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium flex items-center gap-1.5">
+                              <DollarSign className="h-3.5 w-3.5" />
+                              Paid Event
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setIsPaid(!isPaid)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPaid ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                            >
+                              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPaid ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </button>
                           </div>
-                        )}
-                      </div>
+                          {isPaid && (
+                            <div className="space-y-1.5">
+                              <label className="text-sm text-muted-foreground">Ticket Price (USD) <span className="text-destructive">*</span></label>
+                              <Input
+                                type="number"
+                                min="0.50"
+                                step="0.01"
+                                placeholder="10.00"
+                                value={ticketPrice}
+                                onChange={(e) => setTicketPrice(e.target.value)}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       <div className="space-y-1.5">
                         <label className="text-sm text-muted-foreground">Custom RSVP Question (optional)</label>

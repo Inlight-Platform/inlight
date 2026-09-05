@@ -30,6 +30,20 @@ async function generateTicketCode(supabaseAdmin: ReturnType<typeof createClient>
   return data as string;
 }
 
+async function getBuyerName(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  stripeName: string | null | undefined
+) {
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("display_name")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return profile?.display_name || stripeName || null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -92,7 +106,7 @@ serve(async (req) => {
       .select("id")
       .eq("event_id", event_id)
       .eq("user_id", user.id)
-      .eq("status", "confirmed")
+      .in("status", ["confirmed", "partially_refunded"])
       .limit(1)
       .maybeSingle();
 
@@ -118,13 +132,25 @@ serve(async (req) => {
       const existingSession = await stripe.checkout.sessions.retrieve(pendingTicket.stripe_session_id);
       if (existingSession.payment_status === "paid") {
         const ticketCode = await generateTicketCode(supabaseAdmin);
+        const stripeEmail = existingSession.customer_details?.email ?? user.email ?? null;
+        const buyerName = await getBuyerName(supabaseAdmin, user.id, existingSession.customer_details?.name);
+        const paymentIntentId =
+          typeof existingSession.payment_intent === "string"
+            ? existingSession.payment_intent
+            : existingSession.payment_intent?.id ?? null;
         const { error: confirmError } = await supabaseAdmin
           .from("tickets")
           .update({
             status: "confirmed",
             amount_paid: (existingSession.amount_total || 0) / 100,
-            attendee_email: user.email,
+            attendee_email: stripeEmail,
+            attendee_name: buyerName,
             ticket_code: ticketCode,
+            stripe_customer_email: stripeEmail,
+            stripe_payment_intent_id: paymentIntentId,
+            refunded_amount: 0,
+            refunded_at: null,
+            expired_at: null,
           })
           .eq("id", pendingTicket.id);
 
@@ -167,6 +193,9 @@ serve(async (req) => {
       stripe_session_id: session.id,
       status: "pending",
       amount_paid: 0,
+      attendee_email: user.email,
+      stripe_customer_email: user.email,
+      refunded_amount: 0,
     };
 
     const { error: ticketError } = pendingTicket?.id

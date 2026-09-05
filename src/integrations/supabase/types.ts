@@ -2495,9 +2495,14 @@ export type Database = {
           checked_in_by: string | null
           created_at: string
           event_id: string
+          expired_at: string | null
           id: string
+          refunded_amount: number
+          refunded_at: string | null
           source: string
           status: string
+          stripe_customer_email: string | null
+          stripe_payment_intent_id: string | null
           stripe_session_id: string | null
           ticket_code: string | null
           updated_at: string
@@ -2512,9 +2517,14 @@ export type Database = {
           checked_in_by?: string | null
           created_at?: string
           event_id: string
+          expired_at?: string | null
           id?: string
+          refunded_amount?: number
+          refunded_at?: string | null
           source?: string
           status?: string
+          stripe_customer_email?: string | null
+          stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
           ticket_code?: string | null
           updated_at?: string
@@ -2529,9 +2539,14 @@ export type Database = {
           checked_in_by?: string | null
           created_at?: string
           event_id?: string
+          expired_at?: string | null
           id?: string
+          refunded_amount?: number
+          refunded_at?: string | null
           source?: string
           status?: string
+          stripe_customer_email?: string | null
+          stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
           ticket_code?: string | null
           updated_at?: string
@@ -2955,6 +2970,21 @@ export type Database = {
         Returns: string
       }
       generate_ticket_code: { Args: never; Returns: string }
+      get_admin_ticket_revenue_totals: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          event_id: string
+          event_title: string
+          event_date: string
+          creator_user_id: string
+          creator_name: string | null
+          creator_email: string | null
+          tickets_sold: number
+          gross_revenue: number
+          refunds: number
+          net_revenue: number
+        }[]
+      }
       get_public_event_ticket_attendees: {
         Args: { target_event_id: string }
         Returns: {

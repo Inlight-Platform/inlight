@@ -54,6 +54,8 @@ type TicketMetricRow = {
   amount_paid: number | null;
   checked_in_at: string | null;
   created_at: string;
+  refunded_amount: number;
+  status: string;
   ticket_code: string | null;
   user_id: string;
 };
@@ -241,7 +243,7 @@ const EventDashboardPage: React.FC = () => {
     includePrivate: true,
   });
 
-  const { data: confirmedTickets = [], isLoading: ticketMetricsLoading } = useQuery({
+  const { data: paidTickets = [], isLoading: ticketMetricsLoading } = useQuery({
     queryKey: ['event-dashboard-ticket-metrics', dashboardEvent?.id],
     queryFn: async () => {
       if (!dashboardEvent?.id) {
@@ -250,9 +252,9 @@ const EventDashboardPage: React.FC = () => {
 
       const { data, error } = await supabase
         .from('tickets')
-        .select('id, amount_paid, attendee_email, attendee_name, checked_in_at, created_at, ticket_code, user_id')
+        .select('id, amount_paid, attendee_email, attendee_name, checked_in_at, created_at, refunded_amount, status, ticket_code, user_id')
         .eq('event_id', dashboardEvent.id)
-        .eq('status', 'confirmed')
+        .in('status', ['confirmed', 'partially_refunded', 'refunded'])
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -261,13 +263,24 @@ const EventDashboardPage: React.FC = () => {
     },
     enabled: !!dashboardEvent?.id && userOwnsDashboardEvent,
   });
-  const ticketMetrics = useMemo(() => ({
-    ticketsSold: confirmedTickets.length,
-    revenue: confirmedTickets.reduce((sum, ticket) => sum + Number(ticket.amount_paid || 0), 0),
-  }), [confirmedTickets]);
+  const activeTickets = useMemo(
+    () => paidTickets.filter((ticket) => ticket.status === 'confirmed' || ticket.status === 'partially_refunded'),
+    [paidTickets]
+  );
+  const ticketMetrics = useMemo(() => {
+    const grossRevenue = paidTickets.reduce((sum, ticket) => sum + Number(ticket.amount_paid || 0), 0);
+    const refunds = paidTickets.reduce((sum, ticket) => sum + Number(ticket.refunded_amount || 0), 0);
+    return {
+      ticketsSold: paidTickets.length,
+      activeTickets: activeTickets.length,
+      grossRevenue,
+      refunds,
+      revenue: grossRevenue - refunds,
+    };
+  }, [activeTickets.length, paidTickets]);
   const ticketUserIds = useMemo(
-    () => Array.from(new Set(confirmedTickets.map((ticket) => ticket.user_id).filter(Boolean))),
-    [confirmedTickets]
+    () => Array.from(new Set(activeTickets.map((ticket) => ticket.user_id).filter(Boolean))),
+    [activeTickets]
   );
   const { data: ticketProfiles = [], isLoading: ticketProfilesLoading } = useQuery({
     queryKey: ['event-dashboard-ticket-profiles', dashboardEvent?.id, ticketUserIds],
@@ -343,7 +356,7 @@ const EventDashboardPage: React.FC = () => {
       attended: Boolean(rsvp.attended),
     }));
 
-    const ticketAttendees = confirmedTickets
+    const ticketAttendees = activeTickets
       .filter((ticket) => {
         const userKey = ticket.user_id ? `user:${ticket.user_id}` : null;
         const emailKey = ticket.attendee_email ? `email:${ticket.attendee_email.toLowerCase()}` : null;
@@ -366,7 +379,7 @@ const EventDashboardPage: React.FC = () => {
     return [...rsvpAttendees, ...ticketAttendees].sort(
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     );
-  }, [confirmedTickets, rsvps, ticketProfileNameByUserId]);
+  }, [activeTickets, rsvps, ticketProfileNameByUserId]);
 
   const filteredAttendees = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -544,11 +557,13 @@ const EventDashboardPage: React.FC = () => {
             title="Tickets sold"
             value={ticketMetricsLoading ? '...' : ticketMetrics?.ticketsSold ?? 0}
             icon={<Ticket className="h-4 w-4" />}
+            note={ticketMetricsLoading ? undefined : `${ticketMetrics?.activeTickets ?? 0} active`}
           />
           <MetricCard
-            title="Revenue"
+            title="Net revenue"
             value={ticketMetricsLoading ? '...' : formatCurrency(ticketMetrics?.revenue ?? 0)}
             icon={<Ticket className="h-4 w-4" />}
+            note={ticketMetricsLoading || !ticketMetrics?.refunds ? undefined : `${formatCurrency(ticketMetrics.refunds)} refunded`}
           />
         </section>
 

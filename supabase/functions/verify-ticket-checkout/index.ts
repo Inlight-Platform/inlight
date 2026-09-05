@@ -7,6 +7,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type SupabaseAdminClient = ReturnType<typeof createClient>;
+
+async function getBuyerName(
+  supabaseAdmin: SupabaseAdminClient,
+  userId: string,
+  stripeName: string | null | undefined
+) {
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("display_name")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return profile?.display_name || stripeName || null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -49,6 +65,12 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+    const stripeEmail = session.customer_details?.email ?? user.email ?? null;
+    const buyerName = await getBuyerName(supabaseAdmin, user.id, session.customer_details?.name);
+    const paymentIntentId =
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent?.id ?? null;
 
     const { data: ticket, error: ticketLookupError } = await supabaseAdmin
       .from("tickets")
@@ -73,8 +95,14 @@ serve(async (req) => {
         .update({
           status: "confirmed",
           amount_paid: (session.amount_total || 0) / 100,
-          attendee_email: user.email,
+          attendee_email: stripeEmail,
+          attendee_name: buyerName,
           ticket_code: ticketCode,
+          stripe_customer_email: stripeEmail,
+          stripe_payment_intent_id: paymentIntentId,
+          refunded_amount: 0,
+          refunded_at: null,
+          expired_at: null,
         })
         .eq("id", ticket.id);
 
@@ -94,8 +122,14 @@ serve(async (req) => {
         stripe_session_id: session.id,
         status: "confirmed",
         amount_paid: (session.amount_total || 0) / 100,
-        attendee_email: user.email,
+        attendee_email: stripeEmail,
+        attendee_name: buyerName,
         ticket_code: ticketCode,
+        stripe_customer_email: stripeEmail,
+        stripe_payment_intent_id: paymentIntentId,
+        refunded_amount: 0,
+        refunded_at: null,
+        expired_at: null,
       })
       .select("id")
       .single();

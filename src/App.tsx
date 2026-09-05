@@ -31,6 +31,7 @@ import GroupPage from "./pages/GroupPage";
 import AdminPage from "./pages/AdminPage";
 import CompanyProfilePage from "./pages/CompanyProfilePage";
 import MySavesPage from "./pages/MySavesPage";
+import MyTicketsPage from "./pages/MyTicketsPage";
 import NotFound from "./pages/NotFound";
 import NetworkPieChartPage from "./pages/NetworkPieChartPage";
 import ShowcasePage from "./pages/ShowcasePage";
@@ -111,6 +112,7 @@ const App = () => (
             <Route path="/messages/group/:projectId" element={<RequireAuth><MessagesPage /></RequireAuth>} />
             <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
             <Route path="/network" element={<RequireAuth><NetworkPage /></RequireAuth>} />
+            <Route path="/tickets" element={<RequireAuth><MyTicketsPage /></RequireAuth>} />
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/new" element={<RequireAuth><ProjectNewPage /></RequireAuth>} />
