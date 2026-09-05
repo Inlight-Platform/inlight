@@ -29,6 +29,16 @@ serve(async (req) => {
       throw new Error("Missing required fields: event_id, price");
     }
 
+    const { data: isAdmin, error: adminError } = await supabaseClient.rpc("has_role", {
+      _user_id: user.id,
+      _role: "admin",
+    });
+
+    if (adminError) throw adminError;
+    if (!isAdmin) {
+      throw new Error("Only Inlight admins can configure paid event tickets");
+    }
+
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -36,13 +46,17 @@ serve(async (req) => {
 
     const { data: eventRecord, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, title, user_id, stripe_price_id")
+      .select("id, title, user_id, stripe_price_id, is_paid")
       .eq("id", event_id)
       .maybeSingle();
 
     if (eventError) throw eventError;
     if (!eventRecord || eventRecord.user_id !== user.id) {
       throw new Error("You do not have permission to configure tickets for this event");
+    }
+
+    if (!eventRecord.is_paid) {
+      throw new Error("This event is not marked as paid");
     }
 
     if (eventRecord.stripe_price_id) {

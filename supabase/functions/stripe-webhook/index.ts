@@ -6,6 +6,26 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
   apiVersion: "2025-08-27.basil",
 });
 
+type SupabaseAdminClient = ReturnType<typeof createClient>;
+
+const ticketStatusesForRevenue = ["confirmed", "refunded", "partially_refunded"];
+
+async function getBuyerName(supabase: SupabaseAdminClient, userId?: string | null, fallbackName?: string | null) {
+  if (!userId) return fallbackName ?? null;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("display_name")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[STRIPE-WEBHOOK] Buyer profile lookup error:", error);
+  }
+
+  return data?.display_name || fallbackName || null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200 });
@@ -38,25 +58,79 @@ serve(async (req) => {
 
     console.log(`[STRIPE-WEBHOOK] Event type: ${event.type}`);
 
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.metadata?.user_id;
       const customerId = session.customer as string;
       const eventId = session.metadata?.event_id;
 
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-        { auth: { persistSession: false } }
-      );
-
       // Handle ticket purchases
       if (eventId && userId) {
         const amountPaid = (session.amount_total || 0) / 100;
-        const { error: ticketError } = await supabase
+        const stripeEmail = session.customer_details?.email ?? null;
+        const buyerName = await getBuyerName(supabase, userId, session.customer_details?.name ?? null);
+        const paymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null;
+        const { data: ticket, error: ticketLookupError } = await supabase
           .from("tickets")
-          .update({ status: "confirmed", amount_paid: amountPaid })
-          .eq("stripe_session_id", session.id);
+          .select("id, ticket_code")
+          .eq("stripe_session_id", session.id)
+          .maybeSingle();
+
+        if (ticketLookupError) {
+          console.error("[STRIPE-WEBHOOK] Ticket lookup error:", ticketLookupError);
+        }
+
+        let ticketCode = ticket?.ticket_code ?? null;
+        if (!ticketCode) {
+          const { data: generatedCode, error: codeError } = await supabase.rpc("generate_ticket_code");
+          if (codeError) {
+            console.error("[STRIPE-WEBHOOK] Ticket code generation error:", codeError);
+          } else {
+            ticketCode = generatedCode;
+          }
+        }
+
+        const ticketWrite = ticket
+          ? supabase
+              .from("tickets")
+              .update({
+                status: "confirmed",
+                amount_paid: amountPaid,
+                attendee_email: stripeEmail,
+                attendee_name: buyerName,
+                stripe_customer_email: stripeEmail,
+                stripe_payment_intent_id: paymentIntentId,
+                refunded_amount: 0,
+                refunded_at: null,
+                expired_at: null,
+                ticket_code: ticketCode,
+              })
+              .eq("id", ticket.id)
+          : supabase
+              .from("tickets")
+              .insert({
+                event_id: eventId,
+                user_id: userId,
+                stripe_session_id: session.id,
+                status: "confirmed",
+                amount_paid: amountPaid,
+                attendee_email: stripeEmail,
+                attendee_name: buyerName,
+                stripe_customer_email: stripeEmail,
+                stripe_payment_intent_id: paymentIntentId,
+                refunded_amount: 0,
+                refunded_at: null,
+                expired_at: null,
+                ticket_code: ticketCode,
+              });
+
+        const { error: ticketError } = await ticketWrite;
 
         if (ticketError) {
           console.error("[STRIPE-WEBHOOK] Ticket update error:", ticketError);
@@ -108,6 +182,54 @@ serve(async (req) => {
           }
         } else {
           console.log(`[STRIPE-WEBHOOK] Granted job credit to ${clientRefId} via RPC`);
+        }
+      }
+    }
+
+    if (event.type === "checkout.session.expired") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const eventId = session.metadata?.event_id;
+
+      if (eventId) {
+        const { error } = await supabase
+          .from("tickets")
+          .update({
+            status: "expired",
+            expired_at: new Date().toISOString(),
+          })
+          .eq("stripe_session_id", session.id)
+          .eq("status", "pending");
+
+        if (error) {
+          console.error("[STRIPE-WEBHOOK] Ticket expiration update error:", error);
+        } else {
+          console.log(`[STRIPE-WEBHOOK] Expired pending ticket for session ${session.id}`);
+        }
+      }
+    }
+
+    if (event.type === "charge.refunded") {
+      const charge = event.data.object as Stripe.Charge;
+      const paymentIntentId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id ?? null;
+
+      if (paymentIntentId) {
+        const refundedAmount = (charge.amount_refunded || 0) / 100;
+        const totalAmount = (charge.amount || 0) / 100;
+        const nextStatus = refundedAmount >= totalAmount ? "refunded" : "partially_refunded";
+        const { error } = await supabase
+          .from("tickets")
+          .update({
+            status: nextStatus,
+            refunded_amount: refundedAmount,
+            refunded_at: new Date().toISOString(),
+          })
+          .eq("stripe_payment_intent_id", paymentIntentId)
+          .in("status", ticketStatusesForRevenue);
+
+        if (error) {
+          console.error("[STRIPE-WEBHOOK] Ticket refund update error:", error);
+        } else {
+          console.log(`[STRIPE-WEBHOOK] Updated refund state for payment intent ${paymentIntentId}`);
         }
       }
     }
