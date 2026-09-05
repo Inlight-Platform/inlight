@@ -29,20 +29,22 @@ serve(async (req) => {
       throw new Error("Missing required fields: event_id, price");
     }
 
-    const { data: isAdmin, error: adminError } = await supabaseClient.rpc("has_role", {
-      _user_id: user.id,
-      _role: "admin",
-    });
-
-    if (adminError) throw adminError;
-    if (!isAdmin) {
-      throw new Error("Only Inlight admins can configure paid event tickets");
-    }
-
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+
+    const { data: adminRole, error: adminError } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (adminError) throw adminError;
+    if (!adminRole) {
+      throw new Error("Only Inlight admins can configure paid event tickets");
+    }
 
     const { data: eventRecord, error: eventError } = await supabaseAdmin
       .from("events")
