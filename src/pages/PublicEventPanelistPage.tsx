@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Award, Calendar, ExternalLink, Film, Globe, Instagram, Link as LinkIcon, MapPin, User } from 'lucide-react';
+import { ArrowLeft, Calendar, Film, Globe, Instagram, Link as LinkIcon, MapPin, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
@@ -38,30 +38,6 @@ type EventSummary = {
   event_type: string | null;
   image_url: string | null;
   location: string | null;
-};
-
-type PublicProfile = {
-  display_name: string | null;
-  stage_name: string | null;
-  avatar_url: string | null;
-  cover_url: string | null;
-  location: string | null;
-  role: string | null;
-  badges: string[] | null;
-  bio: string | null;
-  headline: string | null;
-  skills: string[] | null;
-  instagram_url: string | null;
-  website_url: string | null;
-};
-
-type Credit = {
-  id: string;
-  project: string;
-  role: string;
-  year: number | null;
-  company: string | null;
-  verified: boolean | null;
 };
 
 const resolveEventUuid = (eventId?: string) => {
@@ -114,34 +90,15 @@ const PublicEventPanelistPage = () => {
       const panelist = (panelistRows?.[0] || null) as EventPanelist | null;
       if (!panelist) return null;
 
-      const [{ data: event }, { data: profile }, { data: credits }] = await Promise.all([
-        supabase
-          .from('events')
-          .select('id, title, description, event_date, event_type, image_url, location')
-          .eq('id', panelist.event_id)
-          .maybeSingle(),
-        panelist.user_id
-          ? supabase
-              .from('profiles_public')
-              .select('display_name, stage_name, avatar_url, cover_url, location, role, badges, bio, headline, skills, instagram_url, website_url')
-              .eq('user_id', panelist.user_id)
-              .maybeSingle()
-          : Promise.resolve({ data: null }),
-        panelist.user_id
-          ? supabase
-              .from('credits')
-              .select('id, project, role, year, company, verified')
-              .eq('user_id', panelist.user_id)
-              .order('year', { ascending: false })
-              .limit(8)
-          : Promise.resolve({ data: [] }),
-      ]);
+      const { data: event } = await supabase
+        .from('events')
+        .select('id, title, description, event_date, event_type, image_url, location')
+        .eq('id', panelist.event_id)
+        .maybeSingle();
 
       return {
         panelist,
         event: event as EventSummary | null,
-        profile: profile as PublicProfile | null,
-        credits: (credits || []) as Credit[],
       };
     },
     enabled: !!panelistSlug,
@@ -164,22 +121,23 @@ const PublicEventPanelistPage = () => {
     );
   }
 
-  const { panelist, event, profile, credits } = data;
-  const displayName = profile?.stage_name || profile?.display_name || panelist.display_name;
-  const title = profile?.role || panelist.title;
-  const bio = profile?.bio || panelist.bio;
-  const avatarUrl = profile?.avatar_url || panelist.headshot_url;
-  const coverUrl = profile?.cover_url || panelist.cover_url || event?.image_url;
-  const location = profile?.location || panelist.location || event?.location;
-  const badges = profile?.badges?.length ? profile.badges : panelist.badges || [];
-  const websiteUrl = profile?.website_url || panelist.website_url;
-  const instagramUrl = profile?.instagram_url || panelist.instagram_url;
+  const { panelist, event } = data;
+  const displayName = panelist.display_name;
+  const title = panelist.title;
+  const bio = panelist.bio;
+  const avatarUrl = panelist.headshot_url;
+  const coverUrl = panelist.cover_url;
+  const location = panelist.location || event?.location;
+  const badges = panelist.badges || [];
+  const websiteUrl = panelist.website_url;
+  const instagramUrl = panelist.instagram_url;
   const instagramHandle = getInstagramHandle(instagramUrl);
   const roleLocationLine = title || location
     ? `${title || ''}${title && location ? ' based in ' : ''}${location || ''}`
-    : profile?.headline || panelist.headline || null;
+    : panelist.headline || null;
   const backToEvent = event ? eventPath(event) : '/feed?tab=events';
   const inlightProfilePath = panelist.user_id ? `/profile/${panelist.user_id}` : null;
+  const coverAlt = `${displayName} cover image`;
 
   const openInlightProfile = () => {
     if (!inlightProfilePath) return;
@@ -201,10 +159,12 @@ const PublicEventPanelistPage = () => {
       </Button>
 
       <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-        <div className="relative h-36 overflow-hidden bg-gradient-to-br from-primary/25 via-background to-background sm:h-44">
-          {coverUrl && <img src={coverUrl} alt="" className="h-full w-full object-cover" />}
-          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/35 to-transparent" />
-        </div>
+        {coverUrl && (
+          <div className="relative flex h-36 items-center justify-center overflow-hidden bg-gradient-to-br from-primary/25 via-background to-background sm:h-44">
+            <img src={coverUrl} alt={coverAlt} className="h-full w-full object-contain" />
+            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/35 to-transparent" />
+          </div>
+        )}
 
         <div className="grid gap-6 px-5 py-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch lg:gap-8">
           <div className="order-2 min-w-0 text-center lg:order-1 lg:flex lg:flex-col lg:justify-center">
@@ -323,37 +283,6 @@ const PublicEventPanelistPage = () => {
         </div>
       </section>
 
-      {credits.length > 0 && (
-        <section className="mt-6 rounded-lg border bg-card p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <Award className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">Credits</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-muted-foreground">
-                  <th className="py-3 pr-4 font-medium">Project</th>
-                  <th className="py-3 pr-4 font-medium">Role</th>
-                  <th className="py-3 pr-4 font-medium">Year</th>
-                  <th className="py-3 pr-4 font-medium">Company</th>
-                </tr>
-              </thead>
-              <tbody>
-                {credits.map((credit) => (
-                  <tr key={credit.id} className="border-b border-border/70 last:border-0">
-                    <td className="py-3 pr-4 font-medium text-foreground">{credit.project}</td>
-                    <td className="py-3 pr-4 text-muted-foreground">{credit.role}</td>
-                    <td className="py-3 pr-4 text-muted-foreground">{credit.year || '-'}</td>
-                    <td className="py-3 pr-4 text-muted-foreground">{credit.company || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
       {event && (
         <section className="mt-6 rounded-lg border bg-card p-5">
           <h2 className="text-lg font-semibold text-foreground">Event</h2>
@@ -392,8 +321,8 @@ const PublicEventPanelistPage = () => {
           <VisitorAuthPrompt
             compact
             title={`View ${displayName}'s full Inlight profile`}
-            description="Sign in or create an account to open this panelist's complete Inlight profile, credits, media, and network context."
-            features={['Full profile', 'Credits and media', 'Creative network']}
+            description="Sign in or create an account to open this panelist's complete Inlight profile and creative network context."
+            features={['Full profile', 'Creative network']}
             returnTo={inlightProfilePath || undefined}
           />
         </DialogContent>

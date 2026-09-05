@@ -1,4 +1,5 @@
 DROP POLICY IF EXISTS "Users can update their own posts" ON public.posts;
+DROP POLICY IF EXISTS "Users can update their own posts or admins can update any" ON public.posts;
 
 CREATE POLICY "Users can update their own posts or admins can update any"
 ON public.posts

@@ -1,6 +1,8 @@
 -- Make project-credit invites visible to admins and verify the inviter's project credit when accepted.
 
 drop policy if exists "Project collaborators can view credit invites" on public.project_credit_invites;
+drop policy if exists "Project collaborators and admins can view credit invites" on public.project_credit_invites;
+
 create policy "Project collaborators and admins can view credit invites"
 on public.project_credit_invites
 for select

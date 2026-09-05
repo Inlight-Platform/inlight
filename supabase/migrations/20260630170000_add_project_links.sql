@@ -14,10 +14,14 @@ create index if not exists idx_project_links_project_id_created_at
 
 alter table public.project_links enable row level security;
 
+drop policy if exists "Users can view links for accessible projects" on public.project_links;
+
 create policy "Users can view links for accessible projects"
 on public.project_links
 for select
 using (public.can_access_project(project_id));
+
+drop policy if exists "Project members can add links" on public.project_links;
 
 create policy "Project members can add links"
 on public.project_links
@@ -39,6 +43,8 @@ with check (
     )
   )
 );
+
+drop policy if exists "Link owners or project creators can delete links" on public.project_links;
 
 create policy "Link owners or project creators can delete links"
 on public.project_links

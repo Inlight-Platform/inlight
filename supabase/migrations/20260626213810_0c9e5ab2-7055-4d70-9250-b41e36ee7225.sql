@@ -1,6 +1,6 @@
 
 -- 1. Tables
-CREATE TABLE public.groups (
+CREATE TABLE IF NOT EXISTS public.groups (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   slug text UNIQUE NOT NULL,
   name text NOT NULL,
@@ -12,11 +12,13 @@ CREATE TABLE public.groups (
 GRANT SELECT ON public.groups TO authenticated, anon;
 GRANT ALL ON public.groups TO service_role;
 ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Groups readable by everyone" ON public.groups;
 CREATE POLICY "Groups readable by everyone" ON public.groups FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Faculty owner can update group" ON public.groups;
 CREATE POLICY "Faculty owner can update group" ON public.groups
   FOR UPDATE USING (faculty_owner_id = auth.uid()) WITH CHECK (faculty_owner_id = auth.uid());
 
-CREATE TABLE public.group_members (
+CREATE TABLE IF NOT EXISTS public.group_members (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id uuid NOT NULL REFERENCES public.groups(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -28,7 +30,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.group_members TO authenticated;
 GRANT ALL ON public.group_members TO service_role;
 ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE public.post_groups (
+CREATE TABLE IF NOT EXISTS public.post_groups (
   post_id uuid NOT NULL REFERENCES public.posts(id) ON DELETE CASCADE,
   group_id uuid NOT NULL REFERENCES public.groups(id) ON DELETE CASCADE,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -75,25 +77,33 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
 $$;
 
 -- 3. Group_members policies (use SECURITY DEFINER helpers)
+DROP POLICY IF EXISTS "Members can view roster of their group" ON public.group_members;
 CREATE POLICY "Members can view roster of their group" ON public.group_members FOR SELECT
   USING (user_id = auth.uid() OR public.is_group_member(auth.uid(), group_id) OR public.is_group_faculty(auth.uid(), group_id));
+DROP POLICY IF EXISTS "Faculty can add members" ON public.group_members;
 CREATE POLICY "Faculty can add members" ON public.group_members FOR INSERT
   WITH CHECK (public.is_group_faculty(auth.uid(), group_id));
+DROP POLICY IF EXISTS "Users can request to join" ON public.group_members;
 CREATE POLICY "Users can request to join" ON public.group_members FOR INSERT
   WITH CHECK (user_id = auth.uid() AND status = 'pending');
+DROP POLICY IF EXISTS "Faculty can update memberships" ON public.group_members;
 CREATE POLICY "Faculty can update memberships" ON public.group_members FOR UPDATE
   USING (public.is_group_faculty(auth.uid(), group_id)) WITH CHECK (public.is_group_faculty(auth.uid(), group_id));
+DROP POLICY IF EXISTS "Faculty or user can remove membership" ON public.group_members;
 CREATE POLICY "Faculty or user can remove membership" ON public.group_members FOR DELETE
   USING (user_id = auth.uid() OR public.is_group_faculty(auth.uid(), group_id));
 
 -- 4. post_groups policies
+DROP POLICY IF EXISTS "Members can read post-group links" ON public.post_groups;
 CREATE POLICY "Members can read post-group links" ON public.post_groups FOR SELECT
   USING (public.is_group_member(auth.uid(), group_id) OR public.is_group_faculty(auth.uid(), group_id));
+DROP POLICY IF EXISTS "Owner can tag own post to a group they belong to" ON public.post_groups;
 CREATE POLICY "Owner can tag own post to a group they belong to" ON public.post_groups FOR INSERT
   WITH CHECK (
     EXISTS (SELECT 1 FROM public.posts p WHERE p.id = post_id AND p.user_id = auth.uid())
     AND (public.is_group_member(auth.uid(), group_id) OR public.is_group_faculty(auth.uid(), group_id))
   );
+DROP POLICY IF EXISTS "Owner or faculty can untag post" ON public.post_groups;
 CREATE POLICY "Owner or faculty can untag post" ON public.post_groups FOR DELETE
   USING (
     EXISTS (SELECT 1 FROM public.posts p WHERE p.id = post_id AND p.user_id = auth.uid())
@@ -125,6 +135,7 @@ $$;
 
 -- Allow faculty to delete posts tagged to their group
 DROP POLICY IF EXISTS "Users can delete their own posts or admins can delete any" ON public.posts;
+DROP POLICY IF EXISTS "Owner admin or faculty can delete post" ON public.posts;
 CREATE POLICY "Owner admin or faculty can delete post" ON public.posts FOR DELETE
   USING (
     auth.uid() = user_id
@@ -138,6 +149,7 @@ CREATE POLICY "Owner admin or faculty can delete post" ON public.posts FOR DELET
 
 -- Allow faculty to flip visibility on posts in their group (public <-> group)
 DROP POLICY IF EXISTS "Users can update their own posts" ON public.posts;
+DROP POLICY IF EXISTS "Owner or faculty can update post" ON public.posts;
 CREATE POLICY "Owner or faculty can update post" ON public.posts FOR UPDATE
   USING (
     auth.uid() = user_id
@@ -242,5 +254,6 @@ EXCEPTION
 END $$;
 
 -- updated_at trigger on groups
+DROP TRIGGER IF EXISTS groups_updated_at ON public.groups;
 CREATE TRIGGER groups_updated_at BEFORE UPDATE ON public.groups
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();

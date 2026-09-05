@@ -2,6 +2,7 @@
 -- public watchlists (profiles.watchlist_public = true).
 DROP POLICY IF EXISTS "Users can view their saved shows" ON public.saved_shows;
 DROP POLICY IF EXISTS "Public watchlists are readable by anyone" ON public.saved_shows;
+DROP POLICY IF EXISTS "Users can view saved shows" ON public.saved_shows;
 
 CREATE POLICY "Users can view saved shows"
 ON public.saved_shows FOR SELECT
