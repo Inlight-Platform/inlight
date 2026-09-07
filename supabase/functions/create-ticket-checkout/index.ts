@@ -9,6 +9,12 @@ const corsHeaders = {
 
 const DEFAULT_SITE_URL = "https://inlight.social";
 const LOCAL_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/;
+const STRIPE_METADATA_LIMIT = 500;
+const STRIPE_DESCRIPTION_LIMIT = 1000;
+
+function truncateForStripe(value: string, maxLength: number) {
+  return value.length > maxLength ? value.slice(0, maxLength) : value;
+}
 
 function getBaseUrl(req: Request) {
   const configuredUrl = Deno.env.get("CHECKOUT_SITE_URL") || Deno.env.get("SITE_URL");
@@ -100,6 +106,18 @@ serve(async (req) => {
     const origin = getBaseUrl(req);
     const successUrl = `${origin}/events/${event_id}?ticket=success&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${origin}/events/${event_id}?ticket=cancelled`;
+    const eventTitle = truncateForStripe(eventRecord.title, STRIPE_METADATA_LIMIT);
+    const buyerEmail = truncateForStripe(user.email, STRIPE_METADATA_LIMIT);
+    const paymentDescription = truncateForStripe(
+      `Inlight ticket: ${eventRecord.title}`,
+      STRIPE_DESCRIPTION_LIMIT
+    );
+    const stripeMetadata = {
+      event_id,
+      event_title: eventTitle,
+      user_id: user.id,
+      buyer_email: buyerEmail,
+    };
 
     const { data: confirmedTicket } = await supabaseAdmin
       .from("tickets")
@@ -185,7 +203,12 @@ serve(async (req) => {
       mode: "payment",
       success_url: successUrl,
       cancel_url: cancelUrl,
-      metadata: { event_id, user_id: user.id },
+      metadata: stripeMetadata,
+      payment_intent_data: {
+        description: paymentDescription,
+        metadata: stripeMetadata,
+        receipt_email: user.email,
+      },
     });
 
     const ticketPayload = {
