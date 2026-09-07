@@ -78,7 +78,7 @@ serve(async (req) => {
 
     const ticketCode = ticket.ticket_code ?? "";
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=10&data=${encodeURIComponent(ticketCode)}`;
-    const eventTimeZone = Deno.env.get("EVENT_EMAIL_TIME_ZONE") || "America/Chicago";
+    const eventTimeZone = Deno.env.get("EVENT_EMAIL_TIME_ZONE") || "America/New_York";
     const eventDate = new Date(event.event_date);
     const formattedDate = eventDate.toLocaleString("en-US", {
       weekday: "long",
