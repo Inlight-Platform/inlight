@@ -26,6 +26,33 @@ async function getBuyerName(supabase: SupabaseAdminClient, userId?: string | nul
   return data?.display_name || fallbackName || null;
 }
 
+async function sendTicketEmail(ticketId: string) {
+  const internalSecret = Deno.env.get("NOTIFICATION_WEBHOOK_SECRET");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+
+  if (!internalSecret || !supabaseUrl) {
+    console.error("[STRIPE-WEBHOOK] Missing NOTIFICATION_WEBHOOK_SECRET or SUPABASE_URL for ticket email");
+    return;
+  }
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/send-ticket-email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-internal-webhook-secret": internalSecret,
+    },
+    body: JSON.stringify({ ticket_id: ticketId }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    console.error("[STRIPE-WEBHOOK] Ticket email send failed:", body);
+    return;
+  }
+
+  console.log(`[STRIPE-WEBHOOK] Ticket email requested for ticket ${ticketId}`);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200 });
@@ -112,6 +139,8 @@ serve(async (req) => {
                 ticket_code: ticketCode,
               })
               .eq("id", ticket.id)
+              .select("id")
+              .single()
           : supabase
               .from("tickets")
               .insert({
@@ -128,14 +157,17 @@ serve(async (req) => {
                 refunded_at: null,
                 expired_at: null,
                 ticket_code: ticketCode,
-              });
+              })
+              .select("id")
+              .single();
 
-        const { error: ticketError } = await ticketWrite;
+        const { data: confirmedTicket, error: ticketError } = await ticketWrite;
 
         if (ticketError) {
           console.error("[STRIPE-WEBHOOK] Ticket update error:", ticketError);
         } else {
           console.log(`[STRIPE-WEBHOOK] Ticket confirmed for event ${eventId}, user ${userId}`);
+          await sendTicketEmail(confirmedTicket.id);
         }
       }
 
