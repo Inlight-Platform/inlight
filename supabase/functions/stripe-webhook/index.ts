@@ -29,16 +29,19 @@ async function getBuyerName(supabase: SupabaseAdminClient, userId?: string | nul
 async function sendTicketEmail(ticketId: string) {
   const internalSecret = Deno.env.get("NOTIFICATION_WEBHOOK_SECRET");
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-  if (!internalSecret || !supabaseUrl) {
-    console.error("[STRIPE-WEBHOOK] Missing NOTIFICATION_WEBHOOK_SECRET or SUPABASE_URL for ticket email");
+  if (!internalSecret || !supabaseUrl || !supabaseAnonKey) {
+    console.error("[STRIPE-WEBHOOK] Missing NOTIFICATION_WEBHOOK_SECRET, SUPABASE_URL, or SUPABASE_ANON_KEY for ticket email");
     return;
   }
 
   const response = await fetch(`${supabaseUrl}/functions/v1/send-ticket-email`, {
     method: "POST",
     headers: {
+      Authorization: `Bearer ${supabaseAnonKey}`,
       "Content-Type": "application/json",
+      apikey: supabaseAnonKey,
       "x-internal-webhook-secret": internalSecret,
     },
     body: JSON.stringify({ ticket_id: ticketId }),
