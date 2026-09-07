@@ -23,13 +23,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let supabase: ReturnType<typeof createClient> | null = null;
+  let claimedTicketId: string | null = null;
+
   try {
     assertInternalSecret(req);
 
     const { ticket_id } = await req.json();
     if (!ticket_id) throw new Error("Missing ticket_id");
 
-    const supabase = createClient(
+    supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } }
@@ -38,17 +41,42 @@ serve(async (req) => {
     // Load ticket + event
     const { data: ticket, error: ticketErr } = await supabase
       .from("tickets")
-      .select("id, ticket_code, attendee_name, attendee_email, user_id, event_id, amount_paid, status")
+      .select("id, ticket_code, attendee_name, attendee_email, user_id, event_id, amount_paid, status, confirmation_email_sent_at, confirmation_email_send_started_at")
       .eq("id", ticket_id)
       .maybeSingle();
 
     if (ticketErr) throw ticketErr;
     if (!ticket) throw new Error("Ticket not found");
+    if (ticket.confirmation_email_sent_at || ticket.confirmation_email_send_started_at) {
+      return new Response(JSON.stringify({ skipped: "confirmation email already requested" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (ticket.status !== "confirmed") {
       return new Response(JSON.stringify({ skipped: "not confirmed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const { data: claimedTicket, error: claimErr } = await supabase
+      .from("tickets")
+      .update({
+        confirmation_email_send_started_at: new Date().toISOString(),
+        confirmation_email_last_error: null,
+      })
+      .eq("id", ticket_id)
+      .is("confirmation_email_sent_at", null)
+      .is("confirmation_email_send_started_at", null)
+      .select("id")
+      .maybeSingle();
+
+    if (claimErr) throw claimErr;
+    if (!claimedTicket) {
+      return new Response(JSON.stringify({ skipped: "confirmation email already requested" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    claimedTicketId = claimedTicket.id;
 
     const { data: event, error: eventErr } = await supabase
       .from("events")
@@ -148,11 +176,32 @@ serve(async (req) => {
 
     console.log(`[send-ticket-email] sent to ${recipientEmail} for ticket ${ticket_id}`);
 
+    const { error: sentUpdateErr } = await supabase
+      .from("tickets")
+      .update({
+        confirmation_email_sent_at: new Date().toISOString(),
+        confirmation_email_provider_id: resendBody?.id ?? null,
+        confirmation_email_last_error: null,
+      })
+      .eq("id", ticket_id);
+
+    if (sentUpdateErr) throw sentUpdateErr;
+
     return new Response(JSON.stringify({ ok: true, id: resendBody?.id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
+    if (supabase && claimedTicketId) {
+      await supabase
+        .from("tickets")
+        .update({
+          confirmation_email_send_started_at: null,
+          confirmation_email_last_error: (error as Error).message,
+        })
+        .eq("id", claimedTicketId);
+    }
+
     console.error("[send-ticket-email] error:", (error as Error).message);
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -181,7 +181,18 @@ serve(async (req) => {
         });
       }
 
-      if (existingSession.status === "open" && existingSession.url && existingSession.success_url === successUrl) {
+      const existingSessionHasCurrentMetadata =
+        existingSession.metadata?.event_id === event_id &&
+        existingSession.metadata?.event_title === eventTitle &&
+        existingSession.metadata?.user_id === user.id &&
+        existingSession.metadata?.buyer_email === buyerEmail;
+
+      if (
+        existingSession.status === "open" &&
+        existingSession.url &&
+        existingSession.success_url === successUrl &&
+        existingSessionHasCurrentMetadata
+      ) {
         return new Response(JSON.stringify({ url: existingSession.url }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,

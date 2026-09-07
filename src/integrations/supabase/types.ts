@@ -2525,6 +2525,10 @@ export type Database = {
           attendee_role: string | null
           checked_in_at: string | null
           checked_in_by: string | null
+          confirmation_email_last_error: string | null
+          confirmation_email_provider_id: string | null
+          confirmation_email_send_started_at: string | null
+          confirmation_email_sent_at: string | null
           created_at: string
           event_id: string
           expired_at: string | null
@@ -2548,6 +2552,10 @@ export type Database = {
           attendee_role?: string | null
           checked_in_at?: string | null
           checked_in_by?: string | null
+          confirmation_email_last_error?: string | null
+          confirmation_email_provider_id?: string | null
+          confirmation_email_send_started_at?: string | null
+          confirmation_email_sent_at?: string | null
           created_at?: string
           event_id: string
           expired_at?: string | null
@@ -2571,6 +2579,10 @@ export type Database = {
           attendee_role?: string | null
           checked_in_at?: string | null
           checked_in_by?: string | null
+          confirmation_email_last_error?: string | null
+          confirmation_email_provider_id?: string | null
+          confirmation_email_send_started_at?: string | null
+          confirmation_email_sent_at?: string | null
           created_at?: string
           event_id?: string
           expired_at?: string | null
