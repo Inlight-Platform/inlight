@@ -15,6 +15,9 @@ verify_jwt = true
 [functions.create-ticket-checkout]
 verify_jwt = false
 
+[functions.verify-ticket-checkout]
+verify_jwt = true
+
 [functions.send-showcase-welcome]
 verify_jwt = true
 

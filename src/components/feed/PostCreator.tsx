@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,6 @@ import { useMyGroups } from '@/hooks/useGroups';
 import { SERVICE_CATEGORIES } from '@/data/services';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  DEFAULT_FEED_IMAGE_POSITION,
   buildFeedImageFields,
   getMissingFeedImageColumn,
   omitFeedImageColumn,
@@ -33,6 +33,7 @@ import {
 import type { Database } from '@/integrations/supabase/types';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
+type EventVisibility = Extract<PostVisibility, 'public' | 'network' | 'specific'>;
 
 type PostInsert = Database['public']['Tables']['posts']['Insert'];
 type EventInsert = Database['public']['Tables']['events']['Insert'];
@@ -78,6 +79,7 @@ const insertWithImageColumnFallback = async <TPayload extends InsertableFeedImag
 
 export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOpen = false, defaultPostType = 'update', defaultGroupId = null, onClose }) => {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [postType, setPostType] = useState<PostType>(defaultPostType);
@@ -90,6 +92,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [eventType, setEventType] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [visibility, setVisibility] = useState<PostVisibility>('public');
+  const [eventVisibility, setEventVisibility] = useState<EventVisibility>('public');
   const [selectedRecipients, setSelectedRecipients] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const { data: myGroups = [] } = useMyGroups();
@@ -103,6 +106,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [isPaid, setIsPaid] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
   const [serviceCategory, setServiceCategory] = useState<string>('');
+  const canCreatePaidEvents = isAdmin;
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
   useEffect(() => {
@@ -120,6 +124,13 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       setSelectedRecipients([]);
     }
   }, [defaultGroupId, defaultPostType]);
+
+  useEffect(() => {
+    if (!canCreatePaidEvents && isPaid) {
+      setIsPaid(false);
+      setTicketPrice('');
+    }
+  }, [canCreatePaidEvents, isPaid]);
 
   const onComposerSelect = useCallback(() => {
     if (!composerEmblaApi) return;
@@ -151,6 +162,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setCustomQuestion('');
     setPostType('update');
     setVisibility('public');
+    setEventVisibility('public');
     setSelectedRecipients([]);
     setSelectedGroupId(null);
     setImagePositions([]);
@@ -227,10 +239,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           throw new Error('Event date is required');
         }
         
-        const parsedPrice = isPaid && ticketPrice ? parseFloat(ticketPrice) : null;
-        const defaultPaymentLink = isPaid && parsedPrice === 10
-          ? 'https://buy.stripe.com/5kQcN4fsA37B9Br4yjco001'
-          : null;
+        const parsedPrice = canCreatePaidEvents && isPaid && ticketPrice ? parseFloat(ticketPrice) : null;
+        const normalizedLinkUrl = linkUrl.trim();
+        const paymentLinkUrl = canCreatePaidEvents && isPaid ? normalizedLinkUrl || null : null;
 
         const eventData = await insertWithImageColumnFallback('events', {
           user_id: user.id,
@@ -243,25 +254,36 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           link_url: linkUrl.trim() || null,
           link_title: linkTitle.trim() || null,
           custom_question: customQuestion.trim() || null,
-          is_paid: isPaid,
+          visibility: eventVisibility,
+          is_paid: canCreatePaidEvents && isPaid,
           price: parsedPrice,
           currency: 'usd',
-          payment_link_url: defaultPaymentLink,
+          payment_link_url: paymentLinkUrl,
         });
 
-        // If paid event, create Stripe price
-        if (isPaid && ticketPrice && eventData) {
+        if (eventVisibility === 'specific' && selectedRecipients.length > 0 && eventData) {
+          const { error: recError } = await supabase
+            .from('event_recipients')
+            .insert(
+              selectedRecipients.map((r) => ({
+                event_id: eventData.id,
+                recipient_id: r.user_id,
+              }))
+            );
+          if (recError) console.error('Failed to add event recipients:', recError);
+        }
+
+        if (canCreatePaidEvents && isPaid && parsedPrice && eventData?.id && !paymentLinkUrl) {
           const { error: priceError } = await supabase.functions.invoke('create-event-price', {
             body: {
               event_id: eventData.id,
-              title: title.trim(),
-              price: parseFloat(ticketPrice),
+              price: parsedPrice,
               currency: 'usd',
             },
           });
+
           if (priceError) {
             console.error('Stripe price creation error:', priceError);
-            // Non-fatal: event is created, price can be retried
           }
         }
       } else if (postType === 'job') {
@@ -330,6 +352,10 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       else toast.error('Please add an image for your event');
       return;
     }
+    if (postType === 'event' && canCreatePaidEvents && isPaid && (!ticketPrice.trim() || Number(ticketPrice) <= 0)) {
+      toast.error('Please add a ticket price');
+      return;
+    }
     if (postType === 'job' && (!title.trim() || !content.trim() || imageUrls.length === 0)) {
       console.log('Job validation failed');
       if (imageUrls.length === 0) toast.error('Please add an image for your opportunity');
@@ -341,8 +367,16 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
   const isValid = () => {
     if (visibility === 'specific' && selectedRecipients.length === 0 && (postType === 'update' || postType === 'job')) return false;
+    if (eventVisibility === 'specific' && selectedRecipients.length === 0 && postType === 'event') return false;
     if (postType === 'update') return content.trim().length > 0 && imageUrls.length > 0;
-    if (postType === 'event') return title.trim().length > 0 && eventDate.trim().length > 0 && imageUrls.length > 0;
+    if (postType === 'event') {
+      return (
+        title.trim().length > 0 &&
+        eventDate.trim().length > 0 &&
+        imageUrls.length > 0 &&
+        (!canCreatePaidEvents || !isPaid || (ticketPrice.trim().length > 0 && Number(ticketPrice) > 0))
+      );
+    }
     if (postType === 'job') return title.trim().length > 0 && content.trim().length > 0 && imageUrls.length > 0;
     return false;
   };
@@ -368,7 +402,6 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   if (!user) return null;
 
   const eventValidationMessage = getEventValidationMessage();
-
   return (
     <>
       <Card className="bg-card border-border">
@@ -521,6 +554,18 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   {/* Event type and paid toggle for events */}
                   {postType === 'event' && (
                     <>
+                      <AudienceSelector
+                        visibility={eventVisibility}
+                        onVisibilityChange={(nextVisibility) => {
+                          if (nextVisibility !== 'group') {
+                            setEventVisibility(nextVisibility);
+                          }
+                        }}
+                        selectedUsers={selectedRecipients}
+                        onSelectedUsersChange={setSelectedRecipients}
+                        currentUserId={user.id}
+                      />
+
                       <div className="space-y-1.5">
                         <label className="text-sm text-muted-foreground">Event Type</label>
                         <Input
@@ -530,35 +575,36 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                         />
                       </div>
 
-                      {/* Paid event toggle */}
-                      <div className="space-y-3 p-3 rounded-lg bg-muted/50">
-                        <div className="flex items-center justify-between">
-                          <label className="text-sm font-medium flex items-center gap-1.5">
-                            <DollarSign className="h-3.5 w-3.5" />
-                            Paid Event
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setIsPaid(!isPaid)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPaid ? 'bg-primary' : 'bg-muted-foreground/30'}`}
-                          >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPaid ? 'translate-x-6' : 'translate-x-1'}`} />
-                          </button>
-                        </div>
-                        {isPaid && (
-                          <div className="space-y-1.5">
-                            <label className="text-sm text-muted-foreground">Ticket Price (USD) <span className="text-destructive">*</span></label>
-                            <Input
-                              type="number"
-                              min="0.50"
-                              step="0.01"
-                              placeholder="10.00"
-                              value={ticketPrice}
-                              onChange={(e) => setTicketPrice(e.target.value)}
-                            />
+                      {canCreatePaidEvents && (
+                        <div className="space-y-3 p-3 rounded-lg bg-muted/50">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium flex items-center gap-1.5">
+                              <DollarSign className="h-3.5 w-3.5" />
+                              Paid Event
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setIsPaid(!isPaid)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPaid ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                            >
+                              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPaid ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </button>
                           </div>
-                        )}
-                      </div>
+                          {isPaid && (
+                            <div className="space-y-1.5">
+                              <label className="text-sm text-muted-foreground">Ticket Price (USD) <span className="text-destructive">*</span></label>
+                              <Input
+                                type="number"
+                                min="0.50"
+                                step="0.01"
+                                placeholder="10.00"
+                                value={ticketPrice}
+                                onChange={(e) => setTicketPrice(e.target.value)}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       <div className="space-y-1.5">
                         <label className="text-sm text-muted-foreground">Custom RSVP Question (optional)</label>

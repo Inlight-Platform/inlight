@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ImageCarousel } from './ImageCarousel';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp, Ticket, BarChart3 } from 'lucide-react';
@@ -93,16 +93,14 @@ type EventPanelist = {
   public_slug: string;
 };
 
-const PANELIST_BIO_PREVIEW_LENGTH = 180;
-
-const getPanelistBioPreview = (bio: string) => {
-  const normalizedBio = bio.replace(/\s+/g, ' ').trim();
-
-  if (normalizedBio.length <= PANELIST_BIO_PREVIEW_LENGTH) {
-    return normalizedBio;
-  }
-
-  return `${normalizedBio.slice(0, PANELIST_BIO_PREVIEW_LENGTH).trimEnd()}...`;
+type PublicTicketAttendee = {
+  id: string;
+  event_id: string;
+  user_id: string | null;
+  name: string;
+  avatar_url: string | null;
+  created_at: string;
+  is_anonymous?: boolean | null;
 };
 
 interface FeedItemProps {
@@ -129,6 +127,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   onRequireAuth,
 }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const { canManageEvents, canManageJobs, canManageProjects } = useFeatureAccess();
@@ -147,6 +146,9 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const isEventItem = item.type === 'event';
   const isPaidEvent = isEventItem && !!item.is_paid;
   const directTicketUrl = isPaidEvent ? item.payment_link_url || item.link_url || null : null;
+  const ticketStatus = searchParams.get('ticket');
+  const checkoutSessionId = searchParams.get('session_id');
+  const hasTicketSuccess = ticketStatus === 'success';
   const eventHasPassed = isEventPast(item.event_date);
   const eventLinkClosed = isEventItem && eventHasPassed;
   const { rsvps, goingRsvps, goingCount, submitRsvp } = useEventRsvps(isEventItem ? item.id : '');
@@ -171,11 +173,77 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   });
   const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
   const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
+  const { data: ticketAttendees = [] } = useQuery({
+    queryKey: ['public-event-ticket-attendees', item.id],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('get_public_event_ticket_attendees', {
+        target_event_id: item.id,
+      });
+      if (error) throw error;
+      return (data || []) as PublicTicketAttendee[];
+    },
+    enabled: isPaidEvent,
+  });
+  const visibleTicketAttendees = ticketAttendees.filter((ticket) => !ticket.is_anonymous);
+  const anonymousTicketCount = ticketAttendees.length - visibleTicketAttendees.length;
+  const attendeeRows = useMemo(() => {
+    const rsvpKeys = new Set(
+      visibleGoingRsvps
+        .flatMap((rsvp) => [rsvp.user_id ? `user:${rsvp.user_id}` : null, rsvp.email ? `email:${rsvp.email.toLowerCase()}` : null])
+        .filter((value): value is string => Boolean(value))
+    );
 
-  const attendeeUserIds = goingRsvps
+    const rsvpRows = visibleGoingRsvps.map((rsvp) => ({
+      id: rsvp.id,
+      user_id: rsvp.user_id,
+      name: rsvp.name || 'Inlight Member',
+      avatar_url: null as string | null,
+      source: 'rsvp' as const,
+    }));
+
+    const ticketRows = visibleTicketAttendees
+      .filter((ticket) => {
+        const userKey = ticket.user_id ? `user:${ticket.user_id}` : null;
+        return !(userKey && rsvpKeys.has(userKey));
+      })
+      .map((ticket) => ({
+        id: ticket.id,
+        user_id: ticket.user_id,
+        name: ticket.name || 'Inlight Member',
+        avatar_url: ticket.avatar_url,
+        source: 'ticket' as const,
+    }));
+
+    return [...rsvpRows, ...ticketRows];
+  }, [visibleTicketAttendees, visibleGoingRsvps]);
+  const anonymousAttendeeCount = anonymousGoingCount + anonymousTicketCount;
+  const attendeeCount = attendeeRows.length + anonymousAttendeeCount;
+  const { data: latestTicket } = useQuery({
+    queryKey: ['event-ticket', item.id, user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('id, ticket_code, amount_paid, status, stripe_session_id')
+        .eq('event_id', item.id)
+        .eq('user_id', user.id)
+        .in('status', ['confirmed', 'pending'])
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data?.find((ticket) => ticket.status === 'confirmed') || data?.[0] || null;
+    },
+    enabled: isPaidEvent && !!user?.id,
+  });
+  const ticketConfirmed = isPaidEvent && (hasTicketSuccess || latestTicket?.status === 'confirmed');
+
+  const attendeeUserIds = [
+    ...goingRsvps
     .filter((r) => !r.is_anonymous)
     .map((r) => r.user_id)
-    .filter((id): id is string => !!id);
+    .filter((id): id is string => !!id),
+    ...visibleTicketAttendees.map((attendee) => attendee.user_id).filter((id): id is string => !!id),
+  ];
   const { data: currentUserProfile } = useQuery({
     queryKey: ['current-user-rsvp-profile', user?.id],
     queryFn: async () => {
@@ -211,6 +279,32 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     ((item.type !== 'event' || canManageEvents) &&
       (item.type !== 'job' || canManageJobs) &&
       (item.type !== 'project' || canManageProjects));
+
+  useEffect(() => {
+    const sessionIdToVerify = checkoutSessionId || (latestTicket?.status === 'pending' ? latestTicket.stripe_session_id : null);
+    if (!isPaidEvent || (!hasTicketSuccess && latestTicket?.status !== 'pending') || !sessionIdToVerify || !user?.id) return;
+
+    let cancelled = false;
+
+    supabase.functions.invoke('verify-ticket-checkout', {
+      body: { event_id: item.id, session_id: sessionIdToVerify },
+    }).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) throw error;
+      if (data?.status === 'confirmed') {
+        queryClient.invalidateQueries({ queryKey: ['event-ticket', item.id, user.id] });
+        toast.success('Ticket confirmed');
+      }
+    }).catch((error) => {
+      if (cancelled) return;
+      console.error('Ticket verification error:', error);
+      toast.error('Payment received. Ticket confirmation is still processing.');
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutSessionId, hasTicketSuccess, isPaidEvent, item.id, latestTicket?.status, latestTicket?.stripe_session_id, queryClient, user?.id]);
   const canDelete = (isOwner || isAdmin) && canManageFeedItem;
   const supportsInlineEdit = item.type !== 'show' && item.type !== 'open_role' && item.source !== 'opportunity';
   const canEdit = (isOwner || isAdmin) && supportsInlineEdit && canManageFeedItem; // Shows have their own edit flow
@@ -390,6 +484,33 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         console.error('Auto-RSVP error:', e);
       }
       window.open(directTicketUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (item.stripe_price_id) {
+      setBuyingTicket(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {
+          body: {
+            event_id: item.id,
+          },
+        });
+
+        if (error) throw error;
+        if (data?.status === 'confirmed') {
+          queryClient.invalidateQueries({ queryKey: ['event-ticket', item.id, user.id] });
+          toast.success('Ticket confirmed');
+          setBuyingTicket(false);
+          navigate(`/events/${item.id}?ticket=success`);
+          return;
+        }
+        if (!data?.url) throw new Error('Checkout link unavailable');
+
+        window.location.href = data.url;
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : 'Failed to start checkout');
+        setBuyingTicket(false);
+      }
       return;
     }
 
@@ -783,7 +904,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                           </span>
                           {panelist.bio && (
                             <span className="line-clamp-2 block text-xs leading-relaxed text-muted-foreground">
-                              {getPanelistBioPreview(panelist.bio)}
+                              {panelist.bio}
                             </span>
                           )}
                           {canOpenPanelist && (
@@ -812,6 +933,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                   <BarChart3 className="h-4 w-4 mr-2" />
                   View Dashboard
                 </Button>
+              ) : ticketConfirmed ? (
+                <div className="flex flex-1 items-center gap-2 text-sm font-semibold text-primary">
+                  <Check className="h-4 w-4" />
+                  You're on the list!
+                </div>
               ) : isPaidEvent ? (
                 <Button
                   size="sm"
@@ -883,7 +1009,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
             </div>
 
             {/* Attendees dropdown */}
-            {user && goingCount > 0 && (
+            {user && attendeeCount > 0 && (
               <div className="rounded-lg border border-border overflow-hidden mt-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowAttendees(!showAttendees); }}
@@ -891,42 +1017,43 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-primary" />
-                    <span className="font-medium text-xs">Attendees ({goingCount})</span>
+                    <span className="font-medium text-xs">Attendees ({attendeeCount})</span>
                   </div>
                   {showAttendees ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
                 </button>
                 {showAttendees && (
                   <div className="border-t border-border max-h-40 overflow-y-auto divide-y divide-border">
-                    {visibleGoingRsvps.map((rsvp) => {
-                      const canOpenProfile = !!rsvp.user_id && avatarByUserId.has(rsvp.user_id);
+                    {attendeeRows.map((attendee) => {
+                      const avatarUrl = attendee.avatar_url || (attendee.user_id && avatarByUserId.get(attendee.user_id)) || undefined;
+                      const canOpenProfile = !!attendee.user_id && (attendee.source === 'ticket' || avatarByUserId.has(attendee.user_id));
                       return (
                       <div
-                        key={rsvp.id}
+                        key={`${attendee.source}-${attendee.id}`}
                         className={cn(
                           'flex items-center gap-2 p-2',
                           canOpenProfile ? 'cursor-pointer hover:bg-accent/50 transition-colors' : 'cursor-default'
                         )}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (canOpenProfile) navigate(`/profile/${rsvp.user_id}`);
+                          if (canOpenProfile) navigate(`/profile/${attendee.user_id}`);
                         }}
                       >
                         <Avatar className="w-6 h-6">
-                          <AvatarImage src={(rsvp.user_id && avatarByUserId.get(rsvp.user_id)) || undefined} />
+                          <AvatarImage src={avatarUrl} />
                           <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
-                            {rsvp.name[0]?.toUpperCase() || 'IM'}
+                            {attendee.name[0]?.toUpperCase() || 'IM'}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-xs font-medium truncate">{rsvp.name || 'Inlight Member'}</span>
+                        <span className="text-xs font-medium truncate">{attendee.name || 'Inlight Member'}</span>
                       </div>
                       );
                     })}
-                    {anonymousGoingCount > 0 && (
+                    {anonymousAttendeeCount > 0 && (
                       <div className="p-2 text-xs text-muted-foreground">
                         <span>
-                          {visibleGoingRsvps.length > 0
-                            ? `and ${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} more`
-                            : `${anonymousGoingCount} ${anonymousGoingCount === 1 ? 'member' : 'members'} attending`}
+                          {attendeeRows.length > 0
+                            ? `and ${anonymousAttendeeCount} ${anonymousAttendeeCount === 1 ? 'member' : 'members'} more`
+                            : `${anonymousAttendeeCount} ${anonymousAttendeeCount === 1 ? 'member' : 'members'} attending`}
                         </span>
                       </div>
                     )}

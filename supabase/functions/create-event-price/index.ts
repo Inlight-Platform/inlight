@@ -34,15 +34,31 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    const { data: adminRole, error: adminError } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (adminError) throw adminError;
+    if (!adminRole) {
+      throw new Error("Only Inlight admins can configure paid event tickets");
+    }
+
     const { data: eventRecord, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, title, user_id, stripe_price_id")
+      .select("id, title, user_id, stripe_price_id, is_paid")
       .eq("id", event_id)
       .maybeSingle();
 
     if (eventError) throw eventError;
     if (!eventRecord || eventRecord.user_id !== user.id) {
       throw new Error("You do not have permission to configure tickets for this event");
+    }
+
+    if (!eventRecord.is_paid) {
+      throw new Error("This event is not marked as paid");
     }
 
     if (eventRecord.stripe_price_id) {

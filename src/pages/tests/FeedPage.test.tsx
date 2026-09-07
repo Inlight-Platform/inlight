@@ -93,25 +93,20 @@ vi.mock('@/integrations/supabase/client', () => {
   return {
     supabase: {
       from: (table: string) => {
-        const chain: {
-          select: ReturnType<typeof vi.fn>;
-          not: ReturnType<typeof vi.fn>;
-          order: ReturnType<typeof vi.fn>;
-          limit: ReturnType<typeof vi.fn>;
-          in: ReturnType<typeof vi.fn>;
-          eq: ReturnType<typeof vi.fn>;
-          maybeSingle: ReturnType<typeof vi.fn>;
-          update: ReturnType<typeof vi.fn>;
-        } = {
+        const resolve = () => Promise.resolve({ data: resultFor(table), error: null });
+        const chain: any = {
           select: vi.fn(() => chain),
           not: vi.fn(() => chain),
           order: vi.fn(() => chain),
-          limit: vi.fn(async () => ({ data: resultFor(table), error: null })),
-          in: vi.fn(async () => ({ data: resultFor(table), error: null })),
-          eq: vi.fn(async () => ({ data: resultFor(table), error: null })),
+          limit: vi.fn(resolve),
+          in: vi.fn(() => chain),
+          eq: vi.fn(() => chain),
           maybeSingle: vi.fn(async () => ({ data: null, error: null })),
           update: vi.fn(() => chain),
         };
+        chain.then = (...args: Parameters<Promise<unknown>['then']>) => resolve().then(...args);
+        chain.catch = (...args: Parameters<Promise<unknown>['catch']>) => resolve().catch(...args);
+        chain.finally = (...args: Parameters<Promise<unknown>['finally']>) => resolve().finally(...args);
         return chain;
       },
       rpc: vi.fn(async (fn: string) => {

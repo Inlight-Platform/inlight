@@ -102,7 +102,7 @@ const phases: Phase[] = [
         popover: {
           title: '🎟️ Step 5 of 7 — The Market',
           description:
-            "See what's trending and grab tickets to live shows. Have your own production? List it here, set up your ticketing, and start earning revenue immediately.",
+            "See what's trending and grab tickets to live shows. Have your own production? List it here and share the details with the Inlight community.",
         },
       },
     ],

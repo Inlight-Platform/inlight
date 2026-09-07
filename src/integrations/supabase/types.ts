@@ -559,6 +559,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          visibility: string
         }
         Insert: {
           created_at?: string
@@ -585,6 +586,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          visibility?: string
         }
         Update: {
           created_at?: string
@@ -611,8 +613,38 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          visibility?: string
         }
         Relationships: []
+      }
+      event_recipients: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          recipient_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          recipient_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          recipient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_recipients_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_panelists: {
         Row: {
@@ -2493,11 +2525,21 @@ export type Database = {
           attendee_role: string | null
           checked_in_at: string | null
           checked_in_by: string | null
+          confirmation_email_last_error: string | null
+          confirmation_email_provider_id: string | null
+          confirmation_email_send_started_at: string | null
+          confirmation_email_sent_at: string | null
           created_at: string
           event_id: string
+          expired_at: string | null
           id: string
+          quantity: number
+          refunded_amount: number
+          refunded_at: string | null
           source: string
           status: string
+          stripe_customer_email: string | null
+          stripe_payment_intent_id: string | null
           stripe_session_id: string | null
           ticket_code: string | null
           updated_at: string
@@ -2510,11 +2552,21 @@ export type Database = {
           attendee_role?: string | null
           checked_in_at?: string | null
           checked_in_by?: string | null
+          confirmation_email_last_error?: string | null
+          confirmation_email_provider_id?: string | null
+          confirmation_email_send_started_at?: string | null
+          confirmation_email_sent_at?: string | null
           created_at?: string
           event_id: string
+          expired_at?: string | null
           id?: string
+          quantity?: number
+          refunded_amount?: number
+          refunded_at?: string | null
           source?: string
           status?: string
+          stripe_customer_email?: string | null
+          stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
           ticket_code?: string | null
           updated_at?: string
@@ -2527,11 +2579,21 @@ export type Database = {
           attendee_role?: string | null
           checked_in_at?: string | null
           checked_in_by?: string | null
+          confirmation_email_last_error?: string | null
+          confirmation_email_provider_id?: string | null
+          confirmation_email_send_started_at?: string | null
+          confirmation_email_sent_at?: string | null
           created_at?: string
           event_id?: string
+          expired_at?: string | null
           id?: string
+          quantity?: number
+          refunded_amount?: number
+          refunded_at?: string | null
           source?: string
           status?: string
+          stripe_customer_email?: string | null
+          stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
           ticket_code?: string | null
           updated_at?: string
@@ -2955,6 +3017,21 @@ export type Database = {
         Returns: string
       }
       generate_ticket_code: { Args: never; Returns: string }
+      get_admin_ticket_revenue_totals: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          event_id: string
+          event_title: string
+          event_date: string
+          creator_user_id: string
+          creator_name: string | null
+          creator_email: string | null
+          tickets_sold: number
+          gross_revenue: number
+          refunds: number
+          net_revenue: number
+        }[]
+      }
       get_public_event_ticket_attendees: {
         Args: { target_event_id: string }
         Returns: {

@@ -8,9 +8,46 @@ const corsHeaders = {
 };
 
 const DEFAULT_SITE_URL = "https://inlight.social";
+const LOCAL_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/;
+const STRIPE_METADATA_LIMIT = 500;
+const STRIPE_DESCRIPTION_LIMIT = 1000;
 
-function getBaseUrl() {
-  return (Deno.env.get("CHECKOUT_SITE_URL") || Deno.env.get("SITE_URL") || DEFAULT_SITE_URL).replace(/\/+$/, "");
+function truncateForStripe(value: string, maxLength: number) {
+  return value.length > maxLength ? value.slice(0, maxLength) : value;
+}
+
+function getBaseUrl(req: Request) {
+  const configuredUrl = Deno.env.get("CHECKOUT_SITE_URL") || Deno.env.get("SITE_URL");
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/+$/, "");
+  }
+
+  const requestOrigin = req.headers.get("origin");
+  if (requestOrigin && LOCAL_ORIGIN_PATTERN.test(requestOrigin)) {
+    return requestOrigin.replace(/\/+$/, "");
+  }
+
+  return DEFAULT_SITE_URL;
+}
+
+async function generateTicketCode(supabaseAdmin: ReturnType<typeof createClient>) {
+  const { data, error } = await supabaseAdmin.rpc("generate_ticket_code");
+  if (error) throw error;
+  return data as string;
+}
+
+async function getBuyerName(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  stripeName: string | null | undefined
+) {
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("display_name")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return profile?.display_name || stripeName || null;
 }
 
 serve(async (req) => {
@@ -66,6 +103,103 @@ serve(async (req) => {
       apiVersion: "2025-08-27.basil",
     });
 
+    const origin = getBaseUrl(req);
+    const successUrl = `${origin}/events/${event_id}?ticket=success&session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${origin}/events/${event_id}?ticket=cancelled`;
+    const eventTitle = truncateForStripe(eventRecord.title, STRIPE_METADATA_LIMIT);
+    const buyerEmail = truncateForStripe(user.email, STRIPE_METADATA_LIMIT);
+    const paymentDescription = truncateForStripe(
+      `Inlight ticket: ${eventRecord.title}`,
+      STRIPE_DESCRIPTION_LIMIT
+    );
+    const stripeMetadata = {
+      event_id,
+      event_title: eventTitle,
+      user_id: user.id,
+      buyer_email: buyerEmail,
+    };
+
+    const { data: confirmedTicket } = await supabaseAdmin
+      .from("tickets")
+      .select("id")
+      .eq("event_id", event_id)
+      .eq("user_id", user.id)
+      .in("status", ["confirmed", "partially_refunded"])
+      .limit(1)
+      .maybeSingle();
+
+    if (confirmedTicket) {
+      return new Response(JSON.stringify({ status: "confirmed", ticket_id: confirmedTicket.id }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    const { data: pendingTicket } = await supabaseAdmin
+      .from("tickets")
+      .select("id, stripe_session_id")
+      .eq("event_id", event_id)
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .not("stripe_session_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (pendingTicket?.stripe_session_id) {
+      const existingSession = await stripe.checkout.sessions.retrieve(pendingTicket.stripe_session_id);
+      if (existingSession.payment_status === "paid") {
+        const ticketCode = await generateTicketCode(supabaseAdmin);
+        const stripeEmail = existingSession.customer_details?.email ?? user.email ?? null;
+        const buyerName = await getBuyerName(supabaseAdmin, user.id, existingSession.customer_details?.name);
+        const paymentIntentId =
+          typeof existingSession.payment_intent === "string"
+            ? existingSession.payment_intent
+            : existingSession.payment_intent?.id ?? null;
+        const { error: confirmError } = await supabaseAdmin
+          .from("tickets")
+          .update({
+            status: "confirmed",
+            quantity: 1,
+            amount_paid: (existingSession.amount_total || 0) / 100,
+            attendee_email: stripeEmail,
+            attendee_name: buyerName,
+            ticket_code: ticketCode,
+            stripe_customer_email: stripeEmail,
+            stripe_payment_intent_id: paymentIntentId,
+            refunded_amount: 0,
+            refunded_at: null,
+            expired_at: null,
+          })
+          .eq("id", pendingTicket.id);
+
+        if (confirmError) throw confirmError;
+
+        return new Response(JSON.stringify({ status: "confirmed" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      const existingSessionHasCurrentMetadata =
+        existingSession.metadata?.event_id === event_id &&
+        existingSession.metadata?.event_title === eventTitle &&
+        existingSession.metadata?.user_id === user.id &&
+        existingSession.metadata?.buyer_email === buyerEmail;
+
+      if (
+        existingSession.status === "open" &&
+        existingSession.url &&
+        existingSession.success_url === successUrl &&
+        existingSessionHasCurrentMetadata
+      ) {
+        return new Response(JSON.stringify({ url: existingSession.url }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+    }
+
     // Check for existing Stripe customer
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     let customerId: string | undefined;
@@ -73,26 +207,38 @@ serve(async (req) => {
       customerId = customers.data[0].id;
     }
 
-    const origin = getBaseUrl();
-
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: [{ price: eventRecord.stripe_price_id, quantity: 1 }],
       mode: "payment",
-      success_url: `${origin}/events/${event_id}?ticket=success`,
-      cancel_url: `${origin}/events/${event_id}?ticket=cancelled`,
-      metadata: { event_id, user_id: user.id },
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: stripeMetadata,
+      payment_intent_data: {
+        description: paymentDescription,
+        metadata: stripeMetadata,
+        receipt_email: user.email,
+      },
     });
 
-    // Create a pending ticket record
-    await supabaseAdmin.from("tickets").insert({
+    const ticketPayload = {
       event_id,
       user_id: user.id,
       stripe_session_id: session.id,
       status: "pending",
+      quantity: 1,
       amount_paid: 0,
-    });
+      attendee_email: user.email,
+      stripe_customer_email: user.email,
+      refunded_amount: 0,
+    };
+
+    const { error: ticketError } = pendingTicket?.id
+      ? await supabaseAdmin.from("tickets").update(ticketPayload).eq("id", pendingTicket.id)
+      : await supabaseAdmin.from("tickets").insert(ticketPayload);
+
+    if (ticketError) throw ticketError;
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
