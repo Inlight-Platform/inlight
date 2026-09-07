@@ -2497,6 +2497,7 @@ export type Database = {
           event_id: string
           expired_at: string | null
           id: string
+          quantity: number
           refunded_amount: number
           refunded_at: string | null
           source: string
@@ -2519,6 +2520,7 @@ export type Database = {
           event_id: string
           expired_at?: string | null
           id?: string
+          quantity?: number
           refunded_amount?: number
           refunded_at?: string | null
           source?: string
@@ -2541,6 +2543,7 @@ export type Database = {
           event_id?: string
           expired_at?: string | null
           id?: string
+          quantity?: number
           refunded_amount?: number
           refunded_at?: string | null
           source?: string

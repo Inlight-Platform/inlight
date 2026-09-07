@@ -142,6 +142,7 @@ serve(async (req) => {
           .from("tickets")
           .update({
             status: "confirmed",
+            quantity: 1,
             amount_paid: (existingSession.amount_total || 0) / 100,
             attendee_email: stripeEmail,
             attendee_name: buyerName,
@@ -192,6 +193,7 @@ serve(async (req) => {
       user_id: user.id,
       stripe_session_id: session.id,
       status: "pending",
+      quantity: 1,
       amount_paid: 0,
       attendee_email: user.email,
       stripe_customer_email: user.email,
