@@ -31,11 +31,17 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
       if (postsError) throw postsError;
 
       // Fetch events by this user
-      const { data: eventsData, error: eventsError } = await supabase
+      let eventsQuery = supabase
         .from('events')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
+
+      if (user?.id !== userId) {
+        eventsQuery = eventsQuery.eq('visibility', 'public');
+      }
+
+      const { data: eventsData, error: eventsError } = await eventsQuery;
 
       if (eventsError) throw eventsError;
 
@@ -114,6 +120,7 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
         event_date: event.event_date,
         location: event.location,
         event_type: event.event_type,
+        visibility: event.visibility,
         created_at: event.created_at,
         creator_profile: profile ? {
           display_name: profile.display_name,

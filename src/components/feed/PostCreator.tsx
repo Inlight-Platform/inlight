@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus, ChevronLeft, ChevronRight, Globe, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -33,6 +33,7 @@ import {
 import type { Database } from '@/integrations/supabase/types';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
+type EventVisibility = 'public' | 'unlisted';
 
 type PostInsert = Database['public']['Tables']['posts']['Insert'];
 type EventInsert = Database['public']['Tables']['events']['Insert'];
@@ -91,6 +92,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [eventType, setEventType] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [visibility, setVisibility] = useState<PostVisibility>('public');
+  const [eventVisibility, setEventVisibility] = useState<EventVisibility>('public');
   const [selectedRecipients, setSelectedRecipients] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const { data: myGroups = [] } = useMyGroups();
@@ -160,6 +162,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setCustomQuestion('');
     setPostType('update');
     setVisibility('public');
+    setEventVisibility('public');
     setSelectedRecipients([]);
     setSelectedGroupId(null);
     setImagePositions([]);
@@ -251,6 +254,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           link_url: linkUrl.trim() || null,
           link_title: linkTitle.trim() || null,
           custom_question: customQuestion.trim() || null,
+          visibility: eventVisibility,
           is_paid: canCreatePaidEvents && isPaid,
           price: parsedPrice,
           currency: 'usd',
@@ -538,6 +542,36 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   {/* Event type and paid toggle for events */}
                   {postType === 'event' && (
                     <>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={eventVisibility === 'public' ? 'default' : 'outline'}
+                            className="gap-2"
+                            onClick={() => setEventVisibility('public')}
+                          >
+                            <Globe className="h-4 w-4" />
+                            Everyone
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={eventVisibility === 'unlisted' ? 'default' : 'outline'}
+                            className="gap-2"
+                            onClick={() => setEventVisibility('unlisted')}
+                          >
+                            <Lock className="h-4 w-4" />
+                            Unlisted
+                          </Button>
+                        </div>
+                        {eventVisibility === 'unlisted' && (
+                          <p className="text-xs text-muted-foreground">
+                            Hidden from public browse. Anyone with the event link can still open it.
+                          </p>
+                        )}
+                      </div>
+
                       <div className="space-y-1.5">
                         <label className="text-sm text-muted-foreground">Event Type</label>
                         <Input

@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
 import { clearAuthRestore, readAuthRestore } from '@/lib/authRestore';
 import { eventIdentifier as publicEventIdentifier, eventPath, identifierFallbackUuid, projectPath } from '@/lib/publicPaths';
+import type { Database } from '@/integrations/supabase/types';
 
 type NetworkFilter = 'all' | '1st';
 type BaseContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates';
@@ -71,6 +72,39 @@ interface GroupProjectLink {
     link_title: string | null;
   } | null;
 }
+
+type EventRow = Database['public']['Tables']['events']['Row'];
+
+const mapEventToFeedItem = (
+  event: EventRow,
+  creatorProfile?: { user_id: string; display_name: string | null; avatar_url: string | null },
+): FeedItemData => ({
+  id: event.id,
+  slug: event.slug,
+  type: 'event' as const,
+  user_id: event.user_id,
+  title: event.title,
+  description: event.description,
+  image_url: event.image_url,
+  image_urls: event.image_urls ?? (event.image_url ? [event.image_url] : undefined),
+  image_positions: event.image_positions,
+  link_url: event.link_url,
+  link_title: event.link_title,
+  created_at: event.created_at,
+  event_date: event.event_date,
+  location: event.location,
+  event_type: event.event_type,
+  is_paid: event.is_paid,
+  price: event.price,
+  currency: event.currency,
+  stripe_price_id: event.stripe_price_id,
+  payment_link_url: event.payment_link_url,
+  visibility: event.visibility,
+  image_position_x: event.image_position_x,
+  image_position_y: event.image_position_y,
+  image_zoom: event.image_zoom,
+  creator_profile: creatorProfile,
+});
 
 const fetchPublicProfileMap = async (userIds: string[]) => {
   const uniqueUserIds = [...new Set(userIds)].filter(Boolean);
@@ -500,43 +534,40 @@ const FeedPage: React.FC = () => {
       const { data, error } = await supabase
         .from('events')
         .select('*')
+        .eq('visibility', 'public')
         .order('event_date', { ascending: true })
         .limit(100);
       if (error) throw error;
 
       const profileMap = await fetchPublicProfileMap(data.map((e) => e.user_id));
 
-      return sortEventsBySchedule(data.map((event) => ({
-        id: event.id,
-        slug: event.slug,
-        type: 'event' as const,
-        user_id: event.user_id,
-        title: event.title,
-        description: event.description,
-        image_url: event.image_url,
-        image_urls: event.image_urls ?? (event.image_url ? [event.image_url] : undefined),
-        image_positions: event.image_positions,
-        link_url: event.link_url,
-        link_title: event.link_title,
-        created_at: event.created_at,
-        event_date: event.event_date,
-        location: event.location,
-        event_type: event.event_type,
-        is_paid: event.is_paid,
-        price: event.price,
-        currency: event.currency,
-        stripe_price_id: event.stripe_price_id,
-        payment_link_url: event.payment_link_url,
-        image_position_x: event.image_position_x,
-        image_position_y: event.image_position_y,
-        image_zoom: event.image_zoom,
-        creator_profile: profileMap.get(event.user_id)
-      })));
+      return sortEventsBySchedule(data.map((event) => mapEventToFeedItem(event, profileMap.get(event.user_id))));
     },
     placeholderData: keepPreviousData,
     retry: 1,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
+  });
+
+  const { data: routeEvent } = useQuery({
+    queryKey: ['feed-route-event', routeEventIdentifier],
+    queryFn: async () => {
+      if (!routeEventIdentifier) return null;
+
+      const fallbackEventId = identifierFallbackUuid(routeEventIdentifier);
+      let query = supabase.from('events').select('*');
+      query = fallbackEventId
+        ? query.eq('id', fallbackEventId)
+        : query.eq('slug', routeEventIdentifier);
+
+      const { data, error } = await query.maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+
+      const profileMap = await fetchPublicProfileMap([data.user_id]);
+      return mapEventToFeedItem(data, profileMap.get(data.user_id));
+    },
+    enabled: !!routeEventIdentifier,
   });
 
   useEffect(() => {
@@ -581,11 +612,22 @@ const FeedPage: React.FC = () => {
       event.slug === eventIdentifier ||
       publicEventIdentifier(event) === rawEventIdentifier
     );
-    if (!restoredEvent) return;
+    const nextEvent = restoredEvent || (
+      routeEvent &&
+      (
+        routeEvent.id === eventIdentifier ||
+        routeEvent.slug === eventIdentifier ||
+        publicEventIdentifier(routeEvent) === rawEventIdentifier
+      )
+        ? routeEvent
+        : null
+    );
+
+    if (!nextEvent) return;
 
     setContentFilter('events');
     eventDetailsReturnTabRef.current = routeState?.returnTab || 'events';
-    setSelectedItem(restoredEvent);
+    setSelectedItem(nextEvent);
     clearAuthRestore();
     if (routeState?.restore) {
       navigate(`${location.pathname}${location.search}${location.hash}`, {
@@ -593,7 +635,7 @@ const FeedPage: React.FC = () => {
         state: routeState.scrollToTop ? { scrollToTop: routeState.scrollToTop } : undefined,
       });
     }
-  }, [events, location.hash, location.pathname, location.search, navigate, routeEventIdentifier, routeState, routeStateEvent, searchParams, selectedItem?.id, selectedItem?.slug]);
+  }, [events, location.hash, location.pathname, location.search, navigate, routeEvent, routeEventIdentifier, routeState, routeStateEvent, searchParams, selectedItem?.id, selectedItem?.slug]);
 
   // Fetch saved projects
   const { data: savedProjects = [] } = useQuery({

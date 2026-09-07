@@ -565,7 +565,13 @@ const ProfilePage: React.FC = () => {
           ? supabase.from("saved_projects").select("project_id").eq("user_id", resolvedUserId).limit(1)
           : Promise.resolve({ data: [] as Array<{ project_id: string | null }> }),
         supabase.from("posts").select("id").eq("user_id", resolvedUserId).limit(1),
-        supabase.from("events").select("id").eq("user_id", resolvedUserId).limit(1),
+        (() => {
+          let query = supabase.from("events").select("id").eq("user_id", resolvedUserId).limit(1);
+          if (!isOwnProfile) {
+            query = query.eq("visibility", "public");
+          }
+          return query;
+        })(),
         supabase.rpc("get_profile_attendance", { _user_id: resolvedUserId }),
         supabase.from("saved_shows").select("id").eq("user_id", resolvedUserId).limit(1),
       ]);
