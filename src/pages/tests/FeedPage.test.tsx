@@ -99,7 +99,7 @@ vi.mock('@/integrations/supabase/client', () => {
           not: vi.fn(() => chain),
           order: vi.fn(() => chain),
           limit: vi.fn(resolve),
-          in: vi.fn(resolve),
+          in: vi.fn(() => chain),
           eq: vi.fn(() => chain),
           maybeSingle: vi.fn(async () => ({ data: null, error: null })),
           update: vi.fn(() => chain),

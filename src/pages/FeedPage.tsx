@@ -529,14 +529,20 @@ const FeedPage: React.FC = () => {
 
   // Fetch events
   const { data: events = [], isLoading: eventsLoading } = useQuery({
-    queryKey: ['feed-events'],
+    queryKey: ['feed-events', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('events')
         .select('*')
-        .eq('visibility', 'public')
-        .order('event_date', { ascending: true })
-        .limit(100);
+        .order('event_date', { ascending: true });
+
+      if (!user) {
+        query = query.eq('visibility', 'public');
+      } else {
+        query = query.in('visibility', ['public', 'network', 'specific']);
+      }
+
+      const { data, error } = await query.limit(100);
       if (error) throw error;
 
       const profileMap = await fetchPublicProfileMap(data.map((e) => e.user_id));

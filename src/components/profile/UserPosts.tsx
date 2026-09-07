@@ -37,8 +37,10 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (user?.id !== userId) {
+      if (!user) {
         eventsQuery = eventsQuery.eq('visibility', 'public');
+      } else if (user.id !== userId) {
+        eventsQuery = eventsQuery.in('visibility', ['public', 'network', 'specific']);
       }
 
       const { data: eventsData, error: eventsError } = await eventsQuery;

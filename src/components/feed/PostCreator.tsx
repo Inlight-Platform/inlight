@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus, ChevronLeft, ChevronRight, Globe, Lock } from 'lucide-react';
+import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -33,7 +33,7 @@ import {
 import type { Database } from '@/integrations/supabase/types';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
-type EventVisibility = 'public' | 'unlisted';
+type EventVisibility = Extract<PostVisibility, 'public' | 'network' | 'specific'>;
 
 type PostInsert = Database['public']['Tables']['posts']['Insert'];
 type EventInsert = Database['public']['Tables']['events']['Insert'];
@@ -261,6 +261,18 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           payment_link_url: paymentLinkUrl,
         });
 
+        if (eventVisibility === 'specific' && selectedRecipients.length > 0 && eventData) {
+          const { error: recError } = await supabase
+            .from('event_recipients')
+            .insert(
+              selectedRecipients.map((r) => ({
+                event_id: eventData.id,
+                recipient_id: r.user_id,
+              }))
+            );
+          if (recError) console.error('Failed to add event recipients:', recError);
+        }
+
         if (canCreatePaidEvents && isPaid && parsedPrice && eventData?.id && !paymentLinkUrl) {
           const { error: priceError } = await supabase.functions.invoke('create-event-price', {
             body: {
@@ -355,6 +367,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
   const isValid = () => {
     if (visibility === 'specific' && selectedRecipients.length === 0 && (postType === 'update' || postType === 'job')) return false;
+    if (eventVisibility === 'specific' && selectedRecipients.length === 0 && postType === 'event') return false;
     if (postType === 'update') return content.trim().length > 0 && imageUrls.length > 0;
     if (postType === 'event') {
       return (
@@ -389,7 +402,6 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   if (!user) return null;
 
   const eventValidationMessage = getEventValidationMessage();
-
   return (
     <>
       <Card className="bg-card border-border">
@@ -542,35 +554,17 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   {/* Event type and paid toggle for events */}
                   {postType === 'event' && (
                     <>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={eventVisibility === 'public' ? 'default' : 'outline'}
-                            className="gap-2"
-                            onClick={() => setEventVisibility('public')}
-                          >
-                            <Globe className="h-4 w-4" />
-                            Everyone
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={eventVisibility === 'unlisted' ? 'default' : 'outline'}
-                            className="gap-2"
-                            onClick={() => setEventVisibility('unlisted')}
-                          >
-                            <Lock className="h-4 w-4" />
-                            Unlisted
-                          </Button>
-                        </div>
-                        {eventVisibility === 'unlisted' && (
-                          <p className="text-xs text-muted-foreground">
-                            Hidden from public browse. Anyone with the event link can still open it.
-                          </p>
-                        )}
-                      </div>
+                      <AudienceSelector
+                        visibility={eventVisibility}
+                        onVisibilityChange={(nextVisibility) => {
+                          if (nextVisibility !== 'group') {
+                            setEventVisibility(nextVisibility);
+                          }
+                        }}
+                        selectedUsers={selectedRecipients}
+                        onSelectedUsersChange={setSelectedRecipients}
+                        currentUserId={user.id}
+                      />
 
                       <div className="space-y-1.5">
                         <label className="text-sm text-muted-foreground">Event Type</label>

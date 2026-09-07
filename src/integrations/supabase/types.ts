@@ -617,6 +617,35 @@ export type Database = {
         }
         Relationships: []
       }
+      event_recipients: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          recipient_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          recipient_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          recipient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_recipients_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_panelists: {
         Row: {
           badges: string[]
