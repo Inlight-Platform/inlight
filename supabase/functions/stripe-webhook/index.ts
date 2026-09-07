@@ -81,7 +81,7 @@ serve(async (req) => {
       });
     }
 
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
 
     console.log(`[STRIPE-WEBHOOK] Event type: ${event.type}`);
 
