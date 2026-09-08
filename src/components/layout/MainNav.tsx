@@ -57,7 +57,6 @@ const mobileNavItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
 { label: 'People', icon: UserRound, path: '/people' },
 { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
-{ label: 'Tickets', icon: Ticket, path: '/tickets' },
 { label: 'Industry', icon: Theater, path: '/stage-whisper' }];
 
 export const MainNav: React.FC = () => {
