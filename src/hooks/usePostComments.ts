@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 export const MAX_COMMENT_LENGTH = 1000;
 
@@ -22,8 +23,9 @@ interface PostCommentWithAuthor extends PostCommentRow {
 }
 
 /** Comment count for a post; RLS only counts rows the viewer is allowed to see. */
-export const usePostCommentCount = (postId?: string | null) =>
-  useQuery({
+export const usePostCommentCount = (postId?: string | null) => {
+  const { user } = useAuth();
+  return useQuery({
     queryKey: ['post-comment-count', postId],
     queryFn: async () => {
       if (!postId) return 0;
@@ -34,12 +36,14 @@ export const usePostCommentCount = (postId?: string | null) =>
       if (error) throw error;
       return count ?? 0;
     },
-    enabled: !!postId,
+    enabled: !!postId && !!user?.id,
   });
+};
 
 /** Flat comment thread for a post, oldest-to-newest, with author profiles. */
-export const usePostComments = (postId: string | null) =>
-  useQuery({
+export const usePostComments = (postId: string | null) => {
+  const { user } = useAuth();
+  return useQuery({
     queryKey: ['post-comments', postId],
     queryFn: async (): Promise<PostCommentWithAuthor[]> => {
       if (!postId) return [];
@@ -64,5 +68,6 @@ export const usePostComments = (postId: string | null) =>
 
       return rows.map((row) => ({ ...row, author: authors.get(row.user_id) }));
     },
-    enabled: !!postId,
+    enabled: !!postId && !!user?.id,
   });
+};
