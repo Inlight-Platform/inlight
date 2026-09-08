@@ -34,6 +34,9 @@ vi.mock('@/components/feed/FeedBentoCard', () => ({
   FeedBentoCard: ({ item }: { item: MockFeedItem }) => (
     <article data-testid="bento-card">{item.content || item.title}</article>
   ),
+  FeedBentoCardWithComments: ({ item }: { item: MockFeedItem }) => (
+    <article data-testid="bento-card">{item.content || item.title}</article>
+  ),
   getBentoSize: () => 'medium',
 }));
 
