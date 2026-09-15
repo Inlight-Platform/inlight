@@ -58,7 +58,7 @@ jobs:
       - name: Validate preview secrets
         run: |
           missing=0
-          for name in VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY SUPABASE_ACCESS_TOKEN RESEND_API_KEY CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN; do
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY SANDBOX_SUPABASE_DB_URL SUPABASE_ACCESS_TOKEN RESEND_API_KEY CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN; do
             if [ -z "${!name}" ]; then
               echo "::error::$name is required for PR sandbox previews."
               missing=1
@@ -81,18 +81,12 @@ jobs:
         run: npm run test:run
 
       - name: Set up Supabase CLI
-        if: ${{ env.SANDBOX_SUPABASE_DB_URL != '' }}
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
       - name: Apply sandbox database migrations
-        if: ${{ env.SANDBOX_SUPABASE_DB_URL != '' }}
         run: supabase db push --db-url "$SANDBOX_SUPABASE_DB_URL" --yes --skip-vault
-
-      - name: Skip sandbox database migrations
-        if: ${{ env.SANDBOX_SUPABASE_DB_URL == '' }}
-        run: echo "::notice::SANDBOX_SUPABASE_DB_URL is not configured, so PR sandbox database migrations were skipped."
 
       - name: Build sandbox app
         run: npm run build:sandbox
@@ -124,6 +118,7 @@ jobs:
 
           npx --yes supabase@latest secrets set RESEND_API_KEY="$RESEND_API_KEY" SITE_URL="$PREVIEW_URL" --project-ref "$project_ref"
           npx --yes supabase@latest functions deploy send-platform-invite --project-ref "$project_ref"
+          npx --yes supabase@latest functions deploy send-group-member-invites --project-ref "$project_ref"
           npx --yes supabase@latest functions deploy send-project-credit-invite --project-ref "$project_ref"
 
       - name: Configure sandbox auth URLs
