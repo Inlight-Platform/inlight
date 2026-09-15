@@ -4,7 +4,7 @@ import { ImageCarousel } from './ImageCarousel';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp, Ticket, BarChart3 } from 'lucide-react';
+import { Calendar, Briefcase, MessageCircle, MapPin, Clock, MoreHorizontal, Trash2, Theater, EyeOff, ExternalLink, Pencil, UserPlus, FolderKanban, Globe, Users, UserCheck, PartyPopper, Check, ChevronDown, ChevronUp, Ticket, BarChart3, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -75,6 +75,8 @@ export interface FeedItemData {
   project_title?: string;
   project_status?: string;
   visibility?: string;
+  author_identity?: string;
+  author_group_id?: string | null;
   source?: 'post' | 'opportunity';
   creator_profile?: {
     display_name: string | null;
@@ -545,7 +547,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
     ? 'Anonymous'
     : capitalizeName(item.creator_profile?.display_name || '') || 'Inlight Member';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
-  const canOpenCreatorProfile = !!user && !showAnonymous;
+  const isGroupAuthored = item.author_identity === 'group';
+  const canOpenCreatorProfile = !!user && !showAnonymous && !isGroupAuthored;
   const bodyText = item.content || item.description;
   const compactEventMedia = compactSquare && item.type === 'event';
   const compactProjectMedia = compactSquare && item.type === 'project';
@@ -783,11 +786,13 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Visibility badge for non-public posts */}
-        {item.visibility && item.visibility !== 'public' && (item.type === 'post' || item.type === 'job') && (
+        {item.visibility && item.visibility !== 'public' && (item.type === 'post' || item.type === 'job' || item.type === 'event' || item.type === 'project') && (
           <div className="mb-3">
             <Badge variant="outline" className="text-xs gap-1">
               {item.visibility === 'network' ? (
                 <><Users className="h-3 w-3" /> Network Only</>
+              ) : item.visibility === 'group' ? (
+                <><Lock className="h-3 w-3" /> Group Only</>
               ) : (
                 <><UserCheck className="h-3 w-3" /> Specific People</>
               )}

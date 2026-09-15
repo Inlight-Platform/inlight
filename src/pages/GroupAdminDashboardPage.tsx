@@ -1,0 +1,800 @@
+import React, { useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, BarChart3, BookOpen, Check, MailPlus, ShieldCheck, Trash2, Upload, UserPlus, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useGroupBySlug, useMyScopedAdminGroups } from '@/hooks/useGroups';
+import { parseBulkEmails } from '@/lib/groupInviteEmails';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+
+interface ProfilePreview {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+interface GroupMember {
+  id: string;
+  user_id: string;
+  status: 'active' | 'pending';
+  joined_at: string;
+  profile?: ProfilePreview;
+}
+
+interface GroupAdmin {
+  id: string;
+  group_id: string;
+  user_id: string | null;
+  email: string | null;
+  status: string;
+  created_at: string;
+  profile?: ProfilePreview;
+}
+
+interface GroupResource {
+  id: string;
+  group_id: string;
+  title: string;
+  description: string;
+  url: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+interface GroupInvite {
+  id: string;
+  email: string;
+  status: string;
+  membership_status_on_accept: string;
+  created_at: string;
+  accepted_at: string | null;
+}
+
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
+const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
+  const context = (error as { context?: { text?: () => Promise<string> } })?.context;
+
+  if (context?.text) {
+    try {
+      const text = await context.text();
+      if (text.trim()) return text.trim();
+    } catch {
+      // Fall through to the plain error message.
+    }
+  }
+
+  return (error as { message?: string })?.message || fallback;
+};
+
+const GroupAdminDashboardPage: React.FC = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: group, isLoading: groupLoading } = useGroupBySlug(slug);
+  const { data: scopedGroups = [], isLoading: scopedGroupsLoading } = useMyScopedAdminGroups();
+  const [adminEmail, setAdminEmail] = useState('');
+  const [memberSearch, setMemberSearch] = useState('');
+  const [resourceTitle, setResourceTitle] = useState('');
+  const [resourceUrl, setResourceUrl] = useState('');
+  const [resourceDescription, setResourceDescription] = useState('');
+  const [memberInviteEmails, setMemberInviteEmails] = useState('');
+  const [memberInviteNote, setMemberInviteNote] = useState('');
+  const [adminPendingRemoval, setAdminPendingRemoval] = useState<GroupAdmin | null>(null);
+
+  const isScopedAdmin = !!group && scopedGroups.some((scopedGroup) => scopedGroup.id === group.id);
+
+  const invalidateGroupDashboard = () => {
+    queryClient.invalidateQueries({ queryKey: ['group-dashboard-members', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-dashboard-admins', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-dashboard-resources', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-dashboard-post-count', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-dashboard-invites', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['my-scoped-admin-groups'] });
+    queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+  };
+
+  const { data: members = [] } = useQuery<GroupMember[]>({
+    queryKey: ['group-dashboard-members', group?.id],
+    enabled: !!group?.id && isScopedAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('group_members')
+        .select('id, user_id, status, joined_at')
+        .eq('group_id', group!.id)
+        .order('joined_at', { ascending: false });
+      if (error) throw error;
+
+      const ids = [...new Set((data || []).map((member) => member.user_id))];
+      if (!ids.length) return [];
+
+      const { data: profiles } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', ids);
+      const profileById = new Map((profiles || []).map((profile) => [profile.user_id, profile]));
+
+      return (data || []).map((member) => ({
+        ...member,
+        status: member.status as GroupMember['status'],
+        profile: profileById.get(member.user_id),
+      }));
+    },
+  });
+
+  const { data: groupAdmins = [] } = useQuery<GroupAdmin[]>({
+    queryKey: ['group-dashboard-admins', group?.id],
+    enabled: !!group?.id && isScopedAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('group_admins')
+        .select('id, group_id, user_id, email, status, created_at')
+        .eq('group_id', group!.id)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+
+      const ids = [...new Set((data || []).map((admin) => admin.user_id).filter(Boolean))] as string[];
+      if (!ids.length) return (data || []) as GroupAdmin[];
+
+      const { data: profiles } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', ids);
+      const profileById = new Map((profiles || []).map((profile) => [profile.user_id, profile]));
+
+      return ((data || []) as GroupAdmin[]).map((admin) => ({
+        ...admin,
+        profile: admin.user_id ? profileById.get(admin.user_id) : undefined,
+      }));
+    },
+  });
+
+  const { data: resources = [] } = useQuery<GroupResource[]>({
+    queryKey: ['group-dashboard-resources', group?.id],
+    enabled: !!group?.id && isScopedAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('group_resources')
+        .select('id, group_id, title, description, url, created_by, created_at')
+        .eq('group_id', group!.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as GroupResource[];
+    },
+  });
+
+  const { data: groupInvites = [] } = useQuery<GroupInvite[]>({
+    queryKey: ['group-dashboard-invites', group?.id],
+    enabled: !!group?.id && isScopedAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('group_invites')
+        .select('id, email, status, membership_status_on_accept, created_at, accepted_at')
+        .eq('group_id', group!.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as GroupInvite[];
+    },
+  });
+
+  const { data: postCount = 0 } = useQuery({
+    queryKey: ['group-dashboard-post-count', group?.id],
+    enabled: !!group?.id && isScopedAdmin,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('post_groups')
+        .select('post_id', { count: 'exact', head: true })
+        .eq('group_id', group!.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  const { data: memberSearchResults = [] } = useQuery<ProfilePreview[]>({
+    queryKey: ['group-dashboard-member-search', group?.id, memberSearch],
+    enabled: isScopedAdmin && memberSearch.trim().length >= 2,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .ilike('display_name', `%${memberSearch.trim()}%`)
+        .limit(8);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const pendingMembers = useMemo(() => members.filter((member) => member.status === 'pending'), [members]);
+  const activeMembers = useMemo(() => members.filter((member) => member.status === 'active'), [members]);
+  const activeAdminCount = groupAdmins.filter((admin) => admin.status === 'active').length;
+  const parsedMemberInviteEmails = useMemo(
+    () => parseBulkEmails(memberInviteEmails),
+    [memberInviteEmails],
+  );
+
+  const setMemberStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: 'active' | 'pending' }) => {
+      const { error } = await supabase.from('group_members').update({ status }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateGroupDashboard();
+      toast.success('Membership updated');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to update membership')),
+  });
+
+  const removeMember = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('group_members').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateGroupDashboard();
+      toast.success('Member removed');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to remove member')),
+  });
+
+  const addMember = useMutation({
+    mutationFn: async (userId: string) => {
+      if (!group) throw new Error('Group not ready');
+      const { error } = await supabase
+        .from('group_members')
+        .insert({ group_id: group.id, user_id: userId, status: 'active' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setMemberSearch('');
+      invalidateGroupDashboard();
+      toast.success('Member added');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to add member')),
+  });
+
+  const addAdmin = useMutation({
+    mutationFn: async () => {
+      if (!group) throw new Error('Group not ready');
+      const { error } = await supabase.rpc('add_group_admin_by_email', {
+        _group_id: group.id,
+        _email: adminEmail.trim(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setAdminEmail('');
+      invalidateGroupDashboard();
+      toast.success('Group admin added');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to add admin')),
+  });
+
+  const removeAdmin = useMutation({
+    mutationFn: async (adminId: string) => {
+      const { error } = await supabase.rpc('remove_group_admin', { _admin_id: adminId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setAdminPendingRemoval(null);
+      invalidateGroupDashboard();
+      toast.success('Group admin removed');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to remove admin')),
+  });
+
+  const createResource = useMutation({
+    mutationFn: async () => {
+      if (!group || !user) throw new Error('Group not ready');
+      const { error } = await supabase.from('group_resources').insert({
+        group_id: group.id,
+        title: resourceTitle.trim(),
+        description: resourceDescription.trim(),
+        url: resourceUrl.trim(),
+        created_by: user.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setResourceTitle('');
+      setResourceUrl('');
+      setResourceDescription('');
+      invalidateGroupDashboard();
+      toast.success('Resource added');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to add resource')),
+  });
+
+  const deleteResource = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('group_resources').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateGroupDashboard();
+      toast.success('Resource removed');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to remove resource')),
+  });
+
+  const handleMemberInviteFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      setMemberInviteEmails((current) => [current.trim(), text.trim()].filter(Boolean).join('\n'));
+      toast.success('Email list added from file.');
+    } catch {
+      toast.error('Could not read that email file.');
+    }
+  };
+
+  const sendMemberInvites = useMutation({
+    mutationFn: async () => {
+      if (!group) throw new Error('Group not ready');
+      const parsed = parseBulkEmails(memberInviteEmails);
+
+      if (parsed.validEmails.length === 0) {
+        throw new Error('Enter at least one valid email address.');
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-group-member-invites', {
+        body: {
+          groupId: group.id,
+          emails: parsed.validEmails,
+          note: memberInviteNote.trim() || null,
+          membershipStatusOnAccept: 'active',
+        },
+      });
+
+      if (error) {
+        throw new Error(await getFunctionErrorMessage(error, 'Failed to send group invites'));
+      }
+
+      return data as {
+        result?: {
+          counts?: {
+            accepted?: number;
+            pending?: number;
+            invalid?: number;
+            duplicates?: number;
+          };
+        };
+        emails?: {
+          sent?: Array<{ email: string }>;
+          failed?: Array<{ email: string; error: unknown }>;
+        };
+      };
+    },
+    onSuccess: (data) => {
+      const invalidCount = parsedMemberInviteEmails.invalidEmails.length;
+      const duplicateCount = parsedMemberInviteEmails.duplicateEmails.length;
+      const acceptedCount = data.result?.counts?.accepted ?? 0;
+      const pendingCount = data.result?.counts?.pending ?? 0;
+      const sentCount = data.emails?.sent?.length ?? 0;
+      setMemberInviteEmails('');
+      setMemberInviteNote('');
+      invalidateGroupDashboard();
+      const skippedText = invalidCount || duplicateCount
+        ? ` Skipped ${invalidCount} invalid and ${duplicateCount} duplicate email${invalidCount + duplicateCount === 1 ? '' : 's'}.`
+        : '';
+      toast.success(
+        `Processed ${acceptedCount + pendingCount} member invite${acceptedCount + pendingCount === 1 ? '' : 's'}; ${sentCount} email${sentCount === 1 ? '' : 's'} sent.${skippedText}`
+      );
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to send group invites')),
+  });
+
+  if (groupLoading || scopedGroupsLoading) {
+    return <div className="p-12 text-center text-muted-foreground">Loading dashboard...</div>;
+  }
+
+  if (!group) {
+    return <div className="p-12 text-center text-muted-foreground">Group not found.</div>;
+  }
+
+  if (!isScopedAdmin) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <Card>
+          <CardContent className="space-y-4 p-6 text-center">
+            <ShieldCheck className="mx-auto h-10 w-10 text-muted-foreground" />
+            <div>
+              <h1 className="text-xl font-semibold">Group dashboard unavailable</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Only admins directly assigned to {group.name} can manage this dashboard.
+              </p>
+            </div>
+            <Button asChild variant="outline">
+              <Link to={`/groups/${group.slug}`}>Back to group</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          <Button asChild variant="ghost" size="sm" className="-ml-2">
+            <Link to={`/groups/${group.slug}`}>
+              <ArrowLeft className="mr-1 h-4 w-4" /> Back to group
+            </Link>
+          </Button>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-3xl font-display font-bold">{group.name} Dashboard</h1>
+              <Badge variant="secondary" className="gap-1">
+                <ShieldCheck className="h-3.5 w-3.5" /> Scoped group admin
+              </Badge>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Manage only this department portal: verification, insights, resources, and invites.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <Tabs defaultValue="verification" className="space-y-4">
+        <TabsList className="mx-auto grid w-full max-w-md grid-cols-4">
+          <TabsTrigger value="verification" className="px-2 text-xs sm:text-sm">Verification</TabsTrigger>
+          <TabsTrigger value="insights" className="px-2 text-xs sm:text-sm">Insights</TabsTrigger>
+          <TabsTrigger value="resources" className="px-2 text-xs sm:text-sm">Resources</TabsTrigger>
+          <TabsTrigger value="invites" className="px-2 text-xs sm:text-sm">Invites</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="verification" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <ShieldCheck className="h-5 w-5" /> Join Requests
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pendingMembers.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No pending requests.</p>
+              ) : (
+                pendingMembers.map((member) => (
+                  <div key={member.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <PersonRow profile={member.profile} fallback="Pending member" />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => setMemberStatus.mutate({ id: member.id, status: 'active' })}>
+                        <Check className="mr-1 h-4 w-4" /> Accept
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => removeMember.mutate(member.id)}>
+                        <X className="mr-1 h-4 w-4" /> Deny
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="insights" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <InsightCard icon={UserPlus} label="Active Members" value={activeMembers.length} />
+          <InsightCard icon={ShieldCheck} label="Pending Requests" value={pendingMembers.length} />
+          <InsightCard icon={BarChart3} label="Group Posts" value={postCount} />
+          <InsightCard icon={BookOpen} label="Resources" value={resources.length} />
+        </TabsContent>
+
+        <TabsContent value="resources" className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <BookOpen className="h-5 w-5" /> Private Resources
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {resources.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No resources yet.</p>
+              ) : (
+                resources.map((resource) => (
+                  <div key={resource.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 space-y-1">
+                      <a href={resource.url} target="_blank" rel="noreferrer" className="font-medium hover:underline">
+                        {resource.title}
+                      </a>
+                      {resource.description && <p className="text-sm text-muted-foreground">{resource.description}</p>}
+                      <p className="truncate text-xs text-muted-foreground">{resource.url}</p>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => deleteResource.mutate(resource.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Add Resource</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!resourceTitle.trim() || !resourceUrl.trim()) return;
+                  createResource.mutate();
+                }}
+              >
+                <Input value={resourceTitle} onChange={(event) => setResourceTitle(event.target.value)} placeholder="Resource title" />
+                <Input value={resourceUrl} onChange={(event) => setResourceUrl(event.target.value)} placeholder="https://..." />
+                <Textarea
+                  value={resourceDescription}
+                  onChange={(event) => setResourceDescription(event.target.value)}
+                  placeholder="Short description"
+                  className="min-h-[88px]"
+                />
+                <Button type="submit" className="w-full" disabled={!resourceTitle.trim() || !resourceUrl.trim() || createResource.isPending}>
+                  Add resource
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="invites" className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <MailPlus className="h-5 w-5" /> Group Admins
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <form
+                className="flex flex-col gap-2 sm:flex-row"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!adminEmail.trim()) return;
+                  addAdmin.mutate();
+                }}
+              >
+                <Input type="email" value={adminEmail} onChange={(event) => setAdminEmail(event.target.value)} placeholder="admin@example.edu" />
+                <Button type="submit" disabled={!adminEmail.trim() || addAdmin.isPending}>
+                  Add admin
+                </Button>
+              </form>
+
+              <div className="space-y-2">
+                {groupAdmins.map((admin) => {
+                  const displayName = admin.profile?.display_name || admin.email || 'Pending admin';
+                  const canRemove = activeAdminCount > 1;
+                  return (
+                    <div key={admin.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                      <PersonRow profile={admin.profile} fallback={displayName} secondary={admin.email || admin.status} />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive"
+                        disabled={!canRemove || removeAdmin.isPending}
+                        title={canRemove ? 'Remove admin' : 'A group must have at least one active admin'}
+                        onClick={() => setAdminPendingRemoval(admin)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <UserPlus className="h-5 w-5" /> Members
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <form
+                className="space-y-3 rounded-lg border p-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  sendMemberInvites.mutate();
+                }}
+              >
+                <div className="space-y-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <Label htmlFor="member-invite-emails">Bulk email invites</Label>
+                    <div>
+                      <Input
+                        id="member-invite-file"
+                        type="file"
+                        accept=".csv,.txt,text/csv,text/plain"
+                        className="sr-only"
+                        onChange={handleMemberInviteFile}
+                      />
+                      <Button asChild type="button" variant="outline" size="sm">
+                        <label htmlFor="member-invite-file" className="cursor-pointer">
+                          <Upload className="mr-2 h-4 w-4" />
+                          Upload CSV/TXT
+                        </label>
+                      </Button>
+                    </div>
+                  </div>
+                  <Textarea
+                    id="member-invite-emails"
+                    value={memberInviteEmails}
+                    onChange={(event) => setMemberInviteEmails(event.target.value)}
+                    placeholder="Paste emails separated by commas, spaces, or new lines"
+                    className="min-h-[120px]"
+                  />
+                </div>
+                <Input
+                  value={memberInviteNote}
+                  onChange={(event) => setMemberInviteNote(event.target.value)}
+                  placeholder="Optional note for invite email"
+                />
+                {memberInviteEmails.trim() && (
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <p>{parsedMemberInviteEmails.validEmails.length} valid email{parsedMemberInviteEmails.validEmails.length === 1 ? '' : 's'} ready.</p>
+                    {parsedMemberInviteEmails.invalidEmails.length > 0 && (
+                      <p className="text-destructive">
+                        Invalid: {parsedMemberInviteEmails.invalidEmails.slice(0, 4).join(', ')}
+                        {parsedMemberInviteEmails.invalidEmails.length > 4 ? `, +${parsedMemberInviteEmails.invalidEmails.length - 4} more` : ''}
+                      </p>
+                    )}
+                    {parsedMemberInviteEmails.duplicateEmails.length > 0 && (
+                      <p>
+                        Duplicates skipped: {parsedMemberInviteEmails.duplicateEmails.slice(0, 4).join(', ')}
+                        {parsedMemberInviteEmails.duplicateEmails.length > 4 ? `, +${parsedMemberInviteEmails.duplicateEmails.length - 4} more` : ''}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={parsedMemberInviteEmails.validEmails.length === 0 || sendMemberInvites.isPending}
+                >
+                  {sendMemberInvites.isPending ? 'Sending invites...' : 'Send member invites'}
+                </Button>
+              </form>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Add existing member</p>
+                <Input
+                  value={memberSearch}
+                  onChange={(event) => setMemberSearch(event.target.value)}
+                  placeholder="Search people by name..."
+                />
+                {memberSearchResults.length > 0 && (
+                  <div className="rounded-lg border">
+                    {memberSearchResults.map((profile) => (
+                      <button
+                        type="button"
+                        key={profile.user_id}
+                        onClick={() => addMember.mutate(profile.user_id)}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
+                      >
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={profile.avatar_url || undefined} />
+                          <AvatarFallback>{profile.display_name?.[0] || 'U'}</AvatarFallback>
+                        </Avatar>
+                        {profile.display_name || 'Unknown'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Active members</p>
+                {activeMembers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No active members yet.</p>
+                ) : (
+                  activeMembers.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                      <PersonRow profile={member.profile} fallback="Member" />
+                      {member.user_id !== user?.id && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => removeMember.mutate(member.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Email invites</p>
+                {groupInvites.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No email invites yet.</p>
+                ) : (
+                  groupInvites.map((invite) => (
+                    <div key={invite.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{invite.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Becomes {invite.membership_status_on_accept} member
+                        </p>
+                      </div>
+                      <Badge variant={invite.status === 'accepted' ? 'default' : 'secondary'}>
+                        {invite.status}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <DeleteConfirmDialog
+        open={!!adminPendingRemoval}
+        onOpenChange={(open) => {
+          if (!open) setAdminPendingRemoval(null);
+        }}
+        onConfirm={() => {
+          if (adminPendingRemoval) removeAdmin.mutate(adminPendingRemoval.id);
+        }}
+        title="Remove group admin?"
+        description={`This removes ${
+          adminPendingRemoval?.profile?.display_name || adminPendingRemoval?.email || 'this person'
+        } from the ${group.name} admin list.`}
+        isPending={removeAdmin.isPending}
+      />
+    </div>
+  );
+};
+
+const PersonRow: React.FC<{ profile?: ProfilePreview; fallback: string; secondary?: string | null }> = ({ profile, fallback, secondary }) => {
+  const label = profile?.display_name || fallback;
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <Avatar className="h-8 w-8">
+        <AvatarImage src={profile?.avatar_url || undefined} />
+        <AvatarFallback>{label[0]?.toUpperCase() || 'U'}</AvatarFallback>
+      </Avatar>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{label}</p>
+        {secondary && <p className="truncate text-xs text-muted-foreground">{secondary}</p>}
+      </div>
+    </div>
+  );
+};
+
+const InsightCard: React.FC<{ icon: React.ElementType; label: string; value: number }> = ({ icon: Icon, label, value }) => (
+  <Card>
+    <CardContent className="flex items-center justify-between p-5">
+      <div>
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="mt-1 text-3xl font-semibold">{value}</p>
+      </div>
+      <div className="rounded-full bg-primary/10 p-3 text-primary">
+        <Icon className="h-5 w-5" />
+      </div>
+    </CardContent>
+  </Card>
+);
+
+export default GroupAdminDashboardPage;

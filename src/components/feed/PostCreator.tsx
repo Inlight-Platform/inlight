@@ -21,8 +21,9 @@ import {
 import { toast } from 'sonner';
 import { ImageUploader, ImageUploaderHandle } from './ImageUploader';
 import { AudienceSelector, PostVisibility } from './AudienceSelector';
+import { AuthorIdentityMode, AuthorIdentitySelector } from './AuthorIdentitySelector';
 import { ImagePositioner } from '@/components/profile/ImagePositioner';
-import { useMyGroups } from '@/hooks/useGroups';
+import { useMyGroups, useMyScopedAdminGroups } from '@/hooks/useGroups';
 import { SERVICE_CATEGORIES } from '@/data/services';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -33,7 +34,7 @@ import {
 import type { Database } from '@/integrations/supabase/types';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
-type EventVisibility = Extract<PostVisibility, 'public' | 'network' | 'specific'>;
+type EventVisibility = PostVisibility;
 
 type PostInsert = Database['public']['Tables']['posts']['Insert'];
 type EventInsert = Database['public']['Tables']['events']['Insert'];
@@ -93,9 +94,12 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [linkUrl, setLinkUrl] = useState('');
   const [visibility, setVisibility] = useState<PostVisibility>('public');
   const [eventVisibility, setEventVisibility] = useState<EventVisibility>('public');
+  const [authorIdentityMode, setAuthorIdentityMode] = useState<AuthorIdentityMode>('personal');
+  const [authorGroupId, setAuthorGroupId] = useState<string | null>(null);
   const [selectedRecipients, setSelectedRecipients] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const { data: myGroups = [] } = useMyGroups();
+  const { data: myScopedAdminGroups = [] } = useMyScopedAdminGroups();
   const [linkTitle, setLinkTitle] = useState('');
   const [customQuestion, setCustomQuestion] = useState('');
   const [imagePositions, setImagePositions] = useState<{ x: number; y: number; zoom: number }[]>([]);
@@ -118,8 +122,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   }, [defaultPostType, navigate, onClose]);
 
   useEffect(() => {
-    if (defaultGroupId && (defaultPostType === 'update' || defaultPostType === 'job')) {
+    if (defaultGroupId && (defaultPostType === 'update' || defaultPostType === 'event' || defaultPostType === 'job')) {
       setVisibility('group');
+      setEventVisibility('group');
       setSelectedGroupId(defaultGroupId);
       setSelectedRecipients([]);
     }
@@ -163,6 +168,8 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setPostType('update');
     setVisibility('public');
     setEventVisibility('public');
+    setAuthorIdentityMode('personal');
+    setAuthorGroupId(null);
     setSelectedRecipients([]);
     setSelectedGroupId(null);
     setImagePositions([]);
@@ -176,6 +183,10 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       if (!user?.id) throw new Error('Must be logged in');
 
       const imageFields = buildFeedImageFields(imageUrls, imagePositions);
+      const authorFields = {
+        author_identity: authorIdentityMode === 'group' ? 'group' : 'personal',
+        author_group_id: authorIdentityMode === 'group' ? authorGroupId : null,
+      };
       
       if (postType === 'update') {
         const categoryLabel = SERVICE_CATEGORIES.find((c) => c.slug === serviceCategory)?.label;
@@ -189,6 +200,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           link_url: linkUrl.trim() || null,
           link_title: linkTitle.trim() || null,
           visibility,
+          ...authorFields,
         });
 
         // Also tag the user's profile with the chosen service so they appear
@@ -255,6 +267,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           link_title: linkTitle.trim() || null,
           custom_question: customQuestion.trim() || null,
           visibility: eventVisibility,
+          ...authorFields,
           is_paid: canCreatePaidEvents && isPaid,
           price: parsedPrice,
           currency: 'usd',
@@ -271,6 +284,13 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
               }))
             );
           if (recError) console.error('Failed to add event recipients:', recError);
+        }
+
+        if (eventVisibility === 'group' && selectedGroupId && eventData) {
+          const { error: gErr } = await supabase
+            .from('event_groups' as never)
+            .insert({ event_id: eventData.id, group_id: selectedGroupId });
+          if (gErr) console.error('Failed to tag event group:', gErr);
         }
 
         if (canCreatePaidEvents && isPaid && parsedPrice && eventData?.id && !paymentLinkUrl) {
@@ -295,6 +315,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           link_url: linkUrl.trim() || null,
           link_title: linkTitle.trim() || null,
           visibility,
+          ...authorFields,
         });
 
         // Insert recipients for specific visibility
@@ -323,6 +344,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       resetForm();
       queryClient.invalidateQueries({ queryKey: ['feed-posts'] });
       queryClient.invalidateQueries({ queryKey: ['feed-group-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-group-events'] });
       queryClient.invalidateQueries({ queryKey: ['feed-events'] });
       toast.success(
         postType === 'update' ? 'Post created!' : 
@@ -339,6 +361,10 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
   const handleSubmit = () => {
     console.log('handleSubmit called', { postType, title, eventDate, content });
+    if (authorIdentityMode === 'group' && !authorGroupId) {
+      toast.error('Please choose a group identity');
+      return;
+    }
     if (postType === 'update' && (!content.trim() || imageUrls.length === 0)) {
       console.log('Update validation failed');
       if (!content.trim()) toast.error('Please add post content');
@@ -366,8 +392,11 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   };
 
   const isValid = () => {
+    if (authorIdentityMode === 'group' && !authorGroupId) return false;
     if (visibility === 'specific' && selectedRecipients.length === 0 && (postType === 'update' || postType === 'job')) return false;
+    if (visibility === 'group' && !selectedGroupId && (postType === 'update' || postType === 'job')) return false;
     if (eventVisibility === 'specific' && selectedRecipients.length === 0 && postType === 'event') return false;
+    if (eventVisibility === 'group' && !selectedGroupId && postType === 'event') return false;
     if (postType === 'update') return content.trim().length > 0 && imageUrls.length > 0;
     if (postType === 'event') {
       return (
@@ -402,6 +431,12 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   if (!user) return null;
 
   const eventValidationMessage = getEventValidationMessage();
+  const authorGroups = myScopedAdminGroups.length > 0
+    ? myScopedAdminGroups
+    : myGroups
+      .filter((group) => group.is_faculty)
+      .map(({ id, slug, name }) => ({ id, slug, name }));
+  const targetGroups = defaultGroupId ? myGroups : myScopedAdminGroups;
   return (
     <>
       <Card className="bg-card border-border">
@@ -452,6 +487,22 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   )}
 
                   {/* Content textarea */}
+                  {authorGroups.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label className="text-sm text-muted-foreground">
+                        Post as
+                      </label>
+                      <AuthorIdentitySelector
+                        identityMode={authorIdentityMode}
+                        onIdentityModeChange={setAuthorIdentityMode}
+                        personalLabel={userProfile?.display_name || 'Personal account'}
+                        availableGroups={authorGroups.map((group) => ({ id: group.id, name: group.name }))}
+                        selectedGroupId={authorGroupId}
+                        onSelectedGroupChange={setAuthorGroupId}
+                      />
+                    </div>
+                  )}
+
                   {postType === 'update' && (
                     <div className="space-y-1.5">
                       <label className="text-sm text-muted-foreground">
@@ -554,18 +605,6 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   {/* Event type and paid toggle for events */}
                   {postType === 'event' && (
                     <>
-                      <AudienceSelector
-                        visibility={eventVisibility}
-                        onVisibilityChange={(nextVisibility) => {
-                          if (nextVisibility !== 'group') {
-                            setEventVisibility(nextVisibility);
-                          }
-                        }}
-                        selectedUsers={selectedRecipients}
-                        onSelectedUsersChange={setSelectedRecipients}
-                        currentUserId={user.id}
-                      />
-
                       <div className="space-y-1.5">
                         <label className="text-sm text-muted-foreground">Event Type</label>
                         <Input
@@ -769,15 +808,21 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                     </p>
                   )}
 
-                  {/* Audience Selector for posts and jobs */}
-                  {(postType === 'update' || postType === 'job') && (
+                  {/* Audience Selector */}
+                  {(postType === 'update' || postType === 'event' || postType === 'job') && (
                     <AudienceSelector
-                      visibility={visibility}
-                      onVisibilityChange={setVisibility}
+                      visibility={postType === 'event' ? eventVisibility : visibility}
+                      onVisibilityChange={(nextVisibility) => {
+                        if (postType === 'event') {
+                          setEventVisibility(nextVisibility);
+                        } else {
+                          setVisibility(nextVisibility);
+                        }
+                      }}
                       selectedUsers={selectedRecipients}
                       onSelectedUsersChange={setSelectedRecipients}
                       currentUserId={user.id}
-                      availableGroups={myGroups.map((g) => ({ id: g.id, name: g.name }))}
+                      availableGroups={targetGroups.map((g) => ({ id: g.id, name: g.name }))}
                       selectedGroupId={selectedGroupId}
                       onSelectedGroupChange={setSelectedGroupId}
                     />

@@ -27,6 +27,7 @@ import ProjectNewPage from "./pages/ProjectNewPage";
 import EventDashboardPage from "./pages/EventDashboardPage";
 import StageWhisperPage from "./pages/StageWhisperPage";
 import GroupMembersPage from "./pages/GroupMembersPage";
+import GroupAdminDashboardPage from "./pages/GroupAdminDashboardPage";
 import GroupPage from "./pages/GroupPage";
 import AdminPage from "./pages/AdminPage";
 import CompanyProfilePage from "./pages/CompanyProfilePage";
@@ -80,6 +81,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/auth/confirm" element={<AuthConfirmPage />} />
+          <Route path="/auth/confirm/auth/confirm" element={<AuthConfirmPage />} />
           <Route path="/auth/reset/continue" element={<AuthResetContinuePage />} />
           <Route path="/preview" element={<PreviewPage />} />
           <Route path="/showcase/join/:programSlug" element={<ShowcaseJoinPage />} />
@@ -121,6 +123,7 @@ const App = () => (
             <Route path="/company/:companyId" element={<CompanyProfilePage />} />
             <Route path="/saves" element={<RequireAuth><MySavesPage /></RequireAuth>} />
             <Route path="/group" element={<GroupMembersPage />} />
+            <Route path="/groups/:slug/dashboard" element={<RequireAuth><GroupAdminDashboardPage /></RequireAuth>} />
             <Route path="/groups/:slug" element={<GroupPage />} />
             <Route path="/pie-chart" element={<NetworkPieChartPage />} />
             <Route path="/admin" element={<RequireAuth><AdminPage /></RequireAuth>} />

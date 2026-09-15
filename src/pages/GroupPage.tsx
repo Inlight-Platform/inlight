@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Users, Trash2, Globe, Lock, Send, Shield, MailPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useAdmin } from '@/hooks/useAdmin';
 import { useGroupBySlug, useMyGroups } from '@/hooks/useGroups';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -66,13 +65,11 @@ const GroupPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { isAdmin: isPlatformAdmin } = useAdmin();
   const queryClient = useQueryClient();
   const { data: group, isLoading: groupLoading } = useGroupBySlug(slug);
   const { data: myGroups = [], isLoading: myGroupsLoading } = useMyGroups();
 
   const isFaculty = !!user && !!group && (
-    isPlatformAdmin ||
     group.faculty_owner_id === user.id ||
     myGroups.some((g) => g.id === group.id && g.is_faculty)
   );
@@ -113,7 +110,7 @@ const GroupPage: React.FC = () => {
 
   const { data: groupMemberCount } = useQuery({
     queryKey: ['group-active-member-count', group?.id],
-    enabled: !!group?.id,
+    enabled: !!group?.id && canViewPrivateGroup,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_group_active_member_count', {
         _group_id: group!.id,
@@ -371,9 +368,11 @@ const GroupPage: React.FC = () => {
         {group.description && (
           <p className="text-muted-foreground">{group.description}</p>
         )}
-        <p className="text-xs text-muted-foreground flex items-center gap-1">
-          <Users className="h-3 w-3" /> {visibleMemberCount} member{visibleMemberCount === 1 ? '' : 's'}
-        </p>
+        {canViewPrivateGroup && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Users className="h-3 w-3" /> {visibleMemberCount} member{visibleMemberCount === 1 ? '' : 's'}
+          </p>
+        )}
       </header>
 
       {!canViewPrivateGroup && (
