@@ -120,6 +120,7 @@ jobs:
           npx --yes supabase@latest functions deploy send-platform-invite --project-ref "$project_ref"
           npx --yes supabase@latest functions deploy send-group-member-invites --project-ref "$project_ref"
           npx --yes supabase@latest functions deploy send-project-credit-invite --project-ref "$project_ref"
+          npx --yes supabase@latest functions deploy send-group-admin-invite --project-ref "$project_ref"
 
       - name: Configure sandbox auth URLs
         env:
