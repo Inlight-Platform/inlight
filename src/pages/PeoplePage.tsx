@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Compass, Users, GraduationCap, Clock, Building2, ChevronDown, Inbox, UserRound, UserPlus, ShieldCheck } from 'lucide-react';
+import { Search, Compass, Users, GraduationCap, Clock, Building2, ChevronDown, Inbox, UserRound, UserPlus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,6 @@ import PersonCard from '@/components/people/PersonCard';
 import CompanyCard from '@/components/people/CompanyCard';
 import { useCompanyFollows } from '@/hooks/useCompanyFollows';
 import { useAuth } from '@/hooks/useAuth';
-import { useMyScopedAdminGroups } from '@/hooks/useGroups';
 import { InviteFriendDialog } from '@/components/invitations/InviteFriendDialog';
 import { VisitorAuthOverlay } from '@/components/auth/VisitorAuthPrompt';
 
@@ -27,99 +26,127 @@ interface Studio {
   badge_tag: string | null;
 }
 
+interface Department {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+}
+
 const PREVIEW_COUNT = 6;
 
 const GroupsSection: React.FC<{
   studios: Studio[];
   studiosLoading: boolean;
-  adminGroups: { id: string; slug: string; name: string }[];
+  departments: Department[];
+  departmentsLoading: boolean;
   onStudioClick: (tag: string | null) => void;
-  onManageGroup: (slug: string) => void;
-}> = ({ studios, studiosLoading, adminGroups, onStudioClick, onManageGroup }) => {
+  onDepartmentClick: (slug: string) => void;
+}> = ({
+  studios,
+  studiosLoading,
+  departments,
+  departmentsLoading,
+  onStudioClick,
+  onDepartmentClick,
+}) => {
   const [expanded, setExpanded] = useState(true);
-  const [groupsTab, setGroupsTab] = useState(adminGroups.length > 0 ? 'manage' : 'explore');
+  const [directoryTab, setDirectoryTab] = useState('departments');
   const hasMore = studios.length > PREVIEW_COUNT;
   const visibleStudios = expanded ? studios : studios.slice(0, PREVIEW_COUNT);
 
   return (
     <section className="mb-8">
-      <Tabs value={groupsTab} onValueChange={setGroupsTab}>
-        <div className="mb-4 flex justify-center">
-          <TabsList className={`grid w-full ${adminGroups.length > 0 ? 'grid-cols-2' : 'grid-cols-1'} sm:w-auto`}>
-            <TabsTrigger value="explore">Explore</TabsTrigger>
-            {adminGroups.length > 0 && (
-              <TabsTrigger value="manage">Manage</TabsTrigger>
-            )}
+      <Tabs value={directoryTab} onValueChange={setDirectoryTab}>
+        <div className="mb-5 flex justify-center overflow-x-auto">
+          <TabsList className="grid min-w-[360px] grid-cols-3">
+            <TabsTrigger value="school">School</TabsTrigger>
+            <TabsTrigger value="departments">Departments</TabsTrigger>
+            <TabsTrigger value="affiliations">Affiliations</TabsTrigger>
           </TabsList>
         </div>
 
-        <TabsContent value="explore" className="mt-0">
-          {studiosLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-24 rounded-xl" />
-              ))}
-            </div>
-          ) : studios.length > 0 ? (
-            <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {visibleStudios.map((studio) => (
-                  <Card
-                    key={studio.id}
-                    className="cursor-pointer hover:bg-accent/50 transition-colors group"
-                    onClick={() => onStudioClick(studio.badge_tag)}
-                  >
-                    <CardContent className="p-4 text-center">
-                      <span className="text-3xl mb-2 block group-hover:scale-110 transition-transform">
-                        {studio.icon}
-                      </span>
-                      <h3 className="font-semibold text-xs mb-0.5 line-clamp-2">
-                        {studio.name}
-                      </h3>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">
-                        {studio.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              {hasMore && (
-                <button
-                  onClick={() => setExpanded(!expanded)}
-                  className="flex items-center gap-1.5 mx-auto mt-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <span>{expanded ? 'Less' : 'More'}</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-                </button>
-              )}
-            </>
-          ) : (
-            <p className="text-muted-foreground text-sm">No groups available yet.</p>
-          )}
-        </TabsContent>
+            <TabsContent value="school" className="mt-0 space-y-2">
+              <p className="text-sm font-medium">Official school offices and resources</p>
+              <p className="text-sm text-muted-foreground">School accounts will appear here as they are added.</p>
+            </TabsContent>
 
-        {adminGroups.length > 0 && (
-          <TabsContent value="manage" className="mt-0">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {adminGroups.map((group) => (
-                <Card key={group.id} className="hover:bg-accent/50 transition-colors">
-                  <CardContent className="flex items-center justify-between gap-3 p-4">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="h-4 w-4 text-primary" />
-                        <h3 className="truncate text-sm font-semibold">{group.name}</h3>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">Scoped group dashboard</p>
-                    </div>
-                    <Button size="sm" onClick={() => onManageGroup(group.slug)}>
-                      Manage
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-        )}
+            <TabsContent value="departments" className="mt-0 space-y-4">
+              <div>
+                <p className="text-sm font-medium">Department portals</p>
+                <p className="text-sm text-muted-foreground">Member-only posts, rosters, and resources.</p>
+              </div>
+              {departmentsLoading ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-md" />)}
+                </div>
+              ) : departments.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {departments.map((department) => (
+                    <Card
+                      key={department.id}
+                      className="cursor-pointer transition-colors hover:bg-accent/50"
+                      onClick={() => onDepartmentClick(department.slug)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <GraduationCap className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                          <div className="min-w-0">
+                            <h3 className="font-semibold">{department.name}</h3>
+                            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                              {department.description || 'Private department portal'}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No listed departments yet.</p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="affiliations" className="mt-0 space-y-4">
+              <div>
+                <p className="text-sm font-medium">Affiliations</p>
+                <p className="text-sm text-muted-foreground">Spaces you're part of through your profile tags.</p>
+              </div>
+              {studiosLoading ? (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                  {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-md" />)}
+                </div>
+              ) : studios.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                    {visibleStudios.map((studio) => (
+                      <Card
+                        key={studio.id}
+                        className="group cursor-pointer transition-colors hover:bg-accent/50"
+                        onClick={() => onStudioClick(studio.badge_tag)}
+                      >
+                        <CardContent className="p-4 text-center">
+                          <span className="mb-2 block text-3xl transition-transform group-hover:scale-110">{studio.icon}</span>
+                          <h3 className="mb-0.5 line-clamp-2 text-xs font-semibold">{studio.name}</h3>
+                          <p className="line-clamp-1 text-[10px] text-muted-foreground">{studio.description}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  {hasMore && (
+                    <button
+                      onClick={() => setExpanded(!expanded)}
+                      className="mx-auto mt-3 flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <span>{expanded ? 'Less' : 'More'}</span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                    </button>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">No affiliations available yet.</p>
+              )}
+            </TabsContent>
       </Tabs>
     </section>
   );
@@ -192,7 +219,6 @@ const PeoplePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const fallbackCurrentUserId = useStore((s) => s.currentUserId);
   const { user: authUser } = useAuth();
-  const { data: scopedAdminGroups = [] } = useMyScopedAdminGroups();
   const currentUserId = authUser?.id || fallbackCurrentUserId;
   
   const { isMutual, firstDegree } = useNetworkConnections();
@@ -271,6 +297,19 @@ const PeoplePage: React.FC = () => {
         .order('name');
       if (error) throw error;
       return data as Studio[];
+    },
+  });
+
+  const { data: departments = [], isLoading: departmentsLoading } = useQuery({
+    queryKey: ['listed-departments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('groups')
+        .select('id, slug, name, description')
+        .eq('is_listed', true)
+        .order('name');
+      if (error) throw error;
+      return (data || []) as Department[];
     },
   });
   
@@ -381,8 +420,8 @@ const PeoplePage: React.FC = () => {
     }
   };
 
-  const handleManageGroup = (slug: string) => {
-    navigate(`/groups/${slug}/dashboard`);
+  const handleDepartmentClick = (slug: string) => {
+    navigate(`/groups/${slug}`, { state: { returnTo } });
   };
 
   const handleAcceptRequest = (requestId: string) => {
@@ -402,7 +441,7 @@ const PeoplePage: React.FC = () => {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-display font-bold">People</h1>
+              <h1 className="text-2xl font-display font-bold">Community</h1>
             </div>
             {authUser && (
               <InviteFriendDialog>
@@ -420,8 +459,8 @@ const PeoplePage: React.FC = () => {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
         {!authUser ? (
           <VisitorAuthOverlay
-            title="People"
-            description="People is where you explore creators and build your creative community."
+            title="Community"
+            description="Community is where you find people, groups, and companies across Inlight."
             features={['Explore', 'Community']}
           >
             <PeopleVisitorPreview />
@@ -652,9 +691,10 @@ const PeoplePage: React.FC = () => {
               <GroupsSection
                 studios={studios}
                 studiosLoading={studiosLoading}
-                adminGroups={scopedAdminGroups}
+                departments={departments}
+                departmentsLoading={departmentsLoading}
                 onStudioClick={handleStudioClick}
-                onManageGroup={handleManageGroup}
+                onDepartmentClick={handleDepartmentClick}
               />
             </div>
           )}

@@ -1057,6 +1057,7 @@ export type Database = {
           description: string | null
           faculty_owner_id: string | null
           id: string
+          is_listed: boolean
           name: string
           slug: string
           updated_at: string
@@ -1066,6 +1067,7 @@ export type Database = {
           description?: string | null
           faculty_owner_id?: string | null
           id?: string
+          is_listed?: boolean
           name: string
           slug: string
           updated_at?: string
@@ -1075,6 +1077,7 @@ export type Database = {
           description?: string | null
           faculty_owner_id?: string | null
           id?: string
+          is_listed?: boolean
           name?: string
           slug?: string
           updated_at?: string
@@ -3307,6 +3310,14 @@ export type Database = {
         Args: { _group_id: string }
         Returns: number
       }
+      can_message_through_group: {
+        Args: { _target_user: string }
+        Returns: boolean
+      }
+      request_group_membership: {
+        Args: { _group_id: string }
+        Returns: string
+      }
       get_my_groups: {
         Args: never
         Returns: {
@@ -3358,6 +3369,10 @@ export type Database = {
           _slug: string
         }
         Returns: Json
+      }
+      update_group_directory_listing: {
+        Args: { _group_id: string; _is_listed: boolean }
+        Returns: boolean
       }
       get_profile_attendance: {
         Args: { _user_id: string }

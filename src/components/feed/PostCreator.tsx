@@ -431,11 +431,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   if (!user) return null;
 
   const eventValidationMessage = getEventValidationMessage();
-  const authorGroups = myScopedAdminGroups.length > 0
-    ? myScopedAdminGroups
-    : myGroups
-      .filter((group) => group.is_faculty)
-      .map(({ id, slug, name }) => ({ id, slug, name }));
+  const authorGroups = myScopedAdminGroups;
   const targetGroups = defaultGroupId ? myGroups : myScopedAdminGroups;
   return (
     <>

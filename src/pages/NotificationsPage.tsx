@@ -50,6 +50,7 @@ const NotificationsPage: React.FC = () => {
       case 'connection_request': return <Link2 className="w-4 h-4" />;
       case 'connection_request_accepted': return <Check className="w-4 h-4" />;
       case 'affiliation_request': return <GraduationCap className="w-4 h-4" />;
+      case 'group_join_request': return <UserPlus className="w-4 h-4" />;
       default: return <Bell className="w-4 h-4" />;
     }
   };
@@ -99,6 +100,7 @@ const NotificationsPage: React.FC = () => {
       case 'follow': if (data.follower_id) navigate(`/profile/${data.follower_id}`); break;
       case 'connection_request': if (data.sender_id) navigate(`/profile/${data.sender_id}`); break;
       case 'connection_request_accepted': if (data.user_id) navigate(`/profile/${data.user_id}`); break;
+      case 'group_join_request': if (data.group_slug) navigate(`/groups/${data.group_slug}/dashboard`); break;
     }
   };
 

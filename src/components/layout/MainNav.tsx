@@ -47,7 +47,7 @@ const InlightHomeIcon: React.FC<{className?: string;}> = ({ className }) =>
 
 const navItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
-{ label: 'People', icon: UserRound, path: '/people' },
+{ label: 'Community', icon: UserRound, path: '/people' },
 { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
 { label: 'My Tickets', icon: Ticket, path: '/tickets' },
 { label: 'Industry Now', icon: Theater, path: '/stage-whisper' },
@@ -56,7 +56,7 @@ const navItems: NavItem[] = [
 
 const mobileNavItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
-{ label: 'People', icon: UserRound, path: '/people' },
+{ label: 'Community', icon: UserRound, path: '/people' },
 { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
 { label: 'Industry', icon: Theater, path: '/stage-whisper' }];
 
@@ -73,12 +73,12 @@ export const MainNav: React.FC = () => {
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const { isDark, toggleTheme } = useTheme();
   const primaryGroupAdminGroup = scopedAdminGroups[0];
-  const groupAdminDashboardPath = primaryGroupAdminGroup ? `/groups/${primaryGroupAdminGroup.slug}/dashboard` : null;
-  const groupAdminDashboardLabel = primaryGroupAdminGroup
+  const groupAdminDashboardPath = primaryGroupAdminGroup
     ? scopedAdminGroups.length === 1
-      ? `Manage ${primaryGroupAdminGroup.name}`
-      : `Group Admin (${scopedAdminGroups.length})`
+      ? `/groups/${primaryGroupAdminGroup.slug}/dashboard`
+      : '/groups/admin'
     : null;
+  const groupAdminDashboardLabel = primaryGroupAdminGroup ? 'Department Admin' : null;
 
   useEffect(() => {
     setCollapsed(!user);
@@ -342,6 +342,7 @@ export const MainNav: React.FC = () => {
                     <TooltipTrigger asChild>
                       <Link
                         to={groupAdminDashboardPath}
+                        state={{ adminGroups: scopedAdminGroups }}
                         className="flex items-center justify-center py-3 rounded-xl text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)] transition-colors">
                         <ShieldCheck className="w-5 h-5" />
                       </Link>
@@ -406,6 +407,7 @@ export const MainNav: React.FC = () => {
                   {groupAdminDashboardPath && groupAdminDashboardLabel &&
                   <Link
                     to={groupAdminDashboardPath}
+                    state={{ adminGroups: scopedAdminGroups }}
                     className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)] transition-colors">
 
                     <ShieldCheck className="w-5 h-5" />
@@ -602,7 +604,7 @@ export const MainNav: React.FC = () => {
               )}
               {groupAdminDashboardPath && groupAdminDashboardLabel && (
                 <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5 text-[hsl(45_95%_58%)]">
-                  <Link to={groupAdminDashboardPath}>
+                  <Link to={groupAdminDashboardPath} state={{ adminGroups: scopedAdminGroups }}>
                     <ShieldCheck className="w-4 h-4" />
                     <span className="truncate">{groupAdminDashboardLabel}</span>
                   </Link>

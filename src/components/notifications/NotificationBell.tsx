@@ -48,6 +48,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
         return <Check className="w-4 h-4" />;
       case 'company_request_new':
         return <Building2 className="w-4 h-4" />;
+      case 'group_join_request':
+        return <UserPlus className="w-4 h-4" />;
       default:
         return <Bell className="w-4 h-4" />;
     }
@@ -142,6 +144,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
         break;
       case 'company_request_new':
         navigate('/admin?tab=company-requests');
+        break;
+      case 'group_join_request':
+        if (data.group_slug) navigate(`/groups/${data.group_slug}/dashboard`);
         break;
       default:
         break;

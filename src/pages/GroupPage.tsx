@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Users, Trash2, Globe, Lock, Send, Shield, MailPlus } from 'lucide-react';
+import { ArrowLeft, Users, Trash2, Globe, Lock, Send, Shield, MailPlus, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGroupBySlug, useMyGroups } from '@/hooks/useGroups';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -96,9 +97,9 @@ const GroupPage: React.FC = () => {
   const requestJoin = useMutation({
     mutationFn: async () => {
       if (!user || !group) throw new Error('Log in to request access');
-      const { error } = await supabase
-        .from('group_members')
-        .insert({ group_id: group.id, user_id: user.id, status: 'pending' });
+      const { error } = await supabase.rpc('request_group_membership', {
+        _group_id: group.id,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -201,6 +202,9 @@ const GroupPage: React.FC = () => {
   // Compose for group (faculty or member)
   const [composeContent, setComposeContent] = useState('');
   const [composeVisibility, setComposeVisibility] = useState<'group' | 'public'>('group');
+  const [activeTab, setActiveTab] = useState<'posts' | 'members'>(() =>
+    new URLSearchParams(location.search).get('tab') === 'members' ? 'members' : 'posts',
+  );
   const createPost = useMutation({
     mutationFn: async () => {
       if (!user || !group) throw new Error('Not ready');
@@ -301,17 +305,32 @@ const GroupPage: React.FC = () => {
   const addAdmin = useMutation({
     mutationFn: async () => {
       if (!group) throw new Error('Group not ready');
-      const { error } = await supabase.rpc('add_group_admin_by_email', {
-        _group_id: group.id,
-        _email: adminEmail,
+      const { data, error } = await supabase.functions.invoke('send-group-admin-invite', {
+        body: {
+          groupId: group.id,
+          email: adminEmail.trim(),
+          note: `You've been invited to administer ${group.name} on Inlight.`,
+        },
       });
       if (error) throw error;
+      return data as {
+        invite: { existing_user: boolean };
+        email: { sent: boolean; notRequired?: boolean; error?: unknown };
+      };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       setAdminEmail('');
       queryClient.invalidateQueries({ queryKey: ['group-admins', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['group-members', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['group-active-member-count', group?.id] });
       queryClient.invalidateQueries({ queryKey: ['my-groups'] });
-      toast.success('Group admin added');
+      if (result.invite.existing_user) {
+        toast.success('Group admin added');
+      } else if (result.email.sent) {
+        toast.success('Group admin invited and email sent');
+      } else {
+        toast.warning('Group admin invitation saved, but the email could not be sent');
+      }
     },
     onError: (error) => toast.error(getErrorMessage(error, 'Failed to add admin')),
   });
@@ -384,7 +403,7 @@ const GroupPage: React.FC = () => {
             <div className="space-y-1">
               <h2 className="text-lg font-semibold">Private group</h2>
               <p className="text-sm text-muted-foreground">
-                Posts, projects, and member details are only available to active members and group admins.
+                Posts, projects, and member details are only available to active members.
               </p>
             </div>
             {!user ? (
@@ -441,7 +460,7 @@ const GroupPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="posts">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'posts' | 'members')}>
         <TabsList>
           <TabsTrigger value="posts">Posts</TabsTrigger>
           <TabsTrigger value="members">Members{pendingMembers.length ? ` (${pendingMembers.length} pending)` : ''}</TabsTrigger>
@@ -655,17 +674,45 @@ const GroupPage: React.FC = () => {
                       </Avatar>
                       <span className="text-sm font-medium">{m.profile?.display_name || 'Unknown'}</span>
                     </button>
-                    {isFaculty && m.user_id !== user?.id && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-destructive h-7 w-7"
-                        onClick={() => {
-                          if (confirm('Remove this member?')) removeMember.mutate(m.id);
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                    {m.user_id !== user?.id && (
+                      <div className="flex items-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              aria-label={`Message ${m.profile?.display_name || 'member'}`}
+                              onClick={() => navigate(`/messages/direct/${m.user_id}`, {
+                                state: { originRoute: `${location.pathname}?tab=members` },
+                              })}
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            sideOffset={8}
+                            className="border-[hsl(45_95%_58%/0.18)] bg-[hsl(222_30%_12%)] px-2.5 py-1.5 text-xs text-white shadow-lg"
+                          >
+                            Message member
+                          </TooltipContent>
+                        </Tooltip>
+                        {isFaculty && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-destructive h-7 w-7"
+                            aria-label={`Remove ${m.profile?.display_name || 'member'}`}
+                            title="Remove member"
+                            onClick={() => {
+                              if (confirm('Remove this member?')) removeMember.mutate(m.id);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </CardContent>
                 </Card>

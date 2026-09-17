@@ -28,7 +28,7 @@ interface AudienceSelectorProps {
   onSelectedUsersChange: (users: SelectedUser[]) => void;
   currentUserId: string;
   allowedVisibilities?: PostVisibility[];
-  /** Groups the current user can post into. When non-empty a "{group} only" option is added. */
+  /** Groups the current user can post into. */
   availableGroups?: { id: string; name: string }[];
   selectedGroupId?: string | null;
   onSelectedGroupChange?: (groupId: string | null) => void;
@@ -46,7 +46,6 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
   onSelectedGroupChange,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [groupSearchQuery, setGroupSearchQuery] = useState('');
   const [showUserSearch, setShowUserSearch] = useState(false);
 
   const { data: searchResults = [], isLoading: searching } = useQuery({
@@ -76,15 +75,17 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
     ? baseOptions.filter((option) => allowedVisibilities.includes(option.value))
     : baseOptions;
   const canSelectGroup = availableGroups.length > 0 && (!allowedVisibilities || allowedVisibilities.includes('group'));
-  const groupOption = { value: 'group' as PostVisibility, label: 'Specific Group', icon: <Lock className="h-4 w-4" />, desc: 'Choose a private group' };
   const selectedGroup = availableGroups.find((group) => group.id === selectedGroupId) ?? null;
-  const filteredGroups = availableGroups.filter((group) =>
-    group.name.toLowerCase().includes(groupSearchQuery.trim().toLowerCase())
-  );
+  const selectedGroupOption = {
+    value: 'group' as PostVisibility,
+    label: selectedGroup?.name || 'Department',
+    icon: <Lock className="h-4 w-4" />,
+    desc: selectedGroup ? `Only ${selectedGroup.name} members` : 'Department members only',
+  };
 
   const currentOption =
     visibility === 'group'
-      ? groupOption
+      ? selectedGroupOption
       : visibleBaseOptions.find((o) => o.value === visibility) ?? visibleBaseOptions[0] ?? baseOptions[0];
 
   const handleSelect = (v: PostVisibility) => {
@@ -96,12 +97,17 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
       onSelectedGroupChange?.(null);
       onSelectedUsersChange([]);
       setShowUserSearch(false);
-      setGroupSearchQuery('');
     } else {
       onSelectedGroupChange?.(null);
       setShowUserSearch(true);
-      setGroupSearchQuery('');
     }
+  };
+
+  const handleGroupSelect = (groupId: string) => {
+    onVisibilityChange('group');
+    onSelectedGroupChange?.(groupId);
+    onSelectedUsersChange([]);
+    setShowUserSearch(false);
   };
 
   const addUser = (user: SelectedUser) => {
@@ -111,16 +117,6 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
 
   const removeUser = (userId: string) => {
     onSelectedUsersChange(selectedUsers.filter((u) => u.user_id !== userId));
-  };
-
-  const selectGroup = (groupId: string) => {
-    onSelectedGroupChange?.(groupId);
-    setGroupSearchQuery('');
-  };
-
-  const removeGroup = () => {
-    onSelectedGroupChange?.(null);
-    setGroupSearchQuery('');
   };
 
   return (
@@ -152,24 +148,25 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
               </div>
             </button>
           ))}
-          {canSelectGroup && (
-            <button
-              type="button"
-              onClick={() => handleSelect('group')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left',
-                visibility === 'group'
-                  ? 'bg-accent text-accent-foreground'
-                  : 'hover:bg-accent/50'
-              )}
-            >
-              {groupOption.icon}
-              <div>
-                <p className="font-medium">{groupOption.label}</p>
-                <p className="text-xs text-muted-foreground">{groupOption.desc}</p>
-              </div>
-            </button>
-          )}
+          {canSelectGroup && availableGroups.map((group) => (
+              <button
+                key={group.id}
+                type="button"
+                onClick={() => handleGroupSelect(group.id)}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left',
+                  visibility === 'group' && selectedGroupId === group.id
+                    ? 'bg-accent text-accent-foreground'
+                    : 'hover:bg-accent/50'
+                )}
+              >
+                <Lock className="h-4 w-4" />
+                <div>
+                  <p className="font-medium">{group.name}</p>
+                  <p className="text-xs text-muted-foreground">Only {group.name} members</p>
+                </div>
+              </button>
+            ))}
         </PopoverContent>
       </Popover>
 
@@ -238,55 +235,6 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
         </div>
       )}
 
-      {visibility === 'group' && canSelectGroup && (
-        <div className="space-y-2">
-          {selectedGroup && (
-            <div className="flex flex-wrap gap-1.5">
-              <Badge variant="secondary" className="gap-1 pr-1">
-                <Lock className="h-3 w-3" />
-                <span className="text-xs max-w-[180px] truncate">{selectedGroup.name}</span>
-                <button
-                  type="button"
-                  onClick={removeGroup}
-                  className="p-0.5 hover:bg-accent rounded-full"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            </div>
-          )}
-
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search groups to add..."
-              value={groupSearchQuery}
-              onChange={(e) => setGroupSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-sm"
-            />
-          </div>
-
-          {groupSearchQuery.trim().length > 0 && filteredGroups.length > 0 && (
-            <div className="border border-border rounded-md max-h-40 overflow-y-auto">
-              {filteredGroups.map((group) => (
-                <button
-                  key={group.id}
-                  type="button"
-                  onClick={() => selectGroup(group.id)}
-                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-accent transition-colors text-left text-sm"
-                >
-                  <Lock className="h-4 w-4 text-muted-foreground" />
-                  <span className="truncate">{group.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {groupSearchQuery.trim().length > 0 && filteredGroups.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-2">No groups found</p>
-          )}
-        </div>
-      )}
     </div>
   );
 };

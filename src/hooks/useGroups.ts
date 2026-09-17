@@ -40,7 +40,7 @@ export const useMyScopedAdminGroups = () => {
       }
 
       console.error('get_my_scoped_admin_groups failed', error);
-      return [];
+      throw error;
     },
   });
 };
@@ -63,7 +63,14 @@ export const useGroupBySlug = (slug?: string) => {
         .eq('slug', slug!)
         .maybeSingle();
       if (error) throw error;
-      return data as { id: string; slug: string; name: string; description: string | null; faculty_owner_id: string | null } | null;
+      return data as {
+        id: string;
+        slug: string;
+        name: string;
+        description: string | null;
+        faculty_owner_id: string | null;
+        is_listed: boolean;
+      } | null;
     },
   });
 };

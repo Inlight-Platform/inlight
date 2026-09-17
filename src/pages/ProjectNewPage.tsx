@@ -6,7 +6,7 @@ import { ChevronLeft, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
-import { useMyGroups, useMyScopedAdminGroups } from '@/hooks/useGroups';
+import { useMyScopedAdminGroups } from '@/hooks/useGroups';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,7 +39,6 @@ const ProjectNewPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { canManageProjects, showRestrictedToast } = useFeatureAccess();
-  const { data: myGroups = [] } = useMyGroups();
   const { data: myScopedAdminGroups = [] } = useMyScopedAdminGroups();
   const queryClient = useQueryClient();
 
@@ -61,11 +60,7 @@ const ProjectNewPage: React.FC = () => {
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
 
-  const authorGroups = myScopedAdminGroups.length > 0
-    ? myScopedAdminGroups
-    : myGroups
-      .filter((group) => group.is_faculty)
-      .map(({ id, slug, name }) => ({ id, slug, name }));
+  const authorGroups = myScopedAdminGroups;
   const selectedGroup = authorGroups.find((group) => group.id === selectedGroupId) ?? null;
 
   const startDate = startDateStr ? new Date(startDateStr) : undefined;

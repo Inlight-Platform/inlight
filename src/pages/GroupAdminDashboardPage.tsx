@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, BarChart3, BookOpen, Check, MailPlus, ShieldCheck, Trash2, Upload, UserPlus, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 
 interface ProfilePreview {
   user_id: string;
@@ -63,6 +64,15 @@ interface GroupInvite {
 const errorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
+const formatDate = (value: string | null) => {
+  if (!value) return null;
+  return new Date(value).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
 const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
   const context = (error as { context?: { text?: () => Promise<string> } })?.context;
 
@@ -80,6 +90,7 @@ const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
 
 const GroupAdminDashboardPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data: group, isLoading: groupLoading } = useGroupBySlug(slug);
@@ -94,6 +105,14 @@ const GroupAdminDashboardPage: React.FC = () => {
   const [adminPendingRemoval, setAdminPendingRemoval] = useState<GroupAdmin | null>(null);
 
   const isScopedAdmin = !!group && scopedGroups.some((scopedGroup) => scopedGroup.id === group.id);
+  const dashboardNavigationState = location.state as {
+    returnTo?: string;
+    adminGroups?: Array<{ id: string; slug: string; name: string }>;
+  } | null;
+  const dashboardReturnTo = dashboardNavigationState?.returnTo || (group ? `/groups/${group.slug}` : '/people');
+  const dashboardReturnState = dashboardNavigationState?.adminGroups
+    ? { adminGroups: dashboardNavigationState.adminGroups }
+    : undefined;
 
   const invalidateGroupDashboard = () => {
     queryClient.invalidateQueries({ queryKey: ['group-dashboard-members', group?.id] });
@@ -217,6 +236,14 @@ const GroupAdminDashboardPage: React.FC = () => {
 
   const pendingMembers = useMemo(() => members.filter((member) => member.status === 'pending'), [members]);
   const activeMembers = useMemo(() => members.filter((member) => member.status === 'active'), [members]);
+  const pendingInvites = useMemo(
+    () => groupInvites.filter((invite) => invite.status === 'pending'),
+    [groupInvites],
+  );
+  const acceptedInvites = useMemo(
+    () => groupInvites.filter((invite) => invite.status === 'accepted'),
+    [groupInvites],
+  );
   const activeAdminCount = groupAdmins.filter((admin) => admin.status === 'active').length;
   const parsedMemberInviteEmails = useMemo(
     () => parseBulkEmails(memberInviteEmails),
@@ -230,19 +257,19 @@ const GroupAdminDashboardPage: React.FC = () => {
     },
     onSuccess: () => {
       invalidateGroupDashboard();
-      toast.success('Membership updated');
+      toast.success('Join request accepted');
     },
     onError: (error) => toast.error(errorMessage(error, 'Failed to update membership')),
   });
 
   const removeMember = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id }: { id: string; action: 'remove' | 'deny' }) => {
       const { error } = await supabase.from('group_members').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       invalidateGroupDashboard();
-      toast.success('Member removed');
+      toast.success(variables.action === 'deny' ? 'Join request denied' : 'Member removed');
     },
     onError: (error) => toast.error(errorMessage(error, 'Failed to remove member')),
   });
@@ -266,16 +293,31 @@ const GroupAdminDashboardPage: React.FC = () => {
   const addAdmin = useMutation({
     mutationFn: async () => {
       if (!group) throw new Error('Group not ready');
-      const { error } = await supabase.rpc('add_group_admin_by_email', {
-        _group_id: group.id,
-        _email: adminEmail.trim(),
+      const { data, error } = await supabase.functions.invoke('send-group-admin-invite', {
+        body: {
+          groupId: group.id,
+          email: adminEmail.trim(),
+          note: `You've been invited to administer ${group.name} on Inlight.`,
+        },
       });
-      if (error) throw error;
+      if (error) {
+        throw new Error(await getFunctionErrorMessage(error, 'Failed to add admin'));
+      }
+      return data as {
+        invite: { existing_user: boolean };
+        email: { sent: boolean; notRequired?: boolean; error?: unknown };
+      };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       setAdminEmail('');
       invalidateGroupDashboard();
-      toast.success('Group admin added');
+      if (result.invite.existing_user) {
+        toast.success('Group admin added');
+      } else if (result.email.sent) {
+        toast.success('Group admin invited and email sent');
+      } else {
+        toast.warning('Group admin invitation saved, but the email could not be sent');
+      }
     },
     onError: (error) => toast.error(errorMessage(error, 'Failed to add admin')),
   });
@@ -291,6 +333,24 @@ const GroupAdminDashboardPage: React.FC = () => {
       toast.success('Group admin removed');
     },
     onError: (error) => toast.error(errorMessage(error, 'Failed to remove admin')),
+  });
+
+  const updateDirectoryListing = useMutation({
+    mutationFn: async (isListed: boolean) => {
+      if (!group) throw new Error('Group not ready');
+      const { error } = await supabase.rpc('update_group_directory_listing', {
+        _group_id: group.id,
+        _is_listed: isListed,
+      });
+      if (error) throw error;
+      return isListed;
+    },
+    onSuccess: (isListed) => {
+      queryClient.invalidateQueries({ queryKey: ['group-by-slug', group?.slug] });
+      queryClient.invalidateQueries({ queryKey: ['listed-departments'] });
+      toast.success(isListed ? 'Department listed in directory' : 'Department removed from directory');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to update directory listing')),
   });
 
   const createResource = useMutation({
@@ -418,7 +478,7 @@ const GroupAdminDashboardPage: React.FC = () => {
               </p>
             </div>
             <Button asChild variant="outline">
-              <Link to={`/groups/${group.slug}`}>Back to group</Link>
+              <Link to={dashboardReturnTo} state={dashboardReturnState}>Back</Link>
             </Button>
           </CardContent>
         </Card>
@@ -431,15 +491,15 @@ const GroupAdminDashboardPage: React.FC = () => {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <Button asChild variant="ghost" size="sm" className="-ml-2">
-            <Link to={`/groups/${group.slug}`}>
-              <ArrowLeft className="mr-1 h-4 w-4" /> Back to group
+            <Link to={dashboardReturnTo} state={dashboardReturnState}>
+              <ArrowLeft className="mr-1 h-4 w-4" /> Back
             </Link>
           </Button>
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-3xl font-display font-bold">{group.name} Dashboard</h1>
               <Badge variant="secondary" className="gap-1">
-                <ShieldCheck className="h-3.5 w-3.5" /> Scoped group admin
+                <ShieldCheck className="h-3.5 w-3.5" /> Department admin
               </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -461,6 +521,28 @@ const GroupAdminDashboardPage: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
+                <BookOpen className="h-5 w-5" /> Directory Listing
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center justify-between gap-4">
+              <div>
+                <Label htmlFor="group-directory-listing">Listed in directory</Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Show this department under Community so non-members can find it and request to join.
+                </p>
+              </div>
+              <Switch
+                id="group-directory-listing"
+                checked={group.is_listed}
+                disabled={updateDirectoryListing.isPending}
+                onCheckedChange={(checked) => updateDirectoryListing.mutate(checked)}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <ShieldCheck className="h-5 w-5" /> Join Requests
               </CardTitle>
             </CardHeader>
@@ -475,7 +557,12 @@ const GroupAdminDashboardPage: React.FC = () => {
                       <Button size="sm" onClick={() => setMemberStatus.mutate({ id: member.id, status: 'active' })}>
                         <Check className="mr-1 h-4 w-4" /> Accept
                       </Button>
-                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => removeMember.mutate(member.id)}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive"
+                        onClick={() => removeMember.mutate({ id: member.id, action: 'deny' })}
+                      >
                         <X className="mr-1 h-4 w-4" /> Deny
                       </Button>
                     </div>
@@ -489,8 +576,8 @@ const GroupAdminDashboardPage: React.FC = () => {
         <TabsContent value="insights" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <InsightCard icon={UserPlus} label="Active Members" value={activeMembers.length} />
           <InsightCard icon={ShieldCheck} label="Pending Requests" value={pendingMembers.length} />
+          <InsightCard icon={MailPlus} label="Invited Emails" value={pendingInvites.length} />
           <InsightCard icon={BarChart3} label="Group Posts" value={postCount} />
-          <InsightCard icon={BookOpen} label="Resources" value={resources.length} />
         </TabsContent>
 
         <TabsContent value="resources" className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
@@ -701,47 +788,88 @@ const GroupAdminDashboardPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Active members</p>
-                {activeMembers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No active members yet.</p>
-                ) : (
-                  activeMembers.map((member) => (
-                    <div key={member.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
-                      <PersonRow profile={member.profile} fallback="Member" />
-                      {member.user_id !== user?.id && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => removeMember.mutate(member.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
+              <div className="rounded-lg border">
+                <div className="border-b px-3 py-2">
+                  <p className="text-sm font-medium">Member roster</p>
+                  <p className="text-xs text-muted-foreground">
+                    Active members, pending join requests, and invited emails for this department.
+                  </p>
+                </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Email invites</p>
-                {groupInvites.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No email invites yet.</p>
-                ) : (
-                  groupInvites.map((invite) => (
-                    <div key={invite.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{invite.email}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Becomes {invite.membership_status_on_accept} member
-                        </p>
+                <RosterSection title="Active members" count={activeMembers.length}>
+                  {activeMembers.length === 0 ? (
+                    <p className="px-3 py-3 text-sm text-muted-foreground">No active members yet.</p>
+                  ) : (
+                    activeMembers.map((member) => (
+                      <div
+                        key={member.id}
+                        className="flex items-center justify-between gap-3 border-t px-3 py-3 first:border-t-0"
+                      >
+                        <PersonRow profile={member.profile} fallback="Member" secondary="Active member" />
+                        {member.user_id !== user?.id && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive"
+                            disabled={removeMember.isPending}
+                            onClick={() => removeMember.mutate({ id: member.id, action: 'remove' })}
+                          >
+                            <Trash2 className="mr-1 h-4 w-4" />
+                            Remove
+                          </Button>
+                        )}
                       </div>
-                      <Badge variant={invite.status === 'accepted' ? 'default' : 'secondary'}>
-                        {invite.status}
-                      </Badge>
-                    </div>
-                  ))
+                    ))
+                  )}
+                </RosterSection>
+
+                <RosterSection title="Pending join requests" count={pendingMembers.length}>
+                  {pendingMembers.length === 0 ? (
+                    <p className="px-3 py-3 text-sm text-muted-foreground">No pending join requests.</p>
+                  ) : (
+                    pendingMembers.map((member) => (
+                      <div
+                        key={member.id}
+                        className="flex flex-col gap-3 border-t px-3 py-3 first:border-t-0 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <PersonRow profile={member.profile} fallback="Pending member" secondary="Requested access" />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            disabled={setMemberStatus.isPending}
+                            onClick={() => setMemberStatus.mutate({ id: member.id, status: 'active' })}
+                          >
+                            <Check className="mr-1 h-4 w-4" />
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive"
+                            disabled={removeMember.isPending}
+                            onClick={() => removeMember.mutate({ id: member.id, action: 'deny' })}
+                          >
+                            <X className="mr-1 h-4 w-4" />
+                            Deny
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </RosterSection>
+
+                <RosterSection title="Invited emails" count={pendingInvites.length}>
+                  {pendingInvites.length === 0 ? (
+                    <p className="px-3 py-3 text-sm text-muted-foreground">No pending email invites.</p>
+                  ) : (
+                    pendingInvites.map((invite) => <InviteRosterRow key={invite.id} invite={invite} />)
+                  )}
+                </RosterSection>
+
+                {acceptedInvites.length > 0 && (
+                  <RosterSection title="Accepted email invites" count={acceptedInvites.length}>
+                    {acceptedInvites.map((invite) => <InviteRosterRow key={invite.id} invite={invite} />)}
+                  </RosterSection>
                 )}
               </div>
             </CardContent>
@@ -779,6 +907,31 @@ const PersonRow: React.FC<{ profile?: ProfilePreview; fallback: string; secondar
         <p className="truncate text-sm font-medium">{label}</p>
         {secondary && <p className="truncate text-xs text-muted-foreground">{secondary}</p>}
       </div>
+    </div>
+  );
+};
+
+const RosterSection: React.FC<{ title: string; count: number; children: React.ReactNode }> = ({ title, count, children }) => (
+  <div>
+    <div className="flex items-center justify-between border-b bg-muted/20 px-3 py-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+      <Badge variant="secondary">{count}</Badge>
+    </div>
+    {children}
+  </div>
+);
+
+const InviteRosterRow: React.FC<{ invite: GroupInvite }> = ({ invite }) => {
+  const statusDate = formatDate(invite.accepted_at || invite.created_at);
+  return (
+    <div className="flex items-center justify-between gap-3 border-t px-3 py-3 first:border-t-0">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{invite.email}</p>
+        <p className="text-xs text-muted-foreground">
+          Becomes {invite.membership_status_on_accept} member{statusDate ? ` · ${statusDate}` : ''}
+        </p>
+      </div>
+      <Badge variant={invite.status === 'accepted' ? 'default' : 'secondary'}>{invite.status}</Badge>
     </div>
   );
 };
