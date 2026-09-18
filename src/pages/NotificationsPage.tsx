@@ -101,6 +101,7 @@ const NotificationsPage: React.FC = () => {
       case 'connection_request': if (data.sender_id) navigate(`/profile/${data.sender_id}`); break;
       case 'connection_request_accepted': if (data.user_id) navigate(`/profile/${data.user_id}`); break;
       case 'group_join_request': if (data.group_slug) navigate(`/groups/${data.group_slug}/dashboard`); break;
+      case 'department_content_removed': if (data.path) navigate(data.path); break;
     }
   };
 

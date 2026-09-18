@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Users, Trash2, Globe, Lock, Shield, MailPlus, MessageSquare, MoreHorizontal, SlidersHorizontal, Check, Plus, LayoutGrid, Rows } from 'lucide-react';
+import { ArrowLeft, BookOpen, ExternalLink, Users, Trash2, Globe, Lock, Shield, MailPlus, MessageSquare, MoreHorizontal, SlidersHorizontal, Check, Plus, LayoutGrid, Rows } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGroupBySlug, useMyGroups } from '@/hooks/useGroups';
@@ -57,6 +57,16 @@ interface GroupMember {
   status: 'active' | 'pending';
   joined_at: string;
   profile?: ProfilePreview;
+}
+
+interface GroupResource {
+  id: string;
+  group_id: string;
+  title: string;
+  description: string;
+  url: string;
+  is_published: boolean;
+  created_at: string;
 }
 
 interface GroupPost {
@@ -375,6 +385,21 @@ const GroupPage: React.FC = () => {
     },
   });
 
+  const { data: resources = [], isLoading: resourcesLoading } = useQuery<GroupResource[]>({
+    queryKey: ['group-resources', group?.id],
+    enabled: !!group?.id && canViewPrivateGroup,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('group_resources')
+        .select('id, group_id, title, description, url, is_published, created_at')
+        .eq('group_id', group!.id)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as GroupResource[];
+    },
+  });
+
   const { data: activeAdminUserIds = [] } = useQuery<string[]>({
     queryKey: ['group-active-admin-user-ids', group?.id],
     enabled: !!group?.id && canViewPrivateGroup,
@@ -417,9 +442,10 @@ const GroupPage: React.FC = () => {
   const [postFilter, setPostFilter] = useState<'all' | 'admin'>('all');
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [historyView, setHistoryView] = useState<'grid' | 'list'>('grid');
-  const [activeTab, setActiveTab] = useState<'posts' | 'members'>(() =>
-    new URLSearchParams(location.search).get('tab') === 'members' ? 'members' : 'posts',
-  );
+  const [activeTab, setActiveTab] = useState<'posts' | 'members' | 'resources'>(() => {
+    const requestedTab = new URLSearchParams(location.search).get('tab');
+    return requestedTab === 'members' || requestedTab === 'resources' ? requestedTab : 'posts';
+  });
   const deletePost = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('posts').delete().eq('id', id);
@@ -593,6 +619,17 @@ const GroupPage: React.FC = () => {
       window.open(destination.url, '_blank', 'noopener,noreferrer');
     }
   };
+  const unlinkGroupContent = async (item: FeedItemData) => {
+    if (item.type !== 'event' && item.type !== 'project') {
+      throw new Error('Only events and projects can be removed from a department without deleting them.');
+    }
+    const { error } = await supabase.rpc('remove_group_content' as never, {
+      target_group_id: group.id,
+      target_content_type: item.type,
+      target_content_id: item.id,
+    } as never);
+    if (error) throw error;
+  };
   const routeState = location.state as { returnTo?: string } | null;
   const handleBack = () => {
     if (routeState?.returnTo) {
@@ -664,7 +701,7 @@ const GroupPage: React.FC = () => {
       {canViewPrivateGroup && (
         <>
         <section className="min-w-0">
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'posts' | 'members')}>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'posts' | 'members' | 'resources')}>
         <div className="relative flex items-center justify-center gap-2">
           <div className="flex min-w-0 items-center justify-center gap-2">
             <TabsList>
@@ -675,6 +712,7 @@ const GroupPage: React.FC = () => {
                   <span className="hidden sm:inline"> ({pendingMembers.length} pending)</span>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="resources">Resources</TabsTrigger>
             </TabsList>
             {activeTab === 'posts' && (
               <DropdownMenu>
@@ -750,9 +788,25 @@ const GroupPage: React.FC = () => {
                 networkDegree={null}
                 onOpenDetails={openGroupFeedItem}
                 canDeleteOverride={isFaculty}
+                onDeleteOverride={(entry.item.type === 'event' || entry.item.type === 'project')
+                  ? unlinkGroupContent
+                  : undefined}
+                deleteActionLabel={(entry.item.type === 'event' || entry.item.type === 'project')
+                  ? 'Remove from department'
+                  : undefined}
+                deleteDialogTitle={(entry.item.type === 'event' || entry.item.type === 'project')
+                  ? `Remove this ${entry.item.type} from ${group.name}?`
+                  : undefined}
+                deleteDialogDescription={(entry.item.type === 'event' || entry.item.type === 'project')
+                  ? `This removes the ${entry.item.type} from ${group.name} and makes it private to its creator.`
+                  : undefined}
+                deleteSuccessMessage={(entry.item.type === 'event' || entry.item.type === 'project')
+                  ? `${entry.item.type === 'event' ? 'Event' : 'Project'} removed from ${group.name}`
+                  : undefined}
                 onDeleteSuccess={() => {
                   queryClient.invalidateQueries({ queryKey: ['group-events', group?.id] });
                   queryClient.invalidateQueries({ queryKey: ['group-projects', group?.id] });
+                  setSelectedItem(null);
                 }}
               />
             ) : (() => {
@@ -839,6 +893,44 @@ const GroupPage: React.FC = () => {
             })())}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="resources" className="mt-4">
+          <div className="mx-auto max-w-3xl space-y-4">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-muted-foreground" />
+              <h2 className="font-semibold">Department resources</h2>
+            </div>
+            {resourcesLoading ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Loading resources...</p>
+            ) : resources.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">No published resources yet.</p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {resources.map((resource) => (
+                  <Card key={resource.id} className="h-full">
+                    <CardContent className="flex h-full flex-col gap-3 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="font-medium">{resource.title}</h3>
+                          {resource.description && (
+                            <p className="mt-1 text-sm text-muted-foreground">{resource.description}</p>
+                          )}
+                        </div>
+                        <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      </div>
+                      <Button asChild variant="outline" size="sm" className="mt-auto w-full gap-2">
+                        <a href={resource.url} target="_blank" rel="noreferrer">
+                          Open resource
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="members" className="space-y-3 mt-4">
@@ -1076,6 +1168,21 @@ const GroupPage: React.FC = () => {
                 item={selectedItem}
                 networkDegree={null}
                 canDeleteOverride={isFaculty}
+                onDeleteOverride={(selectedItem.type === 'event' || selectedItem.type === 'project')
+                  ? unlinkGroupContent
+                  : undefined}
+                deleteActionLabel={(selectedItem.type === 'event' || selectedItem.type === 'project')
+                  ? 'Remove from department'
+                  : undefined}
+                deleteDialogTitle={(selectedItem.type === 'event' || selectedItem.type === 'project')
+                  ? `Remove this ${selectedItem.type} from ${group.name}?`
+                  : undefined}
+                deleteDialogDescription={(selectedItem.type === 'event' || selectedItem.type === 'project')
+                  ? `This removes the ${selectedItem.type} from ${group.name} and makes it private to its creator.`
+                  : undefined}
+                deleteSuccessMessage={(selectedItem.type === 'event' || selectedItem.type === 'project')
+                  ? `${selectedItem.type === 'event' ? 'Event' : 'Project'} removed from ${group.name}`
+                  : undefined}
                 onDeleteSuccess={() => {
                   queryClient.invalidateQueries({ queryKey: ['group-posts', group.id] });
                   queryClient.invalidateQueries({ queryKey: ['group-events', group.id] });

@@ -148,6 +148,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ collapsed })
       case 'group_join_request':
         if (data.group_slug) navigate(`/groups/${data.group_slug}/dashboard`);
         break;
+      case 'department_content_removed':
+        if (data.path) navigate(data.path);
+        break;
       default:
         break;
     }

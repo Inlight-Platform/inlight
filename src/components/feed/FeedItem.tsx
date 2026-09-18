@@ -33,6 +33,7 @@ import { isEventPast } from '@/lib/eventDates';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
 import { VisitorAuthPrompt } from '@/components/auth/VisitorAuthPrompt';
 import { eventPath } from '@/lib/publicPaths';
+import { ContentAudienceControl } from './ContentAudienceControl';
 
 export type FeedItemType = 'post' | 'project' | 'event' | 'job' | 'show' | 'open_role';
 
@@ -117,7 +118,12 @@ interface FeedItemProps {
   onOpenDetails?: (item: FeedItemData) => void;
   onRequireAuth?: (item: FeedItemData, action: 'rsvp' | 'ticket') => void;
   canDeleteOverride?: boolean;
+  onDeleteOverride?: (item: FeedItemData) => Promise<void>;
   onDeleteSuccess?: () => void;
+  deleteActionLabel?: string;
+  deleteDialogTitle?: string;
+  deleteDialogDescription?: string;
+  deleteSuccessMessage?: string;
 }
 
 export const FeedItem: React.FC<FeedItemProps> = ({
@@ -131,7 +137,12 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   onOpenDetails,
   onRequireAuth,
   canDeleteOverride = false,
+  onDeleteOverride,
   onDeleteSuccess,
+  deleteActionLabel = 'Delete',
+  deleteDialogTitle,
+  deleteDialogDescription,
+  deleteSuccessMessage,
 }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -342,6 +353,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async () => {
+      if (onDeleteOverride) {
+        await onDeleteOverride(item);
+        return;
+      }
+
       let error;
       if (!canManageFeedItem && !canDeleteOverride) {
         throw new Error(`This beta group cannot delete ${item.type}s.`);
@@ -363,7 +379,10 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       queryClient.invalidateQueries({ queryKey: ['feed-projects'] });
       queryClient.invalidateQueries({ queryKey: ['feed-shows'] });
       onDeleteSuccess?.();
-      toast.success(`${item.type === 'job' ? 'Job' : item.type === 'show' ? 'Show' : item.type.charAt(0).toUpperCase() + item.type.slice(1)} deleted`);
+      toast.success(
+        deleteSuccessMessage ||
+          `${item.type === 'job' ? 'Job' : item.type === 'show' ? 'Show' : item.type.charAt(0).toUpperCase() + item.type.slice(1)} deleted`,
+      );
       setDeleteDialogOpen(false);
     },
     onError: () => {
@@ -414,6 +433,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   };
 
   const handleClick = () => {
+    if (deleteDialogOpen) return;
+
     if (!user && (item.type === 'post' || item.type === 'project')) {
       setShowVisitorAuthPrompt(true);
       return;
@@ -672,6 +693,15 @@ export const FeedItem: React.FC<FeedItemProps> = ({
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {user?.id === item.user_id && (item.type === 'event' || item.type === 'project') && (
+              <div onClick={(event) => event.stopPropagation()}>
+                <ContentAudienceControl
+                  contentType={item.type}
+                  contentId={item.id}
+                  visibility={item.visibility}
+                />
+              </div>
+            )}
             <div className="p-1.5 rounded-full bg-muted">
               {getTypeIcon()}
             </div>
@@ -705,7 +735,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                     onClick={() => setDeleteDialogOpen(true)}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
+                    {deleteActionLabel}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -1282,8 +1312,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDelete}
-        title={`Delete this ${item.type === 'job' ? 'job post' : item.type}?`}
-        description={`This will permanently delete this ${item.type}. This action cannot be undone.`}
+        title={deleteDialogTitle || `Delete this ${item.type === 'job' ? 'job post' : item.type}?`}
+        description={deleteDialogDescription || `This will permanently delete this ${item.type}. This action cannot be undone.`}
         isPending={deleteMutation.isPending}
       />
 

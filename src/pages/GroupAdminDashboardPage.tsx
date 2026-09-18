@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, BarChart3, BookOpen, Check, MailPlus, ShieldCheck, Trash2, Upload, UserPlus, X } from 'lucide-react';
+import { Activity, ArrowLeft, BarChart3, BookOpen, Check, Eye, EyeOff, GraduationCap, MailPlus, Pencil, ShieldCheck, Trash2, Upload, UserPlus, UsersRound, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -50,6 +50,7 @@ interface GroupResource {
   url: string;
   created_by: string | null;
   created_at: string;
+  is_published: boolean;
 }
 
 interface GroupInvite {
@@ -59,6 +60,18 @@ interface GroupInvite {
   membership_status_on_accept: string;
   created_at: string;
   accepted_at: string | null;
+}
+
+interface GroupActivityInsights {
+  active_members: number;
+  pending_requests: number;
+  content_count: number;
+  accepted_invites: number;
+  pending_invites: number;
+  invite_acceptance_percent: number;
+  student_count: number;
+  alumni_count: number;
+  recent_activity_count: number;
 }
 
 const errorMessage = (error: unknown, fallback: string) =>
@@ -100,6 +113,9 @@ const GroupAdminDashboardPage: React.FC = () => {
   const [resourceTitle, setResourceTitle] = useState('');
   const [resourceUrl, setResourceUrl] = useState('');
   const [resourceDescription, setResourceDescription] = useState('');
+  const [resourcePublished, setResourcePublished] = useState(true);
+  const [editingResource, setEditingResource] = useState<GroupResource | null>(null);
+  const [resourcePendingRemoval, setResourcePendingRemoval] = useState<GroupResource | null>(null);
   const [memberInviteEmails, setMemberInviteEmails] = useState('');
   const [memberInviteNote, setMemberInviteNote] = useState('');
   const [adminPendingRemoval, setAdminPendingRemoval] = useState<GroupAdmin | null>(null);
@@ -118,7 +134,8 @@ const GroupAdminDashboardPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['group-dashboard-members', group?.id] });
     queryClient.invalidateQueries({ queryKey: ['group-dashboard-admins', group?.id] });
     queryClient.invalidateQueries({ queryKey: ['group-dashboard-resources', group?.id] });
-    queryClient.invalidateQueries({ queryKey: ['group-dashboard-post-count', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-resources', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-dashboard-insights', group?.id] });
     queryClient.invalidateQueries({ queryKey: ['group-dashboard-invites', group?.id] });
     queryClient.invalidateQueries({ queryKey: ['my-scoped-admin-groups'] });
     queryClient.invalidateQueries({ queryKey: ['my-groups'] });
@@ -185,7 +202,7 @@ const GroupAdminDashboardPage: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('group_resources')
-        .select('id, group_id, title, description, url, created_by, created_at')
+        .select('id, group_id, title, description, url, created_by, created_at, is_published')
         .eq('group_id', group!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -207,16 +224,25 @@ const GroupAdminDashboardPage: React.FC = () => {
     },
   });
 
-  const { data: postCount = 0 } = useQuery({
-    queryKey: ['group-dashboard-post-count', group?.id],
+  const { data: insights } = useQuery<GroupActivityInsights>({
+    queryKey: ['group-dashboard-insights', group?.id],
     enabled: !!group?.id && isScopedAdmin,
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('post_groups')
-        .select('post_id', { count: 'exact', head: true })
-        .eq('group_id', group!.id);
+      const { data, error } = await supabase.rpc('get_group_activity_insights', {
+        _group_id: group!.id,
+      });
       if (error) throw error;
-      return count ?? 0;
+      return (data?.[0] || {
+        active_members: 0,
+        pending_requests: 0,
+        content_count: 0,
+        accepted_invites: 0,
+        pending_invites: 0,
+        invite_acceptance_percent: 0,
+        student_count: 0,
+        alumni_count: 0,
+        recent_activity_count: 0,
+      }) as GroupActivityInsights;
     },
   });
 
@@ -371,26 +397,53 @@ const GroupAdminDashboardPage: React.FC = () => {
     onError: (error) => toast.error(errorMessage(error, 'Failed to update member posting')),
   });
 
-  const createResource = useMutation({
+  const resetResourceForm = () => {
+    setResourceTitle('');
+    setResourceUrl('');
+    setResourceDescription('');
+    setResourcePublished(true);
+    setEditingResource(null);
+  };
+
+  const saveResource = useMutation({
     mutationFn: async () => {
       if (!group || !user) throw new Error('Group not ready');
-      const { error } = await supabase.from('group_resources').insert({
+      const values = {
         group_id: group.id,
         title: resourceTitle.trim(),
         description: resourceDescription.trim(),
         url: resourceUrl.trim(),
-        created_by: user.id,
-      });
+        is_published: resourcePublished,
+      };
+      const { error } = editingResource
+        ? await supabase.from('group_resources').update(values).eq('id', editingResource.id).eq('group_id', group.id)
+        : await supabase.from('group_resources').insert({ ...values, created_by: user.id });
       if (error) throw error;
     },
     onSuccess: () => {
-      setResourceTitle('');
-      setResourceUrl('');
-      setResourceDescription('');
+      const wasEditing = !!editingResource;
+      resetResourceForm();
       invalidateGroupDashboard();
-      toast.success('Resource added');
+      toast.success(wasEditing ? 'Resource updated' : 'Resource added');
     },
-    onError: (error) => toast.error(errorMessage(error, 'Failed to add resource')),
+    onError: (error) => toast.error(errorMessage(error, 'Failed to save resource')),
+  });
+
+  const toggleResourcePublication = useMutation({
+    mutationFn: async (resource: GroupResource) => {
+      const { error } = await supabase
+        .from('group_resources')
+        .update({ is_published: !resource.is_published })
+        .eq('id', resource.id)
+        .eq('group_id', resource.group_id);
+      if (error) throw error;
+      return !resource.is_published;
+    },
+    onSuccess: (published) => {
+      invalidateGroupDashboard();
+      toast.success(published ? 'Resource published' : 'Resource moved to drafts');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to update publication status')),
   });
 
   const deleteResource = useMutation({
@@ -399,6 +452,7 @@ const GroupAdminDashboardPage: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      setResourcePendingRemoval(null);
       invalidateGroupDashboard();
       toast.success('Resource removed');
     },
@@ -614,10 +668,38 @@ const GroupAdminDashboardPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="insights" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <InsightCard icon={UserPlus} label="Active Members" value={activeMembers.length} />
-          <InsightCard icon={ShieldCheck} label="Pending Requests" value={pendingMembers.length} />
-          <InsightCard icon={MailPlus} label="Invited Emails" value={pendingInvites.length} />
-          <InsightCard icon={BarChart3} label="Group Posts" value={postCount} />
+          <InsightCard icon={UserPlus} label="Active Members" value={insights?.active_members ?? 0} />
+          <InsightCard icon={ShieldCheck} label="Pending Requests" value={insights?.pending_requests ?? 0} />
+          <InsightCard
+            icon={BarChart3}
+            label="Department Content"
+            value={insights?.content_count ?? 0}
+            detail="Posts, events, and projects"
+          />
+          <InsightCard
+            icon={MailPlus}
+            label="Invite Acceptance"
+            value={`${insights?.invite_acceptance_percent ?? 0}%`}
+            detail={`${insights?.accepted_invites ?? 0} accepted of ${(insights?.accepted_invites ?? 0) + (insights?.pending_invites ?? 0)}`}
+          />
+          <InsightCard
+            icon={UsersRound}
+            label="Students"
+            value={insights?.student_count ?? 0}
+            detail="Active members"
+          />
+          <InsightCard
+            icon={GraduationCap}
+            label="Alumni"
+            value={insights?.alumni_count ?? 0}
+            detail="Active members"
+          />
+          <InsightCard
+            icon={Activity}
+            label="Recent Activity"
+            value={insights?.recent_activity_count ?? 0}
+            detail="Department activity in the last 30 days"
+          />
         </TabsContent>
 
         <TabsContent value="resources" className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
@@ -634,20 +716,34 @@ const GroupAdminDashboardPage: React.FC = () => {
                 resources.map((resource) => (
                   <div key={resource.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 space-y-1">
-                      <a href={resource.url} target="_blank" rel="noreferrer" className="font-medium hover:underline">
-                        {resource.title}
-                      </a>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <a href={resource.url} target="_blank" rel="noreferrer" className="font-medium hover:underline">
+                          {resource.title}
+                        </a>
+                        <Badge variant={resource.is_published ? 'default' : 'secondary'}>
+                          {resource.is_published ? 'Published' : 'Draft'}
+                        </Badge>
+                      </div>
                       {resource.description && <p className="text-sm text-muted-foreground">{resource.description}</p>}
                       <p className="truncate text-xs text-muted-foreground">{resource.url}</p>
                     </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => deleteResource.mutate(resource.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit resource" onClick={() => {
+                        setEditingResource(resource);
+                        setResourceTitle(resource.title);
+                        setResourceUrl(resource.url);
+                        setResourceDescription(resource.description);
+                        setResourcePublished(resource.is_published);
+                      }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" title={resource.is_published ? 'Unpublish resource' : 'Publish resource'} onClick={() => toggleResourcePublication.mutate(resource)}>
+                        {resource.is_published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="Delete resource" onClick={() => setResourcePendingRemoval(resource)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))
               )}
@@ -656,7 +752,7 @@ const GroupAdminDashboardPage: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Add Resource</CardTitle>
+              <CardTitle className="text-lg">{editingResource ? 'Edit Resource' : 'Add Resource'}</CardTitle>
             </CardHeader>
             <CardContent>
               <form
@@ -664,7 +760,7 @@ const GroupAdminDashboardPage: React.FC = () => {
                 onSubmit={(event) => {
                   event.preventDefault();
                   if (!resourceTitle.trim() || !resourceUrl.trim()) return;
-                  createResource.mutate();
+                  saveResource.mutate();
                 }}
               >
                 <Input value={resourceTitle} onChange={(event) => setResourceTitle(event.target.value)} placeholder="Resource title" />
@@ -675,9 +771,19 @@ const GroupAdminDashboardPage: React.FC = () => {
                   placeholder="Short description"
                   className="min-h-[88px]"
                 />
-                <Button type="submit" className="w-full" disabled={!resourceTitle.trim() || !resourceUrl.trim() || createResource.isPending}>
-                  Add resource
-                </Button>
+                <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                  <div>
+                    <Label htmlFor="resource-published">Published</Label>
+                    <p className="text-xs text-muted-foreground">Members can view this resource.</p>
+                  </div>
+                  <Switch id="resource-published" checked={resourcePublished} onCheckedChange={setResourcePublished} />
+                </div>
+                <div className="flex gap-2">
+                  {editingResource && <Button type="button" variant="outline" className="flex-1" onClick={resetResourceForm}>Cancel</Button>}
+                  <Button type="submit" className="flex-1" disabled={!resourceTitle.trim() || !resourceUrl.trim() || saveResource.isPending}>
+                    {editingResource ? 'Save changes' : 'Add resource'}
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>
@@ -931,6 +1037,18 @@ const GroupAdminDashboardPage: React.FC = () => {
         } from the ${group.name} admin list.`}
         isPending={removeAdmin.isPending}
       />
+      <DeleteConfirmDialog
+        open={!!resourcePendingRemoval}
+        onOpenChange={(open) => {
+          if (!open) setResourcePendingRemoval(null);
+        }}
+        onConfirm={() => {
+          if (resourcePendingRemoval) deleteResource.mutate(resourcePendingRemoval.id);
+        }}
+        title="Delete resource?"
+        description={`This permanently deletes ${resourcePendingRemoval?.title || 'this resource'} from ${group.name}.`}
+        isPending={deleteResource.isPending}
+      />
     </div>
   );
 };
@@ -976,12 +1094,18 @@ const InviteRosterRow: React.FC<{ invite: GroupInvite }> = ({ invite }) => {
   );
 };
 
-const InsightCard: React.FC<{ icon: React.ElementType; label: string; value: number }> = ({ icon: Icon, label, value }) => (
+const InsightCard: React.FC<{
+  icon: React.ElementType;
+  label: string;
+  value: number | string;
+  detail?: string;
+}> = ({ icon: Icon, label, value, detail }) => (
   <Card>
     <CardContent className="flex items-center justify-between p-5">
-      <div>
+      <div className="min-w-0">
         <p className="text-sm text-muted-foreground">{label}</p>
         <p className="mt-1 text-3xl font-semibold">{value}</p>
+        {detail && <p className="mt-1 text-xs text-muted-foreground">{detail}</p>}
       </div>
       <div className="rounded-full bg-primary/10 p-3 text-primary">
         <Icon className="h-5 w-5" />

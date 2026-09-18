@@ -583,7 +583,7 @@ const FeedPage: React.FC = () => {
 
   // Fetch projects (all, including archived for the archive tab)
   const { data: allProjects = [], isLoading: projectsLoading } = useQuery({
-    queryKey: ['feed-projects-all', user?.id ? 'authenticated' : 'visitor'],
+    queryKey: ['feed-projects-all', user?.id || 'visitor'],
     queryFn: async () => {
       let query = supabase
         .from('projects')
@@ -623,7 +623,7 @@ const FeedPage: React.FC = () => {
 
   // Fetch events
   const { data: events = [], isLoading: eventsLoading } = useQuery({
-    queryKey: ['feed-events', user?.id ? 'authenticated' : 'visitor'],
+    queryKey: ['feed-events', user?.id || 'visitor'],
     queryFn: async () => {
       let query = supabase
         .from('events')
@@ -633,7 +633,9 @@ const FeedPage: React.FC = () => {
       if (!user) {
         query = query.eq('visibility', 'public');
       } else {
-        query = query.in('visibility', ['public', 'network', 'specific']);
+        query = query.or(
+          `visibility.in.(public,network,specific),user_id.eq.${user.id}`,
+        );
       }
 
       const { data, error } = await query.limit(100);

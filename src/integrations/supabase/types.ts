@@ -1017,6 +1017,7 @@ export type Database = {
           description: string
           group_id: string
           id: string
+          is_published: boolean
           title: string
           updated_at: string
           url: string
@@ -1027,6 +1028,7 @@ export type Database = {
           description?: string
           group_id: string
           id?: string
+          is_published?: boolean
           title: string
           updated_at?: string
           url: string
@@ -1037,6 +1039,7 @@ export type Database = {
           description?: string
           group_id?: string
           id?: string
+          is_published?: boolean
           title?: string
           updated_at?: string
           url?: string
@@ -3435,6 +3438,20 @@ export type Database = {
           stage_name: string
           user_id: string
           website_url: string
+        }[]
+      }
+      get_group_activity_insights: {
+        Args: { _group_id: string }
+        Returns: {
+          accepted_invites: number
+          active_members: number
+          alumni_count: number
+          content_count: number
+          invite_acceptance_percent: number
+          pending_invites: number
+          pending_requests: number
+          recent_activity_count: number
+          student_count: number
         }[]
       }
       has_role: {
