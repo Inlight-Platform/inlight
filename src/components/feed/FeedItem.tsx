@@ -116,6 +116,8 @@ interface FeedItemProps {
   compactSquare?: boolean;
   onOpenDetails?: (item: FeedItemData) => void;
   onRequireAuth?: (item: FeedItemData, action: 'rsvp' | 'ticket') => void;
+  canDeleteOverride?: boolean;
+  onDeleteSuccess?: () => void;
 }
 
 export const FeedItem: React.FC<FeedItemProps> = ({
@@ -128,6 +130,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   compactSquare = false,
   onOpenDetails,
   onRequireAuth,
+  canDeleteOverride = false,
+  onDeleteSuccess,
 }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -308,7 +312,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       cancelled = true;
     };
   }, [checkoutSessionId, hasTicketSuccess, isPaidEvent, item.id, latestTicket?.status, latestTicket?.stripe_session_id, queryClient, user?.id]);
-  const canDelete = (isOwner || isAdmin) && canManageFeedItem;
+  const canDelete = canDeleteOverride || ((isOwner || isAdmin) && canManageFeedItem);
   const supportsInlineEdit = item.type !== 'show' && item.type !== 'open_role' && item.source !== 'opportunity';
   const canEdit = (isOwner || isAdmin) && supportsInlineEdit && canManageFeedItem; // Shows have their own edit flow
 
@@ -339,7 +343,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const deleteMutation = useMutation({
     mutationFn: async () => {
       let error;
-      if (!canManageFeedItem) {
+      if (!canManageFeedItem && !canDeleteOverride) {
         throw new Error(`This beta group cannot delete ${item.type}s.`);
       }
       if (item.type === 'post' || item.type === 'job') {
@@ -358,6 +362,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       queryClient.invalidateQueries({ queryKey: ['feed-events'] });
       queryClient.invalidateQueries({ queryKey: ['feed-projects'] });
       queryClient.invalidateQueries({ queryKey: ['feed-shows'] });
+      onDeleteSuccess?.();
       toast.success(`${item.type === 'job' ? 'Job' : item.type === 'show' ? 'Show' : item.type.charAt(0).toUpperCase() + item.type.slice(1)} deleted`);
       setDeleteDialogOpen(false);
     },
@@ -651,6 +656,11 @@ export const FeedItem: React.FC<FeedItemProps> = ({
                 {displayName}
               </span>
               <span className="text-muted-foreground text-sm">{getTypeLabel()}</span>
+              {isGroupAuthored && (
+                <Badge variant="secondary" className="text-xs">
+                  Department
+                </Badge>
+              )}
               {networkDegree && !showAnonymous && (
                 <Badge variant="secondary" className={`text-xs ${getDegreeColor()}`}>
                   {networkDegree}

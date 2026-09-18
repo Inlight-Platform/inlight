@@ -1058,6 +1058,7 @@ export type Database = {
           faculty_owner_id: string | null
           id: string
           is_listed: boolean
+          members_can_post: boolean
           name: string
           slug: string
           updated_at: string
@@ -1068,6 +1069,7 @@ export type Database = {
           faculty_owner_id?: string | null
           id?: string
           is_listed?: boolean
+          members_can_post?: boolean
           name: string
           slug: string
           updated_at?: string
@@ -1078,6 +1080,7 @@ export type Database = {
           faculty_owner_id?: string | null
           id?: string
           is_listed?: boolean
+          members_can_post?: boolean
           name?: string
           slug?: string
           updated_at?: string
@@ -3291,6 +3294,12 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_group_active_admin_user_ids: {
+        Args: { _group_id: string }
+        Returns: {
+          user_id: string
+        }[]
+      }
       get_message_privacy: { Args: { target_user_id: string }; Returns: string }
       get_mutual_connections: {
         Args: { target_user_id: string }
@@ -3449,6 +3458,10 @@ export type Database = {
         Returns: boolean
       }
       remove_group_admin: { Args: { _admin_id: string }; Returns: undefined }
+      update_group_member_posting: {
+        Args: { _group_id: string; _members_can_post: boolean }
+        Returns: undefined
+      }
       mark_show_attended: { Args: { _show_id: string }; Returns: undefined }
       update_profile_pronouns_settings: {
         Args: { _pronouns: string; _show_pronouns: boolean }

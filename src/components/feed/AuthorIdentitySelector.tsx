@@ -53,7 +53,7 @@ export const AuthorIdentitySelector: React.FC<AuthorIdentitySelectorProps> = ({
         <SelectItem value="personal">{personalLabel}</SelectItem>
         {availableGroups.map((group) => (
           <SelectItem key={group.id} value={`group:${group.id}`}>
-            Group admin of {group.name}
+            Department admin of {group.name}
           </SelectItem>
         ))}
       </SelectContent>

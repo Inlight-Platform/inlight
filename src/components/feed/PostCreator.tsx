@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -32,6 +32,7 @@ import {
   omitFeedImageColumn,
 } from '@/lib/feedImagePayload';
 import type { Database } from '@/integrations/supabase/types';
+import { cn } from '@/lib/utils';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
 type EventVisibility = PostVisibility;
@@ -48,6 +49,9 @@ interface PostCreatorProps {
   defaultOpen?: boolean;
   defaultPostType?: PostType;
   defaultGroupId?: string | null;
+  groupOnly?: boolean;
+  compact?: boolean;
+  onCreated?: () => void;
   onClose?: () => void;
 }
 
@@ -78,7 +82,16 @@ const insertWithImageColumnFallback = async <TPayload extends InsertableFeedImag
   throw new Error('Unable to create post with the available image fields.');
 };
 
-export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOpen = false, defaultPostType = 'update', defaultGroupId = null, onClose }) => {
+export const PostCreator: React.FC<PostCreatorProps> = ({
+  userProfile,
+  defaultOpen = false,
+  defaultPostType = 'update',
+  defaultGroupId = null,
+  groupOnly = false,
+  compact = false,
+  onCreated,
+  onClose,
+}) => {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const navigate = useNavigate();
@@ -111,24 +124,31 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [ticketPrice, setTicketPrice] = useState('');
   const [serviceCategory, setServiceCategory] = useState<string>('');
   const canCreatePaidEvents = isAdmin;
+  const openProjectCreator = useCallback(() => {
+    navigate('/projects/new', {
+      state: groupOnly && defaultGroupId
+        ? { lockedGroupId: defaultGroupId, returnTo: window.location.pathname }
+        : undefined,
+    });
+    onClose?.();
+  }, [defaultGroupId, groupOnly, navigate, onClose]);
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
   useEffect(() => {
     setPostType(defaultPostType);
     if (defaultPostType === 'project') {
-      navigate('/projects/new');
-      onClose?.();
+      openProjectCreator();
     }
-  }, [defaultPostType, navigate, onClose]);
+  }, [defaultPostType, openProjectCreator]);
 
   useEffect(() => {
-    if (defaultGroupId && (defaultPostType === 'update' || defaultPostType === 'event' || defaultPostType === 'job')) {
+    if (defaultGroupId && (groupOnly || defaultPostType === 'update' || defaultPostType === 'event' || defaultPostType === 'job')) {
       setVisibility('group');
       setEventVisibility('group');
       setSelectedGroupId(defaultGroupId);
       setSelectedRecipients([]);
     }
-  }, [defaultGroupId, defaultPostType]);
+  }, [defaultGroupId, defaultPostType, groupOnly]);
 
   useEffect(() => {
     if (!canCreatePaidEvents && isPaid) {
@@ -166,12 +186,12 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setLinkTitle('');
     setCustomQuestion('');
     setPostType('update');
-    setVisibility('public');
-    setEventVisibility('public');
+    setVisibility(groupOnly ? 'group' : 'public');
+    setEventVisibility(groupOnly ? 'group' : 'public');
     setAuthorIdentityMode('personal');
     setAuthorGroupId(null);
     setSelectedRecipients([]);
-    setSelectedGroupId(null);
+    setSelectedGroupId(groupOnly ? defaultGroupId : null);
     setImagePositions([]);
     setIsPaid(false);
     setTicketPrice('');
@@ -241,7 +261,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           const { error: gErr } = await supabase
             .from('post_groups' as never)
             .insert({ post_id: postData.id, group_id: selectedGroupId });
-          if (gErr) console.error('Failed to tag post group:', gErr);
+          if (gErr) throw gErr;
         }
       } else if (postType === 'event') {
         // Convert datetime-local to ISO format for Supabase
@@ -290,7 +310,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           const { error: gErr } = await supabase
             .from('event_groups' as never)
             .insert({ event_id: eventData.id, group_id: selectedGroupId });
-          if (gErr) console.error('Failed to tag event group:', gErr);
+          if (gErr) throw gErr;
         }
 
         if (canCreatePaidEvents && isPaid && parsedPrice && eventData?.id && !paymentLinkUrl) {
@@ -336,7 +356,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           const { error: gErr } = await supabase
             .from('post_groups' as never)
             .insert({ post_id: jobData.id, group_id: selectedGroupId });
-          if (gErr) console.error('Failed to tag post group:', gErr);
+          if (gErr) throw gErr;
         }
       }
     },
@@ -351,6 +371,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
         postType === 'event' ? 'Event created!' : 
         'Opportunity posted!'
       );
+      onCreated?.();
       onClose?.();
     },
     onError: (error: Error) => {
@@ -423,21 +444,22 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     const newType = value as PostType;
     setPostType(newType);
     if (newType === 'project') {
-      navigate('/projects/new');
-      onClose?.();
+      openProjectCreator();
     }
   };
 
   if (!user) return null;
 
   const eventValidationMessage = getEventValidationMessage();
-  const authorGroups = myScopedAdminGroups;
-  const targetGroups = defaultGroupId ? myGroups : myScopedAdminGroups;
+  const authorGroups = myScopedAdminGroups.filter((group) => !groupOnly || group.id === defaultGroupId);
+  const targetGroups = myGroups.filter(
+    (group) => (group.is_faculty || group.members_can_post) && (!groupOnly || group.id === defaultGroupId)
+  );
   return (
     <>
       <Card className="bg-card border-border">
         <CardContent className="p-4">
-          <div className="flex gap-3">
+          <div className={cn('flex gap-3', compact && 'flex-col')}>
             <Avatar className="h-10 w-10 flex-shrink-0">
               <AvatarImage src={userProfile?.avatar_url || undefined} />
               <AvatarFallback>{userProfile?.display_name?.[0] || 'U'}</AvatarFallback>
@@ -448,19 +470,19 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="update" className="flex items-center gap-1.5">
                     <MessageSquare className="h-4 w-4" />
-                    <span className="hidden sm:inline">Service</span>
+                    <span className={cn('hidden sm:inline', compact && 'sr-only')}>Service</span>
                   </TabsTrigger>
                   <TabsTrigger value="event" className="flex items-center gap-1.5">
                     <Calendar className="h-4 w-4" />
-                    <span className="hidden sm:inline">Event</span>
+                    <span className={cn('hidden sm:inline', compact && 'sr-only')}>Event</span>
                   </TabsTrigger>
                   <TabsTrigger value="job" className="flex items-center gap-1.5">
                     <Briefcase className="h-4 w-4" />
-                    <span className="hidden sm:inline">Opportunity</span>
+                    <span className={cn('hidden sm:inline', compact && 'sr-only')}>Opportunity</span>
                   </TabsTrigger>
                   <TabsTrigger value="project" className="flex items-center gap-1.5">
                     <Film className="h-4 w-4" />
-                    <span className="hidden sm:inline">Project</span>
+                    <span className={cn('hidden sm:inline', compact && 'sr-only')}>Project</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -535,7 +557,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
                   {/* Event-specific fields */}
                   {postType === 'event' && (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className={cn('grid grid-cols-2 gap-3', compact && 'grid-cols-1')}>
                       <div className="space-y-1.5">
                         <label className="text-sm text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />
@@ -688,7 +710,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                               const zoom = pos.zoom ?? 1;
 
                               return (
-                                <div key={url} className="flex-none w-full relative h-64">
+                                <div key={url} className={cn('flex-none w-full relative h-64', compact && 'h-44')}>
                                   <div
                                     style={{
                                       position: 'absolute',
@@ -805,7 +827,14 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   )}
 
                   {/* Audience Selector */}
-                  {(postType === 'update' || postType === 'event' || postType === 'job') && (
+                  {(postType === 'update' || postType === 'event' || postType === 'job') && (groupOnly ? (
+                    <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {targetGroups.find((group) => group.id === defaultGroupId)?.name || 'Department'} only
+                      </span>
+                    </div>
+                  ) : (
                     <AudienceSelector
                       visibility={postType === 'event' ? eventVisibility : visibility}
                       onVisibilityChange={(nextVisibility) => {
@@ -822,7 +851,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                       selectedGroupId={selectedGroupId}
                       onSelectedGroupChange={setSelectedGroupId}
                     />
-                  )}
+                  ))}
 
                   <div className="flex items-center justify-between">
                     <ImageUploader
@@ -882,7 +911,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   <p className="text-sm text-muted-foreground mb-3">
                     Create a project to collaborate with your team
                   </p>
-                  <Button onClick={() => { navigate('/projects/new'); onClose?.(); }}>
+                  <Button onClick={openProjectCreator}>
                     <Film className="h-4 w-4 mr-2" />
                     Create New Project
                   </Button>

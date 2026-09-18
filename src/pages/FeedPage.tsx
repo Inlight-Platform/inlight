@@ -359,6 +359,9 @@ const FeedPage: React.FC = () => {
   const selectedGroup = selectedGroupId
     ? myGroups.find((group) => group.id === selectedGroupId) || null
     : null;
+  const canPostToSelectedGroup = !!selectedGroup && (
+    selectedGroup.is_faculty || selectedGroup.members_can_post
+  );
 
   useEffect(() => {
     if (groupsLoading || !selectedGroupId || selectedGroup) return;
@@ -1408,7 +1411,7 @@ const FeedPage: React.FC = () => {
                           <p className="text-sm text-muted-foreground">Private feed for {selectedGroup.name} members.</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          {user && (
+                          {user && canPostToSelectedGroup && (
                             <Button size="sm" onClick={() => { setComposePostType('update'); setShowPostCreator(true); }} className={`gap-2 ${navVioletButtonClass}`}>
                               <Plus className="h-4 w-4" />
                               Post
@@ -1428,7 +1431,7 @@ const FeedPage: React.FC = () => {
                       ) : groupFeedItems.length === 0 ? (
                         <div className="text-center py-12">
                           <p className="text-muted-foreground">No posts, events, or projects in {selectedGroup.name} yet.</p>
-                          {user && (
+                          {user && canPostToSelectedGroup && (
                             <Button onClick={() => { setComposePostType('update'); setShowPostCreator(true); }} className={`mt-4 gap-2 ${navVioletButtonClass}`}>
                               <Plus className="h-4 w-4" />
                               Create the first post

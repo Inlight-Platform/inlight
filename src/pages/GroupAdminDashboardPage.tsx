@@ -353,6 +353,24 @@ const GroupAdminDashboardPage: React.FC = () => {
     onError: (error) => toast.error(errorMessage(error, 'Failed to update directory listing')),
   });
 
+  const updateMemberPosting = useMutation({
+    mutationFn: async (membersCanPost: boolean) => {
+      if (!group) throw new Error('Group not ready');
+      const { error } = await supabase.rpc('update_group_member_posting', {
+        _group_id: group.id,
+        _members_can_post: membersCanPost,
+      });
+      if (error) throw error;
+      return membersCanPost;
+    },
+    onSuccess: (membersCanPost) => {
+      queryClient.invalidateQueries({ queryKey: ['group-by-slug', group?.slug] });
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      toast.success(membersCanPost ? 'Member posting enabled' : 'Member posting disabled');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to update member posting')),
+  });
+
   const createResource = useMutation({
     mutationFn: async () => {
       if (!group || !user) throw new Error('Group not ready');
@@ -518,6 +536,28 @@ const GroupAdminDashboardPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="verification" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <ShieldCheck className="h-5 w-5" /> Member Posting
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center justify-between gap-4">
+              <div>
+                <Label htmlFor="group-member-posting">Allow members to post</Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Let active members share services, events, opportunities, and projects with this department.
+                </p>
+              </div>
+              <Switch
+                id="group-member-posting"
+                checked={group.members_can_post}
+                disabled={updateMemberPosting.isPending}
+                onCheckedChange={(checked) => updateMemberPosting.mutate(checked)}
+              />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
