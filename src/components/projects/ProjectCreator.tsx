@@ -113,6 +113,7 @@ export const ProjectCreator: React.FC<ProjectCreatorProps> = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-projects-all'] });
       setTitle('');
       setDescription('');
       setMainImageUrl('');

@@ -71,14 +71,21 @@ interface GroupProjectLink {
     status: string | null;
     link_url: string | null;
     link_title: string | null;
+    visibility?: string | null;
+    author_identity?: string | null;
+    author_group_id?: string | null;
   } | null;
+}
+
+interface GroupEventLink {
+  events: EventRow | null;
 }
 
 type EventRow = Database['public']['Tables']['events']['Row'];
 
 const mapEventToFeedItem = (
   event: EventRow,
-  creatorProfile?: { user_id: string; display_name: string | null; avatar_url: string | null },
+  creatorProfile?: { display_name: string | null; avatar_url: string | null },
 ): FeedItemData => ({
   id: event.id,
   slug: event.slug,
@@ -101,6 +108,8 @@ const mapEventToFeedItem = (
   stripe_price_id: event.stripe_price_id,
   payment_link_url: event.payment_link_url,
   visibility: event.visibility,
+  author_identity: event.author_identity,
+  author_group_id: event.author_group_id,
   image_position_x: event.image_position_x,
   image_position_y: event.image_position_y,
   image_zoom: event.image_zoom,
@@ -141,6 +150,25 @@ const fetchPublicProfileMap = async (userIds: string[]) => {
   }
 
   return new Map((fallbackProfiles || []).map((profile) => [profile.user_id, profile]));
+};
+
+const fetchGroupProfileMap = async (groupIds: string[]) => {
+  const uniqueGroupIds = [...new Set(groupIds)].filter(Boolean);
+  if (!uniqueGroupIds.length) {
+    return new Map<string, { display_name: string | null; avatar_url: string | null }>();
+  }
+
+  const { data, error } = await supabase
+    .from('groups')
+    .select('id, name')
+    .in('id', uniqueGroupIds);
+
+  if (error) throw error;
+
+  return new Map((data || []).map((group) => [group.id, {
+    display_name: group.name,
+    avatar_url: null,
+  }]));
 };
 
 const compareEventsBySchedule = <T extends { event_date?: string | null; created_at: string }>(a: T, b: T) => {
@@ -331,6 +359,9 @@ const FeedPage: React.FC = () => {
   const selectedGroup = selectedGroupId
     ? myGroups.find((group) => group.id === selectedGroupId) || null
     : null;
+  const canPostToSelectedGroup = !!selectedGroup && (
+    selectedGroup.is_faculty || selectedGroup.members_can_post
+  );
 
   useEffect(() => {
     if (groupsLoading || !selectedGroupId || selectedGroup) return;
@@ -353,13 +384,19 @@ const FeedPage: React.FC = () => {
         .map((link) => link.posts)
         .filter((post): post is FeedItemData & { user_id: string; created_at: string } => Boolean(post));
       const uids = [...new Set(rows.map((p) => p.user_id))];
-      if (!uids.length) return [] as FeedItemData[];
       const map = await fetchPublicProfileMap(uids);
+      const groupProfileMap = await fetchGroupProfileMap(
+        rows
+          .filter((p) => p.author_identity === 'group' && p.author_group_id)
+          .map((p) => p.author_group_id!)
+      );
       return rows
         .map((p) => ({
           ...p,
           type: 'post' as const,
-          creator_profile: map.get(p.user_id),
+          creator_profile: p.author_identity === 'group' && p.author_group_id
+            ? groupProfileMap.get(p.author_group_id)
+            : map.get(p.user_id),
         }))
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as FeedItemData[];
     },
@@ -379,8 +416,12 @@ const FeedPage: React.FC = () => {
         .map((link) => link.projects)
         .filter((project): project is NonNullable<GroupProjectLink['projects']> => Boolean(project));
       const uids = [...new Set(rows.map((p) => p.creator_id))];
-      if (!uids.length) return [] as FeedItemData[];
       const map = await fetchPublicProfileMap(uids);
+      const groupProfileMap = await fetchGroupProfileMap(
+        rows
+          .filter((project) => project.author_identity === 'group' && project.author_group_id)
+          .map((project) => project.author_group_id!)
+      );
       return rows
         .map((p) => ({
           id: p.id,
@@ -394,9 +435,43 @@ const FeedPage: React.FC = () => {
           project_status: p.status,
           link_url: p.link_url,
           link_title: p.link_title,
-          creator_profile: map.get(p.creator_id),
+          visibility: p.visibility ?? undefined,
+          author_identity: p.author_identity ?? undefined,
+          author_group_id: p.author_group_id ?? undefined,
+          creator_profile: p.author_identity === 'group' && p.author_group_id
+            ? groupProfileMap.get(p.author_group_id)
+            : map.get(p.creator_id),
         }))
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as FeedItemData[];
+    },
+  });
+
+  // Fetch events tagged to the selected group (for the group tab)
+  const { data: groupEvents = [], isLoading: groupEventsLoading, isError: groupEventsError } = useQuery({
+    queryKey: ['feed-group-events', selectedGroup?.id],
+    enabled: !!selectedGroup?.id,
+    queryFn: async () => {
+      const { data: links, error } = await supabase
+        .from('event_groups' as never)
+        .select('event_id, events(*)')
+        .eq('group_id', selectedGroup!.id);
+      if (error) throw error;
+      const rows = ((links || []) as unknown as GroupEventLink[])
+        .map((link) => link.events)
+        .filter((event): event is EventRow => Boolean(event));
+      const uids = [...new Set(rows.map((event) => event.user_id))];
+      const map = await fetchPublicProfileMap(uids);
+      const groupProfileMap = await fetchGroupProfileMap(
+        rows
+          .filter((event) => event.author_identity === 'group' && event.author_group_id)
+          .map((event) => event.author_group_id!)
+      );
+      return sortEventsBySchedule(rows.map((event) => mapEventToFeedItem(
+        event,
+        event.author_identity === 'group' && event.author_group_id
+          ? groupProfileMap.get(event.author_group_id)
+          : map.get(event.user_id)
+      )));
     },
   });
 
@@ -484,13 +559,20 @@ const FeedPage: React.FC = () => {
       if (error) throw error;
 
       const profileMap = await fetchPublicProfileMap(data.map((p) => p.user_id));
+      const groupProfileMap = await fetchGroupProfileMap(
+        data
+          .filter((post) => post.author_identity === 'group' && post.author_group_id)
+          .map((post) => post.author_group_id!)
+      );
 
       return data.map((post) => ({
         ...post,
         type: 'post' as const,
         visibility: post.visibility,
         image_zoom: post.image_zoom ?? 1,
-        creator_profile: profileMap.get(post.user_id)
+        creator_profile: post.author_identity === 'group' && post.author_group_id
+          ? groupProfileMap.get(post.author_group_id)
+          : profileMap.get(post.user_id)
       }));
     },
     placeholderData: keepPreviousData,
@@ -501,7 +583,7 @@ const FeedPage: React.FC = () => {
 
   // Fetch projects (all, including archived for the archive tab)
   const { data: allProjects = [], isLoading: projectsLoading } = useQuery({
-    queryKey: ['feed-projects-all', user?.id ? 'authenticated' : 'visitor'],
+    queryKey: ['feed-projects-all', user?.id || 'visitor'],
     queryFn: async () => {
       let query = supabase
         .from('projects')
@@ -516,10 +598,21 @@ const FeedPage: React.FC = () => {
       if (error) throw error;
 
       const profileMap = await fetchPublicProfileMap(data.map((p) => p.creator_id));
+      const groupProfileMap = await fetchGroupProfileMap(
+        data
+          .filter((project) => project.author_identity === 'group' && project.author_group_id)
+          .map((project) => project.author_group_id!)
+      );
 
       return data.map((project) => ({
         ...project,
-        creator_profile: profileMap.get(project.creator_id)
+        user_id: project.creator_id,
+        visibility: project.visibility,
+        author_identity: project.author_identity,
+        author_group_id: project.author_group_id,
+        creator_profile: project.author_identity === 'group' && project.author_group_id
+          ? groupProfileMap.get(project.author_group_id)
+          : profileMap.get(project.creator_id)
       }));
     },
     placeholderData: keepPreviousData,
@@ -530,7 +623,7 @@ const FeedPage: React.FC = () => {
 
   // Fetch events
   const { data: events = [], isLoading: eventsLoading } = useQuery({
-    queryKey: ['feed-events', user?.id ? 'authenticated' : 'visitor'],
+    queryKey: ['feed-events', user?.id || 'visitor'],
     queryFn: async () => {
       let query = supabase
         .from('events')
@@ -540,15 +633,27 @@ const FeedPage: React.FC = () => {
       if (!user) {
         query = query.eq('visibility', 'public');
       } else {
-        query = query.in('visibility', ['public', 'network', 'specific']);
+        query = query.or(
+          `visibility.in.(public,network,specific),user_id.eq.${user.id}`,
+        );
       }
 
       const { data, error } = await query.limit(100);
       if (error) throw error;
 
       const profileMap = await fetchPublicProfileMap(data.map((e) => e.user_id));
+      const groupProfileMap = await fetchGroupProfileMap(
+        data
+          .filter((event) => event.author_identity === 'group' && event.author_group_id)
+          .map((event) => event.author_group_id!)
+      );
 
-      return sortEventsBySchedule(data.map((event) => mapEventToFeedItem(event, profileMap.get(event.user_id))));
+      return sortEventsBySchedule(data.map((event) => mapEventToFeedItem(
+        event,
+        event.author_identity === 'group' && event.author_group_id
+          ? groupProfileMap.get(event.author_group_id)
+          : profileMap.get(event.user_id)
+      )));
     },
     placeholderData: keepPreviousData,
     retry: 1,
@@ -572,7 +677,15 @@ const FeedPage: React.FC = () => {
       if (!data) return null;
 
       const profileMap = await fetchPublicProfileMap([data.user_id]);
-      return mapEventToFeedItem(data, profileMap.get(data.user_id));
+      const groupProfileMap = await fetchGroupProfileMap(
+        data.author_identity === 'group' && data.author_group_id ? [data.author_group_id] : []
+      );
+      return mapEventToFeedItem(
+        data,
+        data.author_identity === 'group' && data.author_group_id
+          ? groupProfileMap.get(data.author_group_id)
+          : profileMap.get(data.user_id)
+      );
     },
     enabled: !!routeEventIdentifier,
   });
@@ -790,6 +903,9 @@ const FeedPage: React.FC = () => {
       project_status: project.status,
       link_url: project.link_url,
       link_title: project.link_title,
+      visibility: project.visibility,
+      author_identity: project.author_identity,
+      author_group_id: project.author_group_id,
       creator_profile: project.creator_profile,
     }));
 
@@ -846,6 +962,9 @@ const FeedPage: React.FC = () => {
       project_status: project.status,
       link_url: project.link_url,
       link_title: project.link_title,
+      visibility: project.visibility,
+      author_identity: project.author_identity,
+      author_group_id: project.author_group_id,
       creator_profile: project.creator_profile
     }));
   }, [activeProjects]);
@@ -1282,10 +1401,10 @@ const FeedPage: React.FC = () => {
                       </div>
                     );
                   }
-                  const groupFeedItems = [...groupPosts, ...groupProjects]
-                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-                  const isGroupLoading = groupPostsLoading || groupProjectsLoading;
-                  const isGroupError = groupPostsError || groupProjectsError;
+                  const groupFeedItems = [...groupPosts, ...groupProjects, ...groupEvents]
+                    .sort(compareFeedItemsForDisplay);
+                  const isGroupLoading = groupPostsLoading || groupProjectsLoading || groupEventsLoading;
+                  const isGroupError = groupPostsError || groupProjectsError || groupEventsError;
                   return (
                     <>
                       <div className="flex items-center justify-between">
@@ -1294,7 +1413,7 @@ const FeedPage: React.FC = () => {
                           <p className="text-sm text-muted-foreground">Private feed for {selectedGroup.name} members.</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          {user && (
+                          {user && canPostToSelectedGroup && (
                             <Button size="sm" onClick={() => { setComposePostType('update'); setShowPostCreator(true); }} className={`gap-2 ${navVioletButtonClass}`}>
                               <Plus className="h-4 w-4" />
                               Post
@@ -1313,8 +1432,8 @@ const FeedPage: React.FC = () => {
                         <p className="text-center text-muted-foreground py-12">Unable to load this private group feed.</p>
                       ) : groupFeedItems.length === 0 ? (
                         <div className="text-center py-12">
-                          <p className="text-muted-foreground">No posts or projects in {selectedGroup.name} yet.</p>
-                          {user && (
+                          <p className="text-muted-foreground">No posts, events, or projects in {selectedGroup.name} yet.</p>
+                          {user && canPostToSelectedGroup && (
                             <Button onClick={() => { setComposePostType('update'); setShowPostCreator(true); }} className={`mt-4 gap-2 ${navVioletButtonClass}`}>
                               <Plus className="h-4 w-4" />
                               Create the first post

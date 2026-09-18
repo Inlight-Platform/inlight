@@ -117,6 +117,7 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({ onClose }) => {
     },
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['projects-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-projects-all'] });
       queryClient.invalidateQueries({ queryKey: ['my-projects'] });
       toast.success('Project created! Invitations sent to team members.');
       onClose();

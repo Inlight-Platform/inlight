@@ -68,8 +68,24 @@ vi.mock('@/components/feed/FeedSurvey', () => ({
 
 vi.mock('@/integrations/supabase/client', () => {
   const posts = [
-    { id: 'p1', content: 'Visible Post', user_id: 'u1', visibility: 'public', created_at: '2026-01-02T00:00:00Z' },
-    { id: 'p2', content: 'Orphan Post', user_id: 'missing', visibility: 'public', created_at: '2026-01-01T00:00:00Z' },
+    {
+      id: 'p1',
+      content: 'Visible Post',
+      user_id: 'u1',
+      visibility: 'public',
+      author_identity: 'personal',
+      author_group_id: null,
+      created_at: '2026-01-02T00:00:00Z',
+    },
+    {
+      id: 'p2',
+      content: 'Orphan Post',
+      user_id: 'missing',
+      visibility: 'public',
+      author_identity: 'personal',
+      author_group_id: null,
+      created_at: '2026-01-01T00:00:00Z',
+    },
   ];
   const groupPostLinks = [
     {
@@ -79,6 +95,8 @@ vi.mock('@/integrations/supabase/client', () => {
         content: 'Private Group Post',
         user_id: 'u1',
         visibility: 'group',
+        author_identity: 'personal',
+        author_group_id: null,
         created_at: '2026-01-03T00:00:00Z',
       },
     },
@@ -104,8 +122,11 @@ vi.mock('@/integrations/supabase/client', () => {
           limit: vi.fn(resolve),
           in: vi.fn(() => chain),
           eq: vi.fn(() => chain),
+          or: vi.fn(() => chain),
           maybeSingle: vi.fn(async () => ({ data: null, error: null })),
           update: vi.fn(() => chain),
+          insert: vi.fn(() => chain),
+          delete: vi.fn(() => chain),
         };
         chain.then = (...args: Parameters<Promise<unknown>['then']>) => resolve().then(...args);
         chain.catch = (...args: Parameters<Promise<unknown>['catch']>) => resolve().catch(...args);

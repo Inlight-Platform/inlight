@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, Sparkles, Network, Sun, Moon, MessageSquare, UserRound, MoreHorizontal, Ticket } from 'lucide-react';
+import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, ShieldCheck, Sparkles, Network, Sun, Moon, MessageSquare, UserRound, MoreHorizontal, Ticket } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useMyScopedAdminGroups } from '@/hooks/useGroups';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useQuery } from '@tanstack/react-query';
@@ -46,7 +47,7 @@ const InlightHomeIcon: React.FC<{className?: string;}> = ({ className }) =>
 
 const navItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
-{ label: 'People', icon: UserRound, path: '/people' },
+{ label: 'Community', icon: UserRound, path: '/people' },
 { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
 { label: 'My Tickets', icon: Ticket, path: '/tickets' },
 { label: 'Industry Now', icon: Theater, path: '/stage-whisper' },
@@ -55,7 +56,7 @@ const navItems: NavItem[] = [
 
 const mobileNavItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
-{ label: 'People', icon: UserRound, path: '/people' },
+{ label: 'Community', icon: UserRound, path: '/people' },
 { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
 { label: 'Industry', icon: Theater, path: '/stage-whisper' }];
 
@@ -64,12 +65,20 @@ export const MainNav: React.FC = () => {
   const settingsReturnTo = `${location.pathname}${location.search}${location.hash}`;
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
+  const { data: scopedAdminGroups = [] } = useMyScopedAdminGroups();
   const { collapsed, setCollapsed, toggleCollapsed } = useSidebarState();
   const { totalUnread } = useMessages();
   const { unreadCount: notifUnreadCount } = useNotifications();
   const combinedUnread = notifUnreadCount + totalUnread;
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const { isDark, toggleTheme } = useTheme();
+  const primaryGroupAdminGroup = scopedAdminGroups[0];
+  const groupAdminDashboardPath = primaryGroupAdminGroup
+    ? scopedAdminGroups.length === 1
+      ? `/groups/${primaryGroupAdminGroup.slug}/dashboard`
+      : '/groups/admin'
+    : null;
+  const groupAdminDashboardLabel = primaryGroupAdminGroup ? 'Department Admin' : null;
 
   useEffect(() => {
     setCollapsed(!user);
@@ -328,6 +337,21 @@ export const MainNav: React.FC = () => {
                       <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">Admin</TooltipContent>
                     </Tooltip>
               }
+                  {groupAdminDashboardPath && groupAdminDashboardLabel &&
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link
+                        to={groupAdminDashboardPath}
+                        state={{ adminGroups: scopedAdminGroups }}
+                        className="flex items-center justify-center py-3 rounded-xl text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)] transition-colors">
+                        <ShieldCheck className="w-5 h-5" />
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="bg-[hsl(222_30%_12%)] border-[hsl(45_95%_58%/0.2)] text-white">
+                      {groupAdminDashboardLabel}
+                    </TooltipContent>
+                  </Tooltip>
+                  }
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
@@ -380,6 +404,16 @@ export const MainNav: React.FC = () => {
                       Admin
                     </Link>
               }
+                  {groupAdminDashboardPath && groupAdminDashboardLabel &&
+                  <Link
+                    to={groupAdminDashboardPath}
+                    state={{ adminGroups: scopedAdminGroups }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(45_95%_58%)] hover:bg-[hsl(45_95%_58%/0.1)] transition-colors">
+
+                    <ShieldCheck className="w-5 h-5" />
+                    <span className="truncate">{groupAdminDashboardLabel}</span>
+                  </Link>
+                  }
                   <button
                 onClick={() => setShowSignOutDialog(true)}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[hsl(220_15%_60%)] hover:bg-[hsl(0_75%_55%/0.1)] hover:text-[hsl(0_75%_60%)] transition-colors">
@@ -565,6 +599,14 @@ export const MainNav: React.FC = () => {
                   <Link to="/admin">
                     <Shield className="w-4 h-4" />
                     <span>Admin</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {groupAdminDashboardPath && groupAdminDashboardLabel && (
+                <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5 text-[hsl(45_95%_58%)]">
+                  <Link to={groupAdminDashboardPath} state={{ adminGroups: scopedAdminGroups }}>
+                    <ShieldCheck className="w-4 h-4" />
+                    <span className="truncate">{groupAdminDashboardLabel}</span>
                   </Link>
                 </DropdownMenuItem>
               )}
