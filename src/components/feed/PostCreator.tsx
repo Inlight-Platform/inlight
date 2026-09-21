@@ -41,6 +41,26 @@ type PostInsert = Database['public']['Tables']['posts']['Insert'];
 type EventInsert = Database['public']['Tables']['events']['Insert'];
 type InsertableFeedImagePayload = PostInsert | EventInsert;
 
+const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
+  const context = (error as { context?: Response })?.context;
+
+  if (context) {
+    try {
+      const body = await context.clone().json() as { error?: string; message?: string };
+      if (body.error || body.message) return body.error || body.message || fallback;
+    } catch {
+      try {
+        const text = await context.clone().text();
+        if (text.trim()) return text.trim();
+      } catch {
+        // Fall through to the client error message.
+      }
+    }
+  }
+
+  return (error as { message?: string })?.message || fallback;
+};
+
 interface PostCreatorProps {
   userProfile?: {
     display_name: string | null;
@@ -123,7 +143,14 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
   const [isPaid, setIsPaid] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
   const [serviceCategory, setServiceCategory] = useState<string>('');
-  const canCreatePaidEvents = isAdmin;
+  const isScopedAdminForSelectedGroup = myScopedAdminGroups.some(
+    (group) => group.id === selectedGroupId,
+  );
+  const canCreatePaidEvents = isAdmin || (
+    eventVisibility === 'group' &&
+    !!selectedGroupId &&
+    isScopedAdminForSelectedGroup
+  );
   const openProjectCreator = useCallback(() => {
     navigate('/projects/new', {
       state: groupOnly && defaultGroupId
@@ -323,7 +350,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
           });
 
           if (priceError) {
+            const message = await getFunctionErrorMessage(priceError, 'Unable to configure paid checkout');
             console.error('Stripe price creation error:', priceError);
+            return { warning: `Event created, but paid checkout setup failed: ${message}` };
           }
         }
       } else if (postType === 'job') {
@@ -360,17 +389,21 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       resetForm();
       queryClient.invalidateQueries({ queryKey: ['feed-posts'] });
       queryClient.invalidateQueries({ queryKey: ['feed-group-posts'] });
       queryClient.invalidateQueries({ queryKey: ['feed-group-events'] });
       queryClient.invalidateQueries({ queryKey: ['feed-events'] });
-      toast.success(
-        postType === 'update' ? 'Post created!' : 
-        postType === 'event' ? 'Event created!' : 
-        'Opportunity posted!'
-      );
+      if (result?.warning) {
+        toast.warning(result.warning);
+      } else {
+        toast.success(
+          postType === 'update' ? 'Post created!' :
+          postType === 'event' ? 'Event created!' :
+          'Opportunity posted!'
+        );
+      }
       onCreated?.();
       onClose?.();
     },

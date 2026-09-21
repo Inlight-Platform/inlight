@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, BookOpen, ExternalLink, Users, Trash2, Globe, Lock, Shield, MailPlus, MessageSquare, MoreHorizontal, SlidersHorizontal, Check, Plus, LayoutGrid, Rows } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarClock, ExternalLink, Users, Trash2, Globe, Lock, Shield, MailPlus, MessageSquare, MoreHorizontal, SlidersHorizontal, Check, Plus, LayoutGrid, Rows, Calendar, FolderKanban, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGroupBySlug, useMyGroups } from '@/hooks/useGroups';
@@ -28,7 +28,7 @@ import { FeedBentoCardWithComments, getBentoSize } from '@/components/feed/FeedB
 import { PostComments } from '@/components/feed/PostComments';
 import { PostCreator } from '@/components/feed/PostCreator';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
-import { projectPath } from '@/lib/publicPaths';
+import { groupEventPath, groupPostPath, groupProjectPath, identifierFallbackShortId, identifierFallbackUuid } from '@/lib/publicPaths';
 import { toast } from 'sonner';
 
 interface GroupAdmin {
@@ -67,6 +67,31 @@ interface GroupResource {
   url: string;
   is_published: boolean;
   created_at: string;
+}
+
+interface GroupAuditionTimeslot {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  capacity: number;
+}
+
+interface GroupAudition {
+  id: string;
+  title: string;
+  description: string;
+  materials: string;
+  is_published: boolean;
+  created_at: string;
+  group_audition_timeslots: GroupAuditionTimeslot[];
+}
+
+interface GroupAuditionAvailability {
+  audition_id: string;
+  timeslot_id: string;
+  booked_count: number;
+  capacity: number;
+  is_my_timeslot: boolean;
 }
 
 interface GroupPost {
@@ -130,6 +155,7 @@ interface EventGroupLink {
     is_paid: boolean;
     price: number | null;
     currency: string | null;
+    stripe_price_id: string | null;
     payment_link_url: string | null;
     author_identity: string;
     author_group_id: string | null;
@@ -139,8 +165,16 @@ interface EventGroupLink {
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
+type GroupPageTab = 'all' | 'events' | 'projects' | 'services' | 'auditions' | 'members' | 'resources';
+const GROUP_CONTENT_TABS: GroupPageTab[] = ['all', 'events', 'projects', 'services'];
+
 const GroupPage: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, postIdentifier, eventIdentifier, projectIdentifier } = useParams<{
+    slug: string;
+    postIdentifier?: string;
+    eventIdentifier?: string;
+    projectIdentifier?: string;
+  }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -375,6 +409,7 @@ const GroupPage: React.FC = () => {
         is_paid: event.is_paid,
         price: event.price,
         currency: event.currency,
+        stripe_price_id: event.stripe_price_id,
         payment_link_url: event.payment_link_url,
         author_identity: event.author_identity,
         author_group_id: event.author_group_id,
@@ -397,6 +432,33 @@ const GroupPage: React.FC = () => {
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []) as GroupResource[];
+    },
+  });
+
+  const { data: auditions = [], isLoading: auditionsLoading } = useQuery<GroupAudition[]>({
+    queryKey: ['group-auditions', group?.id],
+    enabled: !!group?.id && canViewPrivateGroup,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('group_auditions')
+        .select('id, title, description, materials, is_published, created_at, group_audition_timeslots(id, starts_at, ends_at, capacity)')
+        .eq('group_id', group!.id)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as GroupAudition[];
+    },
+  });
+
+  const { data: auditionAvailability = [] } = useQuery<GroupAuditionAvailability[]>({
+    queryKey: ['group-audition-availability', group?.id, user?.id],
+    enabled: !!group?.id && !!user?.id && canViewPrivateGroup,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc('get_group_audition_availability', {
+        _group_id: group!.id,
+      });
+      if (error) throw error;
+      return (data || []) as GroupAuditionAvailability[];
     },
   });
 
@@ -442,9 +504,25 @@ const GroupPage: React.FC = () => {
   const [postFilter, setPostFilter] = useState<'all' | 'admin'>('all');
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [historyView, setHistoryView] = useState<'grid' | 'list'>('grid');
-  const [activeTab, setActiveTab] = useState<'posts' | 'members' | 'resources'>(() => {
+  const [activeTab, setActiveTab] = useState<GroupPageTab>(() => {
     const requestedTab = new URLSearchParams(location.search).get('tab');
-    return requestedTab === 'members' || requestedTab === 'resources' ? requestedTab : 'posts';
+    return requestedTab && ['all', 'events', 'projects', 'services', 'auditions', 'members', 'resources'].includes(requestedTab)
+      ? requestedTab as GroupPageTab
+      : 'all';
+  });
+  const bookAuditionTimeslot = useMutation({
+    mutationFn: async ({ auditionId, timeslotId }: { auditionId: string; timeslotId: string }) => {
+      const { error } = await (supabase as any).rpc('book_group_audition_timeslot', {
+        _audition_id: auditionId,
+        _timeslot_id: timeslotId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-audition-availability', group?.id] });
+      toast.success('Audition timeslot reserved');
+    },
+    onError: (error) => toast.error(getErrorMessage(error, 'Failed to reserve timeslot')),
   });
   const deletePost = useMutation({
     mutationFn: async (id: string) => {
@@ -560,6 +638,51 @@ const GroupPage: React.FC = () => {
     onError: (error) => toast.error(getErrorMessage(error, 'Failed to remove admin')),
   });
 
+  const mapGroupPostToFeedItem = (post: GroupPost): FeedItemData => ({
+    id: post.id,
+    type: 'post',
+    user_id: post.user_id,
+    content: post.content,
+    image_url: post.image_url,
+    image_urls: post.image_urls,
+    image_position_x: post.image_position_x,
+    image_position_y: post.image_position_y,
+    image_zoom: post.image_zoom,
+    image_positions: post.image_positions,
+    created_at: post.created_at,
+    visibility: post.visibility || undefined,
+    author_identity: post.author_identity,
+    author_group_id: post.author_group_id,
+    creator_profile: post.creator
+      ? { display_name: post.creator.display_name, avatar_url: post.creator.avatar_url }
+      : undefined,
+  });
+
+  useEffect(() => {
+    const identifier = postIdentifier || eventIdentifier || projectIdentifier;
+    const expectedType = postIdentifier ? 'post' : eventIdentifier ? 'event' : projectIdentifier ? 'project' : null;
+    if (!identifier || selectedItem?.type === expectedType) return;
+
+    const fullId = identifierFallbackUuid(identifier);
+    const shortId = fullId ? null : identifierFallbackShortId(identifier);
+    const matchesIdentifier = (candidate: { id: string }) => (
+      fullId
+        ? candidate.id === fullId
+        : shortId
+          ? candidate.id.replace(/-/g, '').toLowerCase().startsWith(shortId.toLowerCase())
+          : false
+    );
+
+    if (postIdentifier) {
+      const post = posts.find(matchesIdentifier);
+      if (post) setSelectedItem(mapGroupPostToFeedItem(post));
+      return;
+    }
+
+    const item = (eventIdentifier ? events : projects).find(matchesIdentifier);
+    if (item) setSelectedItem(item);
+  }, [eventIdentifier, events, postIdentifier, posts, projectIdentifier, projects, selectedItem?.type]);
+
   if (groupLoading || myGroupsLoading) {
     return <div className="p-12 text-center text-muted-foreground">Loading group…</div>;
   }
@@ -571,44 +694,40 @@ const GroupPage: React.FC = () => {
   const pendingMembers = members.filter((member) => member.status === 'pending');
   const visibleMemberCount = groupMemberCount ?? activeMembers.length;
   const canPostToGroup = isFaculty || group.members_can_post;
-  const visibleGroupContent = groupContent.filter(
-    (entry) => postFilter === 'all' || entry.adminAuthored,
-  );
+  const isContentTab = GROUP_CONTENT_TABS.includes(activeTab);
+  const visibleGroupContent = groupContent.filter((entry) => {
+    if (postFilter === 'admin' && !entry.adminAuthored) return false;
+    if (activeTab === 'events') return entry.kind === 'feed' && entry.item.type === 'event';
+    if (activeTab === 'projects') return entry.kind === 'feed' && entry.item.type === 'project';
+    if (activeTab === 'services') return entry.kind === 'post' && !entry.post.content.startsWith('🎯');
+    return true;
+  });
   const getGroupFeedItem = (entry: (typeof groupContent)[number]): FeedItemData => {
     if (entry.kind === 'feed') return entry.item;
-
-    return {
-      id: entry.post.id,
-      type: 'post',
-      user_id: entry.post.user_id,
-      content: entry.post.content,
-      image_url: entry.post.image_url,
-      image_urls: entry.post.image_urls,
-      image_position_x: entry.post.image_position_x,
-      image_position_y: entry.post.image_position_y,
-      image_zoom: entry.post.image_zoom,
-      image_positions: entry.post.image_positions,
-      created_at: entry.post.created_at,
-      visibility: entry.post.visibility || undefined,
-      author_identity: entry.post.author_identity,
-      author_group_id: entry.post.author_group_id,
-      creator_profile: entry.post.creator
-        ? {
-            display_name: entry.post.creator.display_name,
-            avatar_url: entry.post.creator.avatar_url,
-          }
-        : undefined,
-    };
+    return mapGroupPostToFeedItem(entry.post);
   };
-  const openGroupFeedItem = (item: FeedItemData) => {
-    const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
+  const closeGroupDetails = () => {
+    setSelectedItem(null);
+    if (postIdentifier || eventIdentifier || projectIdentifier) {
+      navigate(`/groups/${group.slug}`, { replace: true });
+    }
+  };
+
+  const openGroupFeedItem = (item: FeedItemData) => {
     if (item.type === 'project') {
-      navigate(projectPath(item), { state: { returnTo } });
+      setSelectedItem(item);
+      navigate(groupProjectPath(group.slug, item));
       return;
     }
-    if (item.type === 'event' || item.type === 'post' || item.type === 'job') {
+    if (item.type === 'event') {
       setSelectedItem(item);
+      navigate(groupEventPath(group.slug, item));
+      return;
+    }
+    if (item.type === 'post' || item.type === 'job') {
+      setSelectedItem(item);
+      navigate(groupPostPath(group.slug, { id: item.id, content: item.content }));
       return;
     }
 
@@ -701,11 +820,15 @@ const GroupPage: React.FC = () => {
       {canViewPrivateGroup && (
         <>
         <section className="min-w-0">
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'posts' | 'members' | 'resources')}>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as GroupPageTab)}>
         <div className="relative flex items-center justify-center gap-2">
           <div className="flex min-w-0 items-center justify-center gap-2">
-            <TabsList>
-              <TabsTrigger value="posts">Posts</TabsTrigger>
+            <TabsList className="max-w-full overflow-x-auto">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="events" className="gap-1.5"><Calendar className="h-4 w-4" />Events</TabsTrigger>
+              <TabsTrigger value="projects" className="gap-1.5"><FolderKanban className="h-4 w-4" />Projects</TabsTrigger>
+              <TabsTrigger value="services" className="gap-1.5"><User className="h-4 w-4" />Services</TabsTrigger>
+              <TabsTrigger value="auditions" className="gap-1.5"><CalendarClock className="h-4 w-4" />Auditions</TabsTrigger>
               <TabsTrigger value="members">
                 Members
                 {pendingMembers.length > 0 && (
@@ -714,7 +837,7 @@ const GroupPage: React.FC = () => {
               </TabsTrigger>
               <TabsTrigger value="resources">Resources</TabsTrigger>
             </TabsList>
-            {activeTab === 'posts' && (
+            {isContentTab && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -740,7 +863,7 @@ const GroupPage: React.FC = () => {
               </DropdownMenu>
             )}
           </div>
-          {activeTab === 'posts' && (
+          {isContentTab && (
             <div className="flex shrink-0 justify-end sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
               <Select value={historyView} onValueChange={(value: 'grid' | 'list') => setHistoryView(value)}>
                 <SelectTrigger className="h-9 w-[96px] sm:w-[120px]">
@@ -759,10 +882,12 @@ const GroupPage: React.FC = () => {
           )}
         </div>
 
-        <TabsContent value="posts" className="mt-4">
+        {isContentTab && <TabsContent value={activeTab} className="mt-4">
           {visibleGroupContent.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              {postFilter === 'admin' ? 'No admin posts yet.' : 'No posts yet.'}
+              {postFilter === 'admin'
+                ? `No admin ${activeTab === 'all' ? 'content' : activeTab} yet.`
+                : `No ${activeTab === 'all' ? 'content' : activeTab} yet.`}
             </p>
           ) : (
             <div
@@ -787,6 +912,7 @@ const GroupPage: React.FC = () => {
                 className="h-full"
                 networkDegree={null}
                 onOpenDetails={openGroupFeedItem}
+                canOpenEventDashboardOverride={isFaculty}
                 canDeleteOverride={isFaculty}
                 onDeleteOverride={(entry.item.type === 'event' || entry.item.type === 'project')
                   ? unlinkGroupContent
@@ -893,6 +1019,97 @@ const GroupPage: React.FC = () => {
             })())}
             </div>
           )}
+        </TabsContent>}
+
+        <TabsContent value="auditions" className="mt-4">
+          <div className="mx-auto max-w-3xl space-y-4">
+            <div className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-muted-foreground" />
+              <h2 className="font-semibold">Department auditions</h2>
+            </div>
+            {auditionsLoading ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Loading auditions...</p>
+            ) : auditions.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">No published auditions yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {auditions.map((audition) => {
+                  const availabilityBySlot = new Map(
+                    auditionAvailability
+                      .filter((row) => row.audition_id === audition.id)
+                      .map((row) => [row.timeslot_id, row]),
+                  );
+                  const myTimeslot = auditionAvailability.find(
+                    (row) => row.audition_id === audition.id && row.is_my_timeslot,
+                  );
+
+                  return (
+                    <Card key={audition.id}>
+                      <CardContent className="space-y-4 p-5">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-lg font-semibold">{audition.title}</h3>
+                            {myTimeslot && <Badge>Signed up</Badge>}
+                          </div>
+                          {audition.description && (
+                            <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{audition.description}</p>
+                          )}
+                        </div>
+
+                        {audition.materials && (
+                          <div className="rounded-md border bg-muted/20 p-3 text-sm">
+                            <p className="font-medium">Materials</p>
+                            <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{audition.materials}</p>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Choose a timeslot</p>
+                          {audition.group_audition_timeslots
+                            .slice()
+                            .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+                            .map((slot) => {
+                              const availability = availabilityBySlot.get(slot.id);
+                              const bookedCount = availability?.booked_count ?? 0;
+                              const capacity = availability?.capacity ?? slot.capacity;
+                              const remaining = Math.max(0, capacity - bookedCount);
+                              const isSelected = availability?.is_my_timeslot ?? false;
+                              const isFull = remaining === 0 && !isSelected;
+
+                              return (
+                                <div key={slot.id} className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
+                                  <div>
+                                    <p className="text-sm font-medium">
+                                      {new Date(slot.starts_at).toLocaleString()} - {new Date(slot.ends_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                    </p>
+                                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                      <span><span className="font-medium text-foreground">Capacity:</span> {capacity}</span>
+                                      <span className={isFull ? 'font-medium text-destructive' : ''}>
+                                        <span className="font-medium text-foreground">Available:</span> {remaining}
+                                        {isFull && ' (Full)'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={isSelected ? 'secondary' : 'default'}
+                                    disabled={isSelected || isFull || bookAuditionTimeslot.isPending}
+                                    onClick={() => bookAuditionTimeslot.mutate({ auditionId: audition.id, timeslotId: slot.id })}
+                                  >
+                                    {isSelected ? <><Check className="mr-1 h-4 w-4" /> Selected</> : myTimeslot ? 'Switch to this slot' : 'Reserve slot'}
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="resources" className="mt-4">
@@ -1157,7 +1374,7 @@ const GroupPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <Sheet open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
+      <Sheet open={!!selectedItem} onOpenChange={(open) => !open && closeGroupDetails()}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
           <SheetHeader>
             <SheetTitle className="text-left">Details</SheetTitle>
@@ -1167,6 +1384,7 @@ const GroupPage: React.FC = () => {
               <FeedItem
                 item={selectedItem}
                 networkDegree={null}
+                canOpenEventDashboardOverride={isFaculty}
                 canDeleteOverride={isFaculty}
                 onDeleteOverride={(selectedItem.type === 'event' || selectedItem.type === 'project')
                   ? unlinkGroupContent
@@ -1187,7 +1405,7 @@ const GroupPage: React.FC = () => {
                   queryClient.invalidateQueries({ queryKey: ['group-posts', group.id] });
                   queryClient.invalidateQueries({ queryKey: ['group-events', group.id] });
                   queryClient.invalidateQueries({ queryKey: ['group-projects', group.id] });
-                  setSelectedItem(null);
+                  closeGroupDetails();
                 }}
               />
               {(selectedItem.type === 'post' || selectedItem.type === 'job') && (

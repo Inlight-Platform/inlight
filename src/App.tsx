@@ -126,6 +126,9 @@ const App = () => (
             <Route path="/group" element={<GroupMembersPage />} />
             <Route path="/groups/admin" element={<RequireAuth><DepartmentAdminPage /></RequireAuth>} />
             <Route path="/groups/:slug/dashboard" element={<RequireAuth><GroupAdminDashboardPage /></RequireAuth>} />
+            <Route path="/groups/:slug/posts/:postIdentifier" element={<GroupPage />} />
+            <Route path="/groups/:slug/events/:eventIdentifier" element={<GroupPage />} />
+            <Route path="/groups/:slug/projects/:projectIdentifier" element={<GroupPage />} />
             <Route path="/groups/:slug" element={<GroupPage />} />
             <Route path="/pie-chart" element={<NetworkPieChartPage />} />
             <Route path="/admin" element={<RequireAuth><AdminPage /></RequireAuth>} />

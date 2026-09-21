@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useMyScopedAdminGroups } from '@/hooks/useGroups';
 import { useEventRsvps } from '@/hooks/useEventRsvps';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -116,6 +117,7 @@ const EventDashboardPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { eventId } = useParams<{ eventId: string }>();
   const { user, loading: authLoading } = useAuth();
+  const { data: scopedAdminGroups = [], isLoading: scopedAdminGroupsLoading } = useMyScopedAdminGroups();
   const routeState = location.state as { event?: FeedItemData } | null;
   const stateEvent = routeState?.event?.type === 'event' ? routeState.event : null;
   const [searchQuery, setSearchQuery] = useState('');
@@ -211,6 +213,22 @@ const EventDashboardPage: React.FC = () => {
 
   const dashboardEvent = event || stateEventRow;
   const userOwnsDashboardEvent = !!user?.id && dashboardEvent?.user_id === user.id;
+  const { data: linkedGroupIds = [], isLoading: linkedGroupsLoading } = useQuery<string[]>({
+    queryKey: ['event-dashboard-groups', dashboardEvent?.id],
+    enabled: !!dashboardEvent?.id && !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('event_groups')
+        .select('group_id')
+        .eq('event_id', dashboardEvent!.id);
+      if (error) throw error;
+      return (data || []).map((link) => link.group_id);
+    },
+  });
+  const userAdministersDashboardEvent = linkedGroupIds.some((groupId) =>
+    scopedAdminGroups.some((group) => group.id === groupId),
+  );
+  const canManageDashboard = userOwnsDashboardEvent || userAdministersDashboardEvent;
 
   useEffect(() => {
     if (authLoading) return;
@@ -223,9 +241,9 @@ const EventDashboardPage: React.FC = () => {
   }, [authLoading, eventId, navigate, user]);
 
   useEffect(() => {
-    if (authLoading || eventLoading || !user) return;
+    if (authLoading || eventLoading || linkedGroupsLoading || scopedAdminGroupsLoading || !user) return;
     const canUseOwnedStateFallback = Boolean(stateEventRow && stateEventRow.user_id === user.id);
-    if ((!canUseOwnedStateFallback && eventError) || !dashboardEvent || !userOwnsDashboardEvent) {
+    if ((!canUseOwnedStateFallback && eventError) || !dashboardEvent || !canManageDashboard) {
       console.log('[Inlight Dashboard Debug] Redirecting dashboard user', {
         routeEventId: eventId,
         authUserId: user.id,
@@ -237,7 +255,7 @@ const EventDashboardPage: React.FC = () => {
       });
       navigate('/feed?tab=events', { replace: true });
     }
-  }, [authLoading, dashboardEvent, eventError, eventId, eventLoading, navigate, stateEventRow, user, userOwnsDashboardEvent]);
+  }, [authLoading, canManageDashboard, dashboardEvent, eventError, eventId, eventLoading, linkedGroupsLoading, navigate, scopedAdminGroupsLoading, stateEventRow, user]);
 
   const { rsvps, isLoading: rsvpsLoading, goingCount, cantMakeItCount } = useEventRsvps(dashboardEvent?.id || '', {
     includePrivate: true,
@@ -261,7 +279,7 @@ const EventDashboardPage: React.FC = () => {
 
       return (data || []) as TicketMetricRow[];
     },
-    enabled: !!dashboardEvent?.id && userOwnsDashboardEvent,
+    enabled: !!dashboardEvent?.id && canManageDashboard,
   });
   const activeTickets = useMemo(
     () => paidTickets.filter((ticket) => ticket.status === 'confirmed' || ticket.status === 'partially_refunded'),
@@ -298,7 +316,7 @@ const EventDashboardPage: React.FC = () => {
 
       return (data || []) as TicketProfileRow[];
     },
-    enabled: userOwnsDashboardEvent && ticketUserIds.length > 0,
+    enabled: canManageDashboard && ticketUserIds.length > 0,
   });
   const ticketProfileNameByUserId = useMemo(
     () => new Map(ticketProfiles.map((profile) => [profile.user_id, profile.display_name])),
@@ -401,6 +419,16 @@ const EventDashboardPage: React.FC = () => {
 
   const checkInMutation = useMutation({
     mutationFn: async ({ rsvpId, attended }: { rsvpId: string; attended: boolean }) => {
+      if (!userOwnsDashboardEvent) {
+        const { error } = await supabase.rpc('set_group_event_rsvp_attendance' as never, {
+          _event_id: dashboardEvent!.id,
+          _rsvp_id: rsvpId,
+          _attended: attended,
+        } as never);
+        if (error) throw error;
+        return;
+      }
+
       const { error } = await supabase
         .from('event_rsvps')
         .update({
@@ -422,6 +450,16 @@ const EventDashboardPage: React.FC = () => {
 
   const ticketCheckInMutation = useMutation({
     mutationFn: async ({ ticketId, attended }: { ticketId: string; attended: boolean }) => {
+      if (!userOwnsDashboardEvent) {
+        const { error } = await supabase.rpc('set_group_event_ticket_check_in' as never, {
+          _event_id: dashboardEvent!.id,
+          _ticket_id: ticketId,
+          _attended: attended,
+        } as never);
+        if (error) throw error;
+        return;
+      }
+
       const { error } = await supabase
         .from('tickets')
         .update({
@@ -470,7 +508,7 @@ const EventDashboardPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (authLoading || !user || (eventLoading && !stateEventRow) || (!dashboardEvent && !eventError && !!user?.id)) {
+  if (authLoading || scopedAdminGroupsLoading || linkedGroupsLoading || !user || (eventLoading && !stateEventRow) || (!dashboardEvent && !eventError && !!user?.id)) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -479,7 +517,7 @@ const EventDashboardPage: React.FC = () => {
   }
 
   const canUseOwnedStateFallback = Boolean(stateEventRow && stateEventRow.user_id === user?.id);
-  if (!dashboardEvent || (!canUseOwnedStateFallback && eventError) || !userOwnsDashboardEvent) {
+  if (!dashboardEvent || (!canUseOwnedStateFallback && eventError) || !canManageDashboard) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -512,10 +550,12 @@ const EventDashboardPage: React.FC = () => {
               <Copy className="h-4 w-4" />
               Copy Link
             </Button>
-            <Button className="gap-2" onClick={() => setEditDialogOpen(true)}>
-              <Pencil className="h-4 w-4" />
-              Edit Event
-            </Button>
+            {userOwnsDashboardEvent && (
+              <Button className="gap-2" onClick={() => setEditDialogOpen(true)}>
+                <Pencil className="h-4 w-4" />
+                Edit Event
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -540,10 +580,12 @@ const EventDashboardPage: React.FC = () => {
                   <Copy className="h-4 w-4" />
                   Public link
                 </Button>
-                <Button size="sm" className="gap-2" onClick={() => setEditDialogOpen(true)}>
-                  <Pencil className="h-4 w-4" />
-                  Edit Event
-                </Button>
+                {userOwnsDashboardEvent && (
+                  <Button size="sm" className="gap-2" onClick={() => setEditDialogOpen(true)}>
+                    <Pencil className="h-4 w-4" />
+                    Edit Event
+                  </Button>
+                )}
               </div>
             </div>
           </CardHeader>

@@ -124,6 +124,7 @@ interface FeedItemProps {
   deleteDialogTitle?: string;
   deleteDialogDescription?: string;
   deleteSuccessMessage?: string;
+  canOpenEventDashboardOverride?: boolean;
 }
 
 export const FeedItem: React.FC<FeedItemProps> = ({
@@ -143,6 +144,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   deleteDialogTitle,
   deleteDialogDescription,
   deleteSuccessMessage,
+  canOpenEventDashboardOverride = false,
 }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -291,7 +293,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const avatarByUserId = new Map(attendeeProfiles.map((p) => [p.user_id, p.avatar_url]));
 
   const isOwner = user?.id === item.user_id;
-  const canOpenEventDashboard = isEventItem && isOwner;
+  const canOpenEventDashboard = isEventItem && (isOwner || canOpenEventDashboardOverride);
   const canManageFeedItem =
     isAdmin ||
     ((item.type !== 'event' || canManageEvents) &&
@@ -395,7 +397,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   };
 
   const openEventDashboard = () => {
-    navigate(`/events/${item.id}/dashboard`, { state: { event: item } });
+    navigate(`${eventPath(item)}/dashboard`, { state: { event: item } });
   };
 
   const getTypeIcon = () => {
@@ -521,7 +523,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       return;
     }
 
-    if (item.stripe_price_id) {
+    if (isPaidEvent) {
       setBuyingTicket(true);
       try {
         const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {

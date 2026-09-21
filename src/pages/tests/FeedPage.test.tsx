@@ -118,6 +118,7 @@ vi.mock('@/integrations/supabase/client', () => {
         const chain: any = {
           select: vi.fn(() => chain),
           not: vi.fn(() => chain),
+          neq: vi.fn(() => chain),
           order: vi.fn(() => chain),
           limit: vi.fn(resolve),
           in: vi.fn(() => chain),
@@ -171,7 +172,7 @@ describe('FeedPage (filtered posts)', () => {
     expect(screen.queryByText('Orphan Post')).toBeNull();
   });
 
-  it('renders a private tab for each accessible group', async () => {
+  it('shows accessible department selectors on Home', async () => {
     mockMyGroups.push(
       { id: 'group-1', slug: 'film', name: 'Film Dept', is_faculty: false },
       { id: 'group-2', slug: 'acting', name: 'Acting Lab', is_faculty: true }
@@ -180,6 +181,7 @@ describe('FeedPage (filtered posts)', () => {
     const FeedPage = (await import('@/pages/FeedPage')).default;
     renderFeed(FeedPage ? <FeedPage /> : null);
 
+    expect(await screen.findByText('Visible Post')).toBeDefined();
     expect(await screen.findByRole('button', { name: /Film Dept/i })).toBeDefined();
     expect(await screen.findByRole('button', { name: /Acting Lab/i })).toBeDefined();
   });
@@ -192,13 +194,14 @@ describe('FeedPage (filtered posts)', () => {
     expect(screen.queryByText('You do not have access to this private group feed.')).toBeNull();
   });
 
-  it('uses the grid renderer for group feed items when grid view is selected', async () => {
+  it('falls back to Home without rendering department content from a legacy group URL', async () => {
     mockMyGroups.push({ id: 'group-1', slug: 'film', name: 'Film Dept', is_faculty: false });
 
     const FeedPage = (await import('@/pages/FeedPage')).default;
     renderFeed(FeedPage ? <FeedPage /> : null, ['/?tab=group%3Agroup-1']);
 
-    expect(await screen.findByText('Private Group Post')).toBeDefined();
+    expect(await screen.findByText('Visible Post')).toBeDefined();
+    expect(screen.queryByText('Private Group Post')).toBeNull();
     expect(screen.getByTestId('bento-card')).toBeDefined();
     expect(screen.queryByTestId('list-card')).toBeNull();
   });

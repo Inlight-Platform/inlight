@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles, Lock } from 'lucide-react';
+import { Filter, Plus, Calendar, FolderKanban, User, Users, Search, X, ArrowUpDown, Archive, Bookmark, BookmarkCheck, LayoutGrid, Rows, Sparkles, GraduationCap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkConnections } from '@/hooks/useNetworkConnections';
@@ -15,7 +15,6 @@ import { WelcomeMessage } from '@/components/feed/WelcomeMessage';
 import { YouTab } from '@/components/feed/YouTab';
 import { ServicesTab } from '@/components/feed/ServicesTab';
 import { useMyGroups } from '@/hooks/useGroups';
-import { GraduationCap } from 'lucide-react';
 import { FeedSurvey, FeedSurveyAnswers } from '@/components/feed/FeedSurvey';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -33,8 +32,7 @@ import type { Database } from '@/integrations/supabase/types';
 
 type NetworkFilter = 'all' | '1st';
 type BaseContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates';
-type GroupContentFilter = `group:${string}`;
-type ContentFilter = BaseContentFilter | GroupContentFilter;
+type ContentFilter = BaseContentFilter;
 type ProjectSubTab = 'feed' | 'my-network' | 'saved' | 'archive';
 type SortOption = 'newest' | 'oldest' | 'a-z' | 'z-a';
 type ViewMode = 'bento' | 'scroll';
@@ -50,37 +48,6 @@ const PROJECT_CATEGORIES = [
 
 type ProjectCategory = typeof PROJECT_CATEGORIES[number]['value'];
 const BASE_CONTENT_FILTERS: BaseContentFilter[] = ['all', 'you', 'events', 'projects', 'updates'];
-const isGroupContentFilter = (value: ContentFilter): value is GroupContentFilter =>
-  value.startsWith('group:');
-const getGroupTabValue = (groupId: string): GroupContentFilter => `group:${groupId}`;
-
-interface GroupPostLink {
-  posts: (FeedItemData & { user_id: string; created_at: string }) | null;
-}
-
-interface GroupProjectLink {
-  projects: {
-    id: string;
-    creator_id: string;
-    title: string;
-    description: string | null;
-    header_image_url: string | null;
-    main_image_url: string | null;
-    created_at: string;
-    category: string | null;
-    status: string | null;
-    link_url: string | null;
-    link_title: string | null;
-    visibility?: string | null;
-    author_identity?: string | null;
-    author_group_id?: string | null;
-  } | null;
-}
-
-interface GroupEventLink {
-  events: EventRow | null;
-}
-
 type EventRow = Database['public']['Tables']['events']['Row'];
 
 const mapEventToFeedItem = (
@@ -229,7 +196,7 @@ const FeedPage: React.FC = () => {
   const [contentFilter, setContentFilter] = useState<ContentFilter>(
     routeEventIdentifier
       ? 'events'
-      : _initialTab && (BASE_CONTENT_FILTERS.includes(_initialTab as BaseContentFilter) || _initialTab.startsWith('group:'))
+      : _initialTab && BASE_CONTENT_FILTERS.includes(_initialTab as BaseContentFilter)
       ? (_initialTab as ContentFilter)
       : 'all'
   );
@@ -244,7 +211,7 @@ const FeedPage: React.FC = () => {
   const isClosingDetailsRef = useRef(false);
   const eventDetailsReturnTabRef = useRef<ContentFilter | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: myGroups = [], isLoading: groupsLoading } = useMyGroups();
+  const { data: myGroups = [] } = useMyGroups();
   const showVisitorFeedGate = (contentFilter === 'you' || contentFilter === 'updates') && !user;
 
   const updateEventSearchParam = useCallback((event?: FeedItemData, returnTab?: ContentFilter | null) => {
@@ -328,10 +295,12 @@ const FeedPage: React.FC = () => {
     const compose = searchParams.get('compose');
     let changed = false;
     if (tab) {
-      if (BASE_CONTENT_FILTERS.includes(tab as BaseContentFilter) || tab.startsWith('group:')) {
+      if (BASE_CONTENT_FILTERS.includes(tab as BaseContentFilter)) {
         setContentFilter(tab as ContentFilter);
-      } else if (tab === 'group' && myGroups[0]) {
-        setContentFilter(getGroupTabValue(myGroups[0].id));
+      } else if (tab === 'group' || tab.startsWith('group:')) {
+        setContentFilter('all');
+        searchParams.delete('tab');
+        changed = true;
       }
     }
     if (compose && ['update', 'event', 'job', 'project'].includes(compose)) {
@@ -342,7 +311,7 @@ const FeedPage: React.FC = () => {
     }
     if (changed) setSearchParams(searchParams, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, myGroups]);
+  }, [searchParams]);
   const setFeedTab = (tab: ContentFilter) => {
     setContentFilter(tab);
     const params = new URLSearchParams(searchParams);
@@ -352,128 +321,6 @@ const FeedPage: React.FC = () => {
   };
   const feedReturnTo = `${location.pathname}${location.search}${location.hash}`;
   const { firstDegree, secondDegree, getConnectionDegree, isLoading: connectionsLoading } = useNetworkConnections();
-
-  const selectedGroupId = isGroupContentFilter(contentFilter)
-    ? contentFilter.slice('group:'.length)
-    : null;
-  const selectedGroup = selectedGroupId
-    ? myGroups.find((group) => group.id === selectedGroupId) || null
-    : null;
-  const canPostToSelectedGroup = !!selectedGroup && (
-    selectedGroup.is_faculty || selectedGroup.members_can_post
-  );
-
-  useEffect(() => {
-    if (groupsLoading || !selectedGroupId || selectedGroup) return;
-
-    setFeedTab('all');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupsLoading, selectedGroupId, selectedGroup]);
-
-  // Fetch posts tagged to the selected group (for the group tab)
-  const { data: groupPosts = [], isLoading: groupPostsLoading, isError: groupPostsError } = useQuery({
-    queryKey: ['feed-group-posts', selectedGroup?.id],
-    enabled: !!selectedGroup?.id,
-    queryFn: async () => {
-      const { data: links, error } = await supabase
-        .from('post_groups')
-        .select('post_id, posts(*)')
-        .eq('group_id', selectedGroup!.id);
-      if (error) throw error;
-      const rows = ((links || []) as unknown as GroupPostLink[])
-        .map((link) => link.posts)
-        .filter((post): post is FeedItemData & { user_id: string; created_at: string } => Boolean(post));
-      const uids = [...new Set(rows.map((p) => p.user_id))];
-      const map = await fetchPublicProfileMap(uids);
-      const groupProfileMap = await fetchGroupProfileMap(
-        rows
-          .filter((p) => p.author_identity === 'group' && p.author_group_id)
-          .map((p) => p.author_group_id!)
-      );
-      return rows
-        .map((p) => ({
-          ...p,
-          type: 'post' as const,
-          creator_profile: p.author_identity === 'group' && p.author_group_id
-            ? groupProfileMap.get(p.author_group_id)
-            : map.get(p.user_id),
-        }))
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as FeedItemData[];
-    },
-  });
-
-  // Fetch projects tagged to the selected group (for the group tab)
-  const { data: groupProjects = [], isLoading: groupProjectsLoading, isError: groupProjectsError } = useQuery({
-    queryKey: ['feed-group-projects', selectedGroup?.id],
-    enabled: !!selectedGroup?.id,
-    queryFn: async () => {
-      const { data: links, error } = await supabase
-        .from('project_groups')
-        .select('project_id, projects(*)')
-        .eq('group_id', selectedGroup!.id);
-      if (error) throw error;
-      const rows = ((links || []) as unknown as GroupProjectLink[])
-        .map((link) => link.projects)
-        .filter((project): project is NonNullable<GroupProjectLink['projects']> => Boolean(project));
-      const uids = [...new Set(rows.map((p) => p.creator_id))];
-      const map = await fetchPublicProfileMap(uids);
-      const groupProfileMap = await fetchGroupProfileMap(
-        rows
-          .filter((project) => project.author_identity === 'group' && project.author_group_id)
-          .map((project) => project.author_group_id!)
-      );
-      return rows
-        .map((p) => ({
-          id: p.id,
-          type: 'project' as const,
-          user_id: p.creator_id,
-          title: p.title,
-          description: p.description,
-          image_url: p.header_image_url || p.main_image_url,
-          created_at: p.created_at,
-          category: p.category,
-          project_status: p.status,
-          link_url: p.link_url,
-          link_title: p.link_title,
-          visibility: p.visibility ?? undefined,
-          author_identity: p.author_identity ?? undefined,
-          author_group_id: p.author_group_id ?? undefined,
-          creator_profile: p.author_identity === 'group' && p.author_group_id
-            ? groupProfileMap.get(p.author_group_id)
-            : map.get(p.creator_id),
-        }))
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as FeedItemData[];
-    },
-  });
-
-  // Fetch events tagged to the selected group (for the group tab)
-  const { data: groupEvents = [], isLoading: groupEventsLoading, isError: groupEventsError } = useQuery({
-    queryKey: ['feed-group-events', selectedGroup?.id],
-    enabled: !!selectedGroup?.id,
-    queryFn: async () => {
-      const { data: links, error } = await supabase
-        .from('event_groups' as never)
-        .select('event_id, events(*)')
-        .eq('group_id', selectedGroup!.id);
-      if (error) throw error;
-      const rows = ((links || []) as unknown as GroupEventLink[])
-        .map((link) => link.events)
-        .filter((event): event is EventRow => Boolean(event));
-      const uids = [...new Set(rows.map((event) => event.user_id))];
-      const map = await fetchPublicProfileMap(uids);
-      const groupProfileMap = await fetchGroupProfileMap(
-        rows
-          .filter((event) => event.author_identity === 'group' && event.author_group_id)
-          .map((event) => event.author_group_id!)
-      );
-      return sortEventsBySchedule(rows.map((event) => mapEventToFeedItem(
-        event,
-        event.author_identity === 'group' && event.author_group_id
-          ? groupProfileMap.get(event.author_group_id)
-          : map.get(event.user_id)
-      )));
-    },
-  });
 
   // Project-specific state
   const [projectSubTab, setProjectSubTab] = useState<ProjectSubTab>('feed');
@@ -549,6 +396,7 @@ const FeedPage: React.FC = () => {
         .from('posts')
         .select('*')
         .not('content', 'like', '🎯%')
+        .neq('visibility', 'group')
         .order('created_at', { ascending: false });
 
       if (!user) {
@@ -588,6 +436,7 @@ const FeedPage: React.FC = () => {
       let query = supabase
         .from('projects')
         .select('*')
+        .neq('visibility', 'group')
         .order('created_at', { ascending: false });
 
       if (!user) {
@@ -628,6 +477,7 @@ const FeedPage: React.FC = () => {
       let query = supabase
         .from('events')
         .select('*')
+        .neq('visibility', 'group')
         .order('event_date', { ascending: true });
 
       if (!user) {
@@ -1022,13 +872,6 @@ const FeedPage: React.FC = () => {
     { value: 'projects', label: 'Projects', icon: <FolderKanban className="h-4 w-4" /> },
     { value: 'updates', label: 'Services', icon: <User className="h-4 w-4" /> },
   ];
-  myGroups.forEach((group) => {
-    contentFilters.push({
-      value: getGroupTabValue(group.id),
-      label: group.name,
-      icon: <GraduationCap className="h-4 w-4" />,
-    });
-  });
 
   const itemCounts = useMemo(() => ({
     events: events.filter(hasVisibleCreator).length,
@@ -1314,6 +1157,18 @@ const FeedPage: React.FC = () => {
                     )}
                   </Button>
                 ))}
+                {myGroups.map((group) => (
+                  <Button
+                    key={group.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/groups/${group.slug}`)}
+                    className={`flex-shrink-0 gap-1.5 ${navVioletOutlineClass}`}
+                  >
+                    <GraduationCap className="h-4 w-4" />
+                    {group.name}
+                  </Button>
+                ))}
                 </div>
                 <div className="mt-2 flex justify-end sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2 sm:mt-0">
                   <Select value={viewMode} onValueChange={(v: ViewMode) => setViewMode(v)}>
@@ -1334,7 +1189,7 @@ const FeedPage: React.FC = () => {
             </div>
 
             {/* Search Bar (for non-project tabs) */}
-            {contentFilter !== 'projects' && contentFilter !== 'you' && !isGroupContentFilter(contentFilter) && (
+            {contentFilter !== 'projects' && contentFilter !== 'you' && (
               <div className="relative mb-4 max-w-xl mx-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -1383,99 +1238,6 @@ const FeedPage: React.FC = () => {
               )
             ) : contentFilter === 'projects' ? (
               renderProjectsContent()
-            ) : isGroupContentFilter(contentFilter) ? (
-              <div className="space-y-4">
-                {(() => {
-                  if (groupsLoading) {
-                    return (
-                      <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                      </div>
-                    );
-                  }
-                  if (!selectedGroup) {
-                    return (
-                      <div className="text-center py-12">
-                        <Lock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-muted-foreground">You do not have access to this private group feed.</p>
-                      </div>
-                    );
-                  }
-                  const groupFeedItems = [...groupPosts, ...groupProjects, ...groupEvents]
-                    .sort(compareFeedItemsForDisplay);
-                  const isGroupLoading = groupPostsLoading || groupProjectsLoading || groupEventsLoading;
-                  const isGroupError = groupPostsError || groupProjectsError || groupEventsError;
-                  return (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text-xl font-semibold">{selectedGroup.name}</h2>
-                          <p className="text-sm text-muted-foreground">Private feed for {selectedGroup.name} members.</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {user && canPostToSelectedGroup && (
-                            <Button size="sm" onClick={() => { setComposePostType('update'); setShowPostCreator(true); }} className={`gap-2 ${navVioletButtonClass}`}>
-                              <Plus className="h-4 w-4" />
-                              Post
-                            </Button>
-                          )}
-                          <Button size="sm" variant="outline" onClick={() => navigate(`/groups/${selectedGroup.slug}`)}>
-                            Open group
-                          </Button>
-                        </div>
-                      </div>
-                      {isGroupLoading ? (
-                        <div className="flex items-center justify-center py-12">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                        </div>
-                      ) : isGroupError ? (
-                        <p className="text-center text-muted-foreground py-12">Unable to load this private group feed.</p>
-                      ) : groupFeedItems.length === 0 ? (
-                        <div className="text-center py-12">
-                          <p className="text-muted-foreground">No posts, events, or projects in {selectedGroup.name} yet.</p>
-                          {user && canPostToSelectedGroup && (
-                            <Button onClick={() => { setComposePostType('update'); setShowPostCreator(true); }} className={`mt-4 gap-2 ${navVioletButtonClass}`}>
-                              <Plus className="h-4 w-4" />
-                              Create the first post
-                            </Button>
-                          )}
-                        </div>
-                      ) : viewMode === 'scroll' ? (
-                        <div className="flex flex-col gap-4 max-w-2xl mx-auto">
-                          {groupFeedItems.map((item) => (
-                            <FeedItem
-                              key={`group-${item.type}-${item.id}`}
-                              item={item}
-                              networkDegree={item.user_id === user?.id ? null : getConnectionDegree(item.user_id)}
-                              onOpenDetails={openFeedDetails}
-                            />
-                          ))}
-                        </div>
-                      ) : (
-                        <div
-                          className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-5 sm:auto-rows-[220px]"
-                          style={{ gridAutoFlow: 'dense' }}
-                        >
-                          {groupFeedItems.map((item, idx) => (
-                            <FeedBentoCardWithComments
-                              key={`group-grid-${item.type}-${item.id}`}
-                              item={item}
-                              size={getBentoSize(idx)}
-                              onClick={() => {
-                                if (item.type === 'project') {
-                                  navigate(projectPath(item), { state: { returnTo: feedReturnTo } });
-                                } else {
-                                  openFeedDetails(item);
-                                }
-                              }}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
             ) : (
               <>
                 {/* Feed Items */}
@@ -1567,7 +1329,6 @@ const FeedPage: React.FC = () => {
             userProfile={userProfile || undefined}
             defaultOpen={true}
             defaultPostType={composePostType}
-            defaultGroupId={selectedGroup?.id ?? null}
             onClose={() => setShowPostCreator(false)}
           />
         </DialogContent>

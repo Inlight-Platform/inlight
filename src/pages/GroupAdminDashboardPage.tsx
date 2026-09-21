@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, ArrowLeft, BarChart3, BookOpen, Check, Eye, EyeOff, GraduationCap, MailPlus, Pencil, ShieldCheck, Trash2, Upload, UserPlus, UsersRound, X } from 'lucide-react';
+import { Activity, ArrowLeft, BarChart3, BookOpen, CalendarClock, Check, Eye, EyeOff, GraduationCap, MailPlus, Pencil, Plus, ShieldCheck, Trash2, Upload, UserPlus, UsersRound, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -62,6 +62,46 @@ interface GroupInvite {
   accepted_at: string | null;
 }
 
+interface GroupAuditionTimeslot {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  capacity: number;
+}
+
+interface GroupAudition {
+  id: string;
+  title: string;
+  description: string;
+  materials: string;
+  is_published: boolean;
+  created_at: string;
+  group_audition_timeslots: GroupAuditionTimeslot[];
+}
+
+interface GroupAuditionSignup {
+  id: string;
+  audition_id: string;
+  timeslot_id: string;
+  user_id: string;
+  created_at: string;
+  profile?: ProfilePreview;
+}
+
+interface AuditionTimeslotDraft {
+  key: string;
+  startsAt: string;
+  endsAt: string;
+  capacity: number;
+}
+
+const createTimeslotDraft = (): AuditionTimeslotDraft => ({
+  key: crypto.randomUUID(),
+  startsAt: '',
+  endsAt: '',
+  capacity: 1,
+});
+
 interface GroupActivityInsights {
   active_members: number;
   pending_requests: number;
@@ -119,6 +159,11 @@ const GroupAdminDashboardPage: React.FC = () => {
   const [memberInviteEmails, setMemberInviteEmails] = useState('');
   const [memberInviteNote, setMemberInviteNote] = useState('');
   const [adminPendingRemoval, setAdminPendingRemoval] = useState<GroupAdmin | null>(null);
+  const [auditionTitle, setAuditionTitle] = useState('');
+  const [auditionDescription, setAuditionDescription] = useState('');
+  const [auditionMaterials, setAuditionMaterials] = useState('');
+  const [auditionPublished, setAuditionPublished] = useState(false);
+  const [auditionTimeslots, setAuditionTimeslots] = useState<AuditionTimeslotDraft[]>([createTimeslotDraft()]);
 
   const isScopedAdmin = !!group && scopedGroups.some((scopedGroup) => scopedGroup.id === group.id);
   const dashboardNavigationState = location.state as {
@@ -137,6 +182,9 @@ const GroupAdminDashboardPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['group-resources', group?.id] });
     queryClient.invalidateQueries({ queryKey: ['group-dashboard-insights', group?.id] });
     queryClient.invalidateQueries({ queryKey: ['group-dashboard-invites', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-dashboard-auditions', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-dashboard-audition-signups', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-auditions', group?.id] });
     queryClient.invalidateQueries({ queryKey: ['my-scoped-admin-groups'] });
     queryClient.invalidateQueries({ queryKey: ['my-groups'] });
   };
@@ -221,6 +269,50 @@ const GroupAdminDashboardPage: React.FC = () => {
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []) as GroupInvite[];
+    },
+  });
+
+  const { data: auditions = [] } = useQuery<GroupAudition[]>({
+    queryKey: ['group-dashboard-auditions', group?.id],
+    enabled: !!group?.id && isScopedAdmin,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('group_auditions')
+        .select('id, title, description, materials, is_published, created_at, group_audition_timeslots(id, starts_at, ends_at, capacity)')
+        .eq('group_id', group!.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as GroupAudition[];
+    },
+  });
+
+  const { data: auditionSignups = [], isLoading: auditionSignupsLoading } = useQuery<GroupAuditionSignup[]>({
+    queryKey: ['group-dashboard-audition-signups', group?.id, auditions.map((audition) => audition.id).join(',')],
+    enabled: !!group?.id && isScopedAdmin && auditions.length > 0,
+    queryFn: async () => {
+      const auditionIds = auditions.map((audition) => audition.id);
+      const { data, error } = await (supabase as any)
+        .from('group_audition_signups')
+        .select('id, audition_id, timeslot_id, user_id, created_at')
+        .in('audition_id', auditionIds)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+
+      const signups = (data || []) as GroupAuditionSignup[];
+      const userIds = [...new Set(signups.map((signup) => signup.user_id))];
+      if (userIds.length === 0) return signups;
+
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles_public')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', userIds);
+      if (profilesError) throw profilesError;
+      const profileById = new Map((profiles || []).map((profile) => [profile.user_id, profile]));
+
+      return signups.map((signup) => ({
+        ...signup,
+        profile: profileById.get(signup.user_id),
+      }));
     },
   });
 
@@ -459,6 +551,68 @@ const GroupAdminDashboardPage: React.FC = () => {
     onError: (error) => toast.error(errorMessage(error, 'Failed to remove resource')),
   });
 
+  const createAudition = useMutation({
+    mutationFn: async () => {
+      if (!group) throw new Error('Group not ready');
+
+      const timeslots = auditionTimeslots.map((slot) => {
+        const startsAt = new Date(slot.startsAt);
+        const endsAt = new Date(slot.endsAt);
+        if (!slot.startsAt || !slot.endsAt || Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) {
+          throw new Error('Every timeslot needs a valid start and end time.');
+        }
+        if (endsAt <= startsAt) throw new Error('Each timeslot must end after it starts.');
+        if (!Number.isInteger(slot.capacity) || slot.capacity < 1) {
+          throw new Error('Each timeslot capacity must be at least one.');
+        }
+        return {
+          starts_at: startsAt.toISOString(),
+          ends_at: endsAt.toISOString(),
+          capacity: slot.capacity,
+        };
+      });
+
+      const { error } = await (supabase as any).rpc('create_group_audition', {
+        _group_id: group.id,
+        _title: auditionTitle.trim(),
+        _description: auditionDescription.trim(),
+        _materials: auditionMaterials.trim(),
+        _is_published: auditionPublished,
+        _timeslots: timeslots,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setAuditionTitle('');
+      setAuditionDescription('');
+      setAuditionMaterials('');
+      setAuditionPublished(false);
+      setAuditionTimeslots([createTimeslotDraft()]);
+      invalidateGroupDashboard();
+      toast.success('Audition created');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to create audition')),
+  });
+
+  const toggleAuditionPublication = useMutation({
+    mutationFn: async (audition: GroupAudition) => {
+      if (!group) throw new Error('Group not ready');
+      const isPublished = !audition.is_published;
+      const { error } = await (supabase as any)
+        .from('group_auditions')
+        .update({ is_published: isPublished, updated_at: new Date().toISOString() })
+        .eq('id', audition.id)
+        .eq('group_id', group.id);
+      if (error) throw error;
+      return isPublished;
+    },
+    onSuccess: (isPublished) => {
+      invalidateGroupDashboard();
+      toast.success(isPublished ? 'Audition published' : 'Audition moved to drafts');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to update audition status')),
+  });
+
   const handleMemberInviteFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -575,16 +729,17 @@ const GroupAdminDashboardPage: React.FC = () => {
               </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Manage only this department portal: verification, insights, resources, and invites.
+              Manage only this department portal: verification, insights, auditions, resources, and invites.
             </p>
           </div>
         </div>
       </div>
 
       <Tabs defaultValue="verification" className="space-y-4">
-        <TabsList className="mx-auto grid w-full max-w-md grid-cols-4">
+        <TabsList className="mx-auto grid w-full max-w-2xl grid-cols-5">
           <TabsTrigger value="verification" className="px-2 text-xs sm:text-sm">Verification</TabsTrigger>
           <TabsTrigger value="insights" className="px-2 text-xs sm:text-sm">Insights</TabsTrigger>
+          <TabsTrigger value="auditions" className="px-2 text-xs sm:text-sm">Auditions</TabsTrigger>
           <TabsTrigger value="resources" className="px-2 text-xs sm:text-sm">Resources</TabsTrigger>
           <TabsTrigger value="invites" className="px-2 text-xs sm:text-sm">Invites</TabsTrigger>
         </TabsList>
@@ -700,6 +855,213 @@ const GroupAdminDashboardPage: React.FC = () => {
             value={insights?.recent_activity_count ?? 0}
             detail="Department activity in the last 30 days"
           />
+        </TabsContent>
+
+        <TabsContent value="auditions" className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,460px)]">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <CalendarClock className="h-5 w-5" /> Department Auditions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {auditions.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No auditions yet.</p>
+              ) : (
+                auditions.map((audition) => (
+                  <div key={audition.id} className="space-y-3 rounded-lg border p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium">{audition.title}</p>
+                        {audition.description && <p className="mt-1 text-sm text-muted-foreground">{audition.description}</p>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={audition.is_published ? 'default' : 'secondary'}>
+                          {audition.is_published ? 'Published' : 'Draft'}
+                        </Badge>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={toggleAuditionPublication.isPending}
+                          onClick={() => toggleAuditionPublication.mutate(audition)}
+                        >
+                          {audition.is_published ? (
+                            <><EyeOff className="mr-1 h-4 w-4" /> Unpublish</>
+                          ) : (
+                            <><Eye className="mr-1 h-4 w-4" /> Publish</>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    {audition.materials && (
+                      <p className="whitespace-pre-wrap text-sm"><span className="font-medium">Materials:</span> {audition.materials}</p>
+                    )}
+                    <div className="space-y-3 border-t pt-3">
+                      {audition.group_audition_timeslots
+                        .slice()
+                        .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+                        .map((slot) => {
+                          const slotSignups = auditionSignups.filter((signup) => signup.timeslot_id === slot.id);
+                          const available = Math.max(0, slot.capacity - slotSignups.length);
+
+                          return (
+                            <div key={slot.id} className="rounded-md border p-3">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {new Date(slot.starts_at).toLocaleString()} - {new Date(slot.ends_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                  </p>
+                                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                    <span><span className="font-medium text-foreground">Capacity:</span> {slot.capacity}</span>
+                                    <span><span className="font-medium text-foreground">Booked:</span> {slotSignups.length}</span>
+                                    <span><span className="font-medium text-foreground">Available:</span> {available}</span>
+                                  </div>
+                                </div>
+                                <Badge variant="secondary">{slotSignups.length} {slotSignups.length === 1 ? 'signup' : 'signups'}</Badge>
+                              </div>
+
+                              <div className="mt-3 border-t pt-3">
+                                {auditionSignupsLoading ? (
+                                  <p className="text-xs text-muted-foreground">Loading roster...</p>
+                                ) : slotSignups.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground">No members signed up.</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {slotSignups.map((signup) => {
+                                      const name = signup.profile?.display_name || 'Department member';
+                                      return (
+                                        <Link
+                                          key={signup.id}
+                                          to={`/profile/${signup.user_id}`}
+                                          className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
+                                        >
+                                          <Avatar className="h-7 w-7">
+                                            <AvatarImage src={signup.profile?.avatar_url || undefined} />
+                                            <AvatarFallback>{name[0]?.toUpperCase() || 'M'}</AvatarFallback>
+                                          </Avatar>
+                                          <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium">{name}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                              Signed up {new Date(signup.created_at).toLocaleDateString()}
+                                            </p>
+                                          </div>
+                                        </Link>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Create Audition</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!auditionTitle.trim() || auditionTimeslots.length === 0) return;
+                  createAudition.mutate();
+                }}
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="audition-title">Title</Label>
+                  <Input id="audition-title" value={auditionTitle} onChange={(event) => setAuditionTitle(event.target.value)} placeholder="Fall production auditions" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="audition-description">Description</Label>
+                  <Textarea id="audition-description" value={auditionDescription} onChange={(event) => setAuditionDescription(event.target.value)} placeholder="What members should know" className="min-h-[88px]" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="audition-materials">Materials</Label>
+                  <Textarea id="audition-materials" value={auditionMaterials} onChange={(event) => setAuditionMaterials(event.target.value)} placeholder="Sides, preparation instructions, or a materials link" className="min-h-[88px]" />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Timeslots</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setAuditionTimeslots((current) => [...current, createTimeslotDraft()])}>
+                      <Plus className="mr-1 h-4 w-4" /> Add slot
+                    </Button>
+                  </div>
+                  {auditionTimeslots.map((slot, index) => (
+                    <div key={slot.key} className="space-y-3 rounded-md border p-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">Slot {index + 1}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          title="Remove timeslot"
+                          disabled={auditionTimeslots.length === 1}
+                          onClick={() => setAuditionTimeslots((current) => current.filter((candidate) => candidate.key !== slot.key))}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <Label htmlFor={`audition-start-${slot.key}`}>Starts</Label>
+                          <Input
+                            id={`audition-start-${slot.key}`}
+                            type="datetime-local"
+                            value={slot.startsAt}
+                            required
+                            onChange={(event) => setAuditionTimeslots((current) => current.map((candidate) => candidate.key === slot.key ? { ...candidate, startsAt: event.target.value } : candidate))}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`audition-end-${slot.key}`}>Ends</Label>
+                          <Input
+                            id={`audition-end-${slot.key}`}
+                            type="datetime-local"
+                            value={slot.endsAt}
+                            required
+                            onChange={(event) => setAuditionTimeslots((current) => current.map((candidate) => candidate.key === slot.key ? { ...candidate, endsAt: event.target.value } : candidate))}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`audition-capacity-${slot.key}`}>Capacity</Label>
+                        <Input
+                          id={`audition-capacity-${slot.key}`}
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={slot.capacity}
+                          required
+                          onChange={(event) => setAuditionTimeslots((current) => current.map((candidate) => candidate.key === slot.key ? { ...candidate, capacity: Number(event.target.value) } : candidate))}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                  <div>
+                    <Label htmlFor="audition-published">Published</Label>
+                    <p className="text-xs text-muted-foreground">Active members can view this audition.</p>
+                  </div>
+                  <Switch id="audition-published" checked={auditionPublished} onCheckedChange={setAuditionPublished} />
+                </div>
+                <Button type="submit" className="w-full" disabled={!auditionTitle.trim() || createAudition.isPending}>
+                  {createAudition.isPending ? 'Creating audition...' : 'Create audition'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="resources" className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
