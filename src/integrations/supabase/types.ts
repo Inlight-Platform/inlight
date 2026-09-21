@@ -542,6 +542,8 @@ export type Database = {
           event_date: string
           event_type: string | null
           id: string
+          author_group_id: string | null
+          author_identity: string
           image_position_x: number | null
           image_position_y: number | null
           image_positions: Json | null
@@ -569,6 +571,8 @@ export type Database = {
           event_date: string
           event_type?: string | null
           id?: string
+          author_group_id?: string | null
+          author_identity?: string
           image_position_x?: number | null
           image_position_y?: number | null
           image_positions?: Json | null
@@ -596,6 +600,8 @@ export type Database = {
           event_date?: string
           event_type?: string | null
           id?: string
+          author_group_id?: string | null
+          author_identity?: string
           image_position_x?: number | null
           image_position_y?: number | null
           image_positions?: Json | null
@@ -642,6 +648,39 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_groups: {
+        Row: {
+          created_at: string
+          event_id: string
+          group_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          group_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_groups_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
         ]
@@ -876,6 +915,69 @@ export type Database = {
           },
         ]
       }
+      group_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          group_id: string
+          id: string
+          invited_by: string | null
+          membership_status_on_accept: string
+          personal_note: string | null
+          platform_invite_id: string | null
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          group_id: string
+          id?: string
+          invited_by?: string | null
+          membership_status_on_accept?: string
+          personal_note?: string | null
+          platform_invite_id?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          group_id?: string
+          id?: string
+          invited_by?: string | null
+          membership_status_on_accept?: string
+          personal_note?: string | null
+          platform_invite_id?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_invites_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_invites_platform_invite_id_fkey"
+            columns: ["platform_invite_id"]
+            isOneToOne: false
+            referencedRelation: "platform_invites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_members: {
         Row: {
           group_id: string
@@ -908,12 +1010,58 @@ export type Database = {
           },
         ]
       }
+      group_resources: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          group_id: string
+          id: string
+          is_published: boolean
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          group_id: string
+          id?: string
+          is_published?: boolean
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          group_id?: string
+          id?: string
+          is_published?: boolean
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_resources_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       groups: {
         Row: {
           created_at: string
           description: string | null
           faculty_owner_id: string | null
           id: string
+          is_listed: boolean
+          members_can_post: boolean
           name: string
           slug: string
           updated_at: string
@@ -923,6 +1071,8 @@ export type Database = {
           description?: string | null
           faculty_owner_id?: string | null
           id?: string
+          is_listed?: boolean
+          members_can_post?: boolean
           name: string
           slug: string
           updated_at?: string
@@ -932,6 +1082,8 @@ export type Database = {
           description?: string | null
           faculty_owner_id?: string | null
           id?: string
+          is_listed?: boolean
+          members_can_post?: boolean
           name?: string
           slug?: string
           updated_at?: string
@@ -1376,6 +1528,8 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          author_group_id: string | null
+          author_identity: string
           image_position_x: number | null
           image_position_y: number | null
           image_positions: Json | null
@@ -1392,6 +1546,8 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          author_group_id?: string | null
+          author_identity?: string
           image_position_x?: number | null
           image_position_y?: number | null
           image_positions?: Json | null
@@ -1408,6 +1564,8 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          author_group_id?: string | null
+          author_identity?: string
           image_position_x?: number | null
           image_position_y?: number | null
           image_positions?: Json | null
@@ -1733,6 +1891,35 @@ export type Database = {
           },
         ]
       }
+      project_recipients: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          recipient_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          recipient_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          recipient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_recipients_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_invitations: {
         Row: {
           created_at: string
@@ -1910,6 +2097,8 @@ export type Database = {
       }
       projects: {
         Row: {
+          author_group_id: string | null
+          author_identity: string
           category: string | null
           company_id: string | null
           created_at: string
@@ -1929,8 +2118,11 @@ export type Database = {
           status: string | null
           title: string
           updated_at: string
+          visibility: string
         }
         Insert: {
+          author_group_id?: string | null
+          author_identity?: string
           category?: string | null
           company_id?: string | null
           created_at?: string
@@ -1950,8 +2142,11 @@ export type Database = {
           status?: string | null
           title: string
           updated_at?: string
+          visibility?: string
         }
         Update: {
+          author_group_id?: string | null
+          author_identity?: string
           category?: string | null
           company_id?: string | null
           created_at?: string
@@ -1971,6 +2166,7 @@ export type Database = {
           status?: string | null
           title?: string
           updated_at?: string
+          visibility?: string
         }
         Relationships: [
           {
@@ -3027,6 +3223,19 @@ export type Database = {
         Args: { _credit_token?: string; _platform_token?: string }
         Returns: Json
       }
+      claim_group_member_invites_for_user: {
+        Args: { _user_id?: string }
+        Returns: number
+      }
+      create_group_member_invites: {
+        Args: {
+          _emails: string[]
+          _group_id: string
+          _membership_status_on_accept?: string
+          _note?: string
+        }
+        Returns: Json
+      }
       consume_job_credit: { Args: { _user_id: string }; Returns: boolean }
       create_platform_invite: {
         Args: { _email: string; _note?: string }
@@ -3088,6 +3297,12 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_group_active_admin_user_ids: {
+        Args: { _group_id: string }
+        Returns: {
+          user_id: string
+        }[]
+      }
       get_message_privacy: { Args: { target_user_id: string }; Returns: string }
       get_mutual_connections: {
         Args: { target_user_id: string }
@@ -3107,11 +3322,27 @@ export type Database = {
         Args: { _group_id: string }
         Returns: number
       }
+      can_message_through_group: {
+        Args: { _target_user: string }
+        Returns: boolean
+      }
+      request_group_membership: {
+        Args: { _group_id: string }
+        Returns: string
+      }
       get_my_groups: {
         Args: never
         Returns: {
           id: string
           is_faculty: boolean
+          name: string
+          slug: string
+        }[]
+      }
+      get_my_scoped_admin_groups: {
+        Args: never
+        Returns: {
+          id: string
           name: string
           slug: string
         }[]
@@ -3150,6 +3381,10 @@ export type Database = {
           _slug: string
         }
         Returns: Json
+      }
+      update_group_directory_listing: {
+        Args: { _group_id: string; _is_listed: boolean }
+        Returns: boolean
       }
       get_profile_attendance: {
         Args: { _user_id: string }
@@ -3205,6 +3440,20 @@ export type Database = {
           website_url: string
         }[]
       }
+      get_group_activity_insights: {
+        Args: { _group_id: string }
+        Returns: {
+          accepted_invites: number
+          active_members: number
+          alumni_count: number
+          content_count: number
+          invite_acceptance_percent: number
+          pending_invites: number
+          pending_requests: number
+          recent_activity_count: number
+          student_count: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3217,11 +3466,19 @@ export type Database = {
         Args: { _group: string; _user: string }
         Returns: boolean
       }
+      is_scoped_group_admin: {
+        Args: { _group: string; _user: string }
+        Returns: boolean
+      }
       is_group_member: {
         Args: { _group: string; _user: string }
         Returns: boolean
       }
       remove_group_admin: { Args: { _admin_id: string }; Returns: undefined }
+      update_group_member_posting: {
+        Args: { _group_id: string; _members_can_post: boolean }
+        Returns: undefined
+      }
       mark_show_attended: { Args: { _show_id: string }; Returns: undefined }
       update_profile_pronouns_settings: {
         Args: { _pronouns: string; _show_pronouns: boolean }

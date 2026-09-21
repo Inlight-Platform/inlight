@@ -37,3 +37,30 @@ export const eventIdentifier = (event: { slug?: string | null; title?: string | 
 
 export const eventPath = (event: { slug?: string | null; title?: string | null; id: string }) =>
   `/events/${eventIdentifier(event)}`;
+
+export const groupPostIdentifier = (post: { content?: string | null; id: string }) => {
+  const readableSlug = slugifyTitle(post.content?.split('\n')[0]?.slice(0, 80));
+  const shortId = post.id.replace(/-/g, '').slice(0, 8);
+  return shortId ? `${readableSlug}-${shortId}` : readableSlug;
+};
+
+export const groupPostPath = (
+  groupSlug: string,
+  post: { content?: string | null; id: string },
+) => `/groups/${groupSlug}/posts/${groupPostIdentifier(post)}`;
+
+const groupTitledContentIdentifier = (item: { title?: string | null; id: string }) => {
+  const readableSlug = slugifyTitle(item.title);
+  const shortId = item.id.replace(/-/g, '').slice(0, 8);
+  return shortId ? `${readableSlug}-${shortId}` : readableSlug;
+};
+
+export const groupEventPath = (
+  groupSlug: string,
+  event: { title?: string | null; id: string },
+) => `/groups/${groupSlug}/events/${groupTitledContentIdentifier(event)}`;
+
+export const groupProjectPath = (
+  groupSlug: string,
+  project: { title?: string | null; id: string },
+) => `/groups/${groupSlug}/projects/${groupTitledContentIdentifier(project)}`;

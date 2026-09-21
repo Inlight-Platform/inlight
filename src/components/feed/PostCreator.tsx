@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Send, X, Calendar, Briefcase, MessageSquare, MapPin, Clock, Film, Link, Move, DollarSign, Plus, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -21,8 +21,9 @@ import {
 import { toast } from 'sonner';
 import { ImageUploader, ImageUploaderHandle } from './ImageUploader';
 import { AudienceSelector, PostVisibility } from './AudienceSelector';
+import { AuthorIdentityMode, AuthorIdentitySelector } from './AuthorIdentitySelector';
 import { ImagePositioner } from '@/components/profile/ImagePositioner';
-import { useMyGroups } from '@/hooks/useGroups';
+import { useMyGroups, useMyScopedAdminGroups } from '@/hooks/useGroups';
 import { SERVICE_CATEGORIES } from '@/data/services';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -31,13 +32,34 @@ import {
   omitFeedImageColumn,
 } from '@/lib/feedImagePayload';
 import type { Database } from '@/integrations/supabase/types';
+import { cn } from '@/lib/utils';
 
 export type PostType = 'update' | 'event' | 'job' | 'project';
-type EventVisibility = Extract<PostVisibility, 'public' | 'network' | 'specific'>;
+type EventVisibility = PostVisibility;
 
 type PostInsert = Database['public']['Tables']['posts']['Insert'];
 type EventInsert = Database['public']['Tables']['events']['Insert'];
 type InsertableFeedImagePayload = PostInsert | EventInsert;
+
+const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
+  const context = (error as { context?: Response })?.context;
+
+  if (context) {
+    try {
+      const body = await context.clone().json() as { error?: string; message?: string };
+      if (body.error || body.message) return body.error || body.message || fallback;
+    } catch {
+      try {
+        const text = await context.clone().text();
+        if (text.trim()) return text.trim();
+      } catch {
+        // Fall through to the client error message.
+      }
+    }
+  }
+
+  return (error as { message?: string })?.message || fallback;
+};
 
 interface PostCreatorProps {
   userProfile?: {
@@ -47,6 +69,9 @@ interface PostCreatorProps {
   defaultOpen?: boolean;
   defaultPostType?: PostType;
   defaultGroupId?: string | null;
+  groupOnly?: boolean;
+  compact?: boolean;
+  onCreated?: () => void;
   onClose?: () => void;
 }
 
@@ -77,7 +102,16 @@ const insertWithImageColumnFallback = async <TPayload extends InsertableFeedImag
   throw new Error('Unable to create post with the available image fields.');
 };
 
-export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOpen = false, defaultPostType = 'update', defaultGroupId = null, onClose }) => {
+export const PostCreator: React.FC<PostCreatorProps> = ({
+  userProfile,
+  defaultOpen = false,
+  defaultPostType = 'update',
+  defaultGroupId = null,
+  groupOnly = false,
+  compact = false,
+  onCreated,
+  onClose,
+}) => {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const navigate = useNavigate();
@@ -93,9 +127,12 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [linkUrl, setLinkUrl] = useState('');
   const [visibility, setVisibility] = useState<PostVisibility>('public');
   const [eventVisibility, setEventVisibility] = useState<EventVisibility>('public');
+  const [authorIdentityMode, setAuthorIdentityMode] = useState<AuthorIdentityMode>('personal');
+  const [authorGroupId, setAuthorGroupId] = useState<string | null>(null);
   const [selectedRecipients, setSelectedRecipients] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const { data: myGroups = [] } = useMyGroups();
+  const { data: myScopedAdminGroups = [] } = useMyScopedAdminGroups();
   const [linkTitle, setLinkTitle] = useState('');
   const [customQuestion, setCustomQuestion] = useState('');
   const [imagePositions, setImagePositions] = useState<{ x: number; y: number; zoom: number }[]>([]);
@@ -106,24 +143,39 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [isPaid, setIsPaid] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
   const [serviceCategory, setServiceCategory] = useState<string>('');
-  const canCreatePaidEvents = isAdmin;
+  const isScopedAdminForSelectedGroup = myScopedAdminGroups.some(
+    (group) => group.id === selectedGroupId,
+  );
+  const canCreatePaidEvents = isAdmin || (
+    eventVisibility === 'group' &&
+    !!selectedGroupId &&
+    isScopedAdminForSelectedGroup
+  );
+  const openProjectCreator = useCallback(() => {
+    navigate('/projects/new', {
+      state: groupOnly && defaultGroupId
+        ? { lockedGroupId: defaultGroupId, returnTo: window.location.pathname }
+        : undefined,
+    });
+    onClose?.();
+  }, [defaultGroupId, groupOnly, navigate, onClose]);
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
   useEffect(() => {
     setPostType(defaultPostType);
     if (defaultPostType === 'project') {
-      navigate('/projects/new');
-      onClose?.();
+      openProjectCreator();
     }
-  }, [defaultPostType, navigate, onClose]);
+  }, [defaultPostType, openProjectCreator]);
 
   useEffect(() => {
-    if (defaultGroupId && (defaultPostType === 'update' || defaultPostType === 'job')) {
+    if (defaultGroupId && (groupOnly || defaultPostType === 'update' || defaultPostType === 'event' || defaultPostType === 'job')) {
       setVisibility('group');
+      setEventVisibility('group');
       setSelectedGroupId(defaultGroupId);
       setSelectedRecipients([]);
     }
-  }, [defaultGroupId, defaultPostType]);
+  }, [defaultGroupId, defaultPostType, groupOnly]);
 
   useEffect(() => {
     if (!canCreatePaidEvents && isPaid) {
@@ -161,10 +213,12 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setLinkTitle('');
     setCustomQuestion('');
     setPostType('update');
-    setVisibility('public');
-    setEventVisibility('public');
+    setVisibility(groupOnly ? 'group' : 'public');
+    setEventVisibility(groupOnly ? 'group' : 'public');
+    setAuthorIdentityMode('personal');
+    setAuthorGroupId(null);
     setSelectedRecipients([]);
-    setSelectedGroupId(null);
+    setSelectedGroupId(groupOnly ? defaultGroupId : null);
     setImagePositions([]);
     setIsPaid(false);
     setTicketPrice('');
@@ -176,6 +230,10 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
       if (!user?.id) throw new Error('Must be logged in');
 
       const imageFields = buildFeedImageFields(imageUrls, imagePositions);
+      const authorFields = {
+        author_identity: authorIdentityMode === 'group' ? 'group' : 'personal',
+        author_group_id: authorIdentityMode === 'group' ? authorGroupId : null,
+      };
       
       if (postType === 'update') {
         const categoryLabel = SERVICE_CATEGORIES.find((c) => c.slug === serviceCategory)?.label;
@@ -189,6 +247,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           link_url: linkUrl.trim() || null,
           link_title: linkTitle.trim() || null,
           visibility,
+          ...authorFields,
         });
 
         // Also tag the user's profile with the chosen service so they appear
@@ -229,7 +288,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           const { error: gErr } = await supabase
             .from('post_groups' as never)
             .insert({ post_id: postData.id, group_id: selectedGroupId });
-          if (gErr) console.error('Failed to tag post group:', gErr);
+          if (gErr) throw gErr;
         }
       } else if (postType === 'event') {
         // Convert datetime-local to ISO format for Supabase
@@ -255,6 +314,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           link_title: linkTitle.trim() || null,
           custom_question: customQuestion.trim() || null,
           visibility: eventVisibility,
+          ...authorFields,
           is_paid: canCreatePaidEvents && isPaid,
           price: parsedPrice,
           currency: 'usd',
@@ -273,6 +333,13 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           if (recError) console.error('Failed to add event recipients:', recError);
         }
 
+        if (eventVisibility === 'group' && selectedGroupId && eventData) {
+          const { error: gErr } = await supabase
+            .from('event_groups' as never)
+            .insert({ event_id: eventData.id, group_id: selectedGroupId });
+          if (gErr) throw gErr;
+        }
+
         if (canCreatePaidEvents && isPaid && parsedPrice && eventData?.id && !paymentLinkUrl) {
           const { error: priceError } = await supabase.functions.invoke('create-event-price', {
             body: {
@@ -283,7 +350,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           });
 
           if (priceError) {
+            const message = await getFunctionErrorMessage(priceError, 'Unable to configure paid checkout');
             console.error('Stripe price creation error:', priceError);
+            return { warning: `Event created, but paid checkout setup failed: ${message}` };
           }
         }
       } else if (postType === 'job') {
@@ -295,6 +364,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           link_url: linkUrl.trim() || null,
           link_title: linkTitle.trim() || null,
           visibility,
+          ...authorFields,
         });
 
         // Insert recipients for specific visibility
@@ -315,20 +385,26 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
           const { error: gErr } = await supabase
             .from('post_groups' as never)
             .insert({ post_id: jobData.id, group_id: selectedGroupId });
-          if (gErr) console.error('Failed to tag post group:', gErr);
+          if (gErr) throw gErr;
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       resetForm();
       queryClient.invalidateQueries({ queryKey: ['feed-posts'] });
       queryClient.invalidateQueries({ queryKey: ['feed-group-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-group-events'] });
       queryClient.invalidateQueries({ queryKey: ['feed-events'] });
-      toast.success(
-        postType === 'update' ? 'Post created!' : 
-        postType === 'event' ? 'Event created!' : 
-        'Opportunity posted!'
-      );
+      if (result?.warning) {
+        toast.warning(result.warning);
+      } else {
+        toast.success(
+          postType === 'update' ? 'Post created!' :
+          postType === 'event' ? 'Event created!' :
+          'Opportunity posted!'
+        );
+      }
+      onCreated?.();
       onClose?.();
     },
     onError: (error: Error) => {
@@ -339,6 +415,10 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
   const handleSubmit = () => {
     console.log('handleSubmit called', { postType, title, eventDate, content });
+    if (authorIdentityMode === 'group' && !authorGroupId) {
+      toast.error('Please choose a group identity');
+      return;
+    }
     if (postType === 'update' && (!content.trim() || imageUrls.length === 0)) {
       console.log('Update validation failed');
       if (!content.trim()) toast.error('Please add post content');
@@ -366,8 +446,11 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   };
 
   const isValid = () => {
+    if (authorIdentityMode === 'group' && !authorGroupId) return false;
     if (visibility === 'specific' && selectedRecipients.length === 0 && (postType === 'update' || postType === 'job')) return false;
+    if (visibility === 'group' && !selectedGroupId && (postType === 'update' || postType === 'job')) return false;
     if (eventVisibility === 'specific' && selectedRecipients.length === 0 && postType === 'event') return false;
+    if (eventVisibility === 'group' && !selectedGroupId && postType === 'event') return false;
     if (postType === 'update') return content.trim().length > 0 && imageUrls.length > 0;
     if (postType === 'event') {
       return (
@@ -394,19 +477,22 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     const newType = value as PostType;
     setPostType(newType);
     if (newType === 'project') {
-      navigate('/projects/new');
-      onClose?.();
+      openProjectCreator();
     }
   };
 
   if (!user) return null;
 
   const eventValidationMessage = getEventValidationMessage();
+  const authorGroups = myScopedAdminGroups.filter((group) => !groupOnly || group.id === defaultGroupId);
+  const targetGroups = myGroups.filter(
+    (group) => (group.is_faculty || group.members_can_post) && (!groupOnly || group.id === defaultGroupId)
+  );
   return (
     <>
       <Card className="bg-card border-border">
         <CardContent className="p-4">
-          <div className="flex gap-3">
+          <div className={cn('flex gap-3', compact && 'flex-col')}>
             <Avatar className="h-10 w-10 flex-shrink-0">
               <AvatarImage src={userProfile?.avatar_url || undefined} />
               <AvatarFallback>{userProfile?.display_name?.[0] || 'U'}</AvatarFallback>
@@ -417,19 +503,19 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="update" className="flex items-center gap-1.5">
                     <MessageSquare className="h-4 w-4" />
-                    <span className="hidden sm:inline">Service</span>
+                    <span className={cn('hidden sm:inline', compact && 'sr-only')}>Service</span>
                   </TabsTrigger>
                   <TabsTrigger value="event" className="flex items-center gap-1.5">
                     <Calendar className="h-4 w-4" />
-                    <span className="hidden sm:inline">Event</span>
+                    <span className={cn('hidden sm:inline', compact && 'sr-only')}>Event</span>
                   </TabsTrigger>
                   <TabsTrigger value="job" className="flex items-center gap-1.5">
                     <Briefcase className="h-4 w-4" />
-                    <span className="hidden sm:inline">Opportunity</span>
+                    <span className={cn('hidden sm:inline', compact && 'sr-only')}>Opportunity</span>
                   </TabsTrigger>
                   <TabsTrigger value="project" className="flex items-center gap-1.5">
                     <Film className="h-4 w-4" />
-                    <span className="hidden sm:inline">Project</span>
+                    <span className={cn('hidden sm:inline', compact && 'sr-only')}>Project</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -452,6 +538,22 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   )}
 
                   {/* Content textarea */}
+                  {authorGroups.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label className="text-sm text-muted-foreground">
+                        Post as
+                      </label>
+                      <AuthorIdentitySelector
+                        identityMode={authorIdentityMode}
+                        onIdentityModeChange={setAuthorIdentityMode}
+                        personalLabel={userProfile?.display_name || 'Personal account'}
+                        availableGroups={authorGroups.map((group) => ({ id: group.id, name: group.name }))}
+                        selectedGroupId={authorGroupId}
+                        onSelectedGroupChange={setAuthorGroupId}
+                      />
+                    </div>
+                  )}
+
                   {postType === 'update' && (
                     <div className="space-y-1.5">
                       <label className="text-sm text-muted-foreground">
@@ -488,7 +590,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
 
                   {/* Event-specific fields */}
                   {postType === 'event' && (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className={cn('grid grid-cols-2 gap-3', compact && 'grid-cols-1')}>
                       <div className="space-y-1.5">
                         <label className="text-sm text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />
@@ -554,18 +656,6 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   {/* Event type and paid toggle for events */}
                   {postType === 'event' && (
                     <>
-                      <AudienceSelector
-                        visibility={eventVisibility}
-                        onVisibilityChange={(nextVisibility) => {
-                          if (nextVisibility !== 'group') {
-                            setEventVisibility(nextVisibility);
-                          }
-                        }}
-                        selectedUsers={selectedRecipients}
-                        onSelectedUsersChange={setSelectedRecipients}
-                        currentUserId={user.id}
-                      />
-
                       <div className="space-y-1.5">
                         <label className="text-sm text-muted-foreground">Event Type</label>
                         <Input
@@ -653,7 +743,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                               const zoom = pos.zoom ?? 1;
 
                               return (
-                                <div key={url} className="flex-none w-full relative h-64">
+                                <div key={url} className={cn('flex-none w-full relative h-64', compact && 'h-44')}>
                                   <div
                                     style={{
                                       position: 'absolute',
@@ -769,19 +859,32 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                     </p>
                   )}
 
-                  {/* Audience Selector for posts and jobs */}
-                  {(postType === 'update' || postType === 'job') && (
+                  {/* Audience Selector */}
+                  {(postType === 'update' || postType === 'event' || postType === 'job') && (groupOnly ? (
+                    <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {targetGroups.find((group) => group.id === defaultGroupId)?.name || 'Department'} only
+                      </span>
+                    </div>
+                  ) : (
                     <AudienceSelector
-                      visibility={visibility}
-                      onVisibilityChange={setVisibility}
+                      visibility={postType === 'event' ? eventVisibility : visibility}
+                      onVisibilityChange={(nextVisibility) => {
+                        if (postType === 'event') {
+                          setEventVisibility(nextVisibility);
+                        } else {
+                          setVisibility(nextVisibility);
+                        }
+                      }}
                       selectedUsers={selectedRecipients}
                       onSelectedUsersChange={setSelectedRecipients}
                       currentUserId={user.id}
-                      availableGroups={myGroups.map((g) => ({ id: g.id, name: g.name }))}
+                      availableGroups={targetGroups.map((g) => ({ id: g.id, name: g.name }))}
                       selectedGroupId={selectedGroupId}
                       onSelectedGroupChange={setSelectedGroupId}
                     />
-                  )}
+                  ))}
 
                   <div className="flex items-center justify-between">
                     <ImageUploader
@@ -841,7 +944,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
                   <p className="text-sm text-muted-foreground mb-3">
                     Create a project to collaborate with your team
                   </p>
-                  <Button onClick={() => { navigate('/projects/new'); onClose?.(); }}>
+                  <Button onClick={openProjectCreator}>
                     <Film className="h-4 w-4 mr-2" />
                     Create New Project
                   </Button>

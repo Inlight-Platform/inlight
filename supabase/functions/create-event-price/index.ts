@@ -42,9 +42,6 @@ serve(async (req) => {
       .maybeSingle();
 
     if (adminError) throw adminError;
-    if (!adminRole) {
-      throw new Error("Only Inlight admins can configure paid event tickets");
-    }
 
     const { data: eventRecord, error: eventError } = await supabaseAdmin
       .from("events")
@@ -55,6 +52,35 @@ serve(async (req) => {
     if (eventError) throw eventError;
     if (!eventRecord || eventRecord.user_id !== user.id) {
       throw new Error("You do not have permission to configure tickets for this event");
+    }
+
+    let isScopedGroupAdmin = false;
+    if (!adminRole) {
+      const { data: eventGroups, error: eventGroupsError } = await supabaseAdmin
+        .from("event_groups")
+        .select("group_id")
+        .eq("event_id", event_id);
+
+      if (eventGroupsError) throw eventGroupsError;
+
+      const groupIds = (eventGroups || []).map((eventGroup) => eventGroup.group_id);
+      if (groupIds.length > 0) {
+        const { data: scopedAdmin, error: scopedAdminError } = await supabaseAdmin
+          .from("group_admins")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .in("group_id", groupIds)
+          .limit(1)
+          .maybeSingle();
+
+        if (scopedAdminError) throw scopedAdminError;
+        isScopedGroupAdmin = !!scopedAdmin;
+      }
+    }
+
+    if (!adminRole && !isScopedGroupAdmin) {
+      throw new Error("Only Inlight admins or the event's department admins can configure paid tickets");
     }
 
     if (!eventRecord.is_paid) {

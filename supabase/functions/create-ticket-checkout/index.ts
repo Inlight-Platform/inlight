@@ -67,25 +67,33 @@ serve(async (req) => {
     const user = data.user;
     if (!user?.email) throw new Error("Not authenticated");
 
+    const authenticatedClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
     const { event_id } = await req.json();
     if (!event_id) {
       throw new Error("Missing event_id");
+    }
+
+    // Use the caller's JWT for the event lookup so event RLS remains the
+    // authorization boundary before Stripe or service-role writes begin.
+    const { data: eventRecord, error: eventError } = await authenticatedClient
+      .from("events")
+      .select("id, title, event_date, stripe_price_id, is_paid")
+      .eq("id", event_id)
+      .maybeSingle();
+
+    if (eventError || !eventRecord) {
+      throw new Error("Event not found or you do not have access");
     }
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
-
-    const { data: eventRecord, error: eventError } = await supabaseAdmin
-      .from("events")
-      .select("id, title, event_date, stripe_price_id, is_paid")
-      .eq("id", event_id)
-      .single();
-
-    if (eventError || !eventRecord) {
-      throw new Error("Event not found");
-    }
 
     if (!eventRecord.is_paid) {
       throw new Error("This event is not configured for paid ticket checkout");

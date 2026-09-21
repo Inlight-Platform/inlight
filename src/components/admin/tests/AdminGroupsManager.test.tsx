@@ -7,6 +7,7 @@ import AdminGroupsManager from '../AdminGroupsManager';
 
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
+  functionsInvoke: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
 }));
@@ -14,6 +15,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     rpc: mocks.rpc,
+    functions: {
+      invoke: mocks.functionsInvoke,
+    },
   },
 }));
 
@@ -44,6 +48,7 @@ const renderManager = () => {
 describe('AdminGroupsManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.functionsInvoke.mockResolvedValue({ data: { invite: { email: 'ryan@adler.edu' } }, error: null });
   });
 
   it('creates a department portal with an initial admin and refreshes the groups list', async () => {
@@ -113,10 +118,77 @@ describe('AdminGroupsManager', () => {
       });
     });
 
-    expect(mocks.toastSuccess).toHaveBeenCalledWith('Department portal created');
+    await waitFor(() => {
+      expect(mocks.functionsInvoke).toHaveBeenCalledWith('send-platform-invite', {
+        body: {
+          email: 'ryan@adler.edu',
+          note: "You've been invited to administer Stella Adler Studio on Inlight.",
+        },
+      });
+    });
+
+    expect(mocks.toastSuccess).toHaveBeenCalledWith('Department portal created and invite email sent');
     expect(await screen.findByText('Stella Adler')).toBeInTheDocument();
     expect(screen.getByText('/stella-adler')).toBeInTheDocument();
     expect(screen.getByText('1')).toBeInTheDocument();
+  });
+
+  it('keeps the created group visible when the invite email fails', async () => {
+    mocks.functionsInvoke.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'Missing RESEND_API_KEY' },
+    });
+    mocks.rpc
+      .mockResolvedValueOnce({
+        data: [],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          id: 'adler-id',
+          slug: 'stella-adler',
+          name: 'Stella Adler Studio',
+          description: 'A private space for Adler students.',
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            id: 'adler-id',
+            slug: 'stella-adler',
+            name: 'Stella Adler',
+            description: 'A private space for Adler students.',
+            active_member_count: 0,
+            active_admin_count: 0,
+            created_at: '2026-08-21T12:00:00.000Z',
+            updated_at: '2026-08-21T12:00:00.000Z',
+          },
+        ],
+        error: null,
+      });
+
+    renderManager();
+
+    expect(await screen.findByText('No department portals yet')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /new group/i }));
+    fireEvent.change(screen.getByLabelText(/name/i), {
+      target: { value: 'Stella Adler' },
+    });
+    fireEvent.change(screen.getByLabelText(/initial admin email/i), {
+      target: { value: 'Ryan@Adler.edu' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /create group/i }));
+
+    await waitFor(() => {
+      expect(mocks.toastSuccess).toHaveBeenCalledWith(
+        'Department portal created, but the invite email could not be sent',
+      );
+    });
+
+    expect(mocks.toastError).toHaveBeenCalledWith('Missing RESEND_API_KEY');
+    expect(await screen.findByText('Stella Adler')).toBeInTheDocument();
   });
 
   it('shows an error state when groups cannot be loaded', async () => {
