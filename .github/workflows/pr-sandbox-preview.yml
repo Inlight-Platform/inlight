@@ -80,19 +80,32 @@ jobs:
       - name: Run tests
         run: npm run test:run
 
+      - name: Detect sandbox migration changes
+        id: migration_changes
+        run: |
+          if git diff --quiet "${{ github.event.pull_request.base.sha }}...HEAD" -- supabase/migrations; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Supabase CLI
-        if: ${{ env.SANDBOX_SUPABASE_DB_URL != '' }}
+        if: ${{ env.SANDBOX_SUPABASE_DB_URL != '' && steps.migration_changes.outputs.changed == 'true' }}
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
       - name: Apply sandbox database migrations
-        if: ${{ env.SANDBOX_SUPABASE_DB_URL != '' }}
+        if: ${{ env.SANDBOX_SUPABASE_DB_URL != '' && steps.migration_changes.outputs.changed == 'true' }}
         run: supabase db push --db-url "$SANDBOX_SUPABASE_DB_URL" --yes --skip-vault
 
-      - name: Skip sandbox database migrations
+      - name: Skip sandbox database migrations without database URL
         if: ${{ env.SANDBOX_SUPABASE_DB_URL == '' }}
         run: echo "::notice::SANDBOX_SUPABASE_DB_URL is not configured, so PR sandbox database migrations were skipped."
+
+      - name: Skip sandbox database migrations without migration changes
+        if: ${{ steps.migration_changes.outputs.changed != 'true' }}
+        run: echo "::notice::This PR does not change supabase/migrations, so PR sandbox database migrations were skipped."
 
       - name: Build sandbox app
         run: npm run build:sandbox

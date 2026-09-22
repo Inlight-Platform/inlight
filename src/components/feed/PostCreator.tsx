@@ -92,7 +92,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
   const [eventType, setEventType] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [visibility, setVisibility] = useState<PostVisibility>('public');
-  const [eventVisibility, setEventVisibility] = useState<EventVisibility>('public');
+  const [eventVisibility, setEventVisibility] = useState<EventVisibility>('specific');
   const [selectedRecipients, setSelectedRecipients] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const { data: myGroups = [] } = useMyGroups();
@@ -162,7 +162,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({ userProfile, defaultOp
     setCustomQuestion('');
     setPostType('update');
     setVisibility('public');
-    setEventVisibility('public');
+    setEventVisibility('specific');
     setSelectedRecipients([]);
     setSelectedGroupId(null);
     setImagePositions([]);
