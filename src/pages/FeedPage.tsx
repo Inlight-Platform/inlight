@@ -754,7 +754,8 @@ const FeedPage: React.FC = () => {
     return ids;
   }, [firstDegree, secondDegree, user?.id]);
 
-  const hasVisibleCreator = useCallback((item: { user_id?: string | null; creator_id?: string | null; creator_profile?: unknown }) => {
+  const hasVisibleCreator = useCallback((item: { type?: string; user_id?: string | null; creator_id?: string | null; creator_profile?: unknown }) => {
+    if (item.type === 'event') return true;
     if (!user) return true;
     const ownerId = item.user_id || item.creator_id;
     return ownerId === user.id || Boolean(item.creator_profile);

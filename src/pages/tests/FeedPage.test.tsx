@@ -71,6 +71,16 @@ vi.mock('@/integrations/supabase/client', () => {
     { id: 'p1', content: 'Visible Post', user_id: 'u1', visibility: 'public', created_at: '2026-01-02T00:00:00Z' },
     { id: 'p2', content: 'Orphan Post', user_id: 'missing', visibility: 'public', created_at: '2026-01-01T00:00:00Z' },
   ];
+  const events = [
+    {
+      id: 'e1',
+      title: 'Public Event Without Creator Profile',
+      user_id: 'missing',
+      visibility: 'public',
+      event_date: '2026-09-22T23:00:00Z',
+      created_at: '2026-09-20T00:00:00Z',
+    },
+  ];
   const groupPostLinks = [
     {
       post_id: 'gp1',
@@ -87,6 +97,7 @@ vi.mock('@/integrations/supabase/client', () => {
 
   const resultFor = (table: string) => {
     if (table === 'posts') return posts;
+    if (table === 'events') return events;
     if (table === 'post_groups') return groupPostLinks;
     if (table === 'project_groups') return [];
     if (table === 'profiles_public') return profiles;
@@ -148,6 +159,13 @@ describe('FeedPage (filtered posts)', () => {
     // Ensure 'Visible Post' is rendered and 'Orphan Post' is not
     expect(await screen.findByText('Visible Post')).toBeDefined();
     expect(screen.queryByText('Orphan Post')).toBeNull();
+  });
+
+  it('shows events even when their creator has no public profile', async () => {
+    const FeedPage = (await import('@/pages/FeedPage')).default;
+    renderFeed(FeedPage ? <FeedPage /> : null, ['/?tab=events']);
+
+    expect(await screen.findByText('Public Event Without Creator Profile')).toBeDefined();
   });
 
   it('renders a private tab for each accessible group', async () => {
