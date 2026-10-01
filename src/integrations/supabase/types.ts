@@ -3002,6 +3002,13 @@ export type Database = {
       }
     }
     Functions: {
+      get_credit_vouch_state: {
+        Args: { _credit_id: string }
+        Returns: {
+          has_vouched: boolean
+          vouch_count: number
+        }[]
+      }
       accept_project_credit_invite: { Args: { _token: string }; Returns: Json }
       add_project_member_by_email: {
         Args: {
