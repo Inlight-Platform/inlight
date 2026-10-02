@@ -188,6 +188,41 @@ Recommended general browse column set: `category`, `created_at`, `creator_id`, `
 
 No view, RPC, query, schema, or policy was changed in Phase 2.5. These are documented projection requirements only.
 
+## Phase 3 Group 4 - company browse identity lockdown
+
+Status: **IMPLEMENTED LOCALLY; OWNER MANUAL VERIFICATION PASSED**
+
+Implementation prepared in `20261002214500_inv96_group4_company_browse_privacy.sql`, with function volatility normalized by `20261002215500_inv96_group4_staff_context_volatility.sql`, public team identity handling tightened by `20261002223000_inv96_group4_public_team_privacy.sql`, anonymous team visibility removed by `20261002224500_inv96_group4_hide_team_from_anonymous.sql`, and unrelated signed-in visibility removed by `20261002230000_inv96_group4_restrict_team_to_managers.sql`:
+
+- `companies` base reads are restricted to the owning user and admins.
+- `company_photos` base reads are restricted to the owning company user and admins.
+- `companies_browse` preserves public company presentation and exposes a caller-specific `is_owner` boolean without returning `owner_user_id`, `created_at`, or `updated_at`.
+- `get_company_photos_browse(uuid)` preserves the public gallery while returning only `id`, `image_url`, and `caption`.
+- Public company, company directory, and in-app company page reads move to the projection/RPC; owner/admin writes remain on the base tables.
+- `get_company_management_context(uuid, text)` returns `owner_user_id` only to the owner, an admin, or a valid staff-token holder, preserving management and staff display without making the UUID public.
+- `get_company_team_browse(uuid)` returns public display fields plus an opaque member key; it does not return account UUIDs or invitation email addresses.
+- `get_company_team_member_browse(uuid, text)` preserves public team-member detail pages through the opaque key without returning an account UUID.
+- Anonymous and unrelated authenticated callers receive no rows from either team RPC. Only the company owner and admins retain the presentation-only Team section and opaque member-detail route.
+- `get_company_staff_access_managed(uuid, text)` returns staff invitation names and emails only to the company owner, an admin, or a valid staff-token holder.
+- Anonymous and authenticated execution was revoked from the superseded `get_company_staff_ids(uuid)` and `get_company_staff_access_public(uuid)` identity-bearing RPCs.
+- Local fixture company: `af4aba4a-3b05-4f48-b81b-4af6f9a8912e`.
+- Local fixture photo: `1d4fc086-b765-42b3-b5f8-856a6588616d`.
+- All five Group 4 migrations were applied to local Supabase only.
+- Automated checks: TypeScript passed; 37 unit tests passed; sandbox build passed. Targeted ESLint remains blocked by 15 pre-existing violations in the company pages; none is on a Group 4 changed line.
+
+### Owner-reported Group 4 verification
+
+1. **PASS** - before implementation, anonymous and unrelated-user base-table reads exposed the fixture company owner UUID and photo uploader UUID; owner and admin reads returned the expected fixture rows.
+2. **PASS** - after implementation, anonymous and unrelated-user base-table reads returned `[]` for both `companies` and `company_photos`; owner and admin reads returned the expected fixture rows.
+3. **PASS** - `companies_browse` returned `is_owner=false` to anonymous, unrelated-user, and admin callers and `is_owner=true` to the owner, without an `owner_user_id` field.
+4. **PASS** - `get_company_photos_browse` returned the fixture photo without `uploaded_by` or `company_id`.
+5. **PASS** - `get_company_management_context` returned `[]` to anonymous and unrelated-user callers and returned the owner UUID to the owner and admin.
+6. **PASS** - the unrelated user could view the company and photos without management or delete controls; the owner retained management, transfer, upload, and delete controls; the admin retained management controls; `/people` listed the company.
+7. **PASS** - the owner uploaded an additional local test photo and received `Photo uploaded!`.
+8. **PASS** - the signed-out public company route initially displayed the Team section through a raw UUID route. The first correction replaced raw identifiers with opaque member keys and removed public invitation-email access; owner REST checks returned `true` for the no-UUID/no-email assertion and both superseded RPCs returned HTTP `401` / PostgreSQL code `42501`. The owner then decided that signed-out visitors may not see Team names at all and confirmed that the anonymous Team call returns `[]`, the signed-out company route has no Team section, and the direct opaque staff route displays `Profile not available.` After observing that an unrelated signed-in user still saw the Team section, the owner chose owner/admin-only Team visibility. The owner confirmed that the unrelated user sees no Team section and receives `Profile not available.` from the opaque detail route, while both the owner and admin see the Team section and can open its detail page.
+
+These are owner-executed and owner-confirmed results. Codex did not independently confirm the manual checks.
+
 ## Base comparison
 
 - Preserved survey: `rls-review-sep22-base.md`, base `fe33c38de6db499ae5b29cf96a85a960fda826c4`.

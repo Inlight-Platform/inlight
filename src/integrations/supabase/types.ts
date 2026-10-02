@@ -2894,6 +2894,25 @@ export type Database = {
       }
     }
     Views: {
+      companies_browse: {
+        Row: {
+          brand_accent_color: string | null
+          brand_primary_color: string | null
+          brand_text_color: string | null
+          cover_image_url: string | null
+          description: string | null
+          fun_facts: Json
+          id: string
+          is_owner: boolean | null
+          location: string | null
+          logo_url: string | null
+          mission: string | null
+          name: string
+          tagline: string | null
+          website_url: string | null
+        }
+        Relationships: []
+      }
       nyc_shows_browse: {
         Row: {
           accessibility_features: string[] | null
@@ -3063,6 +3082,18 @@ export type Database = {
       }
     }
     Functions: {
+      get_company_management_context: {
+        Args: { _company_id: string; _staff_token?: string | null }
+        Returns: { owner_user_id: string | null }[]
+      }
+      get_company_photos_browse: {
+        Args: { _company_id: string }
+        Returns: {
+          caption: string | null
+          id: string
+          image_url: string
+        }[]
+      }
       get_credit_vouch_state: {
         Args: { _credit_id: string }
         Returns: {
@@ -3154,6 +3185,39 @@ export type Database = {
         Args: { _company_id: string }
         Returns: {
           user_id: string
+        }[]
+      }
+      get_company_staff_access_managed: {
+        Args: { _company_id: string; _staff_token?: string | null }
+        Returns: {
+          email: string
+          staff_name: string | null
+        }[]
+      }
+      get_company_team_browse: {
+        Args: { _company_id: string }
+        Returns: {
+          avatar_url: string | null
+          display_name: string
+          member_key: string | null
+          role: string | null
+          stage_name: string | null
+        }[]
+      }
+      get_company_team_member_browse: {
+        Args: { _company_id: string; _member_key: string }
+        Returns: {
+          avatar_url: string | null
+          bio: string | null
+          cover_url: string | null
+          display_name: string
+          headline: string | null
+          instagram_url: string | null
+          location: string | null
+          role: string | null
+          skills: string[] | null
+          stage_name: string | null
+          website_url: string | null
         }[]
       }
       get_message_privacy: { Args: { target_user_id: string }; Returns: string }

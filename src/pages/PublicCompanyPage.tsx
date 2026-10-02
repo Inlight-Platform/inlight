@@ -14,7 +14,7 @@ const PublicCompanyPage: React.FC = () => {
     queryKey: ['public-company', companyId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('companies')
+        .from('companies_browse')
         .select('*')
         .eq('id', companyId!)
         .maybeSingle();
@@ -41,11 +41,9 @@ const PublicCompanyPage: React.FC = () => {
   const { data: photos = [] } = useQuery({
     queryKey: ['public-company-photos', companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('company_photos')
-        .select('id, image_url')
-        .eq('company_id', companyId!)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('get_company_photos_browse', {
+        _company_id: companyId!,
+      });
       if (error) throw error;
       return data || [];
     },
@@ -55,21 +53,9 @@ const PublicCompanyPage: React.FC = () => {
   const { data: staff = [] } = useQuery({
     queryKey: ['public-company-staff', companyId],
     queryFn: async () => {
-      const { data: idRows, error: idErr } = await (supabase.rpc as any)('get_company_staff_ids', { _company_id: companyId });
-      if (idErr) throw idErr;
-      const ids = (idRows || []).map((r: any) => r.user_id);
-      if (ids.length === 0) return [];
-      const { data, error } = await (supabase.rpc as any)('get_public_profiles', { _user_ids: ids });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!companyId,
-  });
-
-  const { data: invitedStaff = [] } = useQuery({
-    queryKey: ['public-company-invited-staff', companyId],
-    queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)('get_company_staff_access_public', { _company_id: companyId });
+      const { data, error } = await supabase.rpc('get_company_team_browse', {
+        _company_id: companyId!,
+      });
       if (error) throw error;
       return data || [];
     },
@@ -212,20 +198,17 @@ const PublicCompanyPage: React.FC = () => {
       )}
 
       {/* Staff */}
-      {(staff.length > 0 || invitedStaff.length > 0) && (
+      {staff.length > 0 && (
         <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 border-b border-border">
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-5 h-5 text-muted-foreground" />
             <h2 className="text-lg font-display font-semibold">Team</h2>
-            <Badge variant="secondary" className="text-xs">{staff.length + invitedStaff.length}</Badge>
+            <Badge variant="secondary" className="text-xs">{staff.length}</Badge>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {staff.map((person: any) => (
-              <Link
-                key={person.user_id}
-                to={`/c/${companyId}/staff/${person.user_id}`}
-                className="flex flex-col items-center text-center p-4 rounded-xl border border-border hover:shadow-lg transition-shadow bg-card"
-              >
+            {staff.map((person) => {
+              const content = (
+                <>
                 {person.avatar_url ? (
                   <img src={person.avatar_url} alt="" className="w-16 h-16 rounded-full object-cover mb-2" />
                 ) : (
@@ -235,20 +218,23 @@ const PublicCompanyPage: React.FC = () => {
                 )}
                 <p className="font-semibold text-sm truncate w-full">{person.stage_name || person.display_name}</p>
                 {person.role && <p className="text-xs text-muted-foreground truncate w-full">{person.role}</p>}
-              </Link>
-            ))}
-            {invitedStaff.map((person: any) => {
-              const displayName = person.staff_name || person.email;
-              return (
+                </>
+              );
+
+              return person.member_key ? (
+                <Link
+                  key={person.member_key}
+                  to={`/c/${companyId}/staff/${person.member_key}`}
+                  className="flex flex-col items-center text-center p-4 rounded-xl border border-border hover:shadow-lg transition-shadow bg-card"
+                >
+                  {content}
+                </Link>
+              ) : (
                 <div
-                  key={`${person.email}-${displayName}`}
+                  key={`named-staff-${person.display_name}`}
                   className="flex flex-col items-center text-center p-4 rounded-xl border border-border bg-card"
                 >
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-lg font-semibold mb-2">
-                    {(displayName || '?').charAt(0)}
-                  </div>
-                  <p className="font-semibold text-sm truncate w-full">{displayName}</p>
-                  <p className="text-xs text-muted-foreground truncate w-full">Staff</p>
+                  {content}
                 </div>
               );
             })}
