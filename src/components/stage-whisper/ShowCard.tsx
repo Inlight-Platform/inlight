@@ -24,7 +24,8 @@ export interface Show {
   official_url: string | null;
   is_active: boolean;
   show_times: string | null;
-  submitted_by: string | null;
+  submitted_by?: string | null;
+  is_owner?: boolean | null;
   badges?: string[] | null;
 }
 

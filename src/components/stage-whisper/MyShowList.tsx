@@ -42,7 +42,7 @@ export const MyShowList: React.FC<MyShowListProps> = ({ onShowClick, onUnsave })
       // Fetch show details
       const showIds = saved.map(s => s.show_id);
       const { data: shows } = await supabase
-        .from('nyc_shows')
+        .from('nyc_shows_browse')
         .select('*')
         .in('id', showIds);
 

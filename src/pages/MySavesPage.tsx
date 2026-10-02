@@ -270,7 +270,7 @@ const MySavesPage: React.FC = () => {
     queryFn: async () => {
       if (!savedShowIds.length) return [];
       const { data } = await supabase
-        .from('nyc_shows')
+        .from('nyc_shows_browse')
         .select('*')
         .in('id', savedShowIds);
       return (data || []) as Show[];

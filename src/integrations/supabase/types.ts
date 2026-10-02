@@ -2894,6 +2894,33 @@ export type Database = {
       }
     }
     Views: {
+      nyc_shows_browse: {
+        Row: {
+          accessibility_features: string[] | null
+          badges: string[] | null
+          borough: string
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_anonymous: boolean | null
+          is_owner: boolean | null
+          lottery_info: string | null
+          official_url: string | null
+          poster_url: string | null
+          price_tier: string
+          run_end: string | null
+          run_start: string | null
+          rush_policy: string | null
+          show_times: string | null
+          show_type: string
+          title: string
+          updated_at: string
+          venue: string
+        }
+        Relationships: []
+      }
       profiles_public: {
         Row: {
           activity_score: number | null
@@ -2997,6 +3024,40 @@ export type Database = {
           vouch_count?: number | null
           website_url?: string | null
           why_artist?: string | null
+        }
+        Relationships: []
+      }
+      user_films_browse: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_anonymous: boolean | null
+          is_owner: boolean | null
+          link_url: string
+          poster_url: string | null
+          title: string
+          updated_at: string
+        }
+        Relationships: []
+      }
+      user_music_shows_browse: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_anonymous: boolean | null
+          is_free: boolean | null
+          is_owner: boolean | null
+          poster_url: string | null
+          show_date: string | null
+          show_type: string
+          ticket_url: string | null
+          title: string
+          updated_at: string
+          venue: string | null
         }
         Relationships: []
       }

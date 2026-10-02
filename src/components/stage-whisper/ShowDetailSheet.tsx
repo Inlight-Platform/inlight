@@ -261,7 +261,7 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
             {/* Floating Actions */}
             <div className="absolute top-4 right-4 flex gap-2">
               {/* Edit button - only for submitter */}
-              {user && show.submitted_by === user.id && (
+              {user && (show.is_owner || show.submitted_by === user.id) && (
                 <EditShowDialog
                   show={show}
                   onSuccess={onClose}

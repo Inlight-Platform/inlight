@@ -1095,3 +1095,91 @@ Completed by the owner against `http://127.0.0.1:54321` and the sandbox app at `
 10. **PASS** — the profile-vouch, credit-vouch, and tip-vote counts changed correctly when removed and restored.
 
 These are owner-executed and owner-confirmed results. Codex did not independently confirm the manual checks.
+
+## Phase 3 — Group 2 implementation
+
+Status: **IMPLEMENTED LOCALLY; OWNER MANUAL VERIFICATION COMPLETE WITH ONE ACCEPTED FIXTURE GAP**
+
+Migrations:
+
+- `supabase/migrations/20261002135954_inv96_group2_anonymous_browse_views.sql`
+- `supabase/migrations/20261002141000_inv96_group2_browse_view_grants.sql`
+- `supabase/migrations/20261002142500_inv96_group2_normalize_anonymous_owner_state.sql`
+
+### Policy and API changes
+
+- `user_films`, `user_music_shows`, and `nyc_shows`: replaced anonymous base-table reads with authenticated owner-only and admin-only `SELECT` policies.
+- Added active-row browse views `user_films_browse`, `user_music_shows_browse`, and `nyc_shows_browse`.
+- Browse views omit `submitted_by` for every caller and expose only caller-relative `is_owner` for owner controls. The ownership flag is normalized with `coalesce(..., false)`, so callers without a user ID receive `false` rather than SQL `NULL`.
+- `anon` and `authenticated` have exactly `SELECT` on the browse views and no write-class view privilege.
+- The migrations do not delete or update fixture rows. All three files include manual rollback instructions.
+
+### Frontend impact
+
+- `src/pages/StageWhisperPage.tsx`: theatre, community-film, and music discovery reads now use browse views. Without this change, tightened base policies would hide other users' listings.
+- `src/pages/MySavesPage.tsx`: saved-show detail hydration now uses `nyc_shows_browse`. Without this change, users could not resolve shows submitted by someone else or seeded shows with no submitter.
+- `src/components/stage-whisper/MyShowList.tsx`: saved-show hydration now uses `nyc_shows_browse` for the same reason.
+- `src/components/profile/AddAttendedDialog.tsx`: the attended-show picker now uses `nyc_shows_browse`; otherwise most shows would disappear.
+- `src/pages/MessagesPage.tsx` and `src/components/messages/GroupChatThread.tsx`: shared-show detail reads now use `nyc_shows_browse`; otherwise recipients could not open another user's show.
+- `src/components/stage-whisper/ShowCard.tsx` and `ShowDetailSheet.tsx`: ownership can come from the view's `is_owner` flag without exposing `submitted_by`.
+- Admin managers intentionally continue reading the base tables under admin policies.
+
+### Owner-reported pre-change baseline
+
+1. The three browse endpoints initially returned HTTP `404` / `PGRST205` because the views did not exist.
+2. The guarded browse assertion returned `false` for each missing endpoint.
+3. Anonymous, owner, and unrelated-user tokens could all read the owner UUID from the three base tables.
+4. The signed-out `/industry-now` page displayed the current `VisitorAuthPrompt`, so cards were not visible through the UI while signed out.
+5. Creating the film through the product UI failed with database code `42P10`; the owner created the film, music, and show fixtures through local Studio Table Editor instead.
+
+These are owner-reported baseline observations, not Codex verification results.
+
+### Automated implementation checks
+
+- All three Group 2 migrations applied with `npx supabase migration up --local`; no reset or hosted command was used.
+- Local catalog inspection found exactly two base-table `SELECT` policies per table: authenticated owner and authenticated admin.
+- Local catalog inspection found the three browse views use `security_barrier=true`, `security_invoker=false`, omit `submitted_by`, filter to active rows, and expose `is_owner`.
+- Local grant inspection found `anon` and `authenticated` have `SELECT` and no `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES`, or `TRIGGER` privilege on each browse view.
+- The three named Group 2 fixtures remain present.
+- `npm run typecheck`: passed.
+- `npm run test:run`: passed (14 test files, 37 tests).
+- `npm run build:sandbox`: passed with pre-existing Browserslist, Tailwind class ambiguity, and bundle-size warnings.
+- `git diff --check`: passed.
+- Targeted lint remains blocked by existing lint debt in the touched files: 24 errors and one warning, none on a Group 2 changed line.
+- No hosted Supabase command, reset, or destructive database command was run for Group 2.
+
+### Shared sandbox CI blocker
+
+- The existing PR's sandbox-preview job fails before applying INV96 migrations because the shared hosted sandbox migration table contains 29 versions from the unmerged `codex/groups-96-97-118` branch that are absent from both `origin/main` and the INV96 PR branch.
+- Those files are Groups-feature migrations and remain out of scope for INV96. They were not copied, cherry-picked, or recreated here.
+- No `supabase migration repair`, hosted `supabase db pull`, hosted `supabase db push`, or other hosted database command was run. The shared sandbox must be reconciled by its owner, or the Groups work must reach `main`, before the INV96 migration-preview job can pass safely.
+
+### Owner-reported in-progress verification
+
+1. **PASS** — anonymous reads of all three browse views returned arrays with no `submitted_by` key.
+2. **PARTIAL BEFORE CORRECTION** — the owner received `is_owner=true` and the unrelated user received `is_owner=false` for all three owner fixtures, but the anonymous caller received `is_owner=null`.
+3. **PASS AFTER CORRECTION** — after a follow-up local migration changed each view expression to `coalesce(submitted_by = auth.uid(), false)`, the anonymous caller received `is_owner=false` for the owner film, music, and show fixtures.
+4. **PASS** — anonymous and unrelated-user base-table reads returned `[]` for all three owner fixtures. The owner and admin each received exactly the expected owner fixture from `user_films`, `user_music_shows`, and `nyc_shows`.
+5. **PASS** — anonymous `INSERT` attempts against all three browse views returned HTTP `401`, PostgreSQL code `42501`, and `permission denied for view ...` without reaching an insert path.
+6. **PASS AFTER CONFIRMED-WORKTREE RETEST** — the initial unrelated-user product attempt showed no fixtures. After starting the frontend from `/Users/clely/.codex/worktrees/inv96-rls-group2/inlight`, the unrelated user saw the film, music, and theatre fixtures and had no theatre edit control. The owner saw all three fixtures and retained the theatre edit control.
+7. **PASS** — the unrelated user saved the owner-submitted theatre fixture, saw and opened it from **My List**, and saw and opened it from `/saves` without receiving the owner edit control.
+8. **PASS** — the unrelated user's attended-show picker found the owner-submitted theatre fixture, displayed the expected success toast, and showed the fixture in **Attended** after refresh.
+9. **PASS** — the admin manager listed the owner-submitted theatre and music fixtures. The community film appeared in Industry Now, and all three fixtures exposed their admin controls without database or loading errors. No delete control was activated.
+10. **PASS** — a correctly encoded local owner-to-other shared-show message returned HTTP `201`, rendered as an `INV96 Anonymous Show` card, and opened the show detail sheet for the unrelated user without an owner edit control. An earlier malformed local test message remains untouched.
+11. **NOT EXERCISED — NO FIXTURE** — read-only membership checks returned `OWNER_GROUPS=[]`, `OTHER_GROUPS=[]`, and `common_group_ids=[]`. The `GroupChatThread` shared-show detail path cannot be manually exercised without creating a local project group chat and memberships; none were created.
+
+Owner disposition: Group 2 is accepted with item 11 retained as an explicit untested gap. No project, group chat, membership, or group-chat message fixture is required for this group.
+
+These are owner-reported results. Codex did not independently confirm the manual checks.
+
+### Group 2 owner verification checklist
+
+1. Confirm anonymous browse-view reads return arrays, include the three active fixtures, and contain no `submitted_by` key.
+2. Confirm each browse row reports `is_owner=false` to anonymous and unrelated-user callers, while the owner's three fixtures report `is_owner=true` to the owner.
+3. Confirm anonymous and unrelated-user base-table reads return `[]` for all three tables.
+4. Confirm the owner sees only the owner's base-table fixtures and the admin sees all base rows.
+5. Confirm anonymous writes to each browse view are rejected and create no row.
+6. Start the sandbox app from the Group 2 worktree and confirm signed-in owner and other-user discovery still shows the fixtures without exposing submitter identity.
+7. Confirm owner controls still appear for the owner's show, saved-show hydration works, the attended-show picker works, shared-show details open, and admin managers still load their base-table records.
+8. Keep the `42P10` poster-upload failure recorded as a separate pre-existing product failure; direct fixture creation does not make that workflow pass.
+9. Paste every response, missing card/control, browser error, console/network error, or unexpected identity field back to Codex. Codex does not mark Group 2 verified.
