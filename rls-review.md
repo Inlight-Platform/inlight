@@ -1172,6 +1172,66 @@ Owner disposition: Group 2 is accepted with item 11 retained as an explicit unte
 
 These are owner-reported results. Codex did not independently confirm the manual checks.
 
+## Phase 3 — Group 3 implementation
+
+Status: **IMPLEMENTED LOCALLY; OWNER MANUAL VERIFICATION PASSED**
+
+Migration: `supabase/migrations/20261002152000_inv96_group3_verified_public_credits.sql`
+
+### Policy changes
+
+- `credits`: replaced the unrestricted `SELECT USING (true)` policy with three explicit read policies.
+- Anonymous and authenticated callers may read rows where `verified IS TRUE`.
+- Authenticated owners may read all of their own credit rows, including drafts.
+- Authenticated admins may read every credit row.
+- Existing insert, update, delete, verification-request, and credit-vouch behavior is unchanged.
+- The migration does not insert, update, or delete any credit or verification-request row and includes a manual rollback block.
+
+### Frontend impact
+
+- No frontend query changes are required. `src/pages/ProfilePage.tsx` already queries `credits` by profile `user_id`; RLS now removes unverified rows for visitors and unrelated users while preserving them on the owner's profile.
+- `src/components/admin/CreditVerificationManager.tsx` continues joining verification requests to `credits`; the admin read policy preserves that workflow.
+- `src/lib/projectInvitationCredits.ts` continues finding and creating the signed-in user's own credits; the owner read policy preserves that workflow.
+
+### Owner-reported pre-change baseline
+
+1. The owner created `INV96 Draft Credit` (`173a97f1-7acc-4d1c-9701-2849b1e23a4a`) with `verified=false`.
+2. The owner created `INV96 Verified Credit` (`bb1fe40a-d9c0-4472-b634-9a0cb65cf07f`) and completed the local admin approval workflow, producing `verified=true`.
+3. Anonymous, unrelated-user, owner, and admin REST reads each returned both fixtures before Group 3 implementation.
+4. The older `INV96 Credit` fixture also remains unverified and must follow the same post-change visibility rule as the draft fixture.
+
+These are owner-reported baseline observations. Codex did not independently confirm the manual checks.
+
+### Automated implementation checks
+
+- `npx supabase migration up --local` applied only `20261002152000_inv96_group3_verified_public_credits.sql`; no reset or hosted command was used.
+- Local catalog inspection found the three intended `SELECT` policies: verified rows for `anon` and `authenticated`, owner rows for `authenticated`, and all rows for authenticated admins.
+- Local database-owner inspection found `INV96 Credit` and `INV96 Draft Credit` still unverified and `INV96 Verified Credit` still verified. This is a fixture-preservation check, not caller-level RLS verification.
+- `npm run typecheck`: passed.
+- `npm run test:run`: passed (14 test files, 37 tests).
+- `git diff --check`: passed.
+- No commit, push, hosted Supabase command, reset, or destructive database command was run for Group 3.
+
+### Owner-reported in-progress verification
+
+1. **PASS** — anonymous and unrelated-user REST reads returned only `INV96 Verified Credit` and did not expose `INV96 Credit` or `INV96 Draft Credit`.
+2. **PASS** — owner and admin REST reads returned all three owner credits with their expected verified states.
+3. **PASS** — no caller received a REST error during the four-role check.
+4. **PASS** — the owner profile displayed all three owner credits.
+5. **PASS** — the unrelated user saw only `INV96 Verified Credit` on the owner's profile and saw neither unverified credit.
+6. **PASS** — the admin Credit Verification Requests manager loaded without a database error, displayed the verified fixture as approved, and opened its review details.
+
+These are owner-reported results. Codex did not independently confirm the manual checks.
+
+### Group 3 owner verification checklist
+
+1. Confirm anonymous and unrelated-user REST reads return `INV96 Verified Credit` but not `INV96 Draft Credit` or the older unverified `INV96 Credit`.
+2. Confirm the owner and admin REST reads return all three owner credits.
+3. Confirm the owner's profile shows all three credits to the owner, while an unrelated user sees only `INV96 Verified Credit`.
+4. Confirm the admin Verification manager still loads and can review credit-verification requests without a database error.
+5. Confirm no credit or verification-request fixture was deleted or modified by the migration.
+6. Paste every response, missing row, browser error, console/network error, or unexpected draft disclosure back to Codex. Codex does not mark Group 3 verified.
+
 ### Group 2 owner verification checklist
 
 1. Confirm anonymous browse-view reads return arrays, include the three active fixtures, and contain no `submitted_by` key.
