@@ -11,12 +11,10 @@ const PublicCompanyProjectPage: React.FC = () => {
   const { data: project, isLoading } = useQuery({
     queryKey: ['public-project', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', projectId!)
-        .eq('company_id', companyId!)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('get_company_project_browse', {
+        _company_id: companyId!,
+        _project_id: projectId!,
+      }).maybeSingle();
       if (error) throw error;
       return data;
     },

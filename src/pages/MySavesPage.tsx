@@ -245,7 +245,7 @@ const MySavesPage: React.FC = () => {
       if (!saved?.length) return [];
       const projectIds = saved.map(s => s.project_id);
       const { data: projects } = await supabase
-        .from('projects')
+        .from('projects_browse')
         .select('*')
         .in('id', projectIds);
       

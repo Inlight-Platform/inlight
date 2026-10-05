@@ -59,19 +59,7 @@ interface GroupPostLink {
 }
 
 interface GroupProjectLink {
-  projects: {
-    id: string;
-    creator_id: string;
-    title: string;
-    description: string | null;
-    header_image_url: string | null;
-    main_image_url: string | null;
-    created_at: string;
-    category: string | null;
-    status: string | null;
-    link_url: string | null;
-    link_title: string | null;
-  } | null;
+  project_id: string;
 }
 
 type EventRow = Database['public']['Tables']['events']['Row'];
@@ -372,16 +360,20 @@ const FeedPage: React.FC = () => {
     queryFn: async () => {
       const { data: links, error } = await supabase
         .from('project_groups')
-        .select('project_id, projects(*)')
+        .select('project_id')
         .eq('group_id', selectedGroup!.id);
       if (error) throw error;
-      const rows = ((links || []) as unknown as GroupProjectLink[])
-        .map((link) => link.projects)
-        .filter((project): project is NonNullable<GroupProjectLink['projects']> => Boolean(project));
-      const uids = [...new Set(rows.map((p) => p.creator_id))];
+      const projectIds = ((links || []) as GroupProjectLink[]).map((link) => link.project_id);
+      if (!projectIds.length) return [] as FeedItemData[];
+      const { data: rows, error: projectsError } = await supabase
+        .from('projects_browse')
+        .select('*')
+        .in('id', projectIds);
+      if (projectsError) throw projectsError;
+      const uids = [...new Set((rows || []).map((p) => p.creator_id).filter((id): id is string => Boolean(id)))];
       if (!uids.length) return [] as FeedItemData[];
       const map = await fetchPublicProfileMap(uids);
-      return rows
+      return (rows || [])
         .map((p) => ({
           id: p.id,
           type: 'project' as const,
@@ -394,7 +386,7 @@ const FeedPage: React.FC = () => {
           project_status: p.status,
           link_url: p.link_url,
           link_title: p.link_title,
-          creator_profile: map.get(p.creator_id),
+          creator_profile: p.creator_id ? map.get(p.creator_id) : undefined,
         }))
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as FeedItemData[];
     },
@@ -503,23 +495,19 @@ const FeedPage: React.FC = () => {
   const { data: allProjects = [], isLoading: projectsLoading } = useQuery({
     queryKey: ['feed-projects-all', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      let query = supabase
-        .from('projects')
+      const query = supabase
+        .from('projects_browse')
         .select('*')
         .order('created_at', { ascending: false });
-
-      if (!user) {
-        query = query.eq('is_public', true);
-      }
 
       const { data, error } = await query.limit(100);
       if (error) throw error;
 
-      const profileMap = await fetchPublicProfileMap(data.map((p) => p.creator_id));
+      const profileMap = await fetchPublicProfileMap(data.map((p) => p.creator_id).filter((id): id is string => Boolean(id)));
 
       return data.map((project) => ({
         ...project,
-        creator_profile: profileMap.get(project.creator_id)
+        creator_profile: project.creator_id ? profileMap.get(project.creator_id) : undefined
       }));
     },
     placeholderData: keepPreviousData,
@@ -781,7 +769,7 @@ const FeedPage: React.FC = () => {
       id: project.id,
       slug: project.slug,
       type: 'project' as const,
-      user_id: project.creator_id,
+      user_id: project.creator_id || '',
       title: project.title,
       description: project.description,
       image_url: project.header_image_url || project.main_image_url,
@@ -837,7 +825,7 @@ const FeedPage: React.FC = () => {
     return activeProjects.map((project) => ({
       id: project.id,
       type: 'project' as const,
-      user_id: project.creator_id,
+      user_id: project.creator_id || '',
       title: project.title,
       description: project.description,
       image_url: project.header_image_url || project.main_image_url,
@@ -932,7 +920,7 @@ const FeedPage: React.FC = () => {
         }}
       >
         <div className="relative">
-          <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1">
+          {user && <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1">
             <Avatar className="h-6 w-6">
               <AvatarImage src={project.creator_profile?.avatar_url || undefined} />
               <AvatarFallback className="text-xs">
@@ -942,7 +930,7 @@ const FeedPage: React.FC = () => {
             <span className="text-xs font-medium text-foreground">
               {project.creator_profile?.display_name || 'Unknown'}
             </span>
-          </div>
+          </div>}
 
           {user && (
             <button

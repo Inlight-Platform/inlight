@@ -128,9 +128,8 @@ export const OpenRolesFeed: React.FC<{
 
       const projectIds = [...new Set(openRoles.map(r => r.project_id))];
       const { data: projects } = await supabase
-        .from('projects')
+        .from('projects_browse')
         .select('id, title, end_date')
-        .eq('is_public', true)
         .in('id', projectIds);
 
       if (!projects?.length) return [];

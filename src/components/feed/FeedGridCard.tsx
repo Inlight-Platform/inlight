@@ -55,6 +55,7 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
   const showAnonymous = item.type === 'show' && item.is_anonymous;
   const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
+  const showCreator = item.type !== 'project' || Boolean(item.creator_profile);
   const title = item.title || item.content?.slice(0, 80) + (item.content && item.content.length > 80 ? '…' : '');
   const subtitle = item.description || item.content;
   const displayTime = item.type === 'event'
@@ -133,17 +134,19 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
         )}
 
         {/* Creator - pushed to bottom */}
-        <div className="flex items-center gap-1.5 mt-auto pt-1">
-          <Avatar className="h-5 w-5">
-            <AvatarImage src={avatarUrl || undefined} />
-            <AvatarFallback className="text-[9px]">
-              {displayName[0] || 'U'}
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-[11px] text-muted-foreground truncate">
-            {displayName}
-          </span>
-        </div>
+        {showCreator && (
+          <div className="flex items-center gap-1.5 mt-auto pt-1">
+            <Avatar className="h-5 w-5">
+              <AvatarImage src={avatarUrl || undefined} />
+              <AvatarFallback className="text-[9px]">
+                {displayName[0] || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-[11px] text-muted-foreground truncate">
+              {displayName}
+            </span>
+          </div>
+        )}
       </div>
     </Card>
   );

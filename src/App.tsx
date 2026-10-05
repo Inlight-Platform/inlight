@@ -116,7 +116,7 @@ const App = () => (
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/new" element={<RequireAuth><ProjectNewPage /></RequireAuth>} />
-            <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+            <Route path="/projects/:projectId" element={<RequireAuth><ProjectDetailPage /></RequireAuth>} />
             <Route path="/stage-whisper" element={<StageWhisperPage />} />
             <Route path="/company/:companyId" element={<CompanyProfilePage />} />
             <Route path="/saves" element={<RequireAuth><MySavesPage /></RequireAuth>} />

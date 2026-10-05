@@ -27,11 +27,9 @@ const PublicCompanyPage: React.FC = () => {
   const { data: projects = [] } = useQuery({
     queryKey: ['public-company-projects', companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, title, description, main_image_url, header_image_url, status, created_at')
-        .eq('company_id', companyId!)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('get_company_projects_browse', {
+        _company_id: companyId!,
+      });
       if (error) throw error;
       return data || [];
     },

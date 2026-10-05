@@ -152,9 +152,8 @@ async function loadLandingPreviewData(): Promise<LandingPreviewData> {
       .order("event_date", { ascending: false })
       .limit(8),
     supabase
-      .from("projects")
+      .from("projects_browse")
       .select("id, title, category, status, header_image_url, main_image_url, creator_id")
-      .eq("is_public", true)
       .or("status.is.null,status.neq.archived")
       .order("created_at", { ascending: false })
       .limit(8),

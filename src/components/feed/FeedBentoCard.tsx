@@ -102,6 +102,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
   const showAnonymous = item.type === 'show' && item.is_anonymous;
   const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
+  const showCreator = item.type !== 'project' || Boolean(item.creator_profile);
   const title =
     item.title ||
     (item.content ? item.content.slice(0, 80) + (item.content.length > 80 ? '…' : '') : 'Untitled');
@@ -156,11 +157,15 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
           )}
           <div className="mt-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 ring-2 ring-primary/30">
-                <AvatarImage src={avatarUrl || undefined} />
-                <AvatarFallback>{displayName[0]}</AvatarFallback>
-              </Avatar>
-              <p className="text-sm font-bold text-white">{displayName}</p>
+              {showCreator && (
+                <>
+                  <Avatar className="h-10 w-10 ring-2 ring-primary/30">
+                    <AvatarImage src={avatarUrl || undefined} />
+                    <AvatarFallback>{displayName[0]}</AvatarFallback>
+                  </Avatar>
+                  <p className="text-sm font-bold text-white">{displayName}</p>
+                </>
+              )}
               {(item.type === 'post' || item.type === 'job') && (
                 <span className="flex items-center gap-1 text-xs text-white/60">
                   <MessageCircle className="h-3.5 w-3.5" />
@@ -229,16 +234,20 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
               isLight ? 'border-slate-200' : 'border-white/10'
             )}
           >
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={avatarUrl || undefined} />
-              <AvatarFallback>{displayName[0]}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className={cn('truncate text-xs font-bold', isLight ? 'text-slate-900' : 'text-white')}>
-                {displayName}
-              </p>
-              <p className={cn('text-[10px]', isLight ? 'text-slate-500' : 'text-white/50')}>{displayTime}</p>
-            </div>
+            {showCreator && (
+              <>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={avatarUrl || undefined} />
+                  <AvatarFallback>{displayName[0]}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className={cn('truncate text-xs font-bold', isLight ? 'text-slate-900' : 'text-white')}>
+                    {displayName}
+                  </p>
+                </div>
+              </>
+            )}
+            <p className={cn('text-[10px]', isLight ? 'text-slate-500' : 'text-white/50')}>{displayTime}</p>
             {(item.type === 'post' || item.type === 'job') && (
               <span className={cn('flex items-center gap-1 text-[10px] font-semibold', isLight ? 'text-slate-500' : 'text-white/50')}>
                 <MessageCircle className="h-3.5 w-3.5" />
@@ -294,13 +303,15 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
             <div className="flex-1" />
           )}
           <div className="flex items-center justify-between text-xs">
-            <div className="flex min-w-0 items-center gap-2">
-              <Avatar className="h-5 w-5">
-                <AvatarImage src={avatarUrl || undefined} />
-                <AvatarFallback className="text-[8px]">{displayName[0]}</AvatarFallback>
-              </Avatar>
-              <span className="truncate font-semibold text-muted-foreground">{displayName}</span>
-            </div>
+            {showCreator ? (
+              <div className="flex min-w-0 items-center gap-2">
+                <Avatar className="h-5 w-5">
+                  <AvatarImage src={avatarUrl || undefined} />
+                  <AvatarFallback className="text-[8px]">{displayName[0]}</AvatarFallback>
+                </Avatar>
+                <span className="truncate font-semibold text-muted-foreground">{displayName}</span>
+              </div>
+            ) : <div />}
             <div className="flex items-center gap-2.5">
               {(item.type === 'post' || item.type === 'job') && (
                 <span className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground/70">
@@ -358,13 +369,15 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
           </div>
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
-          <div className="flex items-center gap-2">
-            <Avatar className="h-5 w-5">
-              <AvatarImage src={avatarUrl || undefined} />
-              <AvatarFallback className="text-[8px]">{displayName[0]}</AvatarFallback>
-            </Avatar>
-            <span className="truncate text-xs font-semibold text-white/80">{displayName}</span>
-          </div>
+          {showCreator ? (
+            <div className="flex items-center gap-2">
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={avatarUrl || undefined} />
+                <AvatarFallback className="text-[8px]">{displayName[0]}</AvatarFallback>
+              </Avatar>
+              <span className="truncate text-xs font-semibold text-white/80">{displayName}</span>
+            </div>
+          ) : <div />}
           <div className="flex items-center gap-2.5">
             {(item.type === 'post' || item.type === 'job') && (
               <span className="flex items-center gap-1 text-[10px] font-semibold text-white/50">

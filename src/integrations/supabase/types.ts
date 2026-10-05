@@ -2913,6 +2913,25 @@ export type Database = {
         }
         Relationships: []
       }
+      projects_browse: {
+        Row: {
+          category: string | null
+          created_at: string
+          creator_id: string | null
+          description: string | null
+          end_date: string | null
+          header_image_url: string | null
+          id: string
+          link_title: string | null
+          link_url: string | null
+          main_image_url: string | null
+          slug: string
+          start_date: string | null
+          status: string | null
+          title: string
+        }
+        Relationships: []
+      }
       nyc_shows_browse: {
         Row: {
           accessibility_features: string[] | null
@@ -3082,6 +3101,52 @@ export type Database = {
       }
     }
     Functions: {
+      get_company_project_browse: {
+        Args: { _company_id: string; _project_id: string }
+        Returns: {
+          category: string | null
+          created_at: string
+          description: string | null
+          end_date: string | null
+          header_image_url: string | null
+          id: string
+          link_title: string | null
+          link_url: string | null
+          main_image_url: string | null
+          slug: string
+          start_date: string | null
+          status: string | null
+          title: string
+        }[]
+      }
+      get_company_projects_browse: {
+        Args: { _company_id: string }
+        Returns: {
+          category: string | null
+          created_at: string
+          description: string | null
+          end_date: string | null
+          header_image_url: string | null
+          id: string
+          link_title: string | null
+          link_url: string | null
+          main_image_url: string | null
+          slug: string
+          start_date: string | null
+          status: string | null
+          title: string
+        }[]
+      }
+      get_project_member_details: {
+        Args: { _project_id: string }
+        Returns: {
+          company_id: string | null
+          google_drive_url: string | null
+          is_public: boolean | null
+          post_approval_required: boolean
+          updated_at: string
+        }[]
+      }
       get_company_management_context: {
         Args: { _company_id: string; _staff_token?: string | null }
         Returns: { owner_user_id: string | null }[]

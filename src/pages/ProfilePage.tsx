@@ -559,7 +559,7 @@ const ProfilePage: React.FC = () => {
           .eq("user_id", resolvedUserId)
           .maybeSingle(),
         supabase.from("credits").select("id").eq("user_id", resolvedUserId).limit(1),
-        supabase.from("projects").select("id").eq("creator_id", resolvedUserId).limit(100),
+        supabase.from("projects_browse").select("id").eq("creator_id", resolvedUserId).limit(100),
         supabase.from("project_members").select("project_id").eq("user_id", resolvedUserId).limit(1),
         isOwnProfile
           ? supabase.from("saved_projects").select("project_id").eq("user_id", resolvedUserId).limit(1)

@@ -223,6 +223,90 @@ Implementation prepared in `20261002214500_inv96_group4_company_browse_privacy.s
 
 These are owner-executed and owner-confirmed results. Codex did not independently confirm the manual checks.
 
+## Phase 3 Group 5 - project browse and member-detail privacy
+
+Status: **IMPLEMENTED LOCALLY; OWNER MANUAL VERIFICATION PASSED**
+
+Implementation prepared in `20261005163000_inv96_group5_project_browse_privacy.sql`, with anonymous helper execution isolated by `20261005164500_inv96_group5_guard_anonymous_browse_helpers.sql` and `20261005165000_inv96_group5_browse_access_helper.sql`:
+
+- Anonymous users may discover public-project presentation fields through `projects_browse`, but `creator_id` is returned as `NULL` and member/workflow fields are omitted.
+- The direct `/projects/:projectId` route now requires authentication.
+- Authenticated users may read browse-safe base columns only for projects they can access. Direct client reads of `google_drive_url`, `company_id`, `is_public`, `post_approval_required`, and `updated_at` are revoked.
+- `get_project_member_details(uuid)` returns those member/workflow fields only to the project creator, a project member, or an admin. Anonymous execution is revoked.
+- `get_company_projects_browse(uuid)` and `get_company_project_browse(uuid, uuid)` preserve public company-project presentation without returning project creator or member-only fields.
+- No project, membership, photo, role, link, or save fixture is inserted, updated, or deleted by these migrations.
+
+### Confirmed access decisions
+
+1. Signed-out visitors may see teaser-card title and image, but no creator name, avatar, or user ID.
+2. Signed-out visitors must sign in before opening a project card or direct `/projects/:id` route.
+3. A signed-in nonmember may open a public project and see creator attribution, but not its Drive URL.
+4. The project owner and project members may open the project and retrieve the Drive URL through the member-authorized RPC.
+5. Admins retain full project access.
+
+### Frontend impact
+
+- `src/App.tsx`: `/projects/:projectId` is wrapped in `RequireAuth`; without this change, a copied direct project URL would bypass the signed-out card gate.
+- `src/pages/ProjectsPage.tsx`: browse and saved-project reads use `projects_browse`, and creator hydration is skipped when the anonymous projection returns no creator ID. Without this change, tightened base access would fail and signed-out cards could expose creator attribution.
+- `src/pages/FeedPage.tsx`: general and group-linked project reads use `projects_browse`; creator hydration and badges require an authenticated caller-visible creator ID. Without this change, public feed reads would fail or continue exposing creator identity to signed-out visitors.
+- `src/components/feed/FeedBentoCard.tsx` and `src/components/feed/FeedGridCard.tsx`: project cards omit the entire creator row when the browse projection does not expose a creator profile, rather than rendering an `Unknown` fallback avatar and label.
+- `src/pages/ProjectDetailPage.tsx`: presentation fields come from `projects_browse`, while member-only fields come from `get_project_member_details`. Without this split, unrelated users could request the Drive URL directly or authorized members would lose it after the base-column revoke.
+- `src/pages/MySavesPage.tsx`, `src/components/profile/SavedProjects.tsx`, `src/components/profile/UserPosts.tsx`, `src/components/scrollytelling.tsx`, `src/components/projects/OpenRolesFeed.tsx`, and `src/pages/ProfilePage.tsx`: project hydration/count reads use the browse projection. Without these changes, public or cross-user project cards and counts would fail under the tightened base policy.
+- `src/pages/PublicCompanyPage.tsx`, `src/pages/CompanyProfilePage.tsx`, and `src/pages/PublicCompanyProjectPage.tsx`: company-linked presentation reads use the public-safe company project RPCs. Without these changes, signed-out company portfolios would fail after anonymous base-table access is removed.
+- `src/integrations/supabase/types.ts`: adds the browse projection and RPC result contracts used by the updated frontend.
+- `src/pages/tests/ProjectDetailPage.test.tsx`: the test double now models the browse-view plus member-detail RPC contract.
+
+### Owner-reported pre-change baseline
+
+1. `projects_browse` returned HTTP `404` / `PGRST205` because the view did not exist.
+2. Anonymous and unrelated-user base-table reads returned the fixture's `google_drive_url` with HTTP `200`.
+3. The owner was the only `project_members` row for the fixture; the unrelated account was not a project member.
+4. The owner saw the project and Drive card; the unrelated user saw the public project without a Drive card.
+5. Signed-out teaser cards displayed the creator name. Clicking a card requested sign-in, but opening a copied `/projects/:id` URL directly displayed the project without the Drive card.
+
+These are owner-reported baseline observations. Codex did not independently confirm the manual checks.
+
+### Automated implementation checks
+
+- All three Group 5 migrations were applied to local Supabase at `http://127.0.0.1:54321`; no reset or hosted command was used.
+- Anonymous `projects_browse` access returned the fixture with `creator_id=null` and without `google_drive_url`, `company_id`, `is_public`, `post_approval_required`, or `updated_at`.
+- Anonymous direct selection of the base-table Drive URL returned HTTP `401` / PostgreSQL code `42501`.
+- Local role simulation returned the public fixture to the unrelated user with the creator UUID but no member-detail row; the owner and admin each received the authorized member-detail row and Drive URL.
+- Anonymous execution privilege on `get_project_member_details(uuid)` is absent, and authenticated direct column privilege on `projects.google_drive_url` is absent.
+- `npm run typecheck`: passed.
+- `npm run test:run`: passed (14 test files, 37 tests).
+- `npm run build:sandbox`: passed with the existing Browserslist, Tailwind class-ambiguity, and bundle-size warnings.
+- `git diff --check`: passed.
+- No commit, push, hosted Supabase command, reset, or destructive database command was run for Group 5.
+
+### Group 5 owner verification checklist
+
+1. Confirm anonymous `projects_browse` returns `INV96 Public Project`, reports `creator_id=null`, and contains none of `google_drive_url`, `company_id`, `is_public`, `post_approval_required`, or `updated_at`.
+2. Confirm anonymous and unrelated-user direct reads of `projects.google_drive_url` are rejected with HTTP `401` / PostgreSQL code `42501`.
+3. Confirm the unrelated user can read the fixture from `projects_browse`, receives the owner UUID as `creator_id`, and receives no sensitive projection fields.
+4. Confirm anonymous `get_project_member_details` execution is rejected, the unrelated user receives `[]`, and both owner and admin receive the fixture's member-detail row and recognizable Drive URL.
+5. Signed out, confirm project teaser cards show title/image but no creator name, avatar, or user ID; clicking a card and opening `/projects/$PROJECT_ID` directly must require sign-in.
+6. As the unrelated user, confirm the public project opens with creator attribution but no Drive card or URL.
+7. As the owner, confirm the project opens and displays the recognizable Drive URL.
+8. As the admin, confirm the project opens, the protected member-detail RPC succeeds, the Drive URL is displayed, and project data loads without database errors. Owner-only controls are not required.
+9. Smoke-test saved projects, project profile cards, the public company portfolio/project pages, and open roles for missing cards or database errors.
+10. Preserve the fixture and paste every REST response, missing field/card/control, browser error, console/network error, or unexpected identity disclosure back to Codex. Codex does not mark Group 5 verified.
+
+### Owner-reported Group 5 verification
+
+1. **PASS** - the working branch was `codex/inv96-rls-group5`.
+2. **PASS** - anonymous `projects_browse` returned `INV96 Public Project` with `creator_id=null` and without `google_drive_url`, `company_id`, `is_public`, `post_approval_required`, or `updated_at`.
+3. **PASS** - anonymous direct Drive selection was rejected with HTTP `401` / PostgreSQL code `42501`; unrelated authenticated direct selection was rejected with HTTP `403` / PostgreSQL code `42501`.
+4. **PASS** - the unrelated authenticated browse projection returned the owner UUID as `creator_id` and contained no sensitive project fields.
+5. **PASS** - anonymous `get_project_member_details` execution was rejected with HTTP `401`; the unrelated user received `[]`; owner and admin each received HTTP `200` with the recognizable Drive URL and protected member-detail fields.
+6. **PASS** - signed-out project cards displayed title and image without creator name, avatar, UUID, or the `Unknown` fallback. Clicking a card or opening `/projects/:id` directly required sign-in and did not display project details.
+7. **PASS** - the unrelated signed-in user opened the public project and saw `inv96.owner`, but no Google Drive card, recognizable Drive URL, or owner editing controls.
+8. **PASS** - the owner saw the recognizable Drive URL and retained owner editing controls.
+9. **PASS** - the admin page loaded without `Project not found` or a database-error toast; `get_project_member_details` returned HTTP `200` with the recognizable Drive URL; project title, creator, team, photos, links, and roles loaded without failed `4xx` or `5xx` requests. No mutation or owner-only control was required.
+10. **PASS** - project cards loaded without database errors, and the project and membership fixtures were preserved.
+
+These are owner-executed and owner-confirmed results. Codex did not independently confirm the manual checks.
+
 ## Base comparison
 
 - Preserved survey: `rls-review-sep22-base.md`, base `fe33c38de6db499ae5b29cf96a85a960fda826c4`.

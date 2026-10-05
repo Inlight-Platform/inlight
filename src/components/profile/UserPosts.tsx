@@ -50,30 +50,26 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
       // Fetch open roles from user's projects
       const { data: openRolesData, error: openRolesError } = await supabase
         .from('project_roles')
-        .select(`
-          id,
-          role_name,
-          created_at,
-          project_id,
-          projects!inner (
-            id,
-            title,
-            status,
-            is_public,
-            creator_id,
-            main_image_url,
-            header_image_url
-          )
-        `)
+        .select('id, role_name, created_at, project_id')
         .is('assigned_user_id', null)
         .order('created_at', { ascending: false });
 
       if (openRolesError) throw openRolesError;
 
+      const projectIds = [...new Set((openRolesData || []).map((role) => role.project_id))];
+      const { data: roleProjects, error: roleProjectsError } = projectIds.length
+        ? await supabase
+            .from('projects_browse')
+            .select('id, title, status, creator_id, main_image_url, header_image_url')
+            .in('id', projectIds)
+        : { data: [], error: null };
+      if (roleProjectsError) throw roleProjectsError;
+      const roleProjectMap = new Map((roleProjects || []).map((project) => [project.id, project]));
+
       // Filter to only this user's projects
-      const userOpenRoles = (openRolesData || []).filter(
-        role => role?.id && role?.projects && (role.projects as any).creator_id === userId && (role.projects as any).is_public
-      );
+      const userOpenRoles = (openRolesData || [])
+        .map((role) => ({ ...role, project: roleProjectMap.get(role.project_id) }))
+        .filter((role) => role.id && role.project?.creator_id === userId);
 
       // Fetch user profile for creator info
       const { data: profile } = await supabase
@@ -134,13 +130,13 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
       const transformedOpenRoles: FeedItemData[] = userOpenRoles.map((role) => ({
         id: role.id,
         type: 'open_role' as const,
-        user_id: (role.projects as any).creator_id,
+        user_id: role.project!.creator_id!,
         title: role.role_name,
         role_id: role.id,
         project_id: role.project_id,
-        project_title: (role.projects as any).title,
-        project_status: (role.projects as any).status,
-        image_url: (role.projects as any).header_image_url || (role.projects as any).main_image_url,
+        project_title: role.project!.title,
+        project_status: role.project!.status,
+        image_url: role.project!.header_image_url || role.project!.main_image_url,
         created_at: role.created_at,
         creator_profile: profile ? {
           display_name: profile.display_name,

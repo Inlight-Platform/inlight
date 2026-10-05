@@ -196,7 +196,7 @@ const ProjectDetailPage: React.FC = () => {
       if (!projectId) return null;
       const fallbackProjectId = identifierFallbackUuid(projectId);
       let query = supabase
-        .from('projects')
+        .from('projects_browse')
         .select('*');
 
       if (isUuid(projectId) || fallbackProjectId) {
@@ -210,7 +210,7 @@ const ProjectDetailPage: React.FC = () => {
       let resolvedProject = data;
       if (error && !isUuid(projectId) && !fallbackProjectId) {
         const { data: titleMatches, error: fallbackError } = await supabase
-          .from('projects')
+          .from('projects_browse')
           .select('*');
 
         if (fallbackError) throw error;
@@ -221,10 +221,16 @@ const ProjectDetailPage: React.FC = () => {
 
       if (!resolvedProject) throw error || new Error('Project not found');
 
+      if (!resolvedProject.creator_id) throw new Error('Project creator is unavailable');
+
       const profileMap = await fetchPublicProfileMap([resolvedProject.creator_id]);
       const creatorProfile = profileMap.get(resolvedProject.creator_id);
+      const { data: memberDetails, error: memberDetailsError } = await supabase.rpc('get_project_member_details', {
+        _project_id: resolvedProject.id,
+      });
+      if (memberDetailsError) throw memberDetailsError;
 
-      return { ...resolvedProject, creator_profile: creatorProfile };
+      return { ...resolvedProject, ...(memberDetails?.[0] || {}), creator_profile: creatorProfile };
     },
     enabled: !!projectId,
   });
@@ -253,7 +259,8 @@ const ProjectDetailPage: React.FC = () => {
   });
 
   const isCreator = project?.creator_id === user?.id;
-  const isMember = members.some(m => m.user_id === user?.id) || isCreator;
+  const hasMemberDetails = project?.is_public !== undefined;
+  const isMember = members.some(m => m.user_id === user?.id) || isCreator || hasMemberDetails;
 
   // Fetch project photos
   const { data: photos = [] } = useQuery({
