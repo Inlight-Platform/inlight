@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowLeft, MessageCircle, Image, Send, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 
 interface Studio {
@@ -51,36 +52,29 @@ const SchoolStudios: React.FC = () => {
   const [newComment, setNewComment] = useState<Record<string, string>>({});
   const [showCreatePost, setShowCreatePost] = useState(false);
   const queryClient = useQueryClient();
-
-  // Get current user
-  const { data: currentUser } = useQuery({
-    queryKey: ['current-user'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
+  const { user: currentUser } = useAuth();
 
   // Fetch studios
   const { data: studios, isLoading: studiosLoading } = useQuery({
-    queryKey: ['studios'],
+    queryKey: ['studios', currentUser?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('studios')
+        .from('studios_browse')
         .select('*')
         .order('name');
       if (error) throw error;
       return data as Studio[];
     },
+    enabled: !!currentUser,
   });
 
   // Fetch posts for selected studio
   const { data: posts, isLoading: postsLoading } = useQuery({
-    queryKey: ['studio-posts', selectedStudio?.id],
+    queryKey: ['studio-posts', currentUser?.id, selectedStudio?.id],
     queryFn: async () => {
       if (!selectedStudio) return [];
       const { data, error } = await supabase
-        .from('studio_posts')
+        .from('studio_posts_browse')
         .select('*')
         .eq('studio_id', selectedStudio.id)
         .order('created_at', { ascending: false });
@@ -99,17 +93,17 @@ const SchoolStudios: React.FC = () => {
         user_profile: profileMap.get(post.user_id),
       })) as StudioPost[];
     },
-    enabled: !!selectedStudio,
+    enabled: !!currentUser && !!selectedStudio,
   });
 
   // Fetch comments for all posts
   const { data: comments } = useQuery({
-    queryKey: ['studio-comments', posts?.map(p => p.id)],
+    queryKey: ['studio-comments', currentUser?.id, posts?.map(p => p.id)],
     queryFn: async () => {
       if (!posts || posts.length === 0) return [];
       const postIds = posts.map(p => p.id);
       const { data, error } = await supabase
-        .from('studio_comments')
+        .from('studio_comments_browse')
         .select('*')
         .in('post_id', postIds)
         .order('created_at', { ascending: true });
@@ -128,7 +122,7 @@ const SchoolStudios: React.FC = () => {
         user_profile: profileMap.get(comment.user_id),
       })) as StudioComment[];
     },
-    enabled: !!posts && posts.length > 0,
+    enabled: !!currentUser && !!posts && posts.length > 0,
   });
 
   // Create post mutation

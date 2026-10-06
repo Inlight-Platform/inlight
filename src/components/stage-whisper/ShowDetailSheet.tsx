@@ -76,11 +76,11 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
 
   // Fetch tips for this show
   const { data: tips = [] } = useQuery({
-    queryKey: ['show-tips', show?.id],
+    queryKey: ['show-tips', user?.id, show?.id],
     queryFn: async () => {
       if (!show?.id) return [];
       const { data, error } = await supabase
-        .from('show_tips')
+        .from('show_tips_browse')
         .select('*')
         .eq('show_id', show.id)
         .order('helpful_count', { ascending: false });
@@ -101,17 +101,17 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
         profile: profileMap.get(tip.user_id),
       })) as Tip[];
     },
-    enabled: !!show?.id,
+    enabled: !!user && !!show?.id,
   });
 
   // Fetch teammates for this show
   const { data: teammates = [] } = useQuery({
-    queryKey: ['show-teammates', show?.id],
+    queryKey: ['show-teammates', user?.id, show?.id],
     queryFn: async () => {
       if (!show?.id) return [];
       
       const { data: teammateData } = await supabase
-        .from('show_teammates')
+        .from('show_teammates_browse')
         .select('user_id, role_description')
         .eq('show_id', show.id);
 
@@ -133,7 +133,7 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
         role_description: t.role_description || undefined,
       })) as ShowTeammate[];
     },
-    enabled: !!show?.id && isOpen,
+    enabled: !!user && !!show?.id && isOpen,
   });
 
   // Fetch submitter profile (for non-anonymous shows)

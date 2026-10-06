@@ -1046,7 +1046,7 @@ const ProfilePage: React.FC = () => {
     queryKey: ["studios"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("studios")
+        .from("studios_browse")
         .select("name, badge_tag")
         .not("badge_tag", "is", null)
         .order("name");

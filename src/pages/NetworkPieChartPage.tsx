@@ -77,7 +77,7 @@ const NetworkPieChartPage: React.FC = () => {
   const { data: studios = [] } = useQuery({
     queryKey: ['studios-list'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('studios').select('id, name, badge_tag, icon');
+      const { data, error } = await supabase.from('studios_browse').select('id, name, badge_tag, icon');
       if (error) throw error;
       return data || [];
     },

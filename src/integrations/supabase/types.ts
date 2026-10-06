@@ -2932,6 +2932,62 @@ export type Database = {
         }
         Relationships: []
       }
+      show_teammates_browse: {
+        Row: {
+          created_at: string
+          id: string
+          role_description: string | null
+          show_id: string
+          user_id: string
+        }
+        Relationships: []
+      }
+      show_tips_browse: {
+        Row: {
+          content: string
+          created_at: string
+          helpful_count: number | null
+          id: string
+          show_id: string
+          tip_type: string
+          updated_at: string
+          user_id: string
+        }
+        Relationships: []
+      }
+      studio_comments_browse: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Relationships: []
+      }
+      studio_posts_browse: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          studio_id: string
+          updated_at: string
+          user_id: string
+        }
+        Relationships: []
+      }
+      studios_browse: {
+        Row: {
+          badge_tag: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+        }
+        Relationships: []
+      }
       nyc_shows_browse: {
         Row: {
           accessibility_features: string[] | null

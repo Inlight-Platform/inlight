@@ -40,7 +40,7 @@ const GroupMembersPage: React.FC = () => {
     queryKey: ['studio-by-badge', badgeTag],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('studios')
+        .from('studios_browse')
         .select('*')
         .eq('badge_tag', badgeTag)
         .single();

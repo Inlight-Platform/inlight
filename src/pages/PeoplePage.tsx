@@ -230,7 +230,7 @@ const PeoplePage: React.FC = () => {
     queryKey: ['studios'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('studios')
+        .from('studios_browse')
         .select('*')
         .order('name');
       if (error) throw error;

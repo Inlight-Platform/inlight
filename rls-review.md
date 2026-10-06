@@ -307,6 +307,88 @@ These are owner-reported baseline observations. Codex did not independently conf
 
 These are owner-executed and owner-confirmed results. Codex did not independently confirm the manual checks.
 
+## Phase 3 Group 6 - signed-in attribution browse views
+
+Status: **IMPLEMENTED LOCALLY; OWNER MANUAL VERIFICATION PASSED**
+
+Migration: `supabase/migrations/20261005180000_inv96_group6_public_attribution_views.sql`
+
+### Policy and API changes
+
+- `show_teammates`, `show_tips`, `studios`, `studio_posts`, and `studio_comments` no longer have literal-true or `PUBLIC` base-table policies.
+- Existing insert, update, and delete behavior is preserved with the same ownership/admin predicates, but every write policy now explicitly targets `authenticated`.
+- Base-table reads are limited to the relevant author, teammate/show submitter, or admin. `studios` base rows are admin-readable because catalog consumers now use the browse view.
+- Added read-only `show_teammates_browse`, `show_tips_browse`, `studios_browse`, `studio_posts_browse`, and `studio_comments_browse` views for `authenticated` callers only.
+- Browse views retain attribution `user_id` fields for signed-in product behavior. The owner clarified that teammates, tips, studios, studio posts, studio comments, and their attribution must not be available to signed-out callers.
+- Follow-up migration `20261005183000_inv96_group6_require_auth_for_browse.sql` removes anonymous execution privileges after the revised owner decision.
+- The migration includes manual rollback statements and does not insert, update, or delete any fixture row.
+
+### Frontend impact
+
+- `src/components/stage-whisper/ShowDetailSheet.tsx`: signed-in teammate and tip presentation reads use `show_teammates_browse` and `show_tips_browse`; those queries are disabled without a signed-in user. Tip creation remains on `show_tips`, and owner show editing remains on `show_teammates`.
+- `src/components/insights/SchoolStudios.tsx`: signed-in studio, post, and comment reads use the three browse views; those queries are disabled without a signed-in user. Signed-in post and comment creation remains on the base tables.
+- `src/App.tsx`: `/insights` is wrapped in `RequireAuth`, so signed-out visitors are redirected to sign-in rather than receiving an empty Insights shell.
+- `src/pages/PeoplePage.tsx`, `src/pages/GroupMembersPage.tsx`, `src/pages/NetworkPieChartPage.tsx`, and `src/pages/ProfilePage.tsx`: studio catalog reads now use `studios_browse`.
+- `src/pages/AdminPage.tsx`, `src/components/admin/BroadwayShowsManager.tsx`, and `src/components/admin/AffiliationRequestsManager.tsx` intentionally retain base-table reads/writes under admin policies.
+- `src/integrations/supabase/types.ts`: adds the five browse-view result contracts.
+
+### Owner-reported pre-change baseline
+
+1. **PASS** - anonymous reads returned HTTP `200` JSON arrays from all five base tables.
+2. **PASS** - the owner created public show `INV96 Group 6 Public Show` and added the unrelated account as a teammate; the product displayed `Your show has been added!`.
+3. **PASS** - the owner created `INV96 Group 6 studio post`; the product displayed `Post created!`.
+4. **PASS** - the unrelated user added `INV96 Group 6 studio comment`, which appeared with the unrelated user's attribution.
+5. **PASS** - anonymous REST reads returned the teammate row, `INV96 verification tip`, Musical Theatre studio metadata, the owner-attributed studio post, and the unrelated-user-attributed studio comment.
+6. The `/insights` route works directly but is not linked from the current desktop or mobile navigation. The older `NavigationWheel` contains an Industry Insights link but is not mounted. This is recorded as a separate product discoverability gap, not an RLS failure, and Group 6 does not change navigation.
+
+Fixture IDs:
+
+- Show: `068214d8-6b6a-4dfc-ae7b-ec9febd6368a`
+- Studio: `f1774909-b1aa-4c31-a726-cc06c70d8289`
+- Studio post: `020a1cc7-8031-47da-8257-2d3463375d02`
+- Studio comment: `47464d3f-8c38-4a76-80b8-73515cb4ba89`
+- Existing tip: `2144d50c-f2d5-4305-8d79-1aaa20b132d5`
+
+These are owner-reported baseline observations. Codex did not independently confirm the manual checks.
+
+### Automated implementation checks
+
+- Applied `20261005180000_inv96_group6_public_attribution_views.sql` and follow-up `20261005183000_inv96_group6_require_auth_for_browse.sql` to local Supabase; no reset or hosted command was used.
+- Catalog inspection found 18 Group 6 policies, all explicitly assigned to `authenticated`; no literal-true base-table read policy remains.
+- Initial grant inspection found `SELECT` for `anon` and `authenticated` on each browse view. After owner clarification, local grant inspection confirmed the follow-up migration removed anonymous privileges and retained `SELECT` only for `authenticated`.
+- Every named fixture remains present exactly once.
+- Before the revised owner decision, local anonymous REST checks returned HTTP `200` arrays from all five browse views. After the follow-up migration, all five anonymous REST requests returned HTTP `401` / PostgreSQL code `42501` and no fixture data.
+- Initial local role simulation returned all five browse fixtures to every caller. The revised result removes anonymous browse access, while service-role fixture checks confirmed every fixture remains present exactly once. Owner manual verification must reconfirm signed-in browse behavior. Base-table isolation remains unchanged: the unrelated user receives only the teammate and own-comment rows; the owner receives the submitted teammate, owned tip, and owned post rows; the admin receives every base fixture.
+- `npm run typecheck`: passed.
+- `npm run test:run`: passed (14 test files, 37 tests).
+- `npm run build:sandbox`: passed with the existing Browserslist, Tailwind class-ambiguity, and bundle-size warnings.
+- `git diff --check`: passed.
+- No commit, push, hosted Supabase command, reset, or destructive database command was run for Group 6.
+
+### Group 6 owner verification checklist
+
+1. Confirm all five anonymous browse endpoint requests are rejected with HTTP `401` and no fixture data.
+2. Confirm anonymous base-table reads return `[]` for all five fixture filters.
+3. Confirm the unrelated user receives only the teammate and own-comment base rows, while the owner receives the submitted teammate, owned tip, and owned studio post base rows.
+4. In local Studio under Authentication -> Policies, confirm every Group 6 policy targets `authenticated`, no `SELECT USING (true)` remains, and write predicates retain their owner/admin checks.
+5. Signed out, open `/insights` directly and confirm the route requires sign-in and no Insights content displays. Open `/industry-now` and confirm no teammate, tip, or related attribution data displays.
+6. Signed in as the unrelated user, confirm Musical Theatre studio content displays, then open `/industry-now`, find `INV96 Group 6 Public Show`, and confirm teammate attribution and `INV96 verification tip` remain visible.
+7. Signed in as the owner, add a new verification tip and studio post; signed in as the unrelated user, add a comment to that post. Confirm each action succeeds and attribution displays. Preserve the new fixtures.
+8. Confirm the admin studio-post manager and Broadway show-tip manager load without database errors. Do not delete anything.
+9. Paste all REST responses, policy screenshots/results, product PASS/FAIL outcomes, missing attribution, and console/network errors back to Codex. Codex does not mark Group 6 verified.
+
+### Owner-reported manual verification results
+
+1. **PASS** - anonymous requests to all five browse views returned HTTP `401` with `permission denied`; no teammate, tip, studio, post, comment, or attribution data was returned.
+2. **PASS** - anonymous base-table reads returned `[]` for all five fixture filters.
+3. **PASS** - base-table isolation matched the intended predicates: the unrelated user received only the teammate and own-comment rows; the owner received the submitted teammate, owned tip, and owned studio post rows; the admin received all five fixture rows.
+4. **PASS** - local Studio showed every Group 6 policy targeting `authenticated` for `show_teammates`, `show_tips`, `studios`, `studio_posts`, and `studio_comments`.
+5. **PASS** - signed-out `/insights` redirected to `/auth`, and a fresh signed-out session displayed no Group 6 teammate, tip, studio, post, comment, or attribution data.
+6. **PASS** - signed in as the unrelated user, Musical Theatre displayed the Group 6 studio post and comment with attribution; `INV96 Group 6 Public Show` displayed `inv96.other` as a teammate; `INV96 verification tip` and the post-change tip displayed with owner attribution.
+7. **PASS** - the owner created the post-change tip and studio post; the unrelated user created `INV96 Group 6 post-change studio comment`, which appeared with `inv96.other` attribution.
+8. **PASS** - the admin show-tip and studio-post managers loaded without database errors and displayed the new records.
+9. All fixtures were preserved. These results were executed and confirmed by the owner; Codex did not independently confirm the browser checks.
+
 ## Base comparison
 
 - Preserved survey: `rls-review-sep22-base.md`, base `fe33c38de6db499ae5b29cf96a85a960fda826c4`.

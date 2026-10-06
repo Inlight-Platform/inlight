@@ -101,7 +101,7 @@ const App = () => (
             <Route path="/feed" element={<FeedPage />} />
             <Route path="/people" element={<PeoplePage />} />
             <Route path="/mutuals" element={<PeoplePage />} />
-            <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/insights" element={<RequireAuth><InsightsPage /></RequireAuth>} />
             <Route path="/events" element={<Navigate to="/feed?tab=events" replace />} />
             <Route path="/events/:eventId/dashboard" element={<EventDashboardPage />} />
             <Route path="/events/:eventId/panelists/:panelistSlug" element={<PublicEventPanelistPage />} />
