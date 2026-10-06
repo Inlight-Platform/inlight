@@ -140,12 +140,14 @@ async function loadLandingPreviewData(): Promise<LandingPreviewData> {
     supabase
       .from("events")
       .select("id, title, event_date, location, event_type, image_url")
+      .eq("visibility", "public")
       .gte("event_date", today)
       .order("event_date", { ascending: true })
       .limit(8),
     supabase
       .from("events")
       .select("id, title, event_date, location, event_type, image_url")
+      .eq("visibility", "public")
       .lt("event_date", today)
       .order("event_date", { ascending: false })
       .limit(8),

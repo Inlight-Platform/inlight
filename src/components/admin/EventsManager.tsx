@@ -12,8 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Calendar, ChevronDown, ChevronRight, Users, Camera, CheckCircle2, XCircle, Loader2, MapPin, Plus, Copy, Trash2, ExternalLink, QrCode, Download } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronRight, Users, Camera, CheckCircle2, XCircle, Loader2, MapPin, Plus, Copy, Trash2, ExternalLink, QrCode, Download, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -40,6 +41,7 @@ type EventPanelist = {
 };
 
 type AdminEvent = Database['public']['Tables']['events']['Row'];
+type EventVisibility = 'public' | 'network' | 'specific';
 
 type PublicProfileOption = {
   user_id: string;
@@ -54,6 +56,18 @@ type PublicProfileOption = {
   skills: string[] | null;
   badges: string[] | null;
   instagram_url: string | null;
+  website_url: string | null;
+};
+
+type CompanyPanelistOption = {
+  id: string;
+  name: string;
+  description: string | null;
+  logo_url: string | null;
+  cover_image_url: string | null;
+  location: string | null;
+  tagline: string | null;
+  mission: string | null;
   website_url: string | null;
 };
 
@@ -77,10 +91,26 @@ const splitList = (value: string) => {
     });
 };
 
+const EVENT_VISIBILITIES: EventVisibility[] = ['public', 'network', 'specific'];
+
+const getEventVisibility = (value: string): EventVisibility =>
+  EVENT_VISIBILITIES.includes(value as EventVisibility)
+    ? value as EventVisibility
+    : 'specific';
+
+const toDateTimeLocalValue = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
+};
+
 const EventsManager: React.FC = () => {
   const { user } = useAuth();
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [scannerEventId, setScannerEventId] = useState<string | null>(null);
+  const [editingEvent, setEditingEvent] = useState<AdminEvent | null>(null);
 
   // AdminPage gates this component. Fetch every event visible to admins so
   // panelists can be attached to existing events regardless of creator.
@@ -123,6 +153,7 @@ const EventsManager: React.FC = () => {
                   setExpandedEventId(expandedEventId === event.id ? null : event.id)
                 }
                 onScan={() => setScannerEventId(event.id)}
+                onEdit={() => setEditingEvent(event)}
               />
             ))}
           </div>
@@ -134,6 +165,13 @@ const EventsManager: React.FC = () => {
             onClose={() => setScannerEventId(null)}
           />
         )}
+
+        <EventEditDialog
+          event={editingEvent}
+          onOpenChange={(open) => {
+            if (!open) setEditingEvent(null);
+          }}
+        />
       </CardContent>
     </Card>
   );
@@ -145,7 +183,8 @@ const EventRow: React.FC<{
   isExpanded: boolean;
   onToggle: () => void;
   onScan: () => void;
-}> = ({ event, isExpanded, onToggle, onScan }) => {
+  onEdit: () => void;
+}> = ({ event, isExpanded, onToggle, onScan, onEdit }) => {
   const { data: rsvps, isLoading } = useQuery({
     queryKey: ['event-rsvps', event.id],
     queryFn: async () => {
@@ -192,9 +231,24 @@ const EventRow: React.FC<{
             </button>
           </CollapsibleTrigger>
           <div className="flex items-center gap-2 ml-2">
+            <Badge variant="outline" className="hidden text-xs capitalize sm:inline-flex">
+              {event.visibility === 'specific' ? 'Specific people' : event.visibility}
+            </Badge>
             {event.is_paid && (
               <Badge variant="secondary" className="text-xs">Paid</Badge>
             )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="gap-1"
+            >
+              <Pencil className="h-4 w-4" />
+              <span className="hidden sm:inline">Edit</span>
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -266,6 +320,107 @@ const EventRow: React.FC<{
   );
 };
 
+const EventEditDialog: React.FC<{
+  event: AdminEvent | null;
+  onOpenChange: (open: boolean) => void;
+}> = ({ event, onOpenChange }) => {
+  const queryClient = useQueryClient();
+  const [eventDate, setEventDate] = useState('');
+  const [visibility, setVisibility] = useState<EventVisibility>('specific');
+
+  useEffect(() => {
+    if (!event) return;
+    setEventDate(toDateTimeLocalValue(event.event_date));
+    setVisibility(getEventVisibility(event.visibility));
+  }, [event]);
+
+  const updateEvent = useMutation({
+    mutationFn: async () => {
+      if (!event) throw new Error('No event selected.');
+
+      const parsedEventDate = new Date(eventDate);
+      if (!eventDate || Number.isNaN(parsedEventDate.getTime())) {
+        throw new Error('Please select a valid date and time.');
+      }
+
+      const { error } = await supabase
+        .from('events')
+        .update({
+          event_date: parsedEventDate.toISOString(),
+          visibility,
+        })
+        .eq('id', event.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-events'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-events'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-route-event'] });
+      queryClient.invalidateQueries({ queryKey: ['user-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['landing-public-preview-data'] });
+      toast.success('Event updated');
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Could not update event.');
+    },
+  });
+
+  return (
+    <Dialog open={!!event} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Event</DialogTitle>
+          <DialogDescription>{event?.title}</DialogDescription>
+        </DialogHeader>
+
+        <form
+          className="space-y-4"
+          onSubmit={(submitEvent) => {
+            submitEvent.preventDefault();
+            updateEvent.mutate();
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="admin-event-date">Date &amp; Time</Label>
+            <Input
+              id="admin-event-date"
+              type="datetime-local"
+              value={eventDate}
+              onChange={(changeEvent) => setEventDate(changeEvent.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="admin-event-visibility">Audience</Label>
+            <Select value={visibility} onValueChange={(value) => setVisibility(value as EventVisibility)}>
+              <SelectTrigger id="admin-event-visibility">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="public">Public</SelectItem>
+                <SelectItem value="network">My Network</SelectItem>
+                <SelectItem value="specific">Specific People</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!eventDate || updateEvent.isPending}>
+              {updateEvent.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const emptyPanelistForm = {
   user_id: null as string | null,
   display_name: '',
@@ -330,6 +485,24 @@ const EventPanelistsSection: React.FC<{ event: AdminEvent }> = ({ event }) => {
     enabled: profileSearch.trim().length >= 2,
   });
 
+  const { data: companyOptions = [] } = useQuery({
+    queryKey: ['admin-panelist-company-search', profileSearch],
+    queryFn: async () => {
+      const trimmed = profileSearch.trim();
+      if (trimmed.length < 2) return [] as CompanyPanelistOption[];
+
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, name, description, logo_url, cover_image_url, location, tagline, mission, website_url')
+        .ilike('name', `%${trimmed}%`)
+        .order('name', { ascending: true })
+        .limit(8);
+      if (error) throw error;
+      return (data || []) as CompanyPanelistOption[];
+    },
+    enabled: profileSearch.trim().length >= 2,
+  });
+
   const resetForm = () => {
     setEditingPanelist(null);
     setProfileSearch('');
@@ -385,6 +558,23 @@ const EventPanelistsSection: React.FC<{ event: AdminEvent }> = ({ event }) => {
       skills: current.skills || (profile.skills || []).join(', '),
       badges: current.badges || (profile.badges || []).join(', '),
       public_slug: current.public_slug || slugify(name),
+    }));
+    setProfileSearch('');
+  };
+
+  const applyCompanyOption = (company: CompanyPanelistOption) => {
+    setForm((current) => ({
+      ...current,
+      user_id: null,
+      display_name: current.display_name || company.name,
+      title: current.title || 'Company',
+      headline: current.headline || company.tagline || '',
+      location: current.location || company.location || '',
+      bio: current.bio || company.description || company.mission || '',
+      headshot_url: current.headshot_url || company.logo_url || '',
+      cover_url: current.cover_url || company.cover_image_url || '',
+      website_url: current.website_url || company.website_url || '',
+      public_slug: current.public_slug || slugify(company.name),
     }));
     setProfileSearch('');
   };
@@ -563,14 +753,14 @@ const EventPanelistsSection: React.FC<{ event: AdminEvent }> = ({ event }) => {
 
           <div className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor={`profile-search-${event.id}`}>Find existing Inlight user</Label>
+              <Label htmlFor={`profile-search-${event.id}`}>Find existing Inlight user or company</Label>
               <Input
                 id={`profile-search-${event.id}`}
                 value={profileSearch}
                 onChange={(e) => setProfileSearch(e.target.value)}
-                placeholder="Search by name, stage name, or role"
+                placeholder="Search people or companies"
               />
-              {profileOptions.length > 0 && (
+              {(profileOptions.length > 0 || companyOptions.length > 0) && (
                 <div className="rounded-md border">
                   {profileOptions.map((profile) => {
                     const name = profile.stage_name || profile.display_name || 'Unnamed user';
@@ -590,11 +780,35 @@ const EventPanelistsSection: React.FC<{ event: AdminEvent }> = ({ event }) => {
                         )}
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium">{name}</p>
-                          <p className="truncate text-xs text-muted-foreground">{profile.role || 'No role listed'}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            Person · {profile.role || 'No role listed'}
+                          </p>
                         </div>
                       </button>
                     );
                   })}
+                  {companyOptions.map((company) => (
+                    <button
+                      key={`company-${company.id}`}
+                      type="button"
+                      className="flex w-full items-center gap-3 border-b p-2 text-left last:border-b-0 hover:bg-muted/60"
+                      onClick={() => applyCompanyOption(company)}
+                    >
+                      {company.logo_url ? (
+                        <img src={company.logo_url} alt="" className="h-9 w-9 rounded-md object-cover" />
+                      ) : (
+                        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-xs font-medium">
+                          {company.name[0]?.toUpperCase() || 'C'}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{company.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          Company{company.location ? ` · ${company.location}` : ''}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>

@@ -126,7 +126,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
   const [eventType, setEventType] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [visibility, setVisibility] = useState<PostVisibility>('public');
-  const [eventVisibility, setEventVisibility] = useState<EventVisibility>('public');
+  const [eventVisibility, setEventVisibility] = useState<EventVisibility>('specific');
   const [authorIdentityMode, setAuthorIdentityMode] = useState<AuthorIdentityMode>('personal');
   const [authorGroupId, setAuthorGroupId] = useState<string | null>(null);
   const [selectedRecipients, setSelectedRecipients] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
@@ -214,7 +214,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
     setCustomQuestion('');
     setPostType('update');
     setVisibility(groupOnly ? 'group' : 'public');
-    setEventVisibility(groupOnly ? 'group' : 'public');
+    setEventVisibility(groupOnly ? 'group' : 'specific');
     setAuthorIdentityMode('personal');
     setAuthorGroupId(null);
     setSelectedRecipients([]);

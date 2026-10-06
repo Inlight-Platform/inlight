@@ -42,6 +42,14 @@ Deno.serve(async (req) => {
   try {
     assertInternalSecret(req);
 
+    if (Deno.env.get("NOTIFICATION_EMAILS_ENABLED") === "false") {
+      console.log("[send-notification-email] Global kill-switch active - email suppressed");
+      return new Response(
+        JSON.stringify({ message: "Notification emails disabled globally" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { record } = await req.json();
     console.log("[send-notification-email] Received record:", JSON.stringify(record));
 

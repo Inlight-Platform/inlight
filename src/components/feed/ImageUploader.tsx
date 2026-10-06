@@ -20,6 +20,26 @@ const SUPPORTED_IMAGE_TYPES = [
   'image/heif',
 ];
 
+const SUPPORTED_IMAGE_EXTENSIONS = [
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.svg',
+  '.bmp',
+  '.tiff',
+  '.tif',
+  '.avif',
+  '.heic',
+  '.heif',
+];
+
+const IMAGE_INPUT_ACCEPT = [
+  ...SUPPORTED_IMAGE_TYPES,
+  ...SUPPORTED_IMAGE_EXTENSIONS,
+].join(',');
+
 // Max file size before compression: 50MB (will be compressed down)
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
@@ -187,8 +207,7 @@ export const ImageUploader = forwardRef<ImageUploaderHandle, ImageUploaderProps>
     }
 
     // Fallback: check by extension for edge cases where MIME type is empty
-    const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff', '.tif', '.avif', '.heic', '.heif'];
-    const hasValidExtension = supportedExtensions.some(ext => fileName.endsWith(ext));
+    const hasValidExtension = SUPPORTED_IMAGE_EXTENSIONS.some(ext => fileName.endsWith(ext));
 
     if (hasValidExtension) {
       return null;
@@ -337,7 +356,7 @@ export const ImageUploader = forwardRef<ImageUploaderHandle, ImageUploaderProps>
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept={IMAGE_INPUT_ACCEPT}
           multiple
           onChange={handleFileChange}
           className="hidden"
@@ -364,7 +383,7 @@ export const ImageUploader = forwardRef<ImageUploaderHandle, ImageUploaderProps>
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept={IMAGE_INPUT_ACCEPT}
         multiple
         onChange={handleFileChange}
         className="hidden"
