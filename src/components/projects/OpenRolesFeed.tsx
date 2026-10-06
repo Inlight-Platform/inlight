@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Loader2, Users, Calendar, Send, Check, Clock, X, Upload, Video, FileText, Bookmark, BookmarkCheck, ExternalLink } from 'lucide-react';
+import { Loader2, Users, Calendar, Send, Check, Clock, X, Upload, Video, FileText, Bookmark, BookmarkCheck, ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { useSavedItems } from '@/hooks/useSavedItems';
 import { format, addMonths, isPast } from 'date-fns';
 import { toast } from 'sonner';
@@ -39,7 +39,16 @@ interface OpenRole {
 export const OpenRolesFeed: React.FC<{
   prependOpportunities?: OpportunityView[];
   restoreOpportunities?: OpportunityView[];
-}> = ({ prependOpportunities = [], restoreOpportunities = prependOpportunities }) => {
+  canManageOpportunity?: (opportunity: OpportunityView) => boolean;
+  onEditOpportunity?: (opportunity: OpportunityView) => void;
+  onDeleteOpportunity?: (opportunity: OpportunityView) => void;
+}> = ({
+  prependOpportunities = [],
+  restoreOpportunities = prependOpportunities,
+  canManageOpportunity = () => false,
+  onEditOpportunity,
+  onDeleteOpportunity,
+}) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -115,7 +124,7 @@ export const OpenRolesFeed: React.FC<{
   }, [applyDialogOpen, user]);
 
   const { data: roles = [], isLoading } = useQuery({
-    queryKey: ['open-roles-feed'],
+    queryKey: ['open-roles-feed', user?.id],
     queryFn: async () => {
       const { data: openRoles, error } = await supabase
         .from('project_roles')
@@ -150,6 +159,7 @@ export const OpenRolesFeed: React.FC<{
           } as OpenRole;
         });
     },
+    enabled: !!user,
   });
 
   // Fetch user's existing applications
@@ -332,6 +342,36 @@ export const OpenRolesFeed: React.FC<{
                   <span className="truncate">{getOpportunityApplyLabel(opportunity)}</span>
                 </div>
                 <div className="flex items-center gap-1">
+                  {canManageOpportunity(opportunity) && onEditOpportunity && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0"
+                      title="Edit opportunity"
+                      aria-label="Edit opportunity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditOpportunity(opportunity);
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  {canManageOpportunity(opportunity) && onDeleteOpportunity && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                      title="Delete opportunity"
+                      aria-label="Delete opportunity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteOpportunity(opportunity);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                   {user && (
                     <button
                       onClick={(e) => {
@@ -623,6 +663,18 @@ export const OpenRolesFeed: React.FC<{
         posterProfile={null}
         hasApplied={false}
         onApply={openSelectedOpportunityApplication}
+        onEdit={selectedDetailOpportunity && canManageOpportunity(selectedDetailOpportunity) && onEditOpportunity
+          ? () => {
+              setOpportunityDetailOpen(false);
+              onEditOpportunity(selectedDetailOpportunity);
+            }
+          : undefined}
+        onDelete={selectedDetailOpportunity && canManageOpportunity(selectedDetailOpportunity) && onDeleteOpportunity
+          ? () => {
+              setOpportunityDetailOpen(false);
+              onDeleteOpportunity(selectedDetailOpportunity);
+            }
+          : undefined}
       />
     </>
   );

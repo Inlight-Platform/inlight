@@ -389,6 +389,103 @@ These are owner-reported baseline observations. Codex did not independently conf
 8. **PASS** - the admin show-tip and studio-post managers loaded without database errors and displayed the new records.
 9. All fixtures were preserved. These results were executed and confirmed by the owner; Codex did not independently confirm the browser checks.
 
+## Phase 3 — Group 7 implementation
+
+Status: **IMPLEMENTED LOCALLY; OWNER MANUAL VERIFICATION PASSED**
+
+Migrations:
+
+- `supabase/migrations/20261006190000_inv96_group7_authenticated_catalog_and_external_jobs.sql`
+- `supabase/migrations/20261006190500_inv96_group7_narrow_table_grants.sql`
+
+### Owner decisions
+
+- `streaming_content` and `film_metrics` require sign-in because the Industry Now surface is planned for temporary removal.
+- `broadway_metrics` and `industry_highlights` require sign-in because `/insights` requires authentication.
+- Anonymous visitors may read an `opportunities` row only when `is_public=true`, `action_type='external'`, and `link_url` is nonempty.
+- All signed-in users may read every opportunity, including internal Inlight opportunities.
+- Signed-out Jobs must not query or display internal `project_roles`.
+- Opportunity posters and admins receive Edit and Delete controls in the current Jobs Discover cards and detail sheet.
+
+### Policy changes
+
+- Replaces literal-true public reads on `streaming_content`, `film_metrics`, `broadway_metrics`, and `industry_highlights` with explicit authenticated reads.
+- Moves every admin write policy on those four tables to `authenticated` while preserving the admin predicate.
+- Replaces the anonymous opportunity policy with an external-link-only predicate.
+- Moves opportunity owner writes and admin management to `authenticated`, preserving poster/admin ownership checks.
+- Removes anonymous table privileges from the four catalog tables and retains only anonymous `SELECT` on `opportunities` under RLS.
+- Narrows authenticated grants on all five tables to `SELECT`, `INSERT`, `UPDATE`, and `DELETE`; unused `TRUNCATE`, `TRIGGER`, and `REFERENCES` privileges are removed.
+- Includes a manual rollback block and does not insert, update, or delete fixtures.
+
+### Frontend impact
+
+- `src/hooks/useOpportunities.ts`: anonymous opportunity reads now mirror the database predicate; create/update operations derive `is_public` from a valid external action/link instead of always publishing every job; poster/admin update and delete operations rely on RLS instead of the unrelated job-posting feature gate.
+- `src/components/projects/OpenRolesFeed.tsx`: signed-out users no longer issue the internal `project_roles` query; poster/admin Edit and Delete controls are available on canonical opportunity cards and their detail sheet.
+- `src/pages/OpportunitiesPage.tsx`: owns the existing edit dialog and delete confirmation flow for compact Discover cards.
+- `src/components/opportunities/OpportunityDetailSheet.tsx` and `OpportunityCard.tsx`: management-capable detail sheets expose both Edit and Delete actions.
+- `src/pages/StageWhisperPage.tsx`: the `film_metrics` request is disabled until a user is signed in.
+- Existing authenticated Insights, saves, messaging, and admin queries keep their current table reads.
+
+### Owner-reported pre-change baseline
+
+1. Anonymous reads of `streaming_content`, `film_metrics`, `broadway_metrics`, and `industry_highlights` returned HTTP `200` JSON arrays.
+2. Anonymous `opportunities` reads failed with HTTP `401` / PostgreSQL `42501` because the public admin policy invoked `has_role`.
+3. Signed-out Jobs also attempted `project_roles` and displayed a misleading empty state after `401` responses.
+4. Public external fixture `INV96 Public Opportunity` (`78a5ea49-f65c-4c05-91ed-7b6cd7343cfb`) is owned by the admin, has `is_public=true`, `action_type=external`, and uses `https://example.com/inv96-group7-apply`.
+5. Private internal fixture `INV96 Private Opportunity` (`6933b50a-9c10-4ee1-80d4-389fb109e23d`) is owned by the admin, has `is_public=false`, `action_type=apply`, and has no external link.
+6. The unrelated signed-in user received both fixtures, and the admin saw both, before implementation.
+7. The current Jobs Discover card and detail sheet had no Edit or Delete controls for the admin.
+
+These are owner-reported baseline observations. Codex did not independently confirm the manual checks.
+
+### Automated implementation checks
+
+- `npx supabase migration up --local` applied only the two Group 7 migrations; no reset or hosted command was used.
+- Local catalog inspection found 22 Group 7 policies. Every catalog read and admin/owner write policy is explicitly assigned to `authenticated`; only the external-opportunity read policy is assigned to `anon`.
+- Local grant inspection found exact authenticated CRUD privileges on all five tables and anonymous `SELECT` only on `opportunities`.
+- Local anonymous REST checks returned HTTP `401` / PostgreSQL `42501` for `streaming_content`, `film_metrics`, `broadway_metrics`, and `industry_highlights`.
+- Local anonymous REST returned HTTP `200` with only `INV96 Public Opportunity`; the private fixture was absent.
+- Database-owner inspection found both opportunity fixtures unchanged with their expected owner, publication state, action type, and link.
+- `npm run typecheck`: passed.
+- `npm run test:run`: passed (14 test files, 37 tests).
+- `npm run build:sandbox`: passed with the existing Browserslist, Tailwind class-ambiguity, and bundle-size warnings.
+- No hosted Supabase command, reset, destructive database command, commit, or push has been run for Group 7.
+
+### Group 7 owner verification checklist
+
+1. Confirm anonymous REST reads of `streaming_content`, `film_metrics`, `broadway_metrics`, and `industry_highlights` return HTTP `401` with no row data.
+2. Confirm the same four endpoints return HTTP `200` JSON arrays to the unrelated, owner, and admin accounts.
+3. Confirm anonymous `opportunities` returns only `INV96 Public Opportunity`, including its external URL, and does not return `INV96 Private Opportunity`.
+4. Confirm unrelated, owner, and admin callers receive both opportunity fixtures without a database error.
+5. Signed out, open Jobs and confirm only the public external fixture appears, no internal project-role request fails, and the external application link opens without requiring sign-in.
+6. Signed in as the unrelated user, confirm both opportunity fixtures appear and neither has management controls.
+7. Signed in as the admin, confirm both fixtures have Edit and Delete controls on the Discover card and detail sheet. Open the edit dialog and delete confirmation, then cancel both without changing or deleting a fixture.
+8. Confirm an opportunity poster receives the same Edit and Delete controls on their own canonical opportunity.
+9. Confirm `/insights` requires sign-in and authenticated Insights content loads without database errors.
+10. Confirm signed-out Industry Now does not request or expose `film_metrics` or `streaming_content` rows.
+11. Preserve both opportunity fixtures and paste every REST response, missing/extra card, browser error, console/network error, or unexpected control back to Codex. Codex does not mark Group 7 verified.
+
+### Owner-reported manual verification results
+
+1. **PASS** - anonymous REST requests to `streaming_content`, `broadway_metrics`, `film_metrics`, and `industry_highlights` each returned HTTP `401`, PostgreSQL code `42501`, and no row data.
+2. **PASS** - anonymous `opportunities` returned only `INV96 Public Opportunity`, with `is_public=true`, `action_type=external`, and the expected external application URL. The private fixture was absent.
+3. **PASS** - unrelated-user, owner, and admin REST requests each returned both `INV96 Public Opportunity` and `INV96 Private Opportunity` with their expected publication and action states.
+4. **PASS** - signed-out Jobs displayed only the public external fixture, opened its external link without sign-in, and made no `project_roles` request.
+5. **PASS** - signed-out `/insights` redirected to `/auth`.
+6. **PASS** - signed-out Industry Now exposed no film or streaming catalog data.
+7. **PASS** - the unrelated signed-in user saw both opportunity fixtures and received no Edit or Delete controls.
+8. **PASS** - the admin saw both fixtures and received Edit and Delete controls on the Discover cards and detail sheets. Both dialogs opened and were cancelled without saving or deleting.
+9. **PASS** - admin film/streaming and industry management sections loaded without database errors.
+10. Both opportunity fixtures were preserved.
+
+These results were executed and confirmed by the owner; Codex did not independently confirm the browser checks.
+
+### Separate route-alias gap
+
+- Both `/industry-now` and `/stage-whisper` currently reach the same Industry Now experience and enforce the same authentication lock.
+- `/stage-whisper` is the route reached from the current navigation, while `/industry-now` remains independently addressable without a corresponding navigation entry.
+- This is a routing and discoverability inconsistency, not an RLS failure. Group 7 does not remove or redirect either route.
+
 ## Base comparison
 
 - Preserved survey: `rls-review-sep22-base.md`, base `fe33c38de6db499ae5b29cf96a85a960fda826c4`.

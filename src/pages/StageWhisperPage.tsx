@@ -166,7 +166,7 @@ const StageWhisperPage: React.FC = () => {
       if (error) throw error;
       return data as FilmMetric[];
     },
-    enabled: industryTab === 'film'
+    enabled: !!user && industryTab === 'film'
   });
 
   // Auto-open show modal when navigated from My Saves

@@ -220,7 +220,11 @@ export function useOpportunities() {
         .order('created_at', { ascending: false });
 
       if (!user) {
-        opportunityQuery = opportunityQuery.eq('is_public', true);
+        opportunityQuery = opportunityQuery
+          .eq('is_public', true)
+          .eq('action_type', 'external')
+          .not('link_url', 'is', null)
+          .neq('link_url', '');
       }
 
       const { data: opportunityRows, error: opportunitiesError } = await withTimeout(
@@ -356,7 +360,7 @@ export function useOpportunities() {
         image_url: input.image_url || null,
         link_url: input.link_url || null,
         link_title: input.link_title || null,
-        is_public: true,
+        is_public: input.action_type === 'external' && Boolean(input.link_url?.trim()),
       });
 
       if (error) throw error;
@@ -394,9 +398,6 @@ export function useOpportunities() {
       link_title?: string | null;
     }) => {
       if (!user) throw new Error('Not authenticated');
-      if (!canManageJobs) {
-        throw new Error('This beta group cannot edit jobs.');
-      }
 
       const { error } = await supabase
         .from('opportunities')
@@ -418,6 +419,7 @@ export function useOpportunities() {
           image_url: input.image_url ?? null,
           link_url: input.link_url ?? null,
           link_title: input.link_title ?? null,
+          is_public: input.action_type === 'external' && Boolean(input.link_url?.trim()),
         })
         .eq('id', input.id);
 
@@ -435,9 +437,6 @@ export function useOpportunities() {
   const deleteOpportunity = useMutation({
     mutationFn: async (input: string | { id: string; source?: OpportunityView['source'] }) => {
       if (!user) throw new Error('Not authenticated');
-      if (!canManageJobs) {
-        throw new Error('This beta group cannot delete jobs.');
-      }
 
       const id = typeof input === 'string' ? input : input.id;
       const source = typeof input === 'string' ? 'opportunity' : input.source || 'opportunity';
