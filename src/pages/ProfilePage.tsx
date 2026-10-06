@@ -564,8 +564,13 @@ const ProfilePage: React.FC = () => {
         isOwnProfile
           ? supabase.from("saved_projects").select("project_id").eq("user_id", resolvedUserId).limit(1)
           : Promise.resolve({ data: [] as Array<{ project_id: string | null }> }),
-        supabase.from("posts").select("id").eq("user_id", resolvedUserId).limit(1),
+        user
+          ? supabase.from("posts").select("id").eq("user_id", resolvedUserId).limit(1)
+          : (supabase as any).rpc("get_public_profile_posts", { _user_id: resolvedUserId }),
         (() => {
+          if (!user) {
+            return (supabase as any).rpc("get_public_profile_events", { _user_id: resolvedUserId });
+          }
           let query = supabase.from("events").select("id").eq("user_id", resolvedUserId).limit(1);
           if (!isOwnProfile) {
             query = query.eq("visibility", "public");

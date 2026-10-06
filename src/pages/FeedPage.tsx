@@ -63,15 +63,16 @@ interface GroupProjectLink {
 }
 
 type EventRow = Database['public']['Tables']['events']['Row'];
+type BrowseEventRow = Omit<EventRow, 'user_id'> & { user_id?: string | null };
 
 const mapEventToFeedItem = (
-  event: EventRow,
+  event: BrowseEventRow,
   creatorProfile?: { user_id: string; display_name: string | null; avatar_url: string | null },
 ): FeedItemData => ({
   id: event.id,
   slug: event.slug,
   type: 'event' as const,
-  user_id: event.user_id,
+  user_id: event.user_id || '',
   title: event.title,
   description: event.description,
   image_url: event.image_url,
@@ -462,27 +463,25 @@ const FeedPage: React.FC = () => {
   const { data: posts = [], isLoading: postsLoading } = useQuery({
     queryKey: ['feed-posts', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      let query = supabase
-        .from('posts')
+      let query = (user ? supabase.from('posts') : (supabase as any).from('posts_public_browse'))
         .select('*')
         .not('content', 'like', '🎯%')
         .order('created_at', { ascending: false });
 
-      if (!user) {
-        query = query.eq('visibility', 'public');
-      }
-
       const { data, error } = await query.limit(100);
       if (error) throw error;
 
-      const profileMap = await fetchPublicProfileMap(data.map((p) => p.user_id));
+      const profileMap = user
+        ? await fetchPublicProfileMap(data.map((p: { user_id?: string | null }) => p.user_id).filter(Boolean))
+        : new Map();
 
-      return data.map((post) => ({
+      return data.map((post: any) => ({
         ...post,
         type: 'post' as const,
+        user_id: post.user_id || '',
         visibility: post.visibility,
         image_zoom: post.image_zoom ?? 1,
-        creator_profile: profileMap.get(post.user_id)
+        creator_profile: post.user_id ? profileMap.get(post.user_id) : undefined,
       }));
     },
     placeholderData: keepPreviousData,
@@ -520,23 +519,24 @@ const FeedPage: React.FC = () => {
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['feed-events', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      let query = supabase
-        .from('events')
+      let query = (user ? supabase.from('events') : (supabase as any).from('events_public_browse'))
         .select('*')
         .order('event_date', { ascending: true });
 
-      if (!user) {
-        query = query.eq('visibility', 'public');
-      } else {
+      if (user) {
         query = query.in('visibility', ['public', 'network', 'specific']);
       }
 
       const { data, error } = await query.limit(100);
       if (error) throw error;
 
-      const profileMap = await fetchPublicProfileMap(data.map((e) => e.user_id));
+      const profileMap = user
+        ? await fetchPublicProfileMap(data.map((e: { user_id?: string | null }) => e.user_id).filter(Boolean))
+        : new Map();
 
-      return sortEventsBySchedule(data.map((event) => mapEventToFeedItem(event, profileMap.get(event.user_id))));
+      return sortEventsBySchedule(data.map((event: BrowseEventRow) => (
+        mapEventToFeedItem(event, event.user_id ? profileMap.get(event.user_id) : undefined)
+      )));
     },
     placeholderData: keepPreviousData,
     retry: 1,
@@ -545,12 +545,12 @@ const FeedPage: React.FC = () => {
   });
 
   const { data: routeEvent } = useQuery({
-    queryKey: ['feed-route-event', routeEventIdentifier],
+    queryKey: ['feed-route-event', routeEventIdentifier, user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
       if (!routeEventIdentifier) return null;
 
       const fallbackEventId = identifierFallbackUuid(routeEventIdentifier);
-      let query = supabase.from('events').select('*');
+      let query = (user ? supabase.from('events') : (supabase as any).from('events_public_browse')).select('*');
       query = fallbackEventId
         ? query.eq('id', fallbackEventId)
         : query.eq('slug', routeEventIdentifier);
@@ -559,8 +559,10 @@ const FeedPage: React.FC = () => {
       if (error) throw error;
       if (!data) return null;
 
-      const profileMap = await fetchPublicProfileMap([data.user_id]);
-      return mapEventToFeedItem(data, profileMap.get(data.user_id));
+      const profileMap = user && data.user_id
+        ? await fetchPublicProfileMap([data.user_id])
+        : new Map();
+      return mapEventToFeedItem(data, data.user_id ? profileMap.get(data.user_id) : undefined);
     },
     enabled: !!routeEventIdentifier,
   });

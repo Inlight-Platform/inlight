@@ -102,7 +102,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
   const showAnonymous = item.type === 'show' && item.is_anonymous;
   const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
-  const showCreator = item.type !== 'project' || Boolean(item.creator_profile);
+  const showCreator = Boolean(item.user_id) && (item.type !== 'project' || Boolean(item.creator_profile));
   const title =
     item.title ||
     (item.content ? item.content.slice(0, 80) + (item.content.length > 80 ? '…' : '') : 'Untitled');

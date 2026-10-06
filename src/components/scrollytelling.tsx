@@ -55,14 +55,8 @@ type LandingProject = {
 
 type LandingPost = {
   id: string;
-  user_id: string;
   content: string;
   created_at: string;
-  creatorName: string | null;
-  creatorRole: string | null;
-  creatorAvatar: string | null;
-  creatorGradYear: number | null;
-  isProfileFallback?: boolean;
 };
 
 type LandingPreviewData = {
@@ -86,12 +80,6 @@ const formatLabel = (value: string | null | undefined) =>
   cleanPreviewText(value, 36)
     ?.replace(/[-_]+/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase()) || null;
-
-const isPlatformProfileName = (name: string | null | undefined) =>
-  (name || "").trim().toLowerCase() === "inlight";
-
-const formatClassYear = (year: number | null | undefined) =>
-  year ? `Class of '${String(year).slice(-2)}` : null;
 
 const toDisplayName = (name?: string | null) => name?.trim() || null;
 
@@ -137,15 +125,15 @@ async function loadLandingPreviewData(): Promise<LandingPreviewData> {
       .not("display_name", "is", null)
       .order("activity_score", { ascending: false, nullsFirst: false })
       .limit(24),
-    supabase
-      .from("events")
+    (supabase as any)
+      .from("events_public_browse")
       .select("id, title, event_date, location, event_type, image_url")
       .eq("visibility", "public")
       .gte("event_date", today)
       .order("event_date", { ascending: true })
       .limit(8),
-    supabase
-      .from("events")
+    (supabase as any)
+      .from("events_public_browse")
       .select("id, title, event_date, location, event_type, image_url")
       .eq("visibility", "public")
       .lt("event_date", today)
@@ -157,10 +145,9 @@ async function loadLandingPreviewData(): Promise<LandingPreviewData> {
       .or("status.is.null,status.neq.archived")
       .order("created_at", { ascending: false })
       .limit(8),
-    supabase
-      .from("posts")
-      .select("id, content, created_at, user_id")
-      .eq("visibility", "public")
+    (supabase as any)
+      .from("posts_public_browse")
+      .select("id, content, created_at")
       .not("content", "like", "🎯%")
       .order("created_at", { ascending: false })
       .limit(100),
@@ -193,81 +180,7 @@ async function loadLandingPreviewData(): Promise<LandingPreviewData> {
         ...upcomingEvents,
       ];
 
-  const postRows = postsResult.data || [];
-  const uniquePosts = postRows.filter((post, index, allPosts) =>
-    allPosts.findIndex((candidate) => candidate.user_id === post.user_id) === index,
-  );
-  const uniquePostUserIds = Array.from(new Set(uniquePosts.map((post) => post.user_id).filter(Boolean)));
-
-  if (uniquePostUserIds.length) {
-    const { data: postProfiles, error: postProfilesError } = await supabase
-      .from("profiles_public")
-      .select("user_id, display_name, avatar_url, role, headline, graduation_year")
-      .in("user_id", uniquePostUserIds);
-
-    if (postProfilesError) {
-      console.warn("Landing preview post author profiles loaded with query errors", postProfilesError);
-    }
-
-    (postProfiles || []).forEach((profile) => {
-      if (!profile.user_id || !toDisplayName(profile.display_name)) return;
-      profileMap.set(profile.user_id, {
-        user_id: profile.user_id,
-        display_name: toDisplayName(profile.display_name)!,
-        avatar_url: profile.avatar_url,
-        role: profile.role,
-        headline: profile.headline,
-        bio: null,
-        graduation_year: profile.graduation_year,
-        badges: [],
-        skills: [],
-      });
-    });
-  }
-
-  const selectedPosts: Array<{
-    id: string;
-    user_id: string;
-    content: string;
-    created_at: string;
-    isProfileFallback?: boolean;
-  }> = uniquePosts
-    .filter((post) => {
-      const creator = profileMap.get(post.user_id);
-      return creator?.display_name && !isPlatformProfileName(creator.display_name);
-    })
-    .slice(0, 4);
-
-  if (selectedPosts.length < 4) {
-    const selectedUserIds = new Set(selectedPosts.map((post) => post.user_id));
-    const profileFallbacks = profiles
-      .map((profile) => ({
-        profile,
-        description: cleanPreviewText(profile.bio || profile.headline, 120),
-      }))
-      .filter(({ profile, description }) => (
-        profile.display_name &&
-        description &&
-        !isPlatformProfileName(profile.display_name) &&
-        !selectedUserIds.has(profile.user_id)
-      ))
-      .slice(0, 4 - selectedPosts.length)
-      .map(({ profile, description }) => ({
-        id: `profile-${profile.user_id}`,
-        user_id: profile.user_id,
-        content: description!,
-        created_at: new Date().toISOString(),
-        isProfileFallback: true,
-      }));
-
-    selectedPosts.push(...profileFallbacks);
-  }
-
-  if (selectedPosts.length < 4) {
-    const selectedPostIds = new Set(selectedPosts.map((post) => post.id));
-    const repeatedAuthorPosts = postRows.filter((post) => !selectedPostIds.has(post.id));
-    selectedPosts.push(...repeatedAuthorPosts.slice(0, 4 - selectedPosts.length));
-  }
+  const selectedPosts = (postsResult.data || []).slice(0, 4);
 
   return {
     profiles,
@@ -287,20 +200,11 @@ async function loadLandingPreviewData(): Promise<LandingPreviewData> {
       image_url: project.header_image_url || project.main_image_url,
       creatorName: profileMap.get(project.creator_id)?.display_name || null,
     })),
-    posts: selectedPosts.map((post) => {
-      const creator = profileMap.get(post.user_id);
-      return {
-        id: post.id,
-        user_id: post.user_id,
-        content: cleanPreviewText(post.content, 120) || post.content,
-        created_at: post.created_at,
-        creatorName: creator?.display_name || null,
-        creatorRole: creator?.role || creator?.headline || null,
-        creatorAvatar: creator?.avatar_url || null,
-        creatorGradYear: creator?.graduation_year || null,
-        isProfileFallback: post.isProfileFallback,
-      };
-    }),
+    posts: selectedPosts.map((post: { id: string; content: string; created_at: string }) => ({
+      id: post.id,
+      content: cleanPreviewText(post.content, 120) || post.content,
+      created_at: post.created_at,
+    })),
   };
 }
 
@@ -750,29 +654,20 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
   );
   const { data, isLoading } = useLandingPreviewData();
 
-  const people = data?.posts.length
-    ? data.posts.slice(0, 4).map((post, index) => ({
-        name: post.creatorName || "Inlight member",
-        role: [cleanPreviewText(post.creatorRole, 36), formatClassYear(post.creatorGradYear)].filter(Boolean).join(" / ") || "Creative",
+  const publicUpdates = data?.posts.length
+    ? data.posts.slice(0, 4).map((post) => ({
         credit: post.content,
-        img: post.creatorAvatar || getFallbackImage(index),
-        when: post.isProfileFallback ? "Profile highlight" : "Latest",
+        when: formatRelativeTime(post.created_at),
         isPlaceholder: false,
       }))
     : isLoading
-    ? Array.from({ length: 4 }, (_, index) => ({
-        name: "",
-        role: "",
+    ? Array.from({ length: 4 }, () => ({
         credit: "",
-        img: getFallbackImage(index),
         when: "",
         isPlaceholder: true,
       }))
     : [
-        { name: "Maya Chen", role: "Director / NYU '23", credit: "Now in post on 'Soft Static' (short)", img: audience1, when: "Profile highlight", isPlaceholder: false },
-        { name: "Daniel Park", role: "Composer / USC '24", credit: "Released single 'Inland Sea' — Spotify", img: winner, when: "Profile highlight", isPlaceholder: false },
-        { name: "Sofia Rivera", role: "Actor / Juilliard '22", credit: "Booked recurring on Hulu pilot", img: community, when: "Profile highlight", isPlaceholder: false },
-        { name: "Jules Okafor", role: "Producer / Tisch '21", credit: "Sundance Episodic Lab '26", img: panel, when: "Profile highlight", isPlaceholder: false },
+        { credit: "New creative work and opportunities appear here as the community shares them.", when: "Public update", isPlaceholder: false },
       ];
 
   return (
@@ -793,7 +688,7 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
         style={{ opacity, x }}
         className="mt-6 flex w-max max-w-none self-start gap-3 pl-0 pr-6 sm:grid sm:w-full sm:max-w-5xl sm:self-auto sm:grid-cols-2 sm:px-6 md:grid-cols-4"
       >
-        {people.map((p, i) => (
+        {publicUpdates.map((p, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 30 }}
@@ -804,14 +699,7 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
           >
             {p.isPlaceholder ? (
               <>
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-muted/30 animate-pulse" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 w-2/3 rounded-full bg-muted/30 animate-pulse" />
-                    <div className="h-3 w-3/5 rounded-full bg-muted/20 animate-pulse" />
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-border space-y-2">
+                <div className="space-y-2">
                   <div className="h-3 w-16 rounded-full bg-muted/30 animate-pulse" />
                   <div className="h-4 w-full rounded-full bg-muted/20 animate-pulse" />
                   <div className="h-4 w-4/5 rounded-full bg-muted/20 animate-pulse" />
@@ -820,16 +708,7 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
               </>
             ) : (
               <>
-                <div className="flex min-w-0 items-center gap-3">
-                  <img src={p.img} alt={p.name} className="h-10 w-10 rounded-full object-cover grayscale sm:h-12 sm:w-12" />
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium leading-snug sm:text-base">{p.name}</div>
-                    <div className="text-[10px] uppercase leading-snug tracking-widest text-muted-foreground">
-                      {p.role}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 flex-1 overflow-hidden border-t border-border pt-3 sm:mt-4 sm:pt-4">
+                <div className="flex-1 overflow-hidden">
                   {p.when ? (
                     <div className="text-[10px] tracking-widest uppercase text-glow mb-1.5">
                       ✦ {p.when}

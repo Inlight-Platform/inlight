@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { useProjectPhotoUpload } from '@/hooks/useProjectPhotoUpload';
 import { Button } from '@/components/ui/button';
@@ -134,6 +135,7 @@ const ProjectDetailPage: React.FC = () => {
   };
   const { isMinimized: chatMinimized, originRoute: chatOriginRoute, chatRoute, close: closeChat, expand: expandChat } = useMinimizedChat();
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const { canManageProjects } = useFeatureAccess();
   const queryClient = useQueryClient();
   const [addPhotoOpen, setAddPhotoOpen] = useState(false);
@@ -344,7 +346,8 @@ const ProjectDetailPage: React.FC = () => {
   });
 
   const canEditProject = canManageProjects && isCreator;
-  const canManageProjectContent = canManageProjects && isMember;
+  const canAdministerProject = canManageProjects && (isCreator || isAdmin);
+  const canManageProjectContent = canManageProjects && (isMember || isAdmin);
 
   useEffect(() => {
     setRolesManuallyToggled(false);
@@ -414,7 +417,7 @@ const ProjectDetailPage: React.FC = () => {
   // Delete photo mutation
   const deletePhotoMutation = useMutation({
     mutationFn: async (photoId: string) => {
-      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
+      if (!canManageProjectContent) throw new Error('Only project members or admins can remove photos.');
       const { error } = await supabase
         .from('project_photos')
         .delete()
@@ -432,7 +435,7 @@ const ProjectDetailPage: React.FC = () => {
   const addMemberMutation = useMutation({
     mutationFn: async () => {
       if (!resolvedProjectId || !memberEmail.trim()) throw new Error('Invalid data');
-      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
+      if (!canAdministerProject) throw new Error('Only the project owner or an admin can add members.');
       
       const { error } = await supabase.rpc('add_project_member_by_email', {
         target_project_id: resolvedProjectId,
@@ -548,7 +551,7 @@ const ProjectDetailPage: React.FC = () => {
   // Delete project link mutation
   const deleteProjectLinkMutation = useMutation({
     mutationFn: async (linkId: string) => {
-      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
+      if (!canManageProjectContent) throw new Error('Only project members or admins can remove links.');
       const { error } = await supabase
         .from('project_links')
         .delete()
@@ -566,7 +569,7 @@ const ProjectDetailPage: React.FC = () => {
   const deleteProjectMutation = useMutation({
     mutationFn: async () => {
       if (!resolvedProjectId) throw new Error('No project ID');
-      if (!canManageProjects) throw new Error('This beta group cannot delete projects.');
+      if (!canAdministerProject) throw new Error('Only the project owner or an admin can delete projects.');
       const { error } = await supabase
         .from('projects')
         .delete()
@@ -606,7 +609,7 @@ const ProjectDetailPage: React.FC = () => {
     mutationFn: async ({ roleName, invitee }: { roleName: string; invitee: InviteeProfile | null }) => {
       if (!resolvedProjectId) throw new Error('No project ID');
       if (!user?.id) throw new Error('You must be logged in');
-      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
+      if (!canAdministerProject) throw new Error('Only the project owner or an admin can add roles.');
 
       const { data: projectRole, error } = await supabase
         .from('project_roles')
@@ -648,7 +651,7 @@ const ProjectDetailPage: React.FC = () => {
   // Delete role mutation
   const deleteRoleMutation = useMutation({
     mutationFn: async (roleId: string) => {
-      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
+      if (!canAdministerProject) throw new Error('Only the project owner or an admin can remove roles.');
       const { data, error } = await supabase
         .from('project_roles')
         .delete()
@@ -668,7 +671,7 @@ const ProjectDetailPage: React.FC = () => {
   // Remove member mutation
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      if (!canManageProjects) throw new Error('This beta group cannot edit projects.');
+      if (!canAdministerProject) throw new Error('Only the project owner or an admin can remove members.');
       const { error } = await supabase
         .from('project_members')
         .delete()
@@ -821,7 +824,7 @@ const ProjectDetailPage: React.FC = () => {
                   <Bookmark className="w-5 h-5" />
                 )}
               </Button>
-              {canEditProject && (
+              {canAdministerProject && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -977,7 +980,7 @@ const ProjectDetailPage: React.FC = () => {
               </a>
             )}
             {projectLinks.map((link) => {
-              const canEditLink = canManageProjectContent && (isCreator || link.user_id === user?.id);
+              const canEditLink = canManageProjectContent && (isCreator || isAdmin || link.user_id === user?.id);
 
               return (
                 <div
@@ -1113,14 +1116,14 @@ const ProjectDetailPage: React.FC = () => {
                       <ChevronDown className="w-5 h-5 text-muted-foreground" />
                     )}
                   </button>
-                  {isCreator && (
+                  {(isCreator || isAdmin) && (
                     <p className="text-sm text-muted-foreground font-normal">
                       Add roles needed for this project. Open roles on public projects appear on Jobs.
                     </p>
                   )}
                 </div>
               </CollapsibleTrigger>
-              {canEditProject && (
+              {canAdministerProject && (
                 <Dialog
                   open={addRoleOpen}
                   onOpenChange={(open) => {
@@ -1178,7 +1181,7 @@ const ProjectDetailPage: React.FC = () => {
                   projectId={resolvedProjectId!}
                   creatorId={project.creator_id}
                   isProjectMember={isMember}
-                  onDeleteRole={canEditProject ? (roleId) => deleteRoleMutation.mutate(roleId) : undefined}
+                  onDeleteRole={canAdministerProject ? (roleId) => deleteRoleMutation.mutate(roleId) : undefined}
                 />
               </CardContent>
             </CollapsibleContent>
@@ -1192,14 +1195,16 @@ const ProjectDetailPage: React.FC = () => {
               <Users className="w-5 h-5" />
               Team Members ({members.filter(m => m.user_id !== project.creator_id).length + 1})
             </CardTitle>
-            {canEditProject && (
+            {canAdministerProject && (
               <div className="flex flex-wrap justify-end gap-2">
-                <InviteFriendDialog projectId={resolvedProjectId} projectTitle={project.title}>
-                  <Button size="sm" variant="outline">
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Invite for Credit
-                  </Button>
-                </InviteFriendDialog>
+                {canEditProject && (
+                  <InviteFriendDialog projectId={resolvedProjectId} projectTitle={project.title}>
+                    <Button size="sm" variant="outline">
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Invite for Credit
+                    </Button>
+                  </InviteFriendDialog>
+                )}
                 <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline">
@@ -1287,7 +1292,7 @@ const ProjectDetailPage: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    {canEditProject && (
+                    {canAdministerProject && (
                       <Button
                         size="icon"
                         variant="ghost"
@@ -1404,7 +1409,7 @@ const ProjectDetailPage: React.FC = () => {
                         {photo.caption}
                       </p>
                     )}
-                    {canManageProjects && (isCreator || photo.user_id === user?.id) && (
+                    {canManageProjects && (isCreator || isAdmin || photo.user_id === user?.id) && (
                       <button
                         onClick={() => deletePhotoMutation.mutate(photo.id)}
                         className="absolute top-2 right-2 p-1.5 bg-destructive/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"

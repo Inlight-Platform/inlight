@@ -554,6 +554,150 @@ These are owner-reported baseline observations. Codex did not independently conf
 
 These results were executed and confirmed by the owner; Codex did not independently confirm the browser checks.
 
+## Phase 3 — Group 9 implementation
+
+Status: **IMPLEMENTED LOCALLY; OWNER MANUAL VERIFICATION COMPLETE**
+
+Migrations:
+
+- `supabase/migrations/20261006213000_inv96_group9_project_child_access.sql`
+- `supabase/migrations/20261006214500_inv96_group9_public_job_teasers.sql`
+- `supabase/migrations/20261006220000_inv96_anonymous_feed_attribution.sql`
+
+### Owner decisions
+
+- `project_members`, `project_photos`, `project_roles`, and `project_links` require sign-in. Signed-in users may read child content for projects they can access, including public projects.
+- Signed-out company-project pages retain public project metadata but do not request or display project-team identities.
+- Project owners and members retain their existing photo/link content controls. Only the owner and admin may manage project members and roles.
+- Admins may view every project-child row and the protected Google Drive URL, add/edit/delete photos and links, add/remove members and roles, and delete a project.
+- Owner-only project-detail controls such as visibility, status, cover, description, and Drive editing remain owner-only.
+- Signed-out Jobs must display teaser cards for internal Inlight opportunities and unassigned roles on public projects. External opportunities retain direct external-link access; opening or applying to an internal opportunity or project role requires sign-in.
+- All Group 9 fixtures must be preserved.
+
+### Policy and frontend changes
+
+- Moves all four project-child policy sets and table grants from broad `PUBLIC`/`anon` assignments to explicit `authenticated` access.
+- Preserves `can_access_project(...)` reads for signed-in users and adds admin access to private projects.
+- Adds explicit owner/member/admin write predicates, including `auth.uid() = user_id` checks on photo and link insertion to prevent uploader-ID spoofing.
+- Allows project owners and admins to add/remove members and create/update/delete roles.
+- Restricts `add_project_member_by_email` execution to `authenticated` and permits either the project owner or an admin.
+- Moves project-delete policies to `authenticated`; the existing owner/admin predicates remain intact.
+- `src/pages/ProjectDetailPage.tsx` exposes the approved admin content, membership, role, moderation, and project-delete controls while retaining owner-only project-detail editing.
+- `src/pages/PublicCompanyProjectPage.tsx` uses an authentication-scoped team query and does not request members while signed out.
+- `opportunities_public_browse` exposes anonymous-safe cards for the existing public external opportunities plus open internal Inlight opportunities. Internal rows omit poster identity, description, compensation, requirements, and application links.
+- `project_roles_public_browse` exposes unassigned role names and public-project teaser metadata without reopening anonymous access to `project_roles`.
+- Signed-out Jobs queries the two narrow browse views. Internal card interaction opens the sign-in prompt; external opportunities retain the existing public detail and link flow.
+- `posts_public_browse` and `events_public_browse` expose public card content without `user_id`; anonymous callers no longer have base-table `SELECT` on `posts` or `events`.
+- `get_public_profile_posts(uuid)` and `get_public_profile_events(uuid)` preserve signed-out public-profile activity without returning the creator identifier.
+- Home feed, landing preview, public event-panelist pages, public-profile activity, and signed-out public job-post discovery now use anonymous-safe projections. Signed-in callers continue using base tables and retain attribution.
+- Signed-out post and event cards omit the creator name and avatar rather than rendering an `Unknown` or fallback identity.
+- The migration contains a manual rollback block and does not insert, update, or delete fixtures.
+
+### Owner-reported pre-change baseline
+
+1. Fixture project `INV96 Public Project` contained only the owner membership before fixture setup.
+2. The owner added one photo (`INV96 Group 9 project photo`), one unassigned role (`INV96 Group 9 Open Role`), and one link (`INV96 Group 9 Link`) through the project UI; all expected success toasts appeared.
+3. Anonymous direct reads returned PostgreSQL `42501` errors through inaccessible `projects` or `can_access_project` dependencies rather than a clean, explicit project-child boundary.
+4. The unrelated signed-in user, owner, and admin each received all four fixture rows because the parent project is public.
+5. Signed-out `/projects/:id` redirected to `/auth` and sent no requests to the four child tables.
+6. The unrelated user saw the owner team entry, photo, open role, and link without content-management controls or the Drive card. The public open role also appeared in Jobs.
+7. The owner saw all fixtures, normal content controls, and the Drive card. The admin saw all fixtures and the Drive URL without database errors.
+
+Fixture IDs:
+
+- Project: `fdc2086a-45fc-49c6-965d-4b5bee85fe15`
+- Owner membership: `a2365d68-aa4d-43bf-9ca7-9fc4dab485b5`
+- Photo: `f1d7659b-1c46-4c6d-939b-bc01354ba708`
+- Open role: `6c9358fd-5176-4a6b-898f-bf1d4b8a1c53`
+- Link: `fd98c897-88fa-4076-bb25-29be45ec37f2`
+
+These are owner-reported baseline observations. Codex did not independently confirm the browser checks.
+
+### Future permissions review
+
+- Group 9 intentionally grants admins broad project powers for the current operational workflow: content authorship, member/role management, moderation, Drive inspection, and project deletion.
+- Reassess whether admins should retain content-authorship and team-management controls, or move to a narrower moderation-only model with audited elevated actions.
+
+### Automated implementation checks
+
+- Verified `.env.sandbox.local` resolves `VITE_SUPABASE_URL` to `http://127.0.0.1:54321`; no hosted Supabase endpoint was used.
+- Applied only migration `20261006213000` to the local sandbox with `npx supabase migration up --local`.
+- Read-only catalog audits confirmed all 15 project-child policies target only `authenticated`; anonymous table grants are absent; authenticated grants are narrowed to the required CRUD operations.
+- `add_project_member_by_email` grants execution only to `authenticated` and now authorizes the project owner or an admin.
+- Fixture-preservation queries confirmed the owner membership, photo, open role, and link remain unchanged.
+- Anonymous REST checks confirmed all four base tables return HTTP `401` / PostgreSQL `42501` without row data.
+- Applied only follow-up migration `20261006214500` to the local sandbox after the owner revised the signed-out Jobs decision.
+- Anonymous REST checks confirmed both public teaser views return HTTP `200`; the internal opportunity omits poster identity and protected detail, and the public-project role is exposed without granting anonymous `project_roles` access.
+- Applied only follow-up migration `20261006220000` to the local sandbox after the owner approved identity-free signed-out event and post cards.
+- Anonymous REST checks confirmed `posts` and `events` base-table reads return HTTP `401`; both browse views and both public-profile RPCs return arrays without a `user_id` key.
+- `npm run typecheck` passed.
+- `npm run test:run` passed: 14 test files, 37 tests.
+- `npm run build:sandbox` passed with the repository's existing Browserslist, Tailwind ambiguity, and bundle-size warnings.
+- `git diff --check` passed.
+- No hosted Supabase command, reset, destructive database command, commit, or push has been run for Group 9.
+
+### Owner-reported post-change verification
+
+1. All four anonymous base-table reads returned HTTP `401` without row data.
+2. The unrelated user, owner, and admin received all four expected fixture rows for the public project.
+3. Signed-out `/projects/:id` redirected to `/auth` without requesting the project-child tables.
+4. The unrelated user saw the photo, role, link, and owner attribution without management controls or the Drive card.
+5. The owner retained all fixtures, existing owner controls, and the Drive card.
+6. The admin saw the Drive URL, approved photo/link/member/role controls, and Delete Project without database errors; destructive confirmations were cancelled.
+7. No public company-linked project fixture existed, so the signed-out company-project Team check remains untested rather than failed.
+8. Every fixture was preserved.
+
+These results were executed and confirmed by the owner; Codex did not independently confirm the browser checks.
+
+### Public Jobs follow-up checklist
+
+1. Signed out, open `/opportunities` and confirm `INV96 Private Opportunity`, `INV96 Public Opportunity`, and `INV96 Group 9 Open Role` all appear as cards.
+2. Click `INV96 Public Opportunity` and confirm its public external detail/link flow still works without sign-in.
+3. Click `INV96 Private Opportunity` and confirm the sign-in prompt appears before protected details or an internal application form are displayed.
+4. Click `INV96 Group 9 Open Role` and confirm the sign-in prompt appears before the application form is displayed.
+5. In the browser network inspector, confirm signed-out Jobs reads `opportunities_public_browse` and `project_roles_public_browse`, not the `project_roles` base table.
+6. Confirm no signed-out internal card displays a poster UUID, creator identity, protected description, compensation, requirements, or internal application data.
+7. Sign in as the unrelated user and confirm both internal fixtures open normally and retain their application flows.
+8. Preserve every fixture and paste all unexpected rows, missing prompts, browser errors, or console/network failures back to Codex. Codex does not mark this follow-up verified.
+
+### Owner-reported Public Jobs follow-up results
+
+1. **PASS** — signed-out Jobs displayed `INV96 Public Opportunity`, `INV96 Private Opportunity`, and `INV96 Group 9 Open Role`.
+2. **PASS** — the public external opportunity opened its external application link without requiring sign-in.
+3. **PASS** — the internal opportunity displayed a sign-in prompt before protected details or its application form.
+4. **PASS** — the public-project open role displayed a sign-in prompt before its application form.
+5. **PASS** — after clearing the browser Network panel and reloading, signed-out Jobs requested `opportunities_public_browse` and `project_roles_public_browse` and made no `project_roles` base-table request.
+6. **PASS** — after sign-in, both internal fixtures opened normally and exposed their application flows.
+
+These results were executed and confirmed by the owner. Codex did not independently confirm the browser checks.
+
+### Anonymous event/post attribution follow-up checklist
+
+1. Signed out, open Home and confirm `INV96 Public Event` shows its title, image, date, and public metadata without `inv96.owner`, an avatar, `Unknown`, or a UUID.
+2. Signed out, locate a public post card on Home and confirm its content remains visible without an author name, avatar, `Unknown`, or a UUID.
+3. In the browser network inspector, confirm signed-out Home reads `events_public_browse` and `posts_public_browse`, not the `events` or `posts` base tables.
+4. Run anonymous REST reads against `events_public_browse` and `posts_public_browse`; confirm each response is an array and no object has a `user_id` key.
+5. Run anonymous REST reads against the `events` and `posts` base tables; confirm each returns HTTP `401` with PostgreSQL code `42501`.
+6. Open the owner public profile signed out and confirm public posts/events still render without creator attribution; confirm the profile RPC responses contain no `user_id` key.
+7. Open the public landing page signed out and confirm public update cards show content and time only, with no author name, avatar, or identifier.
+8. Sign in as the unrelated user and confirm the same Home event/post cards display the owner/author name and avatar normally.
+9. Sign in as the owner and confirm creating, editing, and deleting controls for the owner's post/event remain available; do not delete any fixture.
+10. Open the public event-panelist URL signed out and confirm event metadata still loads without a database error.
+11. Preserve every fixture and paste every missing card, unexpected identity, REST response, browser error, or console/network failure back to Codex. Codex does not mark this follow-up verified.
+
+### Owner-reported anonymous event/post attribution results
+
+1. **PASS** — signed-out Home displayed `INV96 Public Event` without creator attribution.
+2. **PASS** — the signed-out event request used `events_public_browse`.
+3. **PASS** — a signed-out public post card displayed no author attribution or `Unknown` fallback.
+4. **PASS** — the signed-out post request used `posts_public_browse`.
+5. **PASS** — the owner's public-profile activity displayed without attribution while signed out.
+6. **PASS** — signed-in event and post cards retained normal creator/author attribution.
+7. **PASS** — public landing update cards displayed content and time without author identity.
+8. **PASS** — the public event-panelist page continued loading normally.
+
+These results were executed and confirmed by the owner. Codex did not independently confirm the browser checks.
+
 ## Base comparison
 
 - Preserved survey: `rls-review-sep22-base.md`, base `fe33c38de6db499ae5b29cf96a85a960fda826c4`.

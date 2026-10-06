@@ -100,7 +100,11 @@ export const OpenRolesFeed: React.FC<{
 
     restoredOpportunityIdRef.current = jobId;
     setSelectedDetailOpportunity(restoredOpportunity);
-    setOpportunityDetailOpen(true);
+    if (!user && restoredOpportunity.actionType !== 'external') {
+      setShowVisitorAuthPrompt(true);
+    } else {
+      setOpportunityDetailOpen(true);
+    }
     clearAuthRestore();
     const nextRouteState = { ...(routeState || {}) };
     delete nextRouteState.restore;
@@ -108,7 +112,7 @@ export const OpenRolesFeed: React.FC<{
       replace: true,
       state: Object.keys(nextRouteState).length > 0 ? nextRouteState : undefined,
     });
-  }, [restoreOpportunities, location, navigate]);
+  }, [restoreOpportunities, location, navigate, user]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -126,6 +130,31 @@ export const OpenRolesFeed: React.FC<{
   const { data: roles = [], isLoading } = useQuery({
     queryKey: ['open-roles-feed', user?.id],
     queryFn: async () => {
+      if (!user) {
+        const { data, error } = await (supabase as any)
+          .from('project_roles_public_browse')
+          .select('id, role_name, project_id, project_title, project_deadline, created_at')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        return (data || []).map((role: {
+          id: string;
+          role_name: string;
+          project_id: string;
+          project_title: string;
+          project_deadline: string | null;
+          created_at: string;
+        }) => ({
+          roleId: role.id,
+          roleName: role.role_name,
+          projectId: role.project_id,
+          projectTitle: role.project_title,
+          projectDeadline: role.project_deadline,
+          createdAt: role.created_at,
+        } as OpenRole));
+      }
+
       const { data: openRoles, error } = await supabase
         .from('project_roles')
         .select('id, role_name, project_id, created_at')
@@ -159,7 +188,6 @@ export const OpenRolesFeed: React.FC<{
           } as OpenRole;
         });
     },
-    enabled: !!user,
   });
 
   // Fetch user's existing applications
@@ -269,6 +297,10 @@ export const OpenRolesFeed: React.FC<{
   const openOpportunity = (opportunity: OpportunityView) => {
     restoredOpportunityIdRef.current = opportunity.id;
     setSelectedDetailOpportunity(opportunity);
+    if (!user && opportunity.actionType !== 'external') {
+      setShowVisitorAuthPrompt(true);
+      return;
+    }
     setOpportunityDetailOpen(true);
     updateJobSearchParam(opportunity.id);
   };
