@@ -486,6 +486,74 @@ These results were executed and confirmed by the owner; Codex did not independen
 - `/stage-whisper` is the route reached from the current navigation, while `/industry-now` remains independently addressable without a corresponding navigation entry.
 - This is a routing and discoverability inconsistency, not an RLS failure. Group 7 does not remove or redirect either route.
 
+## Phase 3 — Group 8 implementation
+
+Status: **IMPLEMENTED LOCALLY; OWNER MANUAL VERIFICATION COMPLETE**
+
+Migration: `supabase/migrations/20261006200000_inv96_group8_private_network_and_attendees.sql`
+
+### Owner decisions
+
+- Public profiles do not imply a public relationship graph. Direct `connections` enumeration requires sign-in.
+- Event attendee identities and response counts require sign-in. Signed-out visitors receive neither RSVP nor ticket-attendee counts or identities.
+- Public events remain anonymously browsable; network and specific events keep their existing audience rules.
+- Direct RSVP rows remain private to the attendee, event owner, and admin.
+
+### Policy and frontend changes
+
+- Moves all `connections` policies and privileges to `authenticated` while retaining visible-profile filtering and owner-only follow/unfollow writes.
+- Keeps conditional event reads available to `anon` and `authenticated`, while moving all event writes and admin predicates to `authenticated`.
+- Replaces nine overlapping RSVP policies with five authenticated policies covering attendee reads/writes, event-owner reads/check-in updates, and admin reads.
+- Revokes anonymous execution of both attendee RPCs and requires the signed-in caller to be able to view the target event.
+- `src/hooks/useEventRsvps.ts` gates RSVP reads and realtime subscriptions by authentication and uses user-specific cache keys.
+- `src/components/feed/FeedItem.tsx` gates ticket-attendee reads by authentication and uses user-specific cache keys.
+- `src/components/events/EventRsvpForm.tsx` hides response totals while signed out.
+- The migration contains a manual rollback block and does not insert, update, or delete fixtures.
+
+### Owner-reported pre-change baseline
+
+1. Anonymous, unrelated-user, owner, and admin event queries initially returned empty arrays because no event fixtures existed.
+2. The owner and unrelated user established a reciprocal connection, then the owner created `INV96 Public Event`, `INV96 Network Event`, and `INV96 Specific Event`, targeting the unrelated user for the specific event.
+3. Anonymous event reads returned only `INV96 Public Event`. The connected/specified unrelated user, owner, and admin each received all three events.
+4. Anonymous and all signed-in callers could enumerate both reciprocal connection rows, exposing owner and unrelated-user IDs while signed out.
+5. Anonymous direct `event_rsvps` reads failed with HTTP `401` because the `PUBLIC` admin policy invoked `has_role`.
+6. The public RSVP RPC returned the unrelated user's RSVP name, role, status, and user ID without email. Authorized direct reads returned the RSVP email to the attendee, event owner, and admin.
+
+Fixture IDs:
+
+- Public event: `670d6e6a-40d9-45af-bda6-175d934383d8`
+- Network event: `eca4d978-a872-4084-86f3-ee09653e780c`
+- Specific event: `c4e5c8f6-65e1-4190-863a-00222494633f`
+- Public-event RSVP: `b4197329-fd0d-4c5e-9b5c-7a3980c82dba`
+
+These are owner-reported baseline observations. Codex did not independently confirm the browser checks.
+
+### Automated implementation checks
+
+- Verified `.env.sandbox.local` resolves `VITE_SUPABASE_URL` to `http://127.0.0.1:54321`; no hosted Supabase endpoint was used.
+- Applied migration `20261006200000` to the local sandbox with `npx supabase migration up --local`.
+- Read-only catalog audits confirmed the intended policy roles and exact table grants: `connections` and `event_rsvps` are available only to `authenticated`; `events` grants `SELECT` to `anon` and CRUD to `authenticated`; both attendee RPCs grant execution only to `authenticated`.
+- Fixture-preservation queries confirmed all three events and the existing public-event RSVP remain unchanged.
+- Anonymous REST checks confirmed `connections` and `event_rsvps` return HTTP `401`, event reads return only `INV96 Public Event`, and both attendee RPCs return HTTP `401` without attendee data.
+- `npm run typecheck` passed.
+- `npm run test:run` passed: 14 test files, 37 tests.
+- `npm run build:sandbox` passed with the repository's existing Browserslist, Tailwind ambiguity, and bundle-size warnings.
+- No hosted Supabase command, reset, destructive database command, commit, or push has been run for Group 8.
+
+### Owner-confirmed post-implementation verification
+
+1. Anonymous direct reads of `connections` and `event_rsvps` returned HTTP `401` with `permission denied`; no relationship or RSVP rows were exposed.
+2. Anonymous event reads returned only `INV96 Public Event`.
+3. The unrelated user, owner, and admin each received both reciprocal connection rows.
+4. The unrelated user, owner, and admin each received the public, network, and specific event fixtures permitted by the existing audience rules.
+5. Direct RSVP reads returned the public-event RSVP to its attendee, the event owner, and the admin, including the expected private email field.
+6. Signed-out event UI displayed public event metadata without an RSVP count, attendee list, attendee identity, or RSVP submission form.
+7. As the unrelated user, all permitted events opened, attendee information was visible, and the existing RSVP could be updated without an error.
+8. As the owner, the event dashboard loaded private RSVP details and check-in controls without database errors.
+9. All connection, event, recipient, and RSVP fixtures were preserved.
+
+These results were executed and confirmed by the owner; Codex did not independently confirm the browser checks.
+
 ## Base comparison
 
 - Preserved survey: `rls-review-sep22-base.md`, base `fe33c38de6db499ae5b29cf96a85a960fda826c4`.

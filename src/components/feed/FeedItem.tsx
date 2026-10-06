@@ -175,7 +175,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
   const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
   const { data: ticketAttendees = [] } = useQuery({
-    queryKey: ['public-event-ticket-attendees', item.id],
+    queryKey: ['event-ticket-attendees', item.id, user?.id],
     queryFn: async () => {
       const { data, error } = await (supabase.rpc as any)('get_public_event_ticket_attendees', {
         target_event_id: item.id,
@@ -183,7 +183,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       if (error) throw error;
       return (data || []) as PublicTicketAttendee[];
     },
-    enabled: isPaidEvent,
+    enabled: isPaidEvent && !!user,
   });
   const visibleTicketAttendees = ticketAttendees.filter((ticket) => !ticket.is_anonymous);
   const anonymousTicketCount = ticketAttendees.length - visibleTicketAttendees.length;
