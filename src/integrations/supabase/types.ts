@@ -3111,6 +3111,8 @@ export type Database = {
       }
       projects_browse: {
         Row: {
+          author_group_id: string | null
+          author_identity: string | null
           category: string | null
           created_at: string
           creator_id: string | null
@@ -3125,6 +3127,7 @@ export type Database = {
           start_date: string | null
           status: string | null
           title: string
+          visibility: string
         }
         Relationships: []
       }

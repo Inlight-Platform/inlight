@@ -1753,3 +1753,23 @@ These are owner-reported results. Codex did not independently confirm the manual
 7. Confirm owner controls still appear for the owner's show, saved-show hydration works, the attended-show picker works, shared-show details open, and admin managers still load their base-table records.
 8. Keep the `42P10` poster-upload failure recorded as a separate pre-existing product failure; direct fixture creation does not make that workflow pass.
 9. Paste every response, missing card/control, browser error, console/network error, or unexpected identity field back to Codex. Codex does not mark Group 2 verified.
+
+## Sandbox Follow-up: Project Feed Projection (2026-10-08)
+
+- Owner-reported failure: sandbox Home showed no projects to signed-out or signed-in users, although direct project links and unfiltered `projects_browse` reads worked.
+- Cause: the merged Home query filters `projects_browse.visibility` and reads `author_identity` / `author_group_id`; the INV96 projection did not include these columns. PostgREST returned HTTP 400 / `42703`.
+- Forward migration: `20261008220000_inv96_project_feed_projection.sql` appends the three feed fields, retaining the existing access helper, security barrier, SELECT-only grants, and exclusion of Drive and management fields. Creator and group-author identifiers remain null for anonymous reads. Manual rollback statements are included.
+- Updated the view's TypeScript row definition and added signed-out and signed-in public-project feed rendering tests.
+- Automated local verification: replayed pending merged migrations and the new migration in an isolated copy of the local database. Anonymous feed reads returned public project fixtures with null author identifiers; signed-in nonmember reads retained attribution; the nonmember's private-details RPC returned no rows; the owner retained Drive access.
+- Typecheck passed; 17 test files / 49 tests passed; sandbox build passed. An additional migration re-run was declined, so idempotence was not independently exercised.
+- Existing local fixtures were preserved. Isolated local verification databases and temporary verification files remain available; no cleanup or hosted migration was performed by Codex.
+- The separate sandbox `track-analytics-event` preflight 404 remains unresolved.
+
+### Owner Sandbox Retest
+
+1. Wait for the updated PR sandbox migration and preview build to finish successfully.
+2. Signed out, reload Home and confirm the public project appears without creator name, avatar, UUID, or `Unknown`; its browse request must return HTTP 200.
+3. Confirm opening the public project requires sign-in, including a direct `/projects/:id` visit.
+4. As the unrelated user, confirm the public project appears on Home and opens with creator attribution but no Drive or management controls.
+5. As owner/admin, confirm the project and Drive details still load.
+6. Confirm group-only projects remain absent from Home. Preserve all fixtures and report results; these browser checks remain owner-run verification.
