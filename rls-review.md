@@ -1773,3 +1773,23 @@ These are owner-reported results. Codex did not independently confirm the manual
 4. As the unrelated user, confirm the public project appears on Home and opens with creator attribution but no Drive or management controls.
 5. As owner/admin, confirm the project and Drive details still load.
 6. Confirm group-only projects remain absent from Home. Preserve all fixtures and report results; these browser checks remain owner-run verification.
+
+## Production Groups Compatibility Follow-Up
+
+- Production and sandbox policy snapshots revealed that Group 8 had replaced the Groups RSVP INSERT guard without retaining `can_view_event(e)`. The `attended` alternative was also outside the event existence/access boundary.
+- `20261009010000_inv96_preserve_group_rsvp_visibility.sql` restores the explicit audience guard while retaining the authenticated role, required fields, statuses, and attendance/date alternative. It is a new forward migration, not a rewrite of applied history.
+- Verification used the dedicated local database `inv96_compat_20261008`, cloned from the previous isolated migrated verification database. No hosted database was accessed or modified.
+- `supabase/tests/inv96_group_rsvp_and_chat.sql` passed: permitted member RSVP accepted; nonmember RSVP denied for both `attended=false` and `attended=true`.
+- The two enabled production-only chat triggers and their exact supplied function definitions were reproduced transactionally. Project creation and member addition succeeded under `authenticated`; chat creation, creator/member membership, and the new-member notification were asserted. Fixture writes, function definitions, and triggers were rolled back.
+- Local notification-email secrets were missing, so outbound email delivery was not tested. In-app notification creation passed.
+- This is a post-migration compatibility rehearsal, not an exact production-baseline replay. It does not establish full production schema equivalence, Groups policy coverage, or deployment ordering. The full column comparison and release/recovery gates remain necessary.
+- Hosted sandbox and production deployment were not part of the local follow-up verification. The owner subsequently authorized committing and pushing the follow-up to the existing PR.
+
+### Remaining Release Checks
+
+1. Wait for the latest PR checks, including sandbox migration application, to succeed. Sandbox history must include `20261009010000`; its authenticated RSVP INSERT policy must contain `can_view_event` inside the mandatory event `EXISTS` guard.
+2. In production, perform read-only migration-history and full schema comparison checks. New INV96 views and policy changes are expected to be absent before release. Do not interpret this expected mismatch as production verification success.
+3. Complete review of the full 174-column exports, confirm the production backup/recovery point, and ensure frontend publication is held until migration application succeeds. The production-data preview migration step must remain skipped during preparation.
+4. Re-run the production dry run with apply unchecked: expect the previously reviewed 23 migrations plus the RSVP follow-up. Investigate any additional entries before applying.
+5. After authorized coordinated deployment, confirm all expected migration versions exist, public browse views resolve, and the RSVP INSERT policy retains the audience guard. Use browser-only observability to check anonymous identity hiding, protected-route gating, nonmember Drive denial, owner/admin access, and sign-out cache clearing.
+6. Production member/nonmember RSVP writes and project/member creation are not part of the owner's read-only production checks. They were exercised only in the isolated rehearsal; no production behavioral write-test claim is made.
