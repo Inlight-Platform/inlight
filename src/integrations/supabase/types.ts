@@ -3419,6 +3419,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_public_group_authors: {
+        Args: { _group_ids: string[] }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       get_public_profiles: {
         Args: { _user_ids: string[] }
         Returns: {

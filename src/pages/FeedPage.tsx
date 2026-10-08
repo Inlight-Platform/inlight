@@ -126,11 +126,15 @@ const fetchGroupProfileMap = async (groupIds: string[]) => {
   }
 
   const { data, error } = await supabase
-    .from('groups')
-    .select('id, name')
-    .in('id', uniqueGroupIds);
+    .rpc('get_public_group_authors', { _group_ids: uniqueGroupIds });
 
-  if (error) throw error;
+  if (error) {
+    console.warn('[Inlight Group Author Debug] get_public_group_authors failed', {
+      groupIds: uniqueGroupIds,
+      error,
+    });
+    return new Map();
+  }
 
   return new Map((data || []).map((group) => [group.id, {
     display_name: group.name,
