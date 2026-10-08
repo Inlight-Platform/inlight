@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Loader2 } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronLeft, Loader2, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
-import { useMyGroups } from '@/hooks/useGroups';
+import { useMyGroups, useMyScopedAdminGroups } from '@/hooks/useGroups';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -23,6 +22,8 @@ import { toast } from 'sonner';
 import { PROJECT_CATEGORIES, ProjectCategory } from '@/components/projects/ProjectCreator';
 import { RoleSlotBuilder, RoleSlot } from '@/components/projects/RoleSlotBuilder';
 import { ProjectHeaderImageUploader } from '@/components/projects/ProjectHeaderImageUploader';
+import { AudienceSelector, PostVisibility } from '@/components/feed/AudienceSelector';
+import { AuthorIdentityMode, AuthorIdentitySelector } from '@/components/feed/AuthorIdentitySelector';
 import { projectPath } from '@/lib/publicPaths';
 
 const PROJECT_STATUSES = [
@@ -36,10 +37,28 @@ type ProjectStatus = typeof PROJECT_STATUSES[number]['value'];
 
 const ProjectNewPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const routeState = location.state as { lockedGroupId?: string; returnTo?: string } | null;
+  const lockedGroupId = routeState?.lockedGroupId ?? null;
+  const returnTo = routeState?.returnTo ?? '/feed';
   const { user } = useAuth();
   const { canManageProjects, showRestrictedToast } = useFeatureAccess();
+  const { data: myScopedAdminGroups = [] } = useMyScopedAdminGroups();
   const { data: myGroups = [] } = useMyGroups();
   const queryClient = useQueryClient();
+  const { data: currentUserProfile } = useQuery({
+    queryKey: ['project-new-current-user-profile', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const [title, setTitle] = useState('');
   const [creatorRole, setCreatorRole] = useState('');
@@ -48,17 +67,23 @@ const ProjectNewPage: React.FC = () => {
   const [mainImageUrl, setMainImageUrl] = useState('');
   const [category, setCategory] = useState<ProjectCategory>('other');
   const [status, setStatus] = useState<ProjectStatus>('planning');
-  const [isPublic, setIsPublic] = useState(false);
-  const [postToGroup, setPostToGroup] = useState(false);
+  const [projectVisibility, setProjectVisibility] = useState<PostVisibility>(lockedGroupId ? 'group' : 'public');
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(lockedGroupId);
+  const [authorIdentityMode, setAuthorIdentityMode] = useState<AuthorIdentityMode>('personal');
+  const [authorGroupId, setAuthorGroupId] = useState<string | null>(null);
+  const [selectedRecipients, setSelectedRecipients] = useState<{ user_id: string; display_name: string | null; avatar_url: string | null }[]>([]);
   const [roles, setRoles] = useState<RoleSlot[]>([]);
   const [startDateStr, setStartDateStr] = useState('');
   const [endDateStr, setEndDateStr] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
 
-  // Prefer the Strasberg group, otherwise fall back to the user's first group
-  const primaryGroup = myGroups.find((g) => g.slug === 'strasberg') ?? myGroups[0];
-  const canPostToGroup = Boolean(primaryGroup);
+  const authorGroups = myScopedAdminGroups.filter((group) => !lockedGroupId || group.id === lockedGroupId);
+  const targetGroups = myGroups.filter(
+    (group) => (group.is_faculty || group.members_can_post) && (!lockedGroupId || group.id === lockedGroupId)
+  );
+  const selectedGroup = targetGroups.find((group) => group.id === selectedGroupId) ?? null;
+  const canCreateGroupProject = targetGroups.length > 0;
 
   const startDate = startDateStr ? new Date(startDateStr) : undefined;
   const endDate = endDateStr ? new Date(endDateStr) : undefined;
@@ -69,7 +94,9 @@ const ProjectNewPage: React.FC = () => {
   const createProjectMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id || !title.trim()) throw new Error('Invalid data');
-      if (!canManageProjects) throw new Error('This beta group cannot create projects.');
+      if (!canManageProjects && projectVisibility !== 'group') {
+        throw new Error('You can only create projects for your department.');
+      }
 
       // 1. Create the project
       const { data: project, error: projectError } = await supabase
@@ -81,7 +108,10 @@ const ProjectNewPage: React.FC = () => {
           creator_id: user.id,
           category,
           status: effectiveStatus,
-          is_public: isPublic,
+          is_public: projectVisibility === 'public',
+          visibility: projectVisibility,
+          author_identity: authorIdentityMode === 'group' ? 'group' : 'personal',
+          author_group_id: authorIdentityMode === 'group' ? authorGroupId : null,
           start_date: startDate ? startDate.toISOString().split('T')[0] : null,
           end_date: endDate ? endDate.toISOString().split('T')[0] : null,
           link_url: linkUrl.trim() || null,
@@ -91,6 +121,19 @@ const ProjectNewPage: React.FC = () => {
         .single();
 
       if (projectError) throw projectError;
+
+      if (projectVisibility === 'specific' && selectedRecipients.length > 0) {
+        const { error: recipientError } = await supabase
+          .from('project_recipients' as never)
+          .insert(
+            selectedRecipients.map((recipient) => ({
+              project_id: project.id,
+              recipient_id: recipient.user_id,
+            }))
+          );
+
+        if (recipientError) throw recipientError;
+      }
 
       // 2. Add creator as a member
       await supabase.from('project_members').insert({
@@ -144,15 +187,12 @@ const ProjectNewPage: React.FC = () => {
         }
       }
 
-      // 4. Tag project to the user's group when "Post to Strasberg" is enabled
-      if (postToGroup && primaryGroup) {
+      // 4. Tag project to the selected group when group visibility is enabled
+      if (projectVisibility === 'group' && selectedGroupId) {
         const { error: groupError } = await supabase
           .from('project_groups')
-          .insert({ project_id: project.id, group_id: primaryGroup.id });
-        if (groupError) {
-          console.error('Failed to tag project to group:', groupError);
-          // Non-fatal: project is created, group tag can be retried later
-        }
+          .insert({ project_id: project.id, group_id: selectedGroupId });
+        if (groupError) throw groupError;
       }
 
       return project;
@@ -160,7 +200,7 @@ const ProjectNewPage: React.FC = () => {
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['projects-feed'] });
       queryClient.invalidateQueries({ queryKey: ['my-projects'] });
-      queryClient.invalidateQueries({ queryKey: ['feed-group-projects', primaryGroup?.id] });
+      queryClient.invalidateQueries({ queryKey: ['feed-group-projects', selectedGroupId] });
       toast.success('Project created! Invitations sent to assigned team members.');
       navigate(projectPath(project));
     },
@@ -183,7 +223,23 @@ const ProjectNewPage: React.FC = () => {
       toast.error('Please add an image for your project');
       return;
     }
-    if (!canManageProjects) {
+    if (projectVisibility === 'group' && !selectedGroupId) {
+      toast.error('Please choose a group');
+      return;
+    }
+    if (projectVisibility === 'specific' && selectedRecipients.length === 0) {
+      toast.error('Please choose at least one person');
+      return;
+    }
+    if (authorIdentityMode === 'group' && !authorGroupId) {
+      toast.error('Please choose a group identity');
+      return;
+    }
+    if (!canManageProjects && projectVisibility !== 'group') {
+      toast.error('Choose a department audience to create this project.');
+      return;
+    }
+    if (!canManageProjects && !canCreateGroupProject) {
       showRestrictedToast('projects');
       return;
     }
@@ -201,7 +257,7 @@ const ProjectNewPage: React.FC = () => {
     );
   }
 
-  if (!canManageProjects) {
+  if (!canManageProjects && !canCreateGroupProject) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center max-w-sm px-6">
@@ -220,7 +276,7 @@ const ProjectNewPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
           <button
-            onClick={() => safeBack(navigate, '/feed')}
+            onClick={() => safeBack(navigate, returnTo)}
             className="p-2 rounded-full hover:bg-accent transition-colors"
           >
             <ChevronLeft className="w-6 h-6" />
@@ -260,6 +316,26 @@ const ProjectNewPage: React.FC = () => {
                 This becomes your credit on this project.
               </p>
             </div>
+
+            {authorGroups.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="authorIdentity">Post as</Label>
+                <AuthorIdentitySelector
+                  identityMode={authorIdentityMode}
+                  onIdentityModeChange={setAuthorIdentityMode}
+                  personalLabel={
+                    currentUserProfile?.display_name ||
+                    user?.user_metadata?.display_name ||
+                    user?.user_metadata?.full_name ||
+                    user?.email?.split('@')[0] ||
+                    'Personal account'
+                  }
+                  availableGroups={authorGroups.map((group) => ({ id: group.id, name: group.name }))}
+                  selectedGroupId={authorGroupId}
+                  onSelectedGroupChange={setAuthorGroupId}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="companyName">Company / Production (optional)</Label>
@@ -405,39 +481,47 @@ const ProjectNewPage: React.FC = () => {
             />
           </div>
 
-          {/* Public Feed Toggle */}
-          <div className="pt-6 border-t border-border">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Post to Public Feed</Label>
-                <p className="text-sm text-muted-foreground">
-                  Share your project publicly and show open roles to the community
-                </p>
+          <div className="pt-6 border-t border-border space-y-2">
+            <Label>Audience</Label>
+            {lockedGroupId ? (
+              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">{selectedGroup?.name || 'Department'} only</span>
               </div>
-              <Switch
-                checked={isPublic}
-                onCheckedChange={setIsPublic}
+            ) : (
+              <AudienceSelector
+                visibility={projectVisibility}
+                onVisibilityChange={setProjectVisibility}
+                selectedUsers={selectedRecipients}
+                onSelectedUsersChange={setSelectedRecipients}
+                currentUserId={user.id}
+                allowedVisibilities={canManageProjects ? ['public', 'network', 'specific', 'group'] : ['group']}
+                availableGroups={targetGroups.map((group) => ({ id: group.id, name: group.name }))}
+                selectedGroupId={selectedGroupId}
+                onSelectedGroupChange={setSelectedGroupId}
               />
-            </div>
+            )}
+            {projectVisibility === 'public' && (
+              <p className="text-sm text-muted-foreground">
+                Share your project publicly and show open roles to the community.
+              </p>
+            )}
+            {projectVisibility === 'group' && selectedGroup && (
+              <p className="text-sm text-muted-foreground">
+                Share this project with {selectedGroup.name} members in the private group feed.
+              </p>
+            )}
+            {projectVisibility === 'network' && (
+              <p className="text-sm text-muted-foreground">
+                Share this project with your mutual connections.
+              </p>
+            )}
+            {projectVisibility === 'specific' && (
+              <p className="text-sm text-muted-foreground">
+                Share this project with only the people you choose.
+              </p>
+            )}
           </div>
-
-          {/* Group Feed Toggle */}
-          {canPostToGroup && (
-            <div className="pt-6 border-t border-border">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Post to {primaryGroup.name}</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Share this project with {primaryGroup.name} members in the private group feed
-                  </p>
-                </div>
-                <Switch
-                  checked={postToGroup}
-                  onCheckedChange={setPostToGroup}
-                />
-              </div>
-            </div>
-          )}
 
           {/* Submit */}
           <div className="pt-6 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
@@ -454,7 +538,7 @@ const ProjectNewPage: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => safeBack(navigate, '/feed')}
+              onClick={() => safeBack(navigate, returnTo)}
               className="flex-1"
             >
               Cancel

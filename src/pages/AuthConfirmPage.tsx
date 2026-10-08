@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -16,12 +16,23 @@ const allowedOtpTypes: EmailOtpType[] = ['signup', 'email'];
 
 const AuthConfirmPage: React.FC = () => {
   useForceTheme('dark');
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [state, setState] = useState<ConfirmState>('loading');
   const [message, setMessage] = useState('Confirming your account...');
 
   const tokenHash = searchParams.get('token_hash') || '';
+  const confirmationError = useMemo(() => {
+    const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
+    return (
+      searchParams.get('error_description') ||
+      searchParams.get('error') ||
+      hashParams.get('error_description') ||
+      hashParams.get('error') ||
+      ''
+    );
+  }, [location.hash, searchParams]);
   const otpType = useMemo<EmailOtpType>(() => {
     const rawType = searchParams.get('type');
     return allowedOtpTypes.includes(rawType as EmailOtpType) ? (rawType as EmailOtpType) : 'signup';
@@ -31,9 +42,15 @@ const AuthConfirmPage: React.FC = () => {
     let isMounted = true;
 
     const confirmEmail = async () => {
-      if (!tokenHash) {
+      if (confirmationError) {
         setState('error');
-        setMessage('This confirmation link is missing a verification token.');
+        setMessage(confirmationError);
+        return;
+      }
+
+      if (!tokenHash) {
+        setState('success');
+        setMessage('Your email is verified. Sign in to continue.');
         return;
       }
 
@@ -62,11 +79,12 @@ const AuthConfirmPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [navigate, otpType, tokenHash]);
+  }, [confirmationError, navigate, otpType, tokenHash]);
 
   const isLoading = state === 'loading';
   const isSuccess = state === 'success';
   const Icon = isLoading ? Loader2 : isSuccess ? CheckCircle2 : AlertCircle;
+  const showSignInButton = state === 'error' || (state === 'success' && !tokenHash);
 
   return (
     <main className="dark relative min-h-screen overflow-hidden bg-night text-foreground">
@@ -102,9 +120,9 @@ const AuthConfirmPage: React.FC = () => {
               <AlertDescription className="mt-2 text-muted-foreground">{message}</AlertDescription>
             </Alert>
 
-            {state === 'error' && (
+            {showSignInButton && (
               <Button asChild className="mt-5 !h-12 w-full !rounded-xl !bg-foreground !text-background hover:!bg-foreground/90">
-                <Link to="/auth">Back to Sign In</Link>
+                <Link to="/auth">{state === 'success' ? 'Continue to Sign In' : 'Back to Sign In'}</Link>
               </Button>
             )}
           </div>

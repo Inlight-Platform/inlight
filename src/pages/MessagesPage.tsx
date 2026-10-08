@@ -172,6 +172,19 @@ const MessagesPage: React.FC = () => {
     enabled: !!user?.id && !!selectedId && chatType === 'dm',
   });
 
+  const { data: canMessageThroughGroup } = useQuery({
+    queryKey: ['dm-group-membership-check', user?.id, selectedId],
+    queryFn: async () => {
+      if (!user?.id || !selectedId) return false;
+      const { data, error } = await supabase.rpc('can_message_through_group', {
+        _target_user: selectedId,
+      });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && !!selectedId && chatType === 'dm',
+  });
+
   // Handle route params for auto-opening conversations
   useEffect(() => {
     if (routeUserId) {
@@ -245,7 +258,9 @@ const MessagesPage: React.FC = () => {
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
-  const canSendDm = chatType === 'dm' ? (isConnectedToPartner !== false) : true;
+  const canSendDm = chatType === 'dm'
+    ? isConnectedToPartner !== false || canMessageThroughGroup === true
+    : true;
 
   if (authLoading) {
     return (
@@ -481,7 +496,7 @@ const MessagesPage: React.FC = () => {
             </form>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-2">
-              You are no longer connected with this person
+              You can message mutual connections or members of your active departments.
             </p>
           )}
         </div>

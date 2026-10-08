@@ -106,7 +106,6 @@ jobs:
       - name: Skip sandbox database migrations without migration changes
         if: ${{ steps.migration_changes.outputs.changed != 'true' }}
         run: echo "::notice::This PR does not change supabase/migrations, so PR sandbox database migrations were skipped."
-
       - name: Build sandbox app
         run: npm run build:sandbox
 
@@ -137,7 +136,9 @@ jobs:
 
           npx --yes supabase@latest secrets set RESEND_API_KEY="$RESEND_API_KEY" SITE_URL="$PREVIEW_URL" --project-ref "$project_ref"
           npx --yes supabase@latest functions deploy send-platform-invite --project-ref "$project_ref"
+          npx --yes supabase@latest functions deploy send-group-member-invites --project-ref "$project_ref"
           npx --yes supabase@latest functions deploy send-project-credit-invite --project-ref "$project_ref"
+          npx --yes supabase@latest functions deploy send-group-admin-invite --project-ref "$project_ref"
 
       - name: Configure sandbox auth URLs
         env:

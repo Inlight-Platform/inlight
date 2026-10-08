@@ -10,6 +10,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { FeedItemData } from './FeedItem';
 import { ImageCarousel } from './ImageCarousel';
@@ -103,6 +104,7 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
   const displayName = showAnonymous ? 'Anonymous' : item.creator_profile?.display_name || 'Unknown';
   const avatarUrl = showAnonymous ? undefined : item.creator_profile?.avatar_url;
   const showCreator = Boolean(item.user_id) && (item.type !== 'project' || Boolean(item.creator_profile));
+  const isDepartmentAuthored = item.author_identity === 'group';
   const title =
     item.title ||
     (item.content ? item.content.slice(0, 80) + (item.content.length > 80 ? '…' : '') : 'Untitled');
@@ -164,6 +166,11 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                     <AvatarFallback>{displayName[0]}</AvatarFallback>
                   </Avatar>
                   <p className="text-sm font-bold text-white">{displayName}</p>
+                  {isDepartmentAuthored && (
+                    <Badge className="border-white/20 bg-white/15 text-[10px] text-white hover:bg-white/15">
+                      Department
+                    </Badge>
+                  )}
                 </>
               )}
               {(item.type === 'post' || item.type === 'job') && (
@@ -241,13 +248,29 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                   <AvatarFallback>{displayName[0]}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <p className={cn('truncate text-xs font-bold', isLight ? 'text-slate-900' : 'text-white')}>
-                    {displayName}
-                  </p>
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <p className={cn('truncate text-xs font-bold', isLight ? 'text-slate-900' : 'text-white')}>
+                      {displayName}
+                    </p>
+                    {isDepartmentAuthored && (
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          'h-5 flex-shrink-0 px-1.5 text-[9px]',
+                          !isLight && 'border-white/20 bg-white/15 text-white hover:bg-white/15'
+                        )}
+                      >
+                        Department
+                      </Badge>
+                    )}
+                  </div>
+                  <p className={cn('text-[10px]', isLight ? 'text-slate-500' : 'text-white/50')}>{displayTime}</p>
                 </div>
               </>
             )}
-            <p className={cn('text-[10px]', isLight ? 'text-slate-500' : 'text-white/50')}>{displayTime}</p>
+            {!showCreator && (
+              <p className={cn('text-[10px]', isLight ? 'text-slate-500' : 'text-white/50')}>{displayTime}</p>
+            )}
             {(item.type === 'post' || item.type === 'job') && (
               <span className={cn('flex items-center gap-1 text-[10px] font-semibold', isLight ? 'text-slate-500' : 'text-white/50')}>
                 <MessageCircle className="h-3.5 w-3.5" />
@@ -310,6 +333,11 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                   <AvatarFallback className="text-[8px]">{displayName[0]}</AvatarFallback>
                 </Avatar>
                 <span className="truncate font-semibold text-muted-foreground">{displayName}</span>
+                {isDepartmentAuthored && (
+                  <Badge variant="secondary" className="h-5 flex-shrink-0 px-1.5 text-[9px]">
+                    Department
+                  </Badge>
+                )}
               </div>
             ) : <div />}
             <div className="flex items-center gap-2.5">
@@ -376,6 +404,11 @@ export const FeedBentoCard: React.FC<FeedBentoCardProps> = ({ item, size, onClic
                 <AvatarFallback className="text-[8px]">{displayName[0]}</AvatarFallback>
               </Avatar>
               <span className="truncate text-xs font-semibold text-white/80">{displayName}</span>
+              {isDepartmentAuthored && (
+                <Badge className="h-5 flex-shrink-0 border-white/20 bg-white/15 px-1.5 text-[9px] text-white hover:bg-white/15">
+                  Department
+                </Badge>
+              )}
             </div>
           ) : <div />}
           <div className="flex items-center gap-2.5">
