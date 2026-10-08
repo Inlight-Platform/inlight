@@ -194,7 +194,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const visibleGoingRsvps = goingRsvps.filter((rsvp) => !rsvp.is_anonymous);
   const anonymousGoingCount = goingRsvps.length - visibleGoingRsvps.length;
   const { data: ticketAttendees = [] } = useQuery({
-    queryKey: ['public-event-ticket-attendees', item.id],
+    queryKey: ['event-ticket-attendees', item.id, user?.id],
     queryFn: async () => {
       const { data, error } = await (supabase.rpc as any)('get_public_event_ticket_attendees', {
         target_event_id: item.id,
@@ -202,7 +202,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       if (error) throw error;
       return (data || []) as PublicTicketAttendee[];
     },
-    enabled: isPaidEvent,
+    enabled: isPaidEvent && !!user,
   });
   const visibleTicketAttendees = ticketAttendees.filter((ticket) => !ticket.is_anonymous);
   const anonymousTicketCount = ticketAttendees.length - visibleTicketAttendees.length;
@@ -571,6 +571,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   
   // For anonymous shows, hide the creator info
   const showAnonymous = item.type === 'show' && item.is_anonymous;
+  const hideVisitorAttribution = !user && (item.type === 'post' || item.type === 'event');
   const displayName = showAnonymous
     ? 'Anonymous'
     : capitalizeName(item.creator_profile?.display_name || '') || 'Inlight Member';
@@ -653,38 +654,42 @@ export const FeedItem: React.FC<FeedItemProps> = ({
       >
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
-          <Avatar 
-            className={`h-10 w-10 ${canOpenCreatorProfile ? 'cursor-pointer' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (canOpenCreatorProfile) {
-                navigate(`/profile/${item.user_id}`);
-              }
-            }}
-          >
-            <AvatarImage src={avatarUrl || undefined} />
-            <AvatarFallback>{showAnonymous ? <EyeOff className="w-4 h-4" /> : (displayName[0] || 'U')}</AvatarFallback>
-          </Avatar>
+          {!hideVisitorAttribution && (
+            <Avatar
+              className={`h-10 w-10 ${canOpenCreatorProfile ? 'cursor-pointer' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (canOpenCreatorProfile) {
+                  navigate(`/profile/${item.user_id}`);
+                }
+              }}
+            >
+              <AvatarImage src={avatarUrl || undefined} />
+              <AvatarFallback>{showAnonymous ? <EyeOff className="w-4 h-4" /> : (displayName[0] || 'U')}</AvatarFallback>
+            </Avatar>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span 
-                className={`font-medium text-foreground ${showAnonymous ? 'italic text-muted-foreground' : ''} ${canOpenCreatorProfile ? 'cursor-pointer hover:underline' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (canOpenCreatorProfile) {
-                    navigate(`/profile/${item.user_id}`);
-                  }
-                }}
-              >
-                {displayName}
-              </span>
+              {!hideVisitorAttribution && (
+                <span
+                  className={`font-medium text-foreground ${showAnonymous ? 'italic text-muted-foreground' : ''} ${canOpenCreatorProfile ? 'cursor-pointer hover:underline' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (canOpenCreatorProfile) {
+                      navigate(`/profile/${item.user_id}`);
+                    }
+                  }}
+                >
+                  {displayName}
+                </span>
+              )}
               <span className="text-muted-foreground text-sm">{getTypeLabel()}</span>
-              {isGroupAuthored && (
+              {isGroupAuthored && !hideVisitorAttribution && (
                 <Badge variant="secondary" className="text-xs">
                   Department
                 </Badge>
               )}
-              {networkDegree && !showAnonymous && (
+              {networkDegree && !showAnonymous && !hideVisitorAttribution && (
                 <Badge variant="secondary" className={`text-xs ${getDegreeColor()}`}>
                   {networkDegree}
                 </Badge>

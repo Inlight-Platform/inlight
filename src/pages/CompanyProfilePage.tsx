@@ -150,6 +150,7 @@ const TransferOwnershipDialog: React.FC<{ companyId: string; currentOwnerId: str
     onSuccess: () => {
       toast.success('Ownership transferred successfully');
       queryClient.invalidateQueries({ queryKey: ['company', companyId] });
+      queryClient.invalidateQueries({ queryKey: ['company-management', companyId] });
       setOpen(false);
     },
     onError: () => toast.error('Failed to transfer ownership'),
@@ -937,11 +938,24 @@ const CompanyProfilePage: React.FC = () => {
   const { data: company, isLoading } = useQuery({
     queryKey: ['company', companyId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('companies').select('*').eq('id', companyId!).single();
+      const { data, error } = await supabase.from('companies_browse').select('*').eq('id', companyId!).single();
       if (error) throw error;
       return data as Company;
     },
     enabled: !!companyId,
+  });
+
+  const { data: companyManagement } = useQuery({
+    queryKey: ['company-management', companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_company_management_context', {
+        _company_id: companyId!,
+        _staff_token: staffToken || null,
+      }).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companyId && (!!company?.is_owner || isAdmin || (!!staffToken && !!staffAccess)),
   });
 
   const { data: followerCount = 0 } = useQuery({
@@ -955,34 +969,35 @@ const CompanyProfilePage: React.FC = () => {
   });
 
   const { data: ownerProfile } = useQuery({
-    queryKey: ['company-owner', company?.owner_user_id],
+    queryKey: ['company-owner', companyManagement?.owner_user_id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('profiles_public').select('user_id, display_name, avatar_url, role').eq('user_id', company!.owner_user_id!).single();
+      const { data, error } = await supabase.from('profiles_public').select('user_id, display_name, avatar_url, role').eq('user_id', companyManagement!.owner_user_id!).single();
       if (error) throw error;
       return data;
     },
-    enabled: !!company?.owner_user_id,
+    enabled: !!companyManagement?.owner_user_id,
   });
 
   const { data: invitedStaff = [] } = useQuery({
-    queryKey: ['company-invited-staff', companyId],
+    queryKey: ['company-invited-staff', companyId, staffToken],
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)('get_company_staff_access_public', { _company_id: companyId });
+      const { data, error } = await supabase.rpc('get_company_staff_access_managed', {
+        _company_id: companyId!,
+        _staff_token: staffToken || null,
+      });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!companyId,
+    enabled: !!companyId && (!!company?.is_owner || isAdmin || (!!staffToken && !!staffAccess)),
   });
 
   // Fetch company projects
   const { data: companyProjects = [] } = useQuery({
     queryKey: ['company-projects', companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, title, description, main_image_url, header_image_url, status, created_at')
-        .eq('company_id', companyId!)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('get_company_projects_browse', {
+        _company_id: companyId!,
+      });
       if (error) throw error;
       return data || [];
     },
@@ -993,18 +1008,16 @@ const CompanyProfilePage: React.FC = () => {
   const { data: companyPhotos = [], refetch: refetchPhotos } = useQuery({
     queryKey: ['company-photos', companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('company_photos')
-        .select('*')
-        .eq('company_id', companyId!)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('get_company_photos_browse', {
+        _company_id: companyId!,
+      });
       if (error) throw error;
       return data || [];
     },
     enabled: !!companyId,
   });
 
-  const isOwner = user?.id === company?.owner_user_id;
+  const isOwner = company?.is_owner === true;
   const hasStaffAccess = !!staffToken && !!staffAccess && staffAccess.company_id === company?.id;
   const canManageCompany = isOwner || isAdmin || hasStaffAccess;
   const canManageProjects = isOwner || isAdmin;
@@ -1491,8 +1504,8 @@ const CompanyProfilePage: React.FC = () => {
           <h2 className="text-lg font-display font-semibold mb-3">Manage Company</h2>
           <div className="flex flex-wrap gap-3">
             <EditCompanyDialog company={company} accessToken={staffToken} onSaved={() => queryClient.invalidateQueries({ queryKey: ['company', companyId] })} />
-            {canManageProjects && company.owner_user_id && (
-              <TransferOwnershipDialog companyId={company.id} currentOwnerId={company.owner_user_id} />
+            {canManageProjects && companyManagement?.owner_user_id && (
+              <TransferOwnershipDialog companyId={company.id} currentOwnerId={companyManagement.owner_user_id} />
             )}
           </div>
         </section>

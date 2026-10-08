@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import {
-  MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2, CheckCircle2, CalendarPlus, Pencil, ExternalLink, X
+  MapPin, DollarSign, Clock, Users, Briefcase, Globe, Building2, CheckCircle2, CalendarPlus, Pencil, Trash2, ExternalLink, X
 } from 'lucide-react';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
@@ -44,10 +44,11 @@ interface OpportunityDetailSheetProps {
   applicationStatus?: string;
   onApply: () => void;
   onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
-  opportunity, open, onOpenChange, posterProfile, hasApplied, applicationStatus, onApply, onEdit
+  opportunity, open, onOpenChange, posterProfile, hasApplied, applicationStatus, onApply, onEdit, onDelete
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -353,6 +354,17 @@ const OpportunityDetailSheet: React.FC<OpportunityDetailSheetProps> = ({
               >
                 <Pencil className="w-4 h-4 text-muted-foreground" />
               </button>
+            )}
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                title="Delete opportunity"
+                aria-label="Delete opportunity"
+              >
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
             )}
           </div>
 

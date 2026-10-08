@@ -26,7 +26,7 @@ interface Project {
   description: string | null;
   main_image_url: string | null;
   header_image_url: string | null;
-  creator_id: string;
+  creator_id: string | null;
   created_at: string;
   category: string | null;
   status: string | null;
@@ -58,21 +58,17 @@ const ProjectsPage: React.FC = () => {
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['projects-feed', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      let query = supabase
-        .from('projects')
+      const query = supabase
+        .from('projects_browse')
         .select('*')
         .order('created_at', { ascending: false });
-
-      if (!user) {
-        query = query.eq('is_public', true);
-      }
 
       const { data, error } = await query;
       
       if (error) throw error;
 
       // Fetch creator profiles
-      const creatorIds = [...new Set(data.map(p => p.creator_id))].filter(Boolean);
+      const creatorIds = [...new Set(data.map(p => p.creator_id).filter((id): id is string => Boolean(id)))];
       const { data: profiles } = creatorIds.length
         ? await supabase
             .from('profiles_public')
@@ -84,7 +80,7 @@ const ProjectsPage: React.FC = () => {
 
       return data.map(project => ({
         ...project,
-        creator_profile: profileMap.get(project.creator_id)
+        creator_profile: project.creator_id ? profileMap.get(project.creator_id) : undefined
       })) as Project[];
     },
     placeholderData: keepPreviousData,
@@ -124,7 +120,7 @@ const ProjectsPage: React.FC = () => {
 
       const projectIds = saved.map(s => s.project_id);
       const { data: projectsData } = await supabase
-        .from('projects')
+        .from('projects_browse')
         .select('*')
         .in('id', projectIds);
 
@@ -228,7 +224,7 @@ const ProjectsPage: React.FC = () => {
 
   const networkProjects = useMemo(() => {
     return sortProjects(filterBySearch(
-      activeProjects.filter(p => networkUserIds.has(p.creator_id))
+      activeProjects.filter(p => Boolean(p.creator_id) && networkUserIds.has(p.creator_id!))
         .filter(p => selectedCategory === 'all' || p.category === selectedCategory)
     ));
   }, [activeProjects, networkUserIds, selectedCategory, searchQuery, sortBy]);
@@ -299,7 +295,7 @@ const ProjectsPage: React.FC = () => {
       >
         <div className="relative">
           {/* Creator profile in top corner */}
-          <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1">
+          {user && <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1">
             <Avatar className="h-6 w-6">
               <AvatarImage src={project.creator_profile?.avatar_url || undefined} />
               <AvatarFallback className="text-xs">
@@ -309,7 +305,7 @@ const ProjectsPage: React.FC = () => {
             <span className="text-xs font-medium text-foreground">
               {project.creator_profile?.display_name || 'Unknown'}
             </span>
-          </div>
+          </div>}
 
           {/* Save button */}
           {user && (

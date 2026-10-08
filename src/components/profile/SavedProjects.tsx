@@ -59,7 +59,7 @@ export const SavedProjects: React.FC = () => {
 
       const projectIds = saved.map(s => s.project_id);
       const { data: projectsData } = await supabase
-        .from('projects')
+        .from('projects_browse')
         .select('*')
         .in('id', projectIds);
 

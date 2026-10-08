@@ -3090,6 +3090,130 @@ export type Database = {
       }
     }
     Views: {
+      companies_browse: {
+        Row: {
+          brand_accent_color: string | null
+          brand_primary_color: string | null
+          brand_text_color: string | null
+          cover_image_url: string | null
+          description: string | null
+          fun_facts: Json
+          id: string
+          is_owner: boolean | null
+          location: string | null
+          logo_url: string | null
+          mission: string | null
+          name: string
+          tagline: string | null
+          website_url: string | null
+        }
+        Relationships: []
+      }
+      projects_browse: {
+        Row: {
+          author_group_id: string | null
+          author_identity: string | null
+          category: string | null
+          created_at: string
+          creator_id: string | null
+          description: string | null
+          end_date: string | null
+          header_image_url: string | null
+          id: string
+          link_title: string | null
+          link_url: string | null
+          main_image_url: string | null
+          slug: string
+          start_date: string | null
+          status: string | null
+          title: string
+          visibility: string
+        }
+        Relationships: []
+      }
+      show_teammates_browse: {
+        Row: {
+          created_at: string
+          id: string
+          role_description: string | null
+          show_id: string
+          user_id: string
+        }
+        Relationships: []
+      }
+      show_tips_browse: {
+        Row: {
+          content: string
+          created_at: string
+          helpful_count: number | null
+          id: string
+          show_id: string
+          tip_type: string
+          updated_at: string
+          user_id: string
+        }
+        Relationships: []
+      }
+      studio_comments_browse: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Relationships: []
+      }
+      studio_posts_browse: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          studio_id: string
+          updated_at: string
+          user_id: string
+        }
+        Relationships: []
+      }
+      studios_browse: {
+        Row: {
+          badge_tag: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+        }
+        Relationships: []
+      }
+      nyc_shows_browse: {
+        Row: {
+          accessibility_features: string[] | null
+          badges: string[] | null
+          borough: string
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_anonymous: boolean | null
+          is_owner: boolean | null
+          lottery_info: string | null
+          official_url: string | null
+          poster_url: string | null
+          price_tier: string
+          run_end: string | null
+          run_start: string | null
+          rush_policy: string | null
+          show_times: string | null
+          show_type: string
+          title: string
+          updated_at: string
+          venue: string
+        }
+        Relationships: []
+      }
       profiles_public: {
         Row: {
           activity_score: number | null
@@ -3196,8 +3320,107 @@ export type Database = {
         }
         Relationships: []
       }
+      user_films_browse: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_anonymous: boolean | null
+          is_owner: boolean | null
+          link_url: string
+          poster_url: string | null
+          title: string
+          updated_at: string
+        }
+        Relationships: []
+      }
+      user_music_shows_browse: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_anonymous: boolean | null
+          is_free: boolean | null
+          is_owner: boolean | null
+          poster_url: string | null
+          show_date: string | null
+          show_type: string
+          ticket_url: string | null
+          title: string
+          updated_at: string
+          venue: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      get_company_project_browse: {
+        Args: { _company_id: string; _project_id: string }
+        Returns: {
+          category: string | null
+          created_at: string
+          description: string | null
+          end_date: string | null
+          header_image_url: string | null
+          id: string
+          link_title: string | null
+          link_url: string | null
+          main_image_url: string | null
+          slug: string
+          start_date: string | null
+          status: string | null
+          title: string
+        }[]
+      }
+      get_company_projects_browse: {
+        Args: { _company_id: string }
+        Returns: {
+          category: string | null
+          created_at: string
+          description: string | null
+          end_date: string | null
+          header_image_url: string | null
+          id: string
+          link_title: string | null
+          link_url: string | null
+          main_image_url: string | null
+          slug: string
+          start_date: string | null
+          status: string | null
+          title: string
+        }[]
+      }
+      get_project_member_details: {
+        Args: { _project_id: string }
+        Returns: {
+          company_id: string | null
+          google_drive_url: string | null
+          is_public: boolean | null
+          post_approval_required: boolean
+          updated_at: string
+        }[]
+      }
+      get_company_management_context: {
+        Args: { _company_id: string; _staff_token?: string | null }
+        Returns: { owner_user_id: string | null }[]
+      }
+      get_company_photos_browse: {
+        Args: { _company_id: string }
+        Returns: {
+          caption: string | null
+          id: string
+          image_url: string
+        }[]
+      }
+      get_credit_vouch_state: {
+        Args: { _credit_id: string }
+        Returns: {
+          has_vouched: boolean
+          vouch_count: number
+        }[]
+      }
       accept_project_credit_invite: { Args: { _token: string }; Returns: Json }
       add_project_member_by_email: {
         Args: {
@@ -3295,6 +3518,39 @@ export type Database = {
         Args: { _company_id: string }
         Returns: {
           user_id: string
+        }[]
+      }
+      get_company_staff_access_managed: {
+        Args: { _company_id: string; _staff_token?: string | null }
+        Returns: {
+          email: string
+          staff_name: string | null
+        }[]
+      }
+      get_company_team_browse: {
+        Args: { _company_id: string }
+        Returns: {
+          avatar_url: string | null
+          display_name: string
+          member_key: string | null
+          role: string | null
+          stage_name: string | null
+        }[]
+      }
+      get_company_team_member_browse: {
+        Args: { _company_id: string; _member_key: string }
+        Returns: {
+          avatar_url: string | null
+          bio: string | null
+          cover_url: string | null
+          display_name: string
+          headline: string | null
+          instagram_url: string | null
+          location: string | null
+          role: string | null
+          skills: string[] | null
+          stage_name: string | null
+          website_url: string | null
         }[]
       }
       get_group_active_admin_user_ids: {

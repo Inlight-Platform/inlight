@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Loader2, Users, Calendar, Send, Check, Clock, X, Upload, Video, FileText, Bookmark, BookmarkCheck, ExternalLink } from 'lucide-react';
+import { Loader2, Users, Calendar, Send, Check, Clock, X, Upload, Video, FileText, Bookmark, BookmarkCheck, ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { useSavedItems } from '@/hooks/useSavedItems';
 import { format, addMonths, isPast } from 'date-fns';
 import { toast } from 'sonner';
@@ -39,7 +39,16 @@ interface OpenRole {
 export const OpenRolesFeed: React.FC<{
   prependOpportunities?: OpportunityView[];
   restoreOpportunities?: OpportunityView[];
-}> = ({ prependOpportunities = [], restoreOpportunities = prependOpportunities }) => {
+  canManageOpportunity?: (opportunity: OpportunityView) => boolean;
+  onEditOpportunity?: (opportunity: OpportunityView) => void;
+  onDeleteOpportunity?: (opportunity: OpportunityView) => void;
+}> = ({
+  prependOpportunities = [],
+  restoreOpportunities = prependOpportunities,
+  canManageOpportunity = () => false,
+  onEditOpportunity,
+  onDeleteOpportunity,
+}) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -91,7 +100,11 @@ export const OpenRolesFeed: React.FC<{
 
     restoredOpportunityIdRef.current = jobId;
     setSelectedDetailOpportunity(restoredOpportunity);
-    setOpportunityDetailOpen(true);
+    if (!user && restoredOpportunity.actionType !== 'external') {
+      setShowVisitorAuthPrompt(true);
+    } else {
+      setOpportunityDetailOpen(true);
+    }
     clearAuthRestore();
     const nextRouteState = { ...(routeState || {}) };
     delete nextRouteState.restore;
@@ -99,7 +112,7 @@ export const OpenRolesFeed: React.FC<{
       replace: true,
       state: Object.keys(nextRouteState).length > 0 ? nextRouteState : undefined,
     });
-  }, [restoreOpportunities, location, navigate]);
+  }, [restoreOpportunities, location, navigate, user]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -115,8 +128,33 @@ export const OpenRolesFeed: React.FC<{
   }, [applyDialogOpen, user]);
 
   const { data: roles = [], isLoading } = useQuery({
-    queryKey: ['open-roles-feed'],
+    queryKey: ['open-roles-feed', user?.id],
     queryFn: async () => {
+      if (!user) {
+        const { data, error } = await (supabase as any)
+          .from('project_roles_public_browse')
+          .select('id, role_name, project_id, project_title, project_deadline, created_at')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        return (data || []).map((role: {
+          id: string;
+          role_name: string;
+          project_id: string;
+          project_title: string;
+          project_deadline: string | null;
+          created_at: string;
+        }) => ({
+          roleId: role.id,
+          roleName: role.role_name,
+          projectId: role.project_id,
+          projectTitle: role.project_title,
+          projectDeadline: role.project_deadline,
+          createdAt: role.created_at,
+        } as OpenRole));
+      }
+
       const { data: openRoles, error } = await supabase
         .from('project_roles')
         .select('id, role_name, project_id, created_at')
@@ -128,9 +166,8 @@ export const OpenRolesFeed: React.FC<{
 
       const projectIds = [...new Set(openRoles.map(r => r.project_id))];
       const { data: projects } = await supabase
-        .from('projects')
+        .from('projects_browse')
         .select('id, title, end_date')
-        .eq('is_public', true)
         .in('id', projectIds);
 
       if (!projects?.length) return [];
@@ -260,6 +297,10 @@ export const OpenRolesFeed: React.FC<{
   const openOpportunity = (opportunity: OpportunityView) => {
     restoredOpportunityIdRef.current = opportunity.id;
     setSelectedDetailOpportunity(opportunity);
+    if (!user && opportunity.actionType !== 'external') {
+      setShowVisitorAuthPrompt(true);
+      return;
+    }
     setOpportunityDetailOpen(true);
     updateJobSearchParam(opportunity.id);
   };
@@ -333,6 +374,36 @@ export const OpenRolesFeed: React.FC<{
                   <span className="truncate">{getOpportunityApplyLabel(opportunity)}</span>
                 </div>
                 <div className="flex items-center gap-1">
+                  {canManageOpportunity(opportunity) && onEditOpportunity && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0"
+                      title="Edit opportunity"
+                      aria-label="Edit opportunity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditOpportunity(opportunity);
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  {canManageOpportunity(opportunity) && onDeleteOpportunity && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                      title="Delete opportunity"
+                      aria-label="Delete opportunity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteOpportunity(opportunity);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                   {user && (
                     <button
                       onClick={(e) => {
@@ -624,6 +695,18 @@ export const OpenRolesFeed: React.FC<{
         posterProfile={null}
         hasApplied={false}
         onApply={openSelectedOpportunityApplication}
+        onEdit={selectedDetailOpportunity && canManageOpportunity(selectedDetailOpportunity) && onEditOpportunity
+          ? () => {
+              setOpportunityDetailOpen(false);
+              onEditOpportunity(selectedDetailOpportunity);
+            }
+          : undefined}
+        onDelete={selectedDetailOpportunity && canManageOpportunity(selectedDetailOpportunity) && onDeleteOpportunity
+          ? () => {
+              setOpportunityDetailOpen(false);
+              onDeleteOpportunity(selectedDetailOpportunity);
+            }
+          : undefined}
       />
     </>
   );

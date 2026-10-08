@@ -104,7 +104,7 @@ const App = () => (
             <Route path="/feed" element={<FeedPage />} />
             <Route path="/people" element={<PeoplePage />} />
             <Route path="/mutuals" element={<PeoplePage />} />
-            <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/insights" element={<RequireAuth><InsightsPage /></RequireAuth>} />
             <Route path="/events" element={<Navigate to="/feed?tab=events" replace />} />
             <Route path="/events/:eventId/dashboard" element={<EventDashboardPage />} />
             <Route path="/events/:eventId/panelists/:panelistSlug" element={<PublicEventPanelistPage />} />
@@ -119,7 +119,7 @@ const App = () => (
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/new" element={<RequireAuth><ProjectNewPage /></RequireAuth>} />
-            <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+            <Route path="/projects/:projectId" element={<RequireAuth><ProjectDetailPage /></RequireAuth>} />
             <Route path="/stage-whisper" element={<StageWhisperPage />} />
             <Route path="/company/:companyId" element={<CompanyProfilePage />} />
             <Route path="/saves" element={<RequireAuth><MySavesPage /></RequireAuth>} />

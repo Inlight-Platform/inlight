@@ -51,8 +51,8 @@ interface UserFilm {
   description?: string;
   link_url: string;
   poster_url?: string;
-  submitted_by: string;
   is_anonymous?: boolean;
+  is_owner?: boolean;
   created_at: string;
 }
 interface UserMusicShow {
@@ -64,8 +64,8 @@ interface UserMusicShow {
   ticket_url?: string;
   is_free?: boolean;
   poster_url?: string;
-  submitted_by: string;
   is_anonymous?: boolean;
+  is_owner?: boolean;
   created_at: string;
   show_type?: 'concert' | 'cabaret';
 }
@@ -140,7 +140,7 @@ const StageWhisperPage: React.FC = () => {
       const {
         data,
         error
-      } = await supabase.from('nyc_shows').select('*').eq('is_active', true).order('created_at', {
+      } = await supabase.from('nyc_shows_browse').select('*').eq('is_active', true).order('created_at', {
         ascending: false
       });
       if (error) throw error;
@@ -166,7 +166,7 @@ const StageWhisperPage: React.FC = () => {
       if (error) throw error;
       return data as FilmMetric[];
     },
-    enabled: industryTab === 'film'
+    enabled: !!user && industryTab === 'film'
   });
 
   // Auto-open show modal when navigated from My Saves
@@ -197,7 +197,7 @@ const StageWhisperPage: React.FC = () => {
     queryKey: ['user-films'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('user_films')
+        .from('user_films_browse')
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
@@ -215,7 +215,7 @@ const StageWhisperPage: React.FC = () => {
     queryKey: ['user-music-shows'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('user_music_shows')
+        .from('user_music_shows_browse')
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });

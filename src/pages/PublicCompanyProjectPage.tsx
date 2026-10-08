@@ -2,21 +2,21 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { ChevronLeft, CalendarDays } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const PublicCompanyProjectPage: React.FC = () => {
   const { companyId, projectId } = useParams<{ companyId: string; projectId: string }>();
+  const { user } = useAuth();
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['public-project', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', projectId!)
-        .eq('company_id', companyId!)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('get_company_project_browse', {
+        _company_id: companyId!,
+        _project_id: projectId!,
+      }).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -24,7 +24,7 @@ const PublicCompanyProjectPage: React.FC = () => {
   });
 
   const { data: members = [] } = useQuery({
-    queryKey: ['public-project-members', projectId],
+    queryKey: ['public-project-members', projectId, user?.id],
     queryFn: async () => {
       const { data: mem, error } = await supabase
         .from('project_members')
@@ -37,7 +37,7 @@ const PublicCompanyProjectPage: React.FC = () => {
       if (pErr) throw pErr;
       return (mem || []).map(m => ({ ...m, profile: (profiles || []).find((p: any) => p.user_id === m.user_id) }));
     },
-    enabled: !!projectId,
+    enabled: !!projectId && !!user,
   });
 
   if (isLoading) {
