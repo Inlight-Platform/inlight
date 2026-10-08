@@ -31,6 +31,11 @@ type AdminGroupRow = {
   active_admin_count: number;
 };
 
+type CreateGroupResult = {
+  group: AdminGroupRow;
+  inviteEmailError: string | null;
+};
+
 type GroupFormState = {
   name: string;
   slug: string;
@@ -63,6 +68,21 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   }
 
   return message || fallback;
+};
+
+const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
+  const context = (error as { context?: { text?: () => Promise<string> } })?.context;
+
+  if (context?.text) {
+    try {
+      const text = await context.text();
+      if (text.trim()) return text.trim();
+    } catch {
+      // Fall back to the Supabase error message below.
+    }
+  }
+
+  return (error as { message?: string })?.message || fallback;
 };
 
 const AdminGroupsManager: React.FC = () => {
@@ -113,18 +133,40 @@ const AdminGroupsManager: React.FC = () => {
 
   const createGroup = useMutation({
     mutationFn: async () => {
+      const initialAdminEmail = form.initialAdminEmail.trim().toLowerCase();
       const { data, error } = await (supabase.rpc as any)('admin_create_group', {
         _name: form.name.trim(),
         _slug: normalizeSlug(form.slug),
         _description: form.description.trim() || null,
-        _initial_admin_email: form.initialAdminEmail.trim().toLowerCase(),
+        _initial_admin_email: initialAdminEmail,
       });
 
       if (error) throw error;
-      return data as AdminGroupRow;
+
+      const group = data as AdminGroupRow;
+      const { error: inviteError } = await supabase.functions.invoke('send-platform-invite', {
+        body: {
+          email: initialAdminEmail,
+          note: `You've been invited to administer ${group.name} on Inlight.`,
+        },
+      });
+
+      return {
+        group,
+        inviteEmailError: inviteError
+          ? await getFunctionErrorMessage(inviteError, 'Failed to send invite email')
+          : null,
+      } satisfies CreateGroupResult;
     },
-    onSuccess: () => {
-      toast.success('Department portal created');
+    onSuccess: (result) => {
+      toast.success(
+        result.inviteEmailError
+          ? 'Department portal created, but the invite email could not be sent'
+          : 'Department portal created and invite email sent',
+      );
+      if (result.inviteEmailError) {
+        toast.error(result.inviteEmailError);
+      }
       queryClient.invalidateQueries({ queryKey: ['admin-groups'] });
       queryClient.invalidateQueries({ queryKey: ['my-groups'] });
       resetCreateForm();

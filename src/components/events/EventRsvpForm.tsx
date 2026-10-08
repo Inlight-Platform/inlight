@@ -246,7 +246,7 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
       return;
     }
 
-    if (stripePriceId) {
+    if (isPaid) {
       setBuyingTicket(true);
       try {
         const { data, error } = await supabase.functions.invoke('create-ticket-checkout', {

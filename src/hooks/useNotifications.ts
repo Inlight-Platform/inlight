@@ -6,7 +6,7 @@ import { useAuth } from './useAuth';
 interface Notification {
   id: string;
   user_id: string;
-  type: 'message' | 'application' | 'invitation' | 'application_response' | 'invitation_response' | 'follow' | 'connection_request' | 'connection_request_accepted';
+  type: 'message' | 'application' | 'invitation' | 'application_response' | 'invitation_response' | 'follow' | 'connection_request' | 'connection_request_accepted' | 'group_join_request';
   title: string;
   body: string | null;
   data: Record<string, unknown>;

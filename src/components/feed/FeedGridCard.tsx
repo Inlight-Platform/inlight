@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Calendar, Briefcase, FolderKanban, MessageCircle, Theater, UserPlus, Users, UserCheck } from 'lucide-react';
+import { Calendar, Briefcase, FolderKanban, MessageCircle, Theater, UserPlus, Users, UserCheck, Lock } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -109,9 +109,15 @@ export const FeedGridCard: React.FC<FeedGridCardProps> = ({ item, onClick }) => 
                 Completed
               </Badge>
             )}
-            {item.visibility && item.visibility !== 'public' && (item.type === 'post' || item.type === 'job') && (
+            {item.visibility && item.visibility !== 'public' && (item.type === 'post' || item.type === 'job' || item.type === 'event' || item.type === 'project') && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5">
-                {item.visibility === 'network' ? <Users className="h-2.5 w-2.5" /> : <UserCheck className="h-2.5 w-2.5" />}
+                {item.visibility === 'network' ? (
+                  <Users className="h-2.5 w-2.5" />
+                ) : item.visibility === 'group' ? (
+                  <Lock className="h-2.5 w-2.5" />
+                ) : (
+                  <UserCheck className="h-2.5 w-2.5" />
+                )}
               </Badge>
             )}
           </div>

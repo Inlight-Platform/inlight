@@ -27,7 +27,8 @@ interface AudienceSelectorProps {
   selectedUsers: SelectedUser[];
   onSelectedUsersChange: (users: SelectedUser[]) => void;
   currentUserId: string;
-  /** Groups the current user can post into. When non-empty a "{group} only" option is added. */
+  allowedVisibilities?: PostVisibility[];
+  /** Groups the current user can post into. */
   availableGroups?: { id: string; name: string }[];
   selectedGroupId?: string | null;
   onSelectedGroupChange?: (groupId: string | null) => void;
@@ -39,6 +40,7 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
   selectedUsers,
   onSelectedUsersChange,
   currentUserId,
+  allowedVisibilities,
   availableGroups = [],
   selectedGroupId = null,
   onSelectedGroupChange,
@@ -69,24 +71,26 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
     { value: 'network', label: 'My Network', icon: <Users className="h-4 w-4" />, desc: 'Only your connections' },
     { value: 'specific', label: 'Specific People', icon: <UserCheck className="h-4 w-4" />, desc: 'Choose who can see this' },
   ];
-  const groupOptions: { value: PostVisibility; label: string; icon: React.ReactNode; desc: string }[] =
-    availableGroups.map((g) => ({
-      value: 'group' as PostVisibility,
-      label: `${g.name} only`,
-      icon: <Lock className="h-4 w-4" />,
-      desc: `Only visible to ${g.name} members`,
-    }));
-  const options = [...baseOptions, ...groupOptions];
+  const visibleBaseOptions = allowedVisibilities
+    ? baseOptions.filter((option) => allowedVisibilities.includes(option.value))
+    : baseOptions;
+  const canSelectGroup = availableGroups.length > 0 && (!allowedVisibilities || allowedVisibilities.includes('group'));
+  const selectedGroup = availableGroups.find((group) => group.id === selectedGroupId) ?? null;
+  const selectedGroupOption = {
+    value: 'group' as PostVisibility,
+    label: selectedGroup?.name || 'Department',
+    icon: <Lock className="h-4 w-4" />,
+    desc: selectedGroup ? `Only ${selectedGroup.name} members` : 'Department members only',
+  };
 
   const currentOption =
     visibility === 'group'
-      ? groupOptions.find((_, i) => availableGroups[i]?.id === selectedGroupId) ?? groupOptions[0] ?? baseOptions[0]
-      : baseOptions.find((o) => o.value === visibility)!;
+      ? selectedGroupOption
+      : visibleBaseOptions.find((o) => o.value === visibility) ?? visibleBaseOptions[0] ?? baseOptions[0];
 
-  const handleSelect = (v: PostVisibility, groupId?: string) => {
+  const handleSelect = (v: PostVisibility) => {
     onVisibilityChange(v);
     if (v === 'group') {
-      onSelectedGroupChange?.(groupId ?? null);
       onSelectedUsersChange([]);
       setShowUserSearch(false);
     } else if (v !== 'specific') {
@@ -97,6 +101,13 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
       onSelectedGroupChange?.(null);
       setShowUserSearch(true);
     }
+  };
+
+  const handleGroupSelect = (groupId: string) => {
+    onVisibilityChange('group');
+    onSelectedGroupChange?.(groupId);
+    onSelectedUsersChange([]);
+    setShowUserSearch(false);
   };
 
   const addUser = (user: SelectedUser) => {
@@ -118,7 +129,7 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-56 p-1" align="start">
-          {baseOptions.map((opt) => (
+          {visibleBaseOptions.map((opt) => (
             <button
               key={opt.value}
               type="button"
@@ -137,25 +148,25 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
               </div>
             </button>
           ))}
-          {availableGroups.map((g) => (
-            <button
-              key={g.id}
-              type="button"
-              onClick={() => handleSelect('group', g.id)}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left',
-                visibility === 'group' && selectedGroupId === g.id
-                  ? 'bg-accent text-accent-foreground'
-                  : 'hover:bg-accent/50'
-              )}
-            >
-              <Lock className="h-4 w-4" />
-              <div>
-                <p className="font-medium">{g.name} only</p>
-                <p className="text-xs text-muted-foreground">Private to {g.name}</p>
-              </div>
-            </button>
-          ))}
+          {canSelectGroup && availableGroups.map((group) => (
+              <button
+                key={group.id}
+                type="button"
+                onClick={() => handleGroupSelect(group.id)}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left',
+                  visibility === 'group' && selectedGroupId === group.id
+                    ? 'bg-accent text-accent-foreground'
+                    : 'hover:bg-accent/50'
+                )}
+              >
+                <Lock className="h-4 w-4" />
+                <div>
+                  <p className="font-medium">{group.name}</p>
+                  <p className="text-xs text-muted-foreground">Only {group.name} members</p>
+                </div>
+              </button>
+            ))}
         </PopoverContent>
       </Popover>
 
@@ -223,6 +234,7 @@ export const AudienceSelector: React.FC<AudienceSelectorProps> = ({
           )}
         </div>
       )}
+
     </div>
   );
 };

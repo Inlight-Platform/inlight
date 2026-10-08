@@ -8,6 +8,10 @@ const { mockMyGroups } = vi.hoisted(() => ({
   mockMyGroups: [] as { id: string; slug: string; name: string; is_faculty: boolean }[],
 }));
 
+const { mockGroupAuthorLookupError } = vi.hoisted(() => ({
+  mockGroupAuthorLookupError: { current: false },
+}));
+
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 'viewer' }, loading: false }),
 }));
@@ -68,8 +72,24 @@ vi.mock('@/components/feed/FeedSurvey', () => ({
 
 vi.mock('@/integrations/supabase/client', () => {
   const posts = [
-    { id: 'p1', content: 'Visible Post', user_id: 'u1', visibility: 'public', created_at: '2026-01-02T00:00:00Z' },
-    { id: 'p2', content: 'Orphan Post', user_id: 'missing', visibility: 'public', created_at: '2026-01-01T00:00:00Z' },
+    {
+      id: 'p1',
+      content: 'Visible Post',
+      user_id: 'u1',
+      visibility: 'public',
+      author_identity: 'personal',
+      author_group_id: null,
+      created_at: '2026-01-02T00:00:00Z',
+    },
+    {
+      id: 'p2',
+      content: 'Orphan Post',
+      user_id: 'missing',
+      visibility: 'public',
+      author_identity: 'personal',
+      author_group_id: null,
+      created_at: '2026-01-01T00:00:00Z',
+    },
   ];
   const groupPostLinks = [
     {
@@ -79,14 +99,39 @@ vi.mock('@/integrations/supabase/client', () => {
         content: 'Private Group Post',
         user_id: 'u1',
         visibility: 'group',
+        author_identity: 'personal',
+        author_group_id: null,
         created_at: '2026-01-03T00:00:00Z',
       },
     },
   ];
   const profiles = [{ user_id: 'u1', display_name: 'Alice', avatar_url: null }];
+  const events = [
+    {
+      id: 'event-personal',
+      title: 'Personal Public Event',
+      user_id: 'u1',
+      visibility: 'public',
+      author_identity: 'personal',
+      author_group_id: null,
+      event_date: '2026-10-27T23:39:00Z',
+      created_at: '2026-10-01T00:00:00Z',
+    },
+    {
+      id: 'event-group',
+      title: 'Department Public Event',
+      user_id: 'u2',
+      visibility: 'public',
+      author_identity: 'group',
+      author_group_id: 'group-1',
+      event_date: '2026-10-28T23:39:00Z',
+      created_at: '2026-10-02T00:00:00Z',
+    },
+  ];
 
   const resultFor = (table: string) => {
     if (table === 'posts') return posts;
+    if (table === 'events') return events;
     if (table === 'post_groups') return groupPostLinks;
     if (table === 'project_groups') return [];
     if (table === 'profiles_public') return profiles;
@@ -100,12 +145,16 @@ vi.mock('@/integrations/supabase/client', () => {
         const chain: any = {
           select: vi.fn(() => chain),
           not: vi.fn(() => chain),
+          neq: vi.fn(() => chain),
           order: vi.fn(() => chain),
           limit: vi.fn(resolve),
           in: vi.fn(() => chain),
           eq: vi.fn(() => chain),
+          or: vi.fn(() => chain),
           maybeSingle: vi.fn(async () => ({ data: null, error: null })),
           update: vi.fn(() => chain),
+          insert: vi.fn(() => chain),
+          delete: vi.fn(() => chain),
         };
         chain.then = (...args: Parameters<Promise<unknown>['then']>) => resolve().then(...args);
         chain.catch = (...args: Parameters<Promise<unknown>['catch']>) => resolve().catch(...args);
@@ -115,6 +164,11 @@ vi.mock('@/integrations/supabase/client', () => {
       rpc: vi.fn(async (fn: string) => {
         if (fn === 'get_public_profiles') {
           return { data: profiles, error: null };
+        }
+        if (fn === 'get_public_group_authors') {
+          return mockGroupAuthorLookupError.current
+            ? { data: null, error: { message: 'Group identities unavailable' } }
+            : { data: [{ id: 'group-1', name: 'Film Department' }], error: null };
         }
         return { data: null, error: null };
       }),
@@ -137,6 +191,7 @@ const renderFeed = (ui: React.ReactElement, initialEntries = ['/']) => {
 describe('FeedPage (filtered posts)', () => {
   beforeEach(() => {
     mockMyGroups.length = 0;
+    mockGroupAuthorLookupError.current = false;
   });
 
   it('shows posts with visible creator profiles and filters out orphan posts', async () => {
@@ -150,7 +205,7 @@ describe('FeedPage (filtered posts)', () => {
     expect(screen.queryByText('Orphan Post')).toBeNull();
   });
 
-  it('renders a private tab for each accessible group', async () => {
+  it('shows accessible department selectors on Home', async () => {
     mockMyGroups.push(
       { id: 'group-1', slug: 'film', name: 'Film Dept', is_faculty: false },
       { id: 'group-2', slug: 'acting', name: 'Acting Lab', is_faculty: true }
@@ -159,8 +214,18 @@ describe('FeedPage (filtered posts)', () => {
     const FeedPage = (await import('@/pages/FeedPage')).default;
     renderFeed(FeedPage ? <FeedPage /> : null);
 
+    expect(await screen.findByText('Visible Post')).toBeDefined();
     expect(await screen.findByRole('button', { name: /Film Dept/i })).toBeDefined();
     expect(await screen.findByRole('button', { name: /Acting Lab/i })).toBeDefined();
+  });
+
+  it('keeps public events visible when department identity enrichment fails', async () => {
+    mockGroupAuthorLookupError.current = true;
+
+    const FeedPage = (await import('@/pages/FeedPage')).default;
+    renderFeed(FeedPage ? <FeedPage /> : null);
+
+    expect(await screen.findByText('Personal Public Event')).toBeDefined();
   });
 
   it('falls back to the normal feed when a no-group user has a stale group tab URL', async () => {
@@ -171,14 +236,15 @@ describe('FeedPage (filtered posts)', () => {
     expect(screen.queryByText('You do not have access to this private group feed.')).toBeNull();
   });
 
-  it('uses the grid renderer for group feed items when grid view is selected', async () => {
+  it('falls back to Home without rendering department content from a legacy group URL', async () => {
     mockMyGroups.push({ id: 'group-1', slug: 'film', name: 'Film Dept', is_faculty: false });
 
     const FeedPage = (await import('@/pages/FeedPage')).default;
     renderFeed(FeedPage ? <FeedPage /> : null, ['/?tab=group%3Agroup-1']);
 
-    expect(await screen.findByText('Private Group Post')).toBeDefined();
-    expect(screen.getByTestId('bento-card')).toBeDefined();
+    expect(await screen.findByText('Visible Post')).toBeDefined();
+    expect(screen.queryByText('Private Group Post')).toBeNull();
+    expect(screen.getAllByTestId('bento-card').length).toBeGreaterThan(0);
     expect(screen.queryByTestId('list-card')).toBeNull();
   });
 });
