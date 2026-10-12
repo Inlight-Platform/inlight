@@ -43,7 +43,7 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
     queryKey: ['gc-detail-show', detailShowId],
     queryFn: async () => {
       if (!detailShowId) return null;
-      const { data } = await supabase.from('nyc_shows').select('*').eq('id', detailShowId).single();
+      const { data } = await supabase.from('nyc_shows_browse').select('*').eq('id', detailShowId).single();
       return data as Show;
     },
     enabled: !!detailShowId,

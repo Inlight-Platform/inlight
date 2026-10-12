@@ -7,21 +7,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
 const PublicCompanyStaffPage: React.FC = () => {
-  const { companyId, userId } = useParams<{ companyId: string; userId: string }>();
+  const { companyId, userId: memberKey } = useParams<{ companyId: string; userId: string }>();
 
   const { data: person, isLoading } = useQuery({
-    queryKey: ['public-staff', companyId, userId],
+    queryKey: ['public-staff', companyId, memberKey],
     queryFn: async () => {
-      // Verify this user is staff/owner/member of the company before showing
-      const { data: staffRows, error: sErr } = await (supabase.rpc as any)('get_company_staff_ids', { _company_id: companyId });
-      if (sErr) throw sErr;
-      const allowed = (staffRows || []).some((r: any) => r.user_id === userId);
-      if (!allowed) return null;
-      const { data, error } = await (supabase.rpc as any)('get_public_profiles', { _user_ids: [userId] });
+      const { data, error } = await supabase.rpc('get_company_team_member_browse', {
+        _company_id: companyId!,
+        _member_key: memberKey!,
+      });
       if (error) throw error;
       return (data || [])[0] || null;
     },
-    enabled: !!companyId && !!userId,
+    enabled: !!companyId && !!memberKey,
   });
 
   if (isLoading) {

@@ -245,7 +245,7 @@ const MySavesPage: React.FC = () => {
       if (!saved?.length) return [];
       const projectIds = saved.map(s => s.project_id);
       const { data: projects } = await supabase
-        .from('projects')
+        .from('projects_browse')
         .select('*')
         .in('id', projectIds);
       
@@ -270,7 +270,7 @@ const MySavesPage: React.FC = () => {
     queryFn: async () => {
       if (!savedShowIds.length) return [];
       const { data } = await supabase
-        .from('nyc_shows')
+        .from('nyc_shows_browse')
         .select('*')
         .in('id', savedShowIds);
       return (data || []) as Show[];

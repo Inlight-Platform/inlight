@@ -63,7 +63,7 @@ export const AddAttendedDialog: React.FC = () => {
     queryKey: ['attended-picker-shows'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('nyc_shows')
+        .from('nyc_shows_browse')
         .select('id, title, venue, show_type, run_start, run_end')
         .order('title', { ascending: true })
         .limit(1000);

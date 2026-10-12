@@ -12,8 +12,12 @@ const { mockGroupAuthorLookupError } = vi.hoisted(() => ({
   mockGroupAuthorLookupError: { current: false },
 }));
 
+const { mockViewer } = vi.hoisted(() => ({
+  mockViewer: { user: { id: 'viewer' } as { id: string } | null },
+}));
+
 vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({ user: { id: 'viewer' }, loading: false }),
+  useAuth: () => ({ user: mockViewer.user, loading: false }),
 }));
 
 vi.mock('@/hooks/useNetworkConnections', () => ({
@@ -130,6 +134,14 @@ vi.mock('@/integrations/supabase/client', () => {
   ];
 
   const resultFor = (table: string) => {
+    if (table === 'projects_browse') return [{
+      id: 'public-project', title: 'Public Project Teaser',
+      creator_id: mockViewer.user ? 'u1' : null,
+      visibility: 'public',
+      author_identity: mockViewer.user ? 'personal' : null,
+      author_group_id: null,
+      created_at: '2026-01-04T00:00:00Z', status: 'active',
+    }];
     if (table === 'posts') return posts;
     if (table === 'events') return events;
     if (table === 'post_groups') return groupPostLinks;
@@ -192,6 +204,20 @@ describe('FeedPage (filtered posts)', () => {
   beforeEach(() => {
     mockMyGroups.length = 0;
     mockGroupAuthorLookupError.current = false;
+    mockViewer.user = { id: 'viewer' };
+  });
+
+  it('shows public project teasers without a creator for signed-out visitors', async () => {
+    mockViewer.user = null;
+    const FeedPage = (await import('@/pages/FeedPage')).default;
+    renderFeed(<FeedPage />);
+    expect(await screen.findByText('Public Project Teaser')).toBeDefined();
+  });
+
+  it('shows public projects to signed-in nonmembers', async () => {
+    const FeedPage = (await import('@/pages/FeedPage')).default;
+    renderFeed(<FeedPage />);
+    expect(await screen.findByText('Public Project Teaser')).toBeDefined();
   });
 
   it('shows posts with visible creator profiles and filters out orphan posts', async () => {

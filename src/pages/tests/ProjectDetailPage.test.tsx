@@ -58,6 +58,14 @@ vi.mock('@/integrations/supabase/client', () => {
   };
   const tableRows: Record<string, any[]> = {
     projects: [project],
+    projects_browse: [{
+      id: project.id,
+      title: project.title,
+      description: project.description,
+      creator_id: project.creator_id,
+      status: project.status,
+      created_at: project.created_at,
+    }],
     profiles_public: [{ user_id: 'creator1', display_name: 'Creator', avatar_url: null }],
     project_members: [],
     project_photos: [],
@@ -93,7 +101,12 @@ vi.mock('@/integrations/supabase/client', () => {
           getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'https://example.com/image.jpg' } })),
         }),
       },
-      rpc: vi.fn(async () => ({ data: null, error: null })),
+      rpc: vi.fn(async (name: string) => ({
+        data: name === 'get_project_member_details'
+          ? [{ is_public: project.is_public }]
+          : null,
+        error: null,
+      })),
     },
   };
 });

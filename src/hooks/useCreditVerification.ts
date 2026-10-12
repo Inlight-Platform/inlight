@@ -3,13 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 
-interface CreditVouch {
-  id: string;
-  credit_id: string;
-  voucher_id: string;
-  created_at: string;
-}
-
 interface VerificationRequest {
   id: string;
   credit_id: string;
@@ -28,24 +21,22 @@ export function useCreditVouches(creditId: string | undefined) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Get vouches for a specific credit
-  const { data: vouches = [], isLoading } = useQuery({
+  // Fetch only the aggregate and the current user's state; raw voucher IDs stay private.
+  const { data: vouchState, isLoading } = useQuery({
     queryKey: ['credit-vouches', creditId],
     queryFn: async () => {
-      if (!creditId) return [];
+      if (!creditId || !user?.id) return null;
       const { data, error } = await supabase
-        .from('credit_vouches')
-        .select('*')
-        .eq('credit_id', creditId);
+        .rpc('get_credit_vouch_state', { _credit_id: creditId })
+        .single();
       if (error) throw error;
-      return data as CreditVouch[];
+      return data;
     },
-    enabled: !!creditId,
+    enabled: !!creditId && !!user?.id,
   });
 
-  // Check if current user has vouched
-  const hasVouched = vouches.some(v => v.voucher_id === user?.id);
-  const vouchCount = vouches.length;
+  const hasVouched = vouchState?.has_vouched ?? false;
+  const vouchCount = Number(vouchState?.vouch_count ?? 0);
 
   // Add vouch mutation
   const vouchMutation = useMutation({
@@ -90,7 +81,6 @@ export function useCreditVouches(creditId: string | undefined) {
   });
 
   return {
-    vouches,
     hasVouched,
     vouchCount,
     isLoading,

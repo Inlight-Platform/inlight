@@ -10,6 +10,7 @@ import OpportunityCard from '@/components/opportunities/OpportunityCard';
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters';
 import OpportunityCreator from '@/components/opportunities/OpportunityCreator';
 import OpportunityDetailSheet from '@/components/opportunities/OpportunityDetailSheet';
+import EditOpportunityDialog from '@/components/opportunities/EditOpportunityDialog';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 import { AcceptApplicationDialog } from '@/components/projects/AcceptApplicationDialog';
 import { useOpportunities, OpportunityView } from '@/hooks/useOpportunities';
@@ -493,9 +494,11 @@ const OpportunitiesPage: React.FC = () => {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const { canManageJobs, showRestrictedToast } = useFeatureAccess();
-  const { opportunities: allOpportunities, isLoading, isError } = useOpportunities();
+  const { opportunities: allOpportunities, isLoading, isError, deleteOpportunity } = useOpportunities();
   
   const [showCreator, setShowCreator] = useState(false);
+  const [opportunityToEdit, setOpportunityToEdit] = useState<OpportunityView | null>(null);
+  const [opportunityToDelete, setOpportunityToDelete] = useState<OpportunityView | null>(null);
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<OpportunityType | 'all'>('all');
   const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all');
@@ -976,7 +979,17 @@ const OpportunitiesPage: React.FC = () => {
             )}
 
             {!isLoading && (
-              <OpenRolesFeed prependOpportunities={openOpportunities} restoreOpportunities={allOpportunities} />
+              <OpenRolesFeed
+                prependOpportunities={openOpportunities}
+                restoreOpportunities={allOpportunities}
+                canManageOpportunity={(opportunity) => (
+                  opportunity.source === 'opportunity'
+                  && !!user
+                  && (user.id === opportunity.postedBy || isAdmin)
+                )}
+                onEditOpportunity={setOpportunityToEdit}
+                onDeleteOpportunity={setOpportunityToDelete}
+              />
             )}
           </TabsContent>
 
@@ -1023,6 +1036,27 @@ const OpportunitiesPage: React.FC = () => {
 
       {/* Opportunity Creator Modal */}
       <OpportunityCreator open={showCreator} onOpenChange={handleCreatorOpenChange} />
+      {opportunityToEdit && (
+        <EditOpportunityDialog
+          open
+          onOpenChange={(open) => { if (!open) setOpportunityToEdit(null); }}
+          opportunity={opportunityToEdit}
+        />
+      )}
+      <DeleteConfirmDialog
+        open={!!opportunityToDelete}
+        onOpenChange={(open) => { if (!open) setOpportunityToDelete(null); }}
+        onConfirm={() => {
+          if (!opportunityToDelete) return;
+          deleteOpportunity.mutate(
+            { id: opportunityToDelete.id, source: opportunityToDelete.source },
+            { onSuccess: () => setOpportunityToDelete(null) },
+          );
+        }}
+        title="Delete Opportunity"
+        description="Are you sure you want to delete this opportunity? This action cannot be undone."
+        isPending={deleteOpportunity.isPending}
+      />
     </div>
   );
 };

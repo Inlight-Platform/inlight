@@ -51,7 +51,7 @@ const MessagesPage: React.FC = () => {
     queryKey: ['msg-detail-show', detailShowId],
     queryFn: async () => {
       if (!detailShowId) return null;
-      const { data } = await supabase.from('nyc_shows').select('*').eq('id', detailShowId).single();
+      const { data } = await supabase.from('nyc_shows_browse').select('*').eq('id', detailShowId).single();
       return data as Show;
     },
     enabled: !!detailShowId,

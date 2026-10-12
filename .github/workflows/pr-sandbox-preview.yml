@@ -97,7 +97,7 @@ jobs:
 
       - name: Apply sandbox database migrations
         if: ${{ env.SANDBOX_SUPABASE_DB_URL != '' && steps.migration_changes.outputs.changed == 'true' }}
-        run: supabase db push --db-url "$SANDBOX_SUPABASE_DB_URL" --yes --skip-vault
+        run: supabase db push --db-url "$SANDBOX_SUPABASE_DB_URL" --yes --skip-vault --include-all
 
       - name: Skip sandbox database migrations without database URL
         if: ${{ env.SANDBOX_SUPABASE_DB_URL == '' }}

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
+import { useAuth } from './useAuth';
 
 export interface EventRsvp {
   id: string;
@@ -22,11 +23,12 @@ interface UseEventRsvpsOptions {
 }
 
 export function useEventRsvps(eventId: string, options: UseEventRsvpsOptions = {}) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { includePrivate = false } = options;
 
   const { data: rsvps = [], isLoading } = useQuery({
-    queryKey: ['event-rsvps', eventId, includePrivate ? 'private' : 'public'],
+    queryKey: ['event-rsvps', eventId, includePrivate ? 'private' : 'public', user?.id],
     queryFn: async () => {
       const query = includePrivate
         ? supabase
@@ -43,12 +45,12 @@ export function useEventRsvps(eventId: string, options: UseEventRsvpsOptions = {
         is_anonymous: (rsvp as EventRsvp).is_anonymous ?? false,
       })) as EventRsvp[];
     },
-    enabled: !!eventId,
+    enabled: !!eventId && !!user,
   });
 
   // Realtime subscription
   useEffect(() => {
-    if (!eventId) return;
+    if (!eventId || !user) return;
     const channel = supabase
       .channel(`event-rsvps-${eventId}`)
       .on(
@@ -68,7 +70,7 @@ export function useEventRsvps(eventId: string, options: UseEventRsvpsOptions = {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [eventId, queryClient]);
+  }, [eventId, queryClient, user]);
 
   const goingCount = rsvps.filter((r) => r.status === 'going').length;
   const cantMakeItCount = rsvps.filter((r) => r.status === 'cant_make_it').length;

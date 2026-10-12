@@ -441,6 +441,7 @@ const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, compact 
           setShowApplicationDialog(true);
         }}
         onEdit={user && (user.id === opportunity.postedBy || isAdmin) ? () => { setShowDetailSheet(false); setShowEditDialog(true); } : undefined}
+        onDelete={user && (user.id === opportunity.postedBy || isAdmin) ? () => { setShowDetailSheet(false); setShowDeleteDialog(true); } : undefined}
       />
 
       <EditOpportunityDialog

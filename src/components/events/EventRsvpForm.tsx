@@ -358,28 +358,30 @@ const EventRsvpForm: React.FC<EventRsvpFormProps> = ({ eventId, customQuestion, 
         </div>
       ) : null}
 
-      {/* Real-time counter */}
-      <div className="rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="w-5 h-5 text-primary" />
-          <h3 className="font-display font-bold text-lg">Responses</h3>
-        </div>
-        <div className="flex gap-4">
-          <div className="flex-1 text-center rounded-lg bg-background/60 p-3">
-            <p className="text-2xl font-bold text-primary">{goingCount}</p>
-            <p className="text-xs text-muted-foreground">Going</p>
+      {/* Response totals are member-only. */}
+      {currentUserId && (
+        <div className="rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <h3 className="font-display font-bold text-lg">Responses</h3>
           </div>
-          <div className="flex-1 text-center rounded-lg bg-background/60 p-3">
-            <p className="text-2xl font-bold text-muted-foreground">{cantMakeItCount}</p>
-            <p className="text-xs text-muted-foreground">Can't Make It</p>
+          <div className="flex gap-4">
+            <div className="flex-1 text-center rounded-lg bg-background/60 p-3">
+              <p className="text-2xl font-bold text-primary">{goingCount}</p>
+              <p className="text-xs text-muted-foreground">Going</p>
+            </div>
+            <div className="flex-1 text-center rounded-lg bg-background/60 p-3">
+              <p className="text-2xl font-bold text-muted-foreground">{cantMakeItCount}</p>
+              <p className="text-xs text-muted-foreground">Can't Make It</p>
+            </div>
           </div>
+          {totalCount > 0 && (
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              {totalCount} {totalCount === 1 ? 'person has' : 'people have'} responded
+            </p>
+          )}
         </div>
-        {totalCount > 0 && (
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            {totalCount} {totalCount === 1 ? 'person has' : 'people have'} responded
-          </p>
-        )}
-      </div>
+      )}
 
       {/* Attendees dropdown */}
       {currentUserId && (

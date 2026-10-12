@@ -90,8 +90,8 @@ const PublicEventPanelistPage = () => {
       const panelist = (panelistRows?.[0] || null) as EventPanelist | null;
       if (!panelist) return null;
 
-      const { data: event } = await supabase
-        .from('events')
+      const { data: event } = await (supabase as any)
+        .from('events_public_browse')
         .select('id, title, description, event_date, event_type, image_url, location')
         .eq('id', panelist.event_id)
         .maybeSingle();

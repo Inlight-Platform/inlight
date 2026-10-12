@@ -9,8 +9,6 @@ export interface Company {
   logo_url: string | null;
   website_url: string | null;
   location: string | null;
-  owner_user_id: string | null;
-  created_at: string;
   cover_image_url?: string | null;
   tagline?: string | null;
   mission?: string | null;
@@ -18,6 +16,7 @@ export interface Company {
   brand_accent_color?: string | null;
   brand_text_color?: string | null;
   fun_facts?: string[] | null;
+  is_owner?: boolean | null;
 }
 
 export const useCompanyFollows = () => {
@@ -28,7 +27,7 @@ export const useCompanyFollows = () => {
     queryKey: ['companies'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('companies')
+        .from('companies_browse')
         .select('*')
         .order('name');
       if (error) throw error;

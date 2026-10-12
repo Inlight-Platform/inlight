@@ -12,7 +12,7 @@ export interface DBOpportunity {
   description: string;
   type: string;
   status: string;
-  posted_by: string;
+  posted_by: string | null;
   company: string | null;
   location: string | null;
   is_remote: boolean;
@@ -37,7 +37,7 @@ export interface DBOpportunity {
 
 interface DBJobPost {
   id: string;
-  user_id: string;
+  user_id?: string | null;
   content: string;
   image_url: string | null;
   link_url: string | null;
@@ -86,7 +86,7 @@ function toView(row: DBOpportunity): OpportunityView {
     description: row.description,
     type: row.type,
     status: row.status,
-    postedBy: row.posted_by,
+    postedBy: row.posted_by || '',
     company: row.company || undefined,
     location: row.location || 'Remote',
     isRemote: row.is_remote,
@@ -148,7 +148,7 @@ function postToView(row: DBJobPost): OpportunityView {
     description: description || row.content,
     type: 'job',
     status: 'open',
-    postedBy: row.user_id,
+    postedBy: row.user_id || '',
     location: locationMatch?.[1]?.trim() || 'Remote',
     isRemote: !locationMatch,
     experienceLevel: 'any',
@@ -214,14 +214,15 @@ export function useOpportunities() {
   const { data: opportunities = [], isLoading, isError, error } = useQuery({
     queryKey: ['opportunities', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      let opportunityQuery = supabase
-        .from('opportunities')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!user) {
-        opportunityQuery = opportunityQuery.eq('is_public', true);
-      }
+      const opportunityQuery = user
+        ? supabase
+            .from('opportunities')
+            .select('*')
+            .order('created_at', { ascending: false })
+        : (supabase as any)
+            .from('opportunities_public_browse')
+            .select('*')
+            .order('created_at', { ascending: false });
 
       const { data: opportunityRows, error: opportunitiesError } = await withTimeout(
         opportunityQuery,
@@ -236,16 +237,14 @@ export function useOpportunities() {
       }
 
       const buildPublicPostQuery = () => {
-        let query = supabase
-          .from('posts')
-          .select('id, user_id, content, image_url, link_url, link_title, created_at')
+        const source = user ? 'posts' : 'posts_public_browse';
+        const fields = user
+          ? 'id, user_id, content, image_url, link_url, link_title, created_at'
+          : 'id, content, image_url, link_url, link_title, created_at';
+        return (supabase as any)
+          .from(source)
+          .select(fields)
           .order('created_at', { ascending: false });
-
-        if (!user) {
-          query = query.eq('visibility', 'public');
-        }
-
-        return query;
       };
 
       const loadFeedJobPosts = async () => {
@@ -356,7 +355,7 @@ export function useOpportunities() {
         image_url: input.image_url || null,
         link_url: input.link_url || null,
         link_title: input.link_title || null,
-        is_public: true,
+        is_public: input.action_type === 'external' && Boolean(input.link_url?.trim()),
       });
 
       if (error) throw error;
@@ -394,9 +393,6 @@ export function useOpportunities() {
       link_title?: string | null;
     }) => {
       if (!user) throw new Error('Not authenticated');
-      if (!canManageJobs) {
-        throw new Error('This beta group cannot edit jobs.');
-      }
 
       const { error } = await supabase
         .from('opportunities')
@@ -418,6 +414,7 @@ export function useOpportunities() {
           image_url: input.image_url ?? null,
           link_url: input.link_url ?? null,
           link_title: input.link_title ?? null,
+          is_public: input.action_type === 'external' && Boolean(input.link_url?.trim()),
         })
         .eq('id', input.id);
 
@@ -435,9 +432,6 @@ export function useOpportunities() {
   const deleteOpportunity = useMutation({
     mutationFn: async (input: string | { id: string; source?: OpportunityView['source'] }) => {
       if (!user) throw new Error('Not authenticated');
-      if (!canManageJobs) {
-        throw new Error('This beta group cannot delete jobs.');
-      }
 
       const id = typeof input === 'string' ? input : input.id;
       const source = typeof input === 'string' ? 'opportunity' : input.source || 'opportunity';

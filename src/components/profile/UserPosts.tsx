@@ -16,77 +16,76 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
     queryKey: ['user-posts', userId, user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
       // Fetch regular posts
-      let postsQuery = supabase
-        .from('posts')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (!user) {
-        postsQuery = postsQuery.eq('visibility', 'public');
-      }
-
-      const { data: postsData, error: postsError } = await postsQuery;
+      const { data: postsData, error: postsError } = user
+        ? await supabase
+            .from('posts')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+        : await (supabase as any).rpc('get_public_profile_posts', { _user_id: userId });
 
       if (postsError) throw postsError;
 
       // Fetch events by this user
-      let eventsQuery = supabase
-        .from('events')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
+      let eventsResult;
       if (!user) {
-        eventsQuery = eventsQuery.eq('visibility', 'public');
-      } else if (user.id !== userId) {
-        eventsQuery = eventsQuery.in('visibility', ['public', 'network', 'specific']);
+        eventsResult = await (supabase as any).rpc('get_public_profile_events', { _user_id: userId });
+      } else {
+        let eventsQuery = supabase
+          .from('events')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        if (user.id !== userId) {
+          eventsQuery = eventsQuery.in('visibility', ['public', 'network', 'specific']);
+        }
+        eventsResult = await eventsQuery;
       }
 
-      const { data: eventsData, error: eventsError } = await eventsQuery;
+      const { data: eventsData, error: eventsError } = eventsResult;
 
       if (eventsError) throw eventsError;
 
       // Fetch open roles from user's projects
-      const { data: openRolesData, error: openRolesError } = await supabase
-        .from('project_roles')
-        .select(`
-          id,
-          role_name,
-          created_at,
-          project_id,
-          projects!inner (
-            id,
-            title,
-            status,
-            is_public,
-            creator_id,
-            main_image_url,
-            header_image_url
-          )
-        `)
-        .is('assigned_user_id', null)
-        .order('created_at', { ascending: false });
+      const { data: openRolesData, error: openRolesError } = user
+        ? await supabase
+            .from('project_roles')
+            .select('id, role_name, created_at, project_id')
+            .is('assigned_user_id', null)
+            .order('created_at', { ascending: false })
+        : { data: [], error: null };
 
       if (openRolesError) throw openRolesError;
 
+      const projectIds = [...new Set((openRolesData || []).map((role) => role.project_id))];
+      const { data: roleProjects, error: roleProjectsError } = projectIds.length
+        ? await supabase
+            .from('projects_browse')
+            .select('id, title, status, creator_id, main_image_url, header_image_url')
+            .in('id', projectIds)
+        : { data: [], error: null };
+      if (roleProjectsError) throw roleProjectsError;
+      const roleProjectMap = new Map((roleProjects || []).map((project) => [project.id, project]));
+
       // Filter to only this user's projects
-      const userOpenRoles = (openRolesData || []).filter(
-        role => role?.id && role?.projects && (role.projects as any).creator_id === userId && (role.projects as any).is_public
-      );
+      const userOpenRoles = (openRolesData || [])
+        .map((role) => ({ ...role, project: roleProjectMap.get(role.project_id) }))
+        .filter((role) => role.id && role.project?.creator_id === userId);
 
       // Fetch user profile for creator info
-      const { data: profile } = await supabase
-        .from('profiles_public')
-        .select('display_name, avatar_url')
-        .eq('user_id', userId)
-        .single();
+      const { data: profile } = user
+        ? await supabase
+            .from('profiles_public')
+            .select('display_name, avatar_url')
+            .eq('user_id', userId)
+            .single()
+        : { data: null };
 
       // Transform posts to FeedItemData format
-      const transformedPosts: FeedItemData[] = (postsData || []).filter(post => !!post?.id).map((post) => ({
+      const transformedPosts: FeedItemData[] = (postsData || []).filter((post: any) => !!post?.id).map((post: any) => ({
         id: post.id,
         type: post.link_url?.includes('job') || post.content?.toLowerCase().includes('hiring') ? 'job' : 'post',
-        user_id: post.user_id,
+        user_id: post.user_id || '',
         content: post.content,
         image_url: post.image_url,
         image_urls: post.image_urls,
@@ -104,10 +103,10 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
       }));
 
       // Transform events to FeedItemData format
-      const transformedEvents: FeedItemData[] = (eventsData || []).filter(event => !!event?.id).map((event) => ({
+      const transformedEvents: FeedItemData[] = (eventsData || []).filter((event: any) => !!event?.id).map((event: any) => ({
         id: event.id,
         type: 'event' as const,
-        user_id: event.user_id,
+        user_id: event.user_id || '',
         title: event.title,
         description: event.description,
         content: event.description,
@@ -134,13 +133,13 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
       const transformedOpenRoles: FeedItemData[] = userOpenRoles.map((role) => ({
         id: role.id,
         type: 'open_role' as const,
-        user_id: (role.projects as any).creator_id,
+        user_id: role.project!.creator_id!,
         title: role.role_name,
         role_id: role.id,
         project_id: role.project_id,
-        project_title: (role.projects as any).title,
-        project_status: (role.projects as any).status,
-        image_url: (role.projects as any).header_image_url || (role.projects as any).main_image_url,
+        project_title: role.project!.title,
+        project_status: role.project!.status,
+        image_url: role.project!.header_image_url || role.project!.main_image_url,
         created_at: role.created_at,
         creator_profile: profile ? {
           display_name: profile.display_name,
