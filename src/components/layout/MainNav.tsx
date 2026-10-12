@@ -55,7 +55,8 @@ const navItems: NavItem[] = [
 const mobileNavItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
 { label: 'Community', icon: UserRound, path: '/people' },
-{ label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true }];
+{ label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
+{ label: 'Resources', icon: BookOpen, path: '/resources' }];
 
 export const MainNav: React.FC = () => {
   const location = useLocation();
@@ -480,7 +481,7 @@ export const MainNav: React.FC = () => {
         {/* Gold accent line */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(45_95%_58%/0.4)] to-transparent" />
         
-        <div className="grid grid-cols-4 items-stretch gap-1 px-2 py-2">
+        <div className="grid grid-cols-5 items-stretch gap-1 px-2 py-2">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
@@ -520,7 +521,7 @@ export const MainNav: React.FC = () => {
                 aria-label="Open account menu"
                 className={cn(
                   'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative touch-manipulation select-none',
-                  isActive('/resources') || isActive('/pie-chart') || isActive(`/profile/${user.id}`) || isActive('/notifications') || isActive('/settings')
+                  isActive('/pie-chart') || isActive(`/profile/${user.id}`) || isActive('/notifications') || isActive('/settings')
                     ? 'text-white'
                     : 'text-[hsl(220_15%_60%)]'
                 )}>
@@ -540,12 +541,6 @@ export const MainNav: React.FC = () => {
               side="top"
               sideOffset={10}
               className="mb-1 w-64 border-[hsl(45_95%_58%/0.16)] bg-popover p-2 text-popover-foreground shadow-xl">
-              <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
-                <Link to="/resources">
-                  <BookOpen className="w-4 h-4" />
-                  <span>Resources</span>
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
                 <Link to="/pie-chart">
                   <Network className="w-4 h-4" />
