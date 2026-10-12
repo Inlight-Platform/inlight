@@ -3356,6 +3356,33 @@ export type Database = {
       }
     }
     Functions: {
+      get_landing_track_cards: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          content: string
+          created_at: string
+          creator_name: string
+          creator_avatar: string | null
+          creator_headline: string | null
+          creator_role: string | null
+          graduation_year: number | null
+          is_profile_highlight: boolean
+        }[]
+      }
+      get_landing_public_posts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          content: string
+          created_at: string
+          creator_name: string
+          creator_avatar: string | null
+          creator_headline: string | null
+          creator_role: string | null
+          graduation_year: number | null
+        }[]
+      }
       get_company_project_browse: {
         Args: { _company_id: string; _project_id: string }
         Returns: {

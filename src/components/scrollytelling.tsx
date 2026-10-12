@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, useScroll, useTransform, MotionValue, useSpring } from "framer-motion";
 import { Sparkle } from "./Sparkle";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AuthSegmentedButton } from "@/components/auth/AuthSegmentedButton";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -57,6 +58,12 @@ type LandingPost = {
   id: string;
   content: string;
   created_at: string;
+  creator_name: string;
+  creator_avatar: string | null;
+  creator_headline: string | null;
+  creator_role: string | null;
+  graduation_year: number | null;
+  is_profile_highlight: boolean;
 };
 
 type LandingPreviewData = {
@@ -104,17 +111,6 @@ const formatEventLocation = (event: LandingEvent) => {
   return [event.location, time].filter(Boolean).join(" · ");
 };
 
-const formatRelativeTime = (value: string) => {
-  const elapsed = Date.now() - new Date(value).getTime();
-  const hours = Math.max(0, Math.floor(elapsed / 3_600_000));
-  if (hours < 1) return "Now";
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return days === 1 ? "Yesterday" : `${days} days ago`;
-  const weeks = Math.max(1, Math.round(days / 7));
-  return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`;
-};
-
 async function loadLandingPreviewData(): Promise<LandingPreviewData> {
   const today = new Date().toISOString();
 
@@ -145,12 +141,7 @@ async function loadLandingPreviewData(): Promise<LandingPreviewData> {
       .or("status.is.null,status.neq.archived")
       .order("created_at", { ascending: false })
       .limit(8),
-    (supabase as any)
-      .from("posts_public_browse")
-      .select("id, content, created_at")
-      .not("content", "like", "🎯%")
-      .order("created_at", { ascending: false })
-      .limit(100),
+    supabase.rpc("get_landing_track_cards"),
   ]);
 
   const errors = [profilesResult.error, upcomingEventsResult.error, pastEventsResult.error, projectsResult.error, postsResult.error].filter(Boolean);
@@ -200,10 +191,9 @@ async function loadLandingPreviewData(): Promise<LandingPreviewData> {
       image_url: project.header_image_url || project.main_image_url,
       creatorName: profileMap.get(project.creator_id)?.display_name || null,
     })),
-    posts: selectedPosts.map((post: { id: string; content: string; created_at: string }) => ({
-      id: post.id,
+    posts: selectedPosts.map((post) => ({
+      ...post,
       content: cleanPreviewText(post.content, 120) || post.content,
-      created_at: post.created_at,
     })),
   };
 }
@@ -657,17 +647,17 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
   const publicUpdates = data?.posts.length
     ? data.posts.slice(0, 4).map((post) => ({
         credit: post.content,
-        when: formatRelativeTime(post.created_at),
+        creator: post,
         isPlaceholder: false,
       }))
     : isLoading
     ? Array.from({ length: 4 }, () => ({
         credit: "",
-        when: "",
+        creator: null,
         isPlaceholder: true,
       }))
     : [
-        { credit: "New creative work and opportunities appear here as the community shares them.", when: "Public update", isPlaceholder: false },
+        { credit: "New creative work and opportunities appear here as the community shares them.", creator: null, isPlaceholder: false },
       ];
 
   return (
@@ -708,12 +698,33 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
               </>
             ) : (
               <>
-                <div className="flex-1 overflow-hidden">
-                  {p.when ? (
-                    <div className="text-[10px] tracking-widest uppercase text-glow mb-1.5">
-                      ✦ {p.when}
+                {p.creator && (
+                  <div className="mb-4 flex min-w-0 items-center gap-3 border-b border-border pb-4">
+                    <Avatar className="h-10 w-10 shrink-0">
+                      <AvatarImage src={p.creator.creator_avatar || undefined} alt={p.creator.creator_name} />
+                      <AvatarFallback>{p.creator.creator_name.trim().slice(0, 1)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-medium leading-snug">{p.creator.creator_name}</p>
+                      {(p.creator.creator_headline || p.creator.creator_role) && (
+                        <p className="line-clamp-2 text-[10px] uppercase leading-snug text-muted-foreground">
+                          {p.creator.creator_headline || formatLabel(p.creator.creator_role)}
+                        </p>
+                      )}
+                      {p.creator.graduation_year && (
+                        <p className="text-[10px] uppercase leading-snug text-muted-foreground">
+                          Class of '{String(p.creator.graduation_year).slice(-2)}
+                        </p>
+                      )}
                     </div>
-                  ) : null}
+                  </div>
+                )}
+                <div className="flex-1 overflow-hidden">
+                  {p.creator && (
+                    <div className="mb-1.5 text-[10px] uppercase tracking-widest text-glow">
+                      {p.creator.is_profile_highlight ? "Profile highlight" : "Latest"}
+                    </div>
+                  )}
                   <p className="text-xs leading-snug text-muted-foreground sm:text-sm">{p.credit}</p>
                 </div>
               </>
