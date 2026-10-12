@@ -1,11 +1,12 @@
 # Stop 04 Post Attribution
 
 This fix replaces the anonymous post projection used by the landing page with
-`get_landing_public_posts()`. The function returns at most four real public
-posts, with the most recent eligible post per author. Each post includes its
+`get_landing_track_cards()`. The function returns at most four distinct people,
+with the most recent eligible post per author, followed by public profile
+biographies to fill remaining slots. Each card includes its
 author's display name, avatar, headline/role, and graduation year.
 
-It excludes hidden profiles, non-public posts, Group-authored posts, blank
+It excludes hidden profiles, platform accounts, non-public posts, Group-authored posts, blank
 names/content, and generated credit announcements. It accepts no user or post
 identifier parameters and returns no user UUID, email, membership, or contact
 fields. It grants no additional table access. The function uses SECURITY
@@ -34,11 +35,13 @@ and non-public/group-identity sentinels, and rolls back all fixtures.
 3. With at least four eligible authors in the sandbox, expect four cards.
    Each must show a real author name, their photo (or an initial when they have
    no photo), creative area/headline, graduation year on its own line when
-   supplied, and Latest above their own post text, with no relative-time label. No profile biographies or
-   Profile highlight cards should fill missing posts.
-4. In Network, find `get_landing_public_posts`. Expect HTTP 200 and at most
+   supplied, and Latest above their own post text, with no relative-time label.
+   Remaining slots show actual public biographies labeled Profile highlight.
+   All cards must represent different people. The platform account must not appear.
+4. In Network, find `get_landing_track_cards`. Expect HTTP 200 and at most
    four rows, including creator_name and creator_avatar. Cross-check each post
-   id against that author's actual post in the signed-in feed. No user_id,
+   id against that author's actual post in the signed-in feed for Latest cards;
+   cross-check Profile highlight text against that person's public bio. No user_id,
    email, or contact fields should be returned.
 5. In sandbox only, create a new public personal post from a visible account.
    Hard-refresh the landing page: it should replace that author's older post.
@@ -60,4 +63,7 @@ code may show the empty state because the RPC is not installed there.
 
 After that step succeeds, repeat checks 2-4, 7, and 8 using existing production
 posts. Compare against real signed-in feed posts; do not create test data in
-production. Fewer than four cards is valid when fewer than four authors qualify.
+production. Fewer than four cards is valid only when fewer than four visible
+people have eligible posts or nonempty public biographies. Apply the new
+`20261012220000_landing_track_profile_highlights.sql` migration after sandbox
+confirmation; the earlier post-only migration is not sufficient for this update.

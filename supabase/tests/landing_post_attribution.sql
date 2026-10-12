@@ -60,4 +60,30 @@ DO $$ BEGIN
  THEN RAISE EXCEPTION 'Hidden account or private/group identity leaked to signed-in preview'; END IF;
 END $$;
 RESET ROLE;
+-- Isolate the fallback test from existing local profiles; all updates roll back.
+SET LOCAL session_replication_role = replica;
+UPDATE public.profiles SET hidden_from_public = true
+WHERE user_id NOT IN (
+ SELECT ('ca000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid FROM generate_series(1, 6) i
+);
+UPDATE public.profiles SET bio = 'Real profile bio for ' || display_name,
+ activity_score = right(user_id::text, 1)::integer
+WHERE user_id::text LIKE 'ca000000-%';
+UPDATE public.profiles SET display_name = 'Inlight'
+WHERE user_id = 'ca000000-0000-4000-8000-000000000006';
+UPDATE public.posts SET visibility = 'network'
+WHERE id IN ('cb000000-0000-4000-8000-000000000002', 'cb000000-0000-4000-8000-000000000003');
+SET LOCAL session_replication_role = origin;
+SET LOCAL ROLE anon;
+SELECT set_config('request.jwt.claims', '{"role":"anon"}', true);
+SELECT set_config('request.jwt.claim.sub', '', true);
+DO $$ BEGIN
+ IF (SELECT count(*) FROM public.get_landing_track_cards()) <> 4
+ OR (SELECT count(DISTINCT creator_name) FROM public.get_landing_track_cards()) <> 4
+ OR (SELECT count(*) FROM public.get_landing_track_cards() WHERE is_profile_highlight) <> 2
+ OR EXISTS (SELECT 1 FROM public.get_landing_track_cards() WHERE creator_name IN ('Inlight', 'Landing Author 5') OR content LIKE '%sentinel%')
+ OR EXISTS (SELECT 1 FROM public.get_landing_track_cards() WHERE is_profile_highlight AND content NOT LIKE 'Real profile bio for %')
+ THEN RAISE EXCEPTION 'Public profile fallback or identity boundaries failed'; END IF;
+END $$;
+RESET ROLE;
 ROLLBACK;

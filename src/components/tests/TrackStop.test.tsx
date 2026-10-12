@@ -49,4 +49,19 @@ describe('TrackStop attribution', () => {
     expect(screen.queryByText('Alice Artist')).not.toBeInTheDocument();
     expect(screen.queryByText('Latest')).not.toBeInTheDocument();
   });
+
+  it('labels profile biographies separately from actual latest posts', () => {
+    query.data = { posts: [
+      { id: 'post-a', content: 'A new show.', creator_name: 'Alice Artist', creator_avatar: null, creator_headline: 'Actor', creator_role: null, graduation_year: 2026, is_profile_highlight: false },
+      { id: 'profile-b', content: 'A real public biography.', creator_name: 'Bob Musician', creator_avatar: null, creator_headline: 'Composer', creator_role: null, graduation_year: 2027, is_profile_highlight: true },
+    ] };
+    render(<TrackStop progress={motionValue(0.5)} />);
+    const alice = screen.getByText('Alice Artist').closest('.border-b')?.parentElement;
+    const bob = screen.getByText('Bob Musician').closest('.border-b')?.parentElement;
+    expect(alice).toHaveTextContent('Latest');
+    expect(alice).not.toHaveTextContent('Profile highlight');
+    expect(bob).toHaveTextContent('Profile highlight');
+    expect(bob).toHaveTextContent('A real public biography.');
+    expect(bob).not.toHaveTextContent('Latest');
+  });
 });

@@ -63,6 +63,7 @@ type LandingPost = {
   creator_headline: string | null;
   creator_role: string | null;
   graduation_year: number | null;
+  is_profile_highlight: boolean;
 };
 
 type LandingPreviewData = {
@@ -140,7 +141,7 @@ async function loadLandingPreviewData(): Promise<LandingPreviewData> {
       .or("status.is.null,status.neq.archived")
       .order("created_at", { ascending: false })
       .limit(8),
-    supabase.rpc("get_landing_public_posts"),
+    supabase.rpc("get_landing_track_cards"),
   ]);
 
   const errors = [profilesResult.error, upcomingEventsResult.error, pastEventsResult.error, projectsResult.error, postsResult.error].filter(Boolean);
@@ -720,7 +721,9 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
                 )}
                 <div className="flex-1 overflow-hidden">
                   {p.creator && (
-                    <div className="mb-1.5 text-[10px] uppercase tracking-widest text-glow">Latest</div>
+                    <div className="mb-1.5 text-[10px] uppercase tracking-widest text-glow">
+                      {p.creator.is_profile_highlight ? "Profile highlight" : "Latest"}
+                    </div>
                   )}
                   <p className="text-xs leading-snug text-muted-foreground sm:text-sm">{p.credit}</p>
                 </div>
