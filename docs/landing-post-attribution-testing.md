@@ -33,7 +33,8 @@ and non-public/group-identity sentinels, and rolls back all fixtures.
 2. Open the landing page signed out, hard-refresh, and scroll to Stop 04.
 3. With at least four eligible authors in the sandbox, expect four cards.
    Each must show a real author name, their photo (or an initial when they have
-   no photo) and their own post text, with no relative-time label. No profile biographies or
+   no photo), creative area/headline, graduation year on its own line when
+   supplied, and Latest above their own post text, with no relative-time label. No profile biographies or
    Profile highlight cards should fill missing posts.
 4. In Network, find `get_landing_public_posts`. Expect HTTP 200 and at most
    four rows, including creator_name and creator_avatar. Cross-check each post

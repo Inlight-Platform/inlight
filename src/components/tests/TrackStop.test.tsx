@@ -23,16 +23,22 @@ describe('TrackStop attribution', () => {
       posts: [
         { id: 'post-a', content: 'Alice opened a new show.', created_at: new Date().toISOString(), creator_name: 'Alice Artist', creator_avatar: null, creator_headline: 'Actor', creator_role: null, graduation_year: 2026 },
         { id: 'post-b', content: 'Bob released a single.', created_at: new Date().toISOString(), creator_name: 'Bob Musician', creator_avatar: null, creator_headline: null, creator_role: 'composer', graduation_year: null },
+        { id: 'post-c', content: 'Cara filmed a short.', created_at: new Date().toISOString(), creator_name: 'Cara Director', creator_avatar: null, creator_headline: 'Film', creator_role: null, graduation_year: 2027 },
+        { id: 'post-d', content: 'Dan designed a set.', created_at: new Date().toISOString(), creator_name: 'Dan Designer', creator_avatar: null, creator_headline: 'Design', creator_role: null, graduation_year: 2025 },
       ],
     };
     render(<TrackStop progress={motionValue(0.5)} />);
     const alice = screen.getByText('Alice Artist').closest('.border-b')?.parentElement;
     const bob = screen.getByText('Bob Musician').closest('.border-b')?.parentElement;
     expect(alice).toHaveTextContent('Alice opened a new show.');
-    expect(alice).toHaveTextContent("Actor / Class of '26");
+    expect(alice).toHaveTextContent('Actor');
+    expect(alice).toHaveTextContent("Class of '26");
     expect(alice).not.toHaveTextContent('Bob released a single.');
     expect(bob).toHaveTextContent('Bob released a single.');
     expect(bob).toHaveTextContent('Composer');
+    expect(screen.getAllByText('Latest')).toHaveLength(4);
+    expect(screen.getByText('Cara Director')).toBeInTheDocument();
+    expect(screen.getByText('Dan Designer')).toBeInTheDocument();
     expect(screen.queryByText('Profile highlight')).not.toBeInTheDocument();
   });
 
@@ -41,5 +47,6 @@ describe('TrackStop attribution', () => {
     render(<TrackStop progress={motionValue(0.5)} />);
     expect(screen.getByText('New creative work and opportunities appear here as the community shares them.')).toBeInTheDocument();
     expect(screen.queryByText('Alice Artist')).not.toBeInTheDocument();
+    expect(screen.queryByText('Latest')).not.toBeInTheDocument();
   });
 });

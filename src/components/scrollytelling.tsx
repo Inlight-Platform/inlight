@@ -705,13 +705,23 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
                     </Avatar>
                     <div className="min-w-0">
                       <p className="break-words text-sm font-medium leading-snug">{p.creator.creator_name}</p>
-                      <p className="line-clamp-2 text-[10px] uppercase leading-snug text-muted-foreground">
-                        {[p.creator.creator_headline || formatLabel(p.creator.creator_role), p.creator.graduation_year ? `Class of '${String(p.creator.graduation_year).slice(-2)}` : null].filter(Boolean).join(" / ")}
-                      </p>
+                      {(p.creator.creator_headline || p.creator.creator_role) && (
+                        <p className="line-clamp-2 text-[10px] uppercase leading-snug text-muted-foreground">
+                          {p.creator.creator_headline || formatLabel(p.creator.creator_role)}
+                        </p>
+                      )}
+                      {p.creator.graduation_year && (
+                        <p className="text-[10px] uppercase leading-snug text-muted-foreground">
+                          Class of '{String(p.creator.graduation_year).slice(-2)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
                 <div className="flex-1 overflow-hidden">
+                  {p.creator && (
+                    <div className="mb-1.5 text-[10px] uppercase tracking-widest text-glow">Latest</div>
+                  )}
                   <p className="text-xs leading-snug text-muted-foreground sm:text-sm">{p.credit}</p>
                 </div>
               </>
