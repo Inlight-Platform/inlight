@@ -25,7 +25,6 @@ import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ProjectNewPage from "./pages/ProjectNewPage";
 import EventDashboardPage from "./pages/EventDashboardPage";
-import StageWhisperPage from "./pages/StageWhisperPage";
 import GroupMembersPage from "./pages/GroupMembersPage";
 import GroupAdminDashboardPage from "./pages/GroupAdminDashboardPage";
 import DepartmentAdminPage from "./pages/DepartmentAdminPage";
@@ -33,7 +32,6 @@ import GroupPage from "./pages/GroupPage";
 import AdminPage from "./pages/AdminPage";
 import CompanyProfilePage from "./pages/CompanyProfilePage";
 import MySavesPage from "./pages/MySavesPage";
-import MyTicketsPage from "./pages/MyTicketsPage";
 import NotFound from "./pages/NotFound";
 import NetworkPieChartPage from "./pages/NetworkPieChartPage";
 import ShowcasePage from "./pages/ShowcasePage";
@@ -92,7 +90,7 @@ const App = () => (
           <Route path="/c/:companyId/project/:projectId" element={<PublicCompanyProjectPage />} />
           <Route path="/c/:companyId/staff/:userId" element={<PublicCompanyStaffPage />} />
           <Route path="/company-edit/:token" element={<CompanyProfilePage />} />
-          <Route path="/industry-now" element={<StageWhisperPage />} />
+          <Route path="/industry-now" element={<Navigate to="/feed" replace />} />
           <Route path="/plan-selection" element={<RequireAuth><PlanSelectionPage /></RequireAuth>} />
           <Route path="/onboarding" element={<RequireAuth><OnboardingSurveyPage /></RequireAuth>} />
 
@@ -115,12 +113,12 @@ const App = () => (
             <Route path="/messages/group/:projectId" element={<RequireAuth><MessagesPage /></RequireAuth>} />
             <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
             <Route path="/network" element={<RequireAuth><NetworkPage /></RequireAuth>} />
-            <Route path="/tickets" element={<RequireAuth><MyTicketsPage /></RequireAuth>} />
+            <Route path="/tickets" element={<Navigate to="/feed" replace />} />
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/new" element={<RequireAuth><ProjectNewPage /></RequireAuth>} />
             <Route path="/projects/:projectId" element={<RequireAuth><ProjectDetailPage /></RequireAuth>} />
-            <Route path="/stage-whisper" element={<StageWhisperPage />} />
+            <Route path="/stage-whisper" element={<Navigate to="/feed" replace />} />
             <Route path="/company/:companyId" element={<CompanyProfilePage />} />
             <Route path="/saves" element={<RequireAuth><MySavesPage /></RequireAuth>} />
             <Route path="/group" element={<GroupMembersPage />} />

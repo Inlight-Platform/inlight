@@ -59,17 +59,11 @@ const GroupsSection: React.FC<{
     <section className="mb-8">
       <Tabs value={directoryTab} onValueChange={setDirectoryTab}>
         <div className="mb-5 flex justify-center overflow-x-auto">
-          <TabsList className="grid min-w-[360px] grid-cols-3">
-            <TabsTrigger value="school">School</TabsTrigger>
+          <TabsList className="grid min-w-[280px] grid-cols-2">
             <TabsTrigger value="departments">Departments</TabsTrigger>
             <TabsTrigger value="affiliations">Affiliations</TabsTrigger>
           </TabsList>
         </div>
-
-            <TabsContent value="school" className="mt-0 space-y-2">
-              <p className="text-sm font-medium">Official school offices and resources</p>
-              <p className="text-sm text-muted-foreground">School accounts will appear here as they are added.</p>
-            </TabsContent>
 
             <TabsContent value="departments" className="mt-0 space-y-4">
               <div>
