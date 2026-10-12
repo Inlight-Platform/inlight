@@ -1,0 +1,45 @@
+import { render, screen } from '@testing-library/react';
+import { motionValue } from 'framer-motion';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { TrackStop } from '../scrollytelling';
+
+const query = vi.hoisted(() => ({ data: null as unknown, isLoading: false }));
+vi.mock('@tanstack/react-query', () => ({ useQuery: () => query }));
+vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }));
+vi.mock('@/integrations/supabase/client', () => ({ supabase: {} }));
+
+beforeAll(() => {
+  vi.stubGlobal('IntersectionObserver', class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
+});
+afterAll(() => vi.unstubAllGlobals());
+
+describe('TrackStop attribution', () => {
+  it('renders each real post with its matching author and identity details', () => {
+    query.data = {
+      posts: [
+        { id: 'post-a', content: 'Alice opened a new show.', created_at: new Date().toISOString(), creator_name: 'Alice Artist', creator_avatar: null, creator_headline: 'Actor', creator_role: null, graduation_year: 2026 },
+        { id: 'post-b', content: 'Bob released a single.', created_at: new Date().toISOString(), creator_name: 'Bob Musician', creator_avatar: null, creator_headline: null, creator_role: 'composer', graduation_year: null },
+      ],
+    };
+    render(<TrackStop progress={motionValue(0.5)} />);
+    const alice = screen.getByText('Alice Artist').closest('.border-b')?.parentElement;
+    const bob = screen.getByText('Bob Musician').closest('.border-b')?.parentElement;
+    expect(alice).toHaveTextContent('Alice opened a new show.');
+    expect(alice).toHaveTextContent("Actor / Class of '26");
+    expect(alice).not.toHaveTextContent('Bob released a single.');
+    expect(bob).toHaveTextContent('Bob released a single.');
+    expect(bob).toHaveTextContent('Composer');
+    expect(screen.queryByText('Profile highlight')).not.toBeInTheDocument();
+  });
+
+  it('does not manufacture posts or identities when no eligible posts exist', () => {
+    query.data = { posts: [] };
+    render(<TrackStop progress={motionValue(0.5)} />);
+    expect(screen.getByText('New creative work and opportunities appear here as the community shares them.')).toBeInTheDocument();
+    expect(screen.queryByText('Alice Artist')).not.toBeInTheDocument();
+  });
+});
