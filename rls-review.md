@@ -15,6 +15,11 @@
 - Isolated rollback-only testing now revokes all three authenticated grants before applying both follow-ups. Active member and scoped admin RPC results pass; a nonmember cannot discover the restricted fixture; anonymous RPC execution is denied while public listed metadata still loads. Reapplying the RPC grant migration also passes.
 - Push authorization covers this follow-up only. Production deployment and browser Check 5 remain pending; no production SQL workaround was applied.
 
+### Complete caller-scoped Group lookup grants
+
+- Production also denied `get_my_faculty_group()`, used by AuthPage and useTour. Migration `20261012200000_inv96_group_lookup_rpc_grants.sql` explicitly restores authenticated/service-role EXECUTE for all three caller-scoped Group lookups and denies PUBLIC/anonymous EXECUTE. Lookup definitions and authorization rules remain unchanged.
+- Expanded isolated tests remove grants from all three RPCs and both policy helpers, apply the follow-ups, and verify member versus scoped-admin results, nonmember exclusion, anonymous denial for each RPC, and repeat-application safety. All passed. No production operation was performed.
+
 ## Survey provenance
 
 - Survey date: 2026-09-28
