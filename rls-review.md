@@ -1,5 +1,13 @@
 # INV96 Phases 1-2.5 - Row-Level Security Survey, Classification, and Column Minimization
 
+## 2026-10-12 Group helper permission follow-up (local only)
+
+- Production preview returned 403 because authenticated callers could not execute `is_group_member(uuid,uuid)` or `is_group_faculty(uuid,uuid)`; sandbox grants differed despite matching function definitions.
+- Migration `20261012190000_inv96_scoped_group_policy_helpers.sql` restores explicit policy-helper execution and restricts ordinary callers to their own authenticated user ID. Service-role calls retain cross-user checks. Anonymous helper calls return false, including probes supplying another user's UUID.
+- The Groups SELECT policy uses a CASE branch for anonymous directory reads, avoiding the authenticated-only `has_role` helper. Listed metadata remains browsable; unlisted Groups remain hidden from nonmembers.
+- Rollback-only isolated tests reproduced the missing grants and passed member/scoped-admin access, Home `get_my_groups`, outsider denial, cross-user probe denial, anonymous directory visibility/privacy, and service-role checks. Application typecheck and all 49 tests passed.
+- This follow-up has not been pushed or applied to sandbox/production. Browser Check 5 remains pending until authorized deployment and retesting.
+
 ## Survey provenance
 
 - Survey date: 2026-09-28
