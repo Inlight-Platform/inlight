@@ -110,17 +110,6 @@ const formatEventLocation = (event: LandingEvent) => {
   return [event.location, time].filter(Boolean).join(" · ");
 };
 
-const formatRelativeTime = (value: string) => {
-  const elapsed = Date.now() - new Date(value).getTime();
-  const hours = Math.max(0, Math.floor(elapsed / 3_600_000));
-  if (hours < 1) return "Now";
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return days === 1 ? "Yesterday" : `${days} days ago`;
-  const weeks = Math.max(1, Math.round(days / 7));
-  return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`;
-};
-
 async function loadLandingPreviewData(): Promise<LandingPreviewData> {
   const today = new Date().toISOString();
 
@@ -658,18 +647,16 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
     ? data.posts.slice(0, 4).map((post) => ({
         credit: post.content,
         creator: post,
-        when: formatRelativeTime(post.created_at),
         isPlaceholder: false,
       }))
     : isLoading
     ? Array.from({ length: 4 }, () => ({
         credit: "",
         creator: null,
-        when: "",
         isPlaceholder: true,
       }))
     : [
-        { credit: "New creative work and opportunities appear here as the community shares them.", creator: null, when: "Public update", isPlaceholder: false },
+        { credit: "New creative work and opportunities appear here as the community shares them.", creator: null, isPlaceholder: false },
       ];
 
   return (
@@ -725,11 +712,6 @@ export function TrackStop({ progress }: { progress: MotionValue<number> }) {
                   </div>
                 )}
                 <div className="flex-1 overflow-hidden">
-                  {p.when ? (
-                    <div className="text-[10px] tracking-widest uppercase text-glow mb-1.5">
-                      ✦ {p.when}
-                    </div>
-                  ) : null}
                   <p className="text-xs leading-snug text-muted-foreground sm:text-sm">{p.credit}</p>
                 </div>
               </>
