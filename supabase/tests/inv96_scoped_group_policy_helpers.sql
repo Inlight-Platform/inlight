@@ -1,4 +1,4 @@
--- Run in an isolated database, inside a transaction after the follow-up migration.
+-- Run in an isolated database, inside a transaction after both Group grant follow-ups.
 -- Synthetic identities avoid relying on production accounts or signup side effects.
 SET LOCAL session_replication_role = replica;
 INSERT INTO auth.users (id, email) VALUES
@@ -24,6 +24,7 @@ SELECT set_config('request.jwt.claim.sub', 'ba5b137a-e63a-4372-9a18-3da3d90e4198
 DO $$ BEGIN
  IF NOT public.is_group_member(auth.uid(), 'b1000000-0000-4000-8000-000000000001')
  OR NOT EXISTS (SELECT 1 FROM public.groups WHERE slug='inv96-private-helper-test')
+ OR NOT EXISTS (SELECT 1 FROM public.get_my_groups() WHERE slug='inv96-private-helper-test' AND NOT is_faculty)
  THEN RAISE EXCEPTION 'Member access failed'; END IF;
  IF public.is_group_faculty('824fbc48-fbb1-46f9-9d08-b2eb136a3506', 'b1000000-0000-4000-8000-000000000001')
  THEN RAISE EXCEPTION 'Cross-user admin probe leaked'; END IF;
@@ -44,6 +45,7 @@ DO $$ BEGIN
  IF public.is_group_member(auth.uid(), 'b1000000-0000-4000-8000-000000000001')
  OR public.is_group_member('ba5b137a-e63a-4372-9a18-3da3d90e4198', 'b1000000-0000-4000-8000-000000000001')
  OR EXISTS (SELECT 1 FROM public.groups WHERE slug='inv96-private-helper-test')
+ OR EXISTS (SELECT 1 FROM public.get_my_groups() WHERE slug='inv96-private-helper-test')
  THEN RAISE EXCEPTION 'Nonmember access/probe failed'; END IF;
 END $$;
 
@@ -52,6 +54,14 @@ SET LOCAL ROLE anon;
 SELECT set_config('request.jwt.claims', '{"role":"anon"}', true);
 SELECT set_config('request.jwt.claim.sub', '', true);
 DO $$ BEGIN
+ IF has_function_privilege('anon', 'public.get_my_groups()', 'EXECUTE') THEN
+   RAISE EXCEPTION 'Anonymous Group RPC privilege leaked';
+ END IF;
+ BEGIN
+   PERFORM * FROM public.get_my_groups();
+   RAISE EXCEPTION 'Anonymous Group RPC call unexpectedly succeeded';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
  IF NOT EXISTS (SELECT 1 FROM public.groups WHERE slug='inv96-listed-helper-test')
  OR EXISTS (SELECT 1 FROM public.groups WHERE slug='inv96-private-helper-test')
  OR public.is_group_member('ba5b137a-e63a-4372-9a18-3da3d90e4198', 'b1000000-0000-4000-8000-000000000001')

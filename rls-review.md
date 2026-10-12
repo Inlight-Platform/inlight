@@ -1,12 +1,19 @@
 # INV96 Phases 1-2.5 - Row-Level Security Survey, Classification, and Column Minimization
 
-## 2026-10-12 Group helper permission follow-up (local only)
+## 2026-10-12 Group helper permission follow-ups
 
 - Production preview returned 403 because authenticated callers could not execute `is_group_member(uuid,uuid)` or `is_group_faculty(uuid,uuid)`; sandbox grants differed despite matching function definitions.
 - Migration `20261012190000_inv96_scoped_group_policy_helpers.sql` restores explicit policy-helper execution and restricts ordinary callers to their own authenticated user ID. Service-role calls retain cross-user checks. Anonymous helper calls return false, including probes supplying another user's UUID.
 - The Groups SELECT policy uses a CASE branch for anonymous directory reads, avoiding the authenticated-only `has_role` helper. Listed metadata remains browsable; unlisted Groups remain hidden from nonmembers.
 - Rollback-only isolated tests reproduced the missing grants and passed member/scoped-admin access, Home `get_my_groups`, outsider denial, cross-user probe denial, anonymous directory visibility/privacy, and service-role checks. Application typecheck and all 49 tests passed.
-- This follow-up has not been pushed or applied to sandbox/production. Browser Check 5 remains pending until authorized deployment and retesting.
+- Helper follow-up pushed in `a9afce7`; the user subsequently applied it to production and confirmed department dashboard access. Browser Check 5 remains pending because Home's independent RPC grant was still missing.
+
+### Home Group RPC grant follow-up
+
+- After the helper migration was deployed, the dashboard worked but Home still returned 403 for `get_my_groups()`. Production authenticated EXECUTE was missing independently of the helper grants.
+- Migration `20261012193000_inv96_restore_my_groups_execute.sql` explicitly grants authenticated/service-role execution and removes PUBLIC/anonymous execution. The existing no-argument RPC is scoped by `auth.uid()`; its logic and membership rules are unchanged.
+- Isolated rollback-only testing now revokes all three authenticated grants before applying both follow-ups. Active member and scoped admin RPC results pass; a nonmember cannot discover the restricted fixture; anonymous RPC execution is denied while public listed metadata still loads. Reapplying the RPC grant migration also passes.
+- Push authorization covers this follow-up only. Production deployment and browser Check 5 remain pending; no production SQL workaround was applied.
 
 ## Survey provenance
 
