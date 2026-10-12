@@ -2,7 +2,7 @@ name: PR Sandbox Preview
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, labeled]
     branches: ['**']
 
 permissions:
@@ -273,12 +273,12 @@ jobs:
           version: latest
 
       - name: Apply production database migrations
-        if: ${{ env.PRODUCTION_SUPABASE_DB_URL != '' }}
+        if: ${{ env.PRODUCTION_SUPABASE_DB_URL != '' && contains(github.event.pull_request.labels.*.name, 'apply-production-migrations') }}
         run: supabase db push --db-url "$PRODUCTION_SUPABASE_DB_URL" --yes --skip-vault
 
       - name: Skip production database migrations
-        if: ${{ env.PRODUCTION_SUPABASE_DB_URL == '' }}
-        run: echo "::notice::PRODUCTION_SUPABASE_DB_URL is not configured, so production-data preview database migrations were skipped."
+        if: ${{ env.PRODUCTION_SUPABASE_DB_URL == '' || !contains(github.event.pull_request.labels.*.name, 'apply-production-migrations') }}
+        run: echo "::notice::Production migrations require PRODUCTION_SUPABASE_DB_URL and the apply-production-migrations PR label after sandbox approval."
 
       - name: Build production-data app
         run: npm run build

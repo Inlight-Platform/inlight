@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, BookOpen, Theater, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, ShieldCheck, Sparkles, Network, Sun, Moon, MessageSquare, UserRound, MoreHorizontal, Ticket } from 'lucide-react';
+import { Home, Briefcase, BookOpen, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, ShieldCheck, Sparkles, Network, Sun, Moon, UserRound, MoreHorizontal } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useMyScopedAdminGroups } from '@/hooks/useGroups';
@@ -49,16 +49,13 @@ const navItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
 { label: 'Community', icon: UserRound, path: '/people' },
 { label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
-{ label: 'My Tickets', icon: Ticket, path: '/tickets' },
-{ label: 'Industry Now', icon: Theater, path: '/stage-whisper' },
 { label: 'Resources', icon: BookOpen, path: '/resources' },
 { label: 'Your Network', icon: Network, path: '/pie-chart' }];
 
 const mobileNavItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
 { label: 'Community', icon: UserRound, path: '/people' },
-{ label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
-{ label: 'Industry', icon: Theater, path: '/stage-whisper' }];
+{ label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true }];
 
 export const MainNav: React.FC = () => {
   const location = useLocation();
@@ -483,7 +480,7 @@ export const MainNav: React.FC = () => {
         {/* Gold accent line */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(45_95%_58%/0.4)] to-transparent" />
         
-        <div className="grid grid-cols-5 items-stretch gap-1 px-2 py-2">
+        <div className="grid grid-cols-4 items-stretch gap-1 px-2 py-2">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
@@ -523,7 +520,7 @@ export const MainNav: React.FC = () => {
                 aria-label="Open account menu"
                 className={cn(
                   'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 transition-all relative touch-manipulation select-none',
-                  isActive('/tickets') || isActive('/resources') || isActive('/pie-chart') || isActive(`/profile/${user.id}`) || isActive('/notifications') || isActive('/settings')
+                  isActive('/resources') || isActive('/pie-chart') || isActive(`/profile/${user.id}`) || isActive('/notifications') || isActive('/settings')
                     ? 'text-white'
                     : 'text-[hsl(220_15%_60%)]'
                 )}>
@@ -543,12 +540,6 @@ export const MainNav: React.FC = () => {
               side="top"
               sideOffset={10}
               className="mb-1 w-64 border-[hsl(45_95%_58%/0.16)] bg-popover p-2 text-popover-foreground shadow-xl">
-              <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
-                <Link to="/tickets">
-                  <Ticket className="w-4 h-4" />
-                  <span>My Tickets</span>
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
                 <Link to="/resources">
                   <BookOpen className="w-4 h-4" />
