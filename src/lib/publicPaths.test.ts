@@ -1,5 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { groupEventPath, groupPostIdentifier, groupPostPath, groupProjectPath } from './publicPaths';
+import { eventPath, groupEventPath, groupPostIdentifier, groupPostPath, groupProjectPath, identifierFallbackUuid, projectPath } from './publicPaths';
+
+describe('project public paths', () => {
+  const firstId = 'e6f08864-03ac-4fc4-9926-9b0281eabb83';
+  const secondId = 'e6f08864-03ac-4fc4-9926-9b0281eabb84';
+
+  it('keeps same-title creation results distinct even without returned slugs', () => {
+    const first = projectPath({ id: firstId, title: 'Final Showcase' });
+    const second = projectPath({ id: secondId, title: 'Final Showcase' });
+    expect(first).toBe(`/projects/final-showcase-${firstId}`);
+    expect(second).toBe(`/projects/final-showcase-${secondId}`);
+    expect(first).not.toBe(second);
+    expect(identifierFallbackUuid(second)).toBe(secondId);
+  });
+
+  it('keeps the UUID authoritative when a stored slug or title changes', () => {
+    const path = projectPath({ id: secondId, slug: 'final-showcase-2', title: 'Renamed project' });
+    expect(path).toBe(`/projects/final-showcase-2-${secondId}`);
+    expect(identifierFallbackUuid(path)).toBe(secondId);
+  });
+
+  it('includes identity even when the title is empty', () => {
+    expect(projectPath({ id: secondId, title: '' })).toBe(`/projects/untitled-${secondId}`);
+  });
+
+  it('does not change event URL formatting', () => {
+    expect(eventPath({ id: firstId, title: 'Final Showcase' })).toBe('/events/final-showcase-e6f08864');
+  });
+});
 
 describe('group post public paths', () => {
   const post = {

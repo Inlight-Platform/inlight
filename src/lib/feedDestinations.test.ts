@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { getFeedItemDestination, getLinkedPostDestination } from './feedDestinations';
 
 describe('feed destination resolution', () => {
+  it('routes same-title project cards using the project UUID', () => {
+    const first = getFeedItemDestination({ id: 'e6f08864-03ac-4fc4-9926-9b0281eabb83', type: 'project', title: 'Final Showcase' });
+    const second = getFeedItemDestination({ id: 'e6f08864-03ac-4fc4-9926-9b0281eabb84', type: 'project', title: 'Final Showcase', slug: 'final-showcase-2' });
+    expect(first).toEqual({ kind: 'internal', to: '/projects/final-showcase-e6f08864-03ac-4fc4-9926-9b0281eabb83' });
+    expect(second).toEqual({ kind: 'internal', to: '/projects/final-showcase-2-e6f08864-03ac-4fc4-9926-9b0281eabb84' });
+  });
   it('routes update posts with relative project links to the project', () => {
     expect(getLinkedPostDestination('/projects/project-123')).toEqual({
       kind: 'internal',
