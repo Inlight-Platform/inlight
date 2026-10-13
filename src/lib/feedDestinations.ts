@@ -1,13 +1,14 @@
+import { projectPath } from './publicPaths';
+
 type FeedDestinationItem = {
   id: string;
   slug?: string | null;
+  title?: string | null;
   type: string;
   user_id?: string | null;
   link_url?: string | null;
   project_id?: string | null;
 };
-
-const publicIdentifier = (item: FeedDestinationItem) => item.slug?.trim() || item.id;
 
 export type FeedDestination =
   | { kind: 'internal'; to: string }
@@ -51,7 +52,7 @@ export const getLinkedPostDestination = (linkUrl?: string | null): FeedDestinati
 
 export const getFeedItemDestination = (item: FeedDestinationItem): FeedDestination | null => {
   if (item.type === 'project') {
-    return { kind: 'internal', to: `/projects/${publicIdentifier(item)}` };
+    return { kind: 'internal', to: projectPath(item) };
   }
 
   if (item.type === 'show') {

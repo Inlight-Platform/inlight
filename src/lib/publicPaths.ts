@@ -27,7 +27,7 @@ export const publicIdentifier = (item: { slug?: string | null; title?: string | 
   item.slug?.trim() || slugifyTitle(item.title) || item.id;
 
 export const projectPath = (project: { slug?: string | null; title?: string | null; id: string }) =>
-  `/projects/${publicIdentifier(project)}`;
+  `/projects/${publicIdentifier(project)}-${project.id}`;
 
 export const eventIdentifier = (event: { slug?: string | null; title?: string | null; id: string }) => {
   const readableSlug = event.slug?.trim() || slugifyTitle(event.title);
