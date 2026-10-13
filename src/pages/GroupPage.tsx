@@ -28,6 +28,7 @@ import { FeedBentoCardWithComments, getBentoSize } from '@/components/feed/FeedB
 import { PostComments } from '@/components/feed/PostComments';
 import { PostCreator } from '@/components/feed/PostCreator';
 import { getFeedItemDestination } from '@/lib/feedDestinations';
+import { fetchGroupProjects } from '@/lib/groupProjects';
 import { groupEventPath, groupPostPath, groupProjectPath, identifierFallbackShortId, identifierFallbackUuid } from '@/lib/publicPaths';
 import { toast } from 'sonner';
 
@@ -114,25 +115,6 @@ interface GroupPost {
 interface PostGroupLink {
   post_id: string;
   posts: GroupPost | null;
-}
-
-interface ProjectGroupLink {
-  projects: {
-    id: string;
-    creator_id: string;
-    title: string;
-    description: string | null;
-    header_image_url: string | null;
-    main_image_url: string | null;
-    created_at: string;
-    category: string | null;
-    status: string | null;
-    link_url: string | null;
-    link_title: string | null;
-    visibility: string | null;
-    author_identity: string;
-    author_group_id: string | null;
-  } | null;
 }
 
 interface EventGroupLink {
@@ -333,16 +315,8 @@ const GroupPage: React.FC = () => {
     queryKey: ['group-projects', group?.id],
     enabled: !!group?.id && canViewPrivateGroup,
     queryFn: async () => {
-      const { data: links, error } = await supabase
-        .from('project_groups')
-        .select('project_id, projects(*)')
-        .eq('group_id', group!.id);
-      if (error) throw error;
-
-      const rows = ((links || []) as unknown as ProjectGroupLink[])
-        .map((link) => link.projects)
-        .filter((project): project is NonNullable<ProjectGroupLink['projects']> => Boolean(project));
-      const ids = [...new Set(rows.map((project) => project.creator_id))];
+      const rows = await fetchGroupProjects(group!.id);
+      const ids = [...new Set(rows.map((project) => project.creator_id).filter((id): id is string => Boolean(id)))];
       const { data: profiles } = ids.length
         ? await supabase.from('profiles_public').select('user_id, display_name, avatar_url').in('user_id', ids)
         : { data: [] };
@@ -351,7 +325,7 @@ const GroupPage: React.FC = () => {
       return rows.map((project) => ({
         id: project.id,
         type: 'project' as const,
-        user_id: project.creator_id,
+        user_id: project.creator_id || undefined,
         title: project.title,
         description: project.description || undefined,
         image_url: project.header_image_url || project.main_image_url,
@@ -365,7 +339,7 @@ const GroupPage: React.FC = () => {
         author_group_id: project.author_group_id,
         creator_profile: project.author_identity === 'group' && project.author_group_id === group!.id
           ? { display_name: group!.name, avatar_url: null }
-          : profileById.get(project.creator_id),
+          : project.creator_id ? profileById.get(project.creator_id) : undefined,
       }));
     },
   });
