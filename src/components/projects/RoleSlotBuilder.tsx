@@ -1,3 +1,4 @@
+import { JOBS_ENABLED } from '@/lib/featureFlags';
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -60,6 +61,8 @@ export const RoleSlotBuilder: React.FC<RoleSlotBuilderProps> = ({
   const assignedUserIds = roles
     .filter((r) => r.assignedUser)
     .map((r) => r.assignedUser!.user_id);
+
+  if (!JOBS_ENABLED) return null;
 
   return (
     <div className="space-y-4">

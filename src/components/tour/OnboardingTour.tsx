@@ -1,3 +1,4 @@
+import { JOBS_ENABLED } from '@/lib/featureFlags';
 import React, { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { driver, type Driver, type DriveStep } from 'driver.js';
@@ -80,7 +81,7 @@ const phases: Phase[] = [
     ],
   },
   // 3 - Opportunity Phase (Jobs)
-  {
+  ...(JOBS_ENABLED ? [{
     route: '/opportunities',
     steps: () => [
       {
@@ -92,7 +93,7 @@ const phases: Phase[] = [
         },
       },
     ],
-  },
+  }] : []),
   // 4 - Market Phase (Industry Now / stage-whisper)
   {
     route: '/stage-whisper',

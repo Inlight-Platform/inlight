@@ -1,3 +1,4 @@
+import { JOBS_ENABLED } from '@/lib/featureFlags';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useNavigate } from 'react-router-dom';
@@ -116,7 +117,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
   const { isAdmin } = useAdmin();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [postType, setPostType] = useState<PostType>(defaultPostType);
+  const [postType, setPostType] = useState<PostType>(!JOBS_ENABLED && defaultPostType === 'job' ? 'update' : defaultPostType);
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -162,7 +163,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
 
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
   useEffect(() => {
-    setPostType(defaultPostType);
+    setPostType(!JOBS_ENABLED && defaultPostType === 'job' ? 'update' : defaultPostType);
     if (defaultPostType === 'project') {
       openProjectCreator();
     }
@@ -500,7 +501,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
             <div className="flex-1 space-y-4">
               {/* Post Type Tabs */}
               <Tabs value={postType} onValueChange={handlePostTypeChange}>
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className={cn("grid w-full", JOBS_ENABLED ? "grid-cols-4" : "grid-cols-3")}>
                   <TabsTrigger value="update" className="flex items-center gap-1.5">
                     <MessageSquare className="h-4 w-4" />
                     <span className={cn('hidden sm:inline', compact && 'sr-only')}>Service</span>
@@ -509,10 +510,10 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
                     <Calendar className="h-4 w-4" />
                     <span className={cn('hidden sm:inline', compact && 'sr-only')}>Event</span>
                   </TabsTrigger>
-                  <TabsTrigger value="job" className="flex items-center gap-1.5">
+                  {JOBS_ENABLED && <TabsTrigger value="job" className="flex items-center gap-1.5">
                     <Briefcase className="h-4 w-4" />
                     <span className={cn('hidden sm:inline', compact && 'sr-only')}>Opportunity</span>
-                  </TabsTrigger>
+                  </TabsTrigger>}
                   <TabsTrigger value="project" className="flex items-center gap-1.5">
                     <Film className="h-4 w-4" />
                     <span className={cn('hidden sm:inline', compact && 'sr-only')}>Project</span>
@@ -520,7 +521,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
                 </TabsList>
               </Tabs>
 
-              {postType !== 'project' && (
+              {postType !== 'project' && (JOBS_ENABLED || postType !== 'job') && (
                 <>
                   {/* Title field for events and jobs */}
                   {(postType === 'event' || postType === 'job') && (

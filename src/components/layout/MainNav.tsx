@@ -1,3 +1,4 @@
+import { JOBS_ENABLED } from '@/lib/featureFlags';
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Briefcase, BookOpen, Settings, LogOut, LogIn, PanelLeftClose, PanelLeft, Bell, Shield, ShieldCheck, Sparkles, Network, Sun, Moon, UserRound, MoreHorizontal } from 'lucide-react';
@@ -48,15 +49,16 @@ const InlightHomeIcon: React.FC<{className?: string;}> = ({ className }) =>
 const navItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
 { label: 'Community', icon: UserRound, path: '/people' },
-{ label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
+...(JOBS_ENABLED ? [{ label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true }] : []),
 { label: 'Resources', icon: BookOpen, path: '/resources' },
 { label: 'Your Network', icon: Network, path: '/pie-chart' }];
 
 const mobileNavItems: NavItem[] = [
 { label: 'Home', icon: Home, path: '/feed' },
 { label: 'Community', icon: UserRound, path: '/people' },
-{ label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true },
-{ label: 'Resources', icon: BookOpen, path: '/resources' }];
+...(JOBS_ENABLED ? [{ label: 'Jobs', icon: Briefcase, path: '/opportunities', accent: true }] : []),
+{ label: 'Resources', icon: BookOpen, path: '/resources' },
+...(!JOBS_ENABLED ? [{ label: 'Your Network', icon: Network, path: '/pie-chart' }] : [])];
 
 export const MainNav: React.FC = () => {
   const location = useLocation();
@@ -541,13 +543,15 @@ export const MainNav: React.FC = () => {
               side="top"
               sideOffset={10}
               className="mb-1 w-64 border-[hsl(45_95%_58%/0.16)] bg-popover p-2 text-popover-foreground shadow-xl">
-              <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
-                <Link to="/pie-chart">
-                  <Network className="w-4 h-4" />
-                  <span>Your Network</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {JOBS_ENABLED && <>
+                <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
+                  <Link to="/pie-chart">
+                    <Network className="w-4 h-4" />
+                    <span>Your Network</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>}
               <DropdownMenuItem asChild className="gap-3 rounded-md px-3 py-2.5">
                 <Link to={`/profile/${user.id}`}>
                   <Avatar className="w-6 h-6 ring-1 ring-[hsl(45_95%_58%/0.3)]">

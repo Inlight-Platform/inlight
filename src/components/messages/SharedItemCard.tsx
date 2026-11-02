@@ -1,3 +1,4 @@
+import { JOBS_ENABLED } from '@/lib/featureFlags';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ExternalLink, FolderKanban, Theater, BookOpen, Briefcase, Film, User } from 'lucide-react';
@@ -70,6 +71,8 @@ const SharedItemCard: React.FC<SharedItemCardProps> = ({ data, isOwn, onCardClic
   };
 
   const hasUrl = !!data.url;
+
+  if (!JOBS_ENABLED && data.type === 'Job') return null;
 
   return (
     <button
