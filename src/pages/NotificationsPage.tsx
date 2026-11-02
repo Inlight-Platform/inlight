@@ -1,3 +1,4 @@
+import { JOBS_ENABLED } from '@/lib/featureFlags';
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Mail, FileText, UserPlus, Check, Trash2, Users, X, Link2, MessageSquare, Loader2, GraduationCap } from 'lucide-react';
@@ -26,6 +27,8 @@ const NotificationsPage: React.FC = () => {
     markAllAsRead,
     deleteNotification,
   } = useNotifications();
+
+  const visibleNotifications = notifications.filter((notification) => JOBS_ENABLED || (notification.type !== 'application' && notification.type !== 'application_response'));
 
   const { acceptRequest, rejectRequest } = useConnectionRequests();
   const { conversations, loadingConversations, totalUnread } = useMessages();
@@ -143,7 +146,7 @@ const NotificationsPage: React.FC = () => {
 
           <TabsContent value="notifications">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">{notifications.length} notifications</span>
+            <span className="text-sm text-muted-foreground">{visibleNotifications.length} notifications</span>
             {unreadCount > 0 && (
               <Button variant="ghost" size="sm" onClick={() => markAllAsRead.mutate()} className="text-xs">
                 <Check className="w-3 h-3 mr-1" /> Mark all read
@@ -151,14 +154,14 @@ const NotificationsPage: React.FC = () => {
             )}
           </div>
 
-            {notifications.length === 0 ? (
+            {visibleNotifications.length === 0 ? (
           <div className="py-16 text-center text-muted-foreground">
             <Bell className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="text-sm">No notifications yet</p>
           </div>
         ) : (
           <div className="divide-y divide-border rounded-lg border border-border overflow-hidden">
-            {notifications.map(notification => (
+            {visibleNotifications.map(notification => (
               <div
                 key={notification.id}
                 className={cn(

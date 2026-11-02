@@ -1,3 +1,4 @@
+import { JOBS_ENABLED } from '@/lib/featureFlags';
 import React, { useRef, useState } from 'react';
 import { isPast } from 'date-fns';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -440,12 +441,12 @@ const MySavesPage: React.FC = () => {
 
   const isLoading = loadingProjects || loadingShows || loadingFilms;
 
-  const totalSaves = savedProjects.length + visibleShows.length + visibleFilms.length + savedResources.length + savedJobs.length + savedPeople.length;
+  const totalSaves = savedProjects.length + visibleShows.length + visibleFilms.length + savedResources.length + (JOBS_ENABLED ? savedJobs.length : 0) + savedPeople.length;
   const routeStateRef = useRef((location.state as { returnTo?: string } | null) || null);
   const routeState = routeStateRef.current;
   const initialTab = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(
-    initialTab && ['projects', 'shows', 'films', 'people', 'resources', 'jobs'].includes(initialTab)
+    initialTab && (JOBS_ENABLED || initialTab !== 'jobs') && ['projects', 'shows', 'films', 'people', 'resources', 'jobs'].includes(initialTab)
       ? initialTab
       : 'projects'
   );
@@ -498,11 +499,11 @@ const MySavesPage: React.FC = () => {
           <div className="text-center py-16">
             <Bookmark className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-30" />
             <h2 className="text-xl font-semibold mb-2">No saves yet</h2>
-            <p className="text-muted-foreground">Browse projects, shows, resources, and jobs to start saving!</p>
+            <p className="text-muted-foreground">Browse projects, shows, resources{JOBS_ENABLED ? ', and jobs' : ''} to start saving!</p>
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-            <TabsList className="grid w-full max-w-3xl grid-cols-6 mx-auto">
+            <TabsList className={cn("grid w-full max-w-3xl mx-auto", JOBS_ENABLED ? "grid-cols-6" : "grid-cols-5")}>
               <TabsTrigger value="projects" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <FolderKanban className="w-4 h-4" />
                 <span className="hidden sm:inline">Projects</span> ({savedProjects.length})
@@ -523,10 +524,10 @@ const MySavesPage: React.FC = () => {
                 <BookOpen className="w-4 h-4" />
                 <span className="hidden sm:inline">Resources</span> ({savedResources.length})
               </TabsTrigger>
-              <TabsTrigger value="jobs" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              {JOBS_ENABLED && <TabsTrigger value="jobs" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <Briefcase className="w-4 h-4" />
                 <span className="hidden sm:inline">Jobs</span> ({savedJobs.length})
-              </TabsTrigger>
+              </TabsTrigger>}
             </TabsList>
 
             {/* Projects */}
@@ -792,7 +793,7 @@ const MySavesPage: React.FC = () => {
             </TabsContent>
 
             {/* Jobs */}
-            <TabsContent value="jobs">
+            {JOBS_ENABLED && <TabsContent value="jobs">
               {savedJobs.length === 0 ? (
                 <EmptyCategory icon={Briefcase} label="jobs" />
               ) : (
@@ -887,7 +888,7 @@ const MySavesPage: React.FC = () => {
                   })()}
                 </>
               )}
-            </TabsContent>
+            </TabsContent>}
           </Tabs>
         )}
       </div>
@@ -908,6 +909,7 @@ const MySavesPage: React.FC = () => {
         onSave={saveFilm}
         onUnsave={unsaveFilm}
       />
+      {JOBS_ENABLED && <>
       <OpportunityDetailSheet
         opportunity={detailJobView}
         open={!!detailJobView}
@@ -933,6 +935,7 @@ const MySavesPage: React.FC = () => {
           setDetailJobView(null);
         }}
       />
+      </>}
       <ShareDialog
         open={shareDialog.open}
         onOpenChange={(open) => setShareDialog(prev => ({ ...prev, open }))}

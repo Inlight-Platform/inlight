@@ -1,3 +1,4 @@
+import { JOBS_ENABLED } from '@/lib/featureFlags';
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ImageCarousel } from './ImageCarousel';
@@ -629,6 +630,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         document.body,
       )
     : null;
+
+  if (!JOBS_ENABLED && (item.type === 'job' || item.type === 'open_role')) return null;
 
   return (
     <>

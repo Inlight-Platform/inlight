@@ -1,3 +1,4 @@
+import { JOBS_ENABLED } from '@/lib/featureFlags';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -447,9 +448,9 @@ const ProjectsPage: React.FC = () => {
                 <Users className="w-3 h-3" />
                 <span className="hidden sm:inline">My </span>Network
               </TabsTrigger>
-              <TabsTrigger value="open-roles" className="flex-shrink-0 whitespace-nowrap">
+              {JOBS_ENABLED && <TabsTrigger value="open-roles" className="flex-shrink-0 whitespace-nowrap">
                 <span className="hidden sm:inline">Open </span>Roles
-              </TabsTrigger>
+              </TabsTrigger>}
               <TabsTrigger value="saved" className="flex-shrink-0 whitespace-nowrap">Saved</TabsTrigger>
               <TabsTrigger value="archive" className="gap-1 flex-shrink-0 whitespace-nowrap">
                 <Archive className="w-3 h-3" />
@@ -514,9 +515,9 @@ const ProjectsPage: React.FC = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="open-roles">
+          {JOBS_ENABLED && <TabsContent value="open-roles">
             <OpenRolesFeed />
-          </TabsContent>
+          </TabsContent>}
 
           <TabsContent value="saved">
             {!user ? (

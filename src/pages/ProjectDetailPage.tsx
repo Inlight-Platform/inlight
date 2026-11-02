@@ -1,3 +1,4 @@
+import { JOBS_ENABLED } from '@/lib/featureFlags';
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
@@ -1084,7 +1085,7 @@ const ProjectDetailPage: React.FC = () => {
         {resolvedProjectId && <ProjectInvitationPrompt projectId={resolvedProjectId} projectTitle={project.title} />}
 
         {/* Open Roles - Collapsible */}
-        <Collapsible
+        {JOBS_ENABLED && <Collapsible
           open={rolesOpen}
           onOpenChange={(open) => {
             setRolesManuallyToggled(true);
@@ -1173,7 +1174,7 @@ const ProjectDetailPage: React.FC = () => {
               </CardContent>
             </CollapsibleContent>
           </Card>
-        </Collapsible>
+        </Collapsible>}
 
         {/* Members Section */}
         <Card>

@@ -1,3 +1,4 @@
+import { JOBS_ENABLED } from '@/lib/featureFlags';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -151,7 +152,7 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
       const allPosts = [...transformedPosts, ...transformedEvents, ...transformedOpenRoles];
       allPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      return allPosts;
+      return allPosts.filter((post) => JOBS_ENABLED || (post.type !== 'job' && post.type !== 'open_role'));
     },
     enabled: !!userId,
   });

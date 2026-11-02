@@ -1,3 +1,4 @@
+import { JOBS_ENABLED } from '@/lib/featureFlags';
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, addMonths, isPast } from 'date-fns';
 import { Plus, Briefcase, TrendingUp, Clock, Loader2, Users, ExternalLink, FileText, ArrowLeft, ChevronRight } from 'lucide-react';
@@ -890,6 +891,7 @@ const OpportunitiesPage: React.FC = () => {
 
   return (
     <div className="w-full">
+      {JOBS_ENABLED && <>
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
@@ -1057,6 +1059,7 @@ const OpportunitiesPage: React.FC = () => {
         description="Are you sure you want to delete this opportunity? This action cannot be undone."
         isPending={deleteOpportunity.isPending}
       />
+      </>}
     </div>
   );
 };
