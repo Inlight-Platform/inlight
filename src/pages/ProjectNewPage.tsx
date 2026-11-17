@@ -124,7 +124,7 @@ const ProjectNewPage: React.FC = () => {
 
       if (projectVisibility === 'specific' && selectedRecipients.length > 0) {
         const { error: recipientError } = await supabase
-          .from('project_recipients' as never)
+          .from('project_recipients')
           .insert(
             selectedRecipients.map((recipient) => ({
               project_id: project.id,

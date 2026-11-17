@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { toast } from 'sonner';
+import type { OpportunityBrowseDatabase } from '@/integrations/supabase/opportunityBrowseTypes';
 
 const QUERY_TIMEOUT_MS = 10000;
 
@@ -18,22 +19,28 @@ export interface DBOpportunity {
   is_remote: boolean;
   compensation: string | null;
   experience_level: string;
-  roles: string[];
-  skills: string[];
-  requirements: string[];
+  roles: string[] | null;
+  skills?: string[];
+  requirements: string[] | null;
   deadline: string | null;
   start_date: string | null;
   duration: string | null;
-  tags: string[];
+  tags: string[] | null;
   is_featured: boolean;
-  action_type: string;
+  action_type: string | null;
   image_url: string | null;
   link_url: string | null;
   link_title: string | null;
   is_public?: boolean | null;
   created_at: string;
-  updated_at: string;
+  updated_at: string | null;
 }
+
+type PublicOpportunity = OpportunityBrowseDatabase['public']['Views']['opportunities_public_browse']['Row'];
+
+const hasRequiredPublicFields = (row: PublicOpportunity | DBOpportunity): row is DBOpportunity =>
+  row.title !== null && row.description !== null && row.type !== null && row.status !== null &&
+  row.is_remote !== null && row.experience_level !== null && row.is_featured !== null && row.created_at !== null;
 
 interface DBJobPost {
   id: string;
@@ -93,7 +100,7 @@ function toView(row: DBOpportunity): OpportunityView {
     compensation: row.compensation || undefined,
     experienceLevel: row.experience_level,
     roles: row.roles || [],
-    skills: (row as { skills?: string[] }).skills || [],
+    skills: row.skills || [],
     requirements: row.requirements || [],
     deadline: row.deadline || undefined,
     startDate: row.start_date || undefined,
@@ -194,7 +201,7 @@ function isUsableExternalUrl(value?: string | null) {
   }
 }
 
-function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+function withTimeout<T>(promise: PromiseLike<T>, label: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout>;
 
   const timeout = new Promise<never>((_, reject) => {
@@ -215,19 +222,16 @@ export function useOpportunities() {
     queryKey: ['opportunities', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
       const opportunityQuery = user
-        ? supabase
+        ? withTimeout(supabase
             .from('opportunities')
             .select('*')
-            .order('created_at', { ascending: false })
-        : (supabase as any)
+            .order('created_at', { ascending: false }), 'Loading opportunities')
+        : withTimeout(supabase
             .from('opportunities_public_browse')
             .select('*')
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false }), 'Loading opportunities');
 
-      const { data: opportunityRows, error: opportunitiesError } = await withTimeout(
-        opportunityQuery,
-        'Loading opportunities'
-      ).catch((error) => {
+      const { data: opportunityRows, error: opportunitiesError } = await opportunityQuery.catch((error) => {
         console.warn('Canonical opportunities failed to load; showing public feed jobs only.', error);
         return { data: [], error: null };
       });
@@ -237,14 +241,9 @@ export function useOpportunities() {
       }
 
       const buildPublicPostQuery = () => {
-        const source = user ? 'posts' : 'posts_public_browse';
-        const fields = user
-          ? 'id, user_id, content, image_url, link_url, link_title, created_at'
-          : 'id, content, image_url, link_url, link_title, created_at';
-        return (supabase as any)
-          .from(source)
-          .select(fields)
-          .order('created_at', { ascending: false });
+        return user
+          ? supabase.from('posts').select('id, user_id, content, image_url, link_url, link_title, created_at').order('created_at', { ascending: false })
+          : supabase.from('posts_public_browse').select('id, content, image_url, link_url, link_title, created_at').order('created_at', { ascending: false });
       };
 
       const loadFeedJobPosts = async () => {
@@ -273,7 +272,7 @@ export function useOpportunities() {
         }
 
         const rowsById = new Map<string, DBJobPost>();
-        [...((markedJobs.data || []) as DBJobPost[]), ...((linkedPosts.data || []) as DBJobPost[])]
+        [...(markedJobs.data || []), ...(linkedPosts.data || [])]
           .forEach((row) => rowsById.set(row.id, row));
 
         return Array.from(rowsById.values());
@@ -281,7 +280,9 @@ export function useOpportunities() {
 
       const jobPostRows = await loadFeedJobPosts();
 
-      const canonicalOpportunities = ((opportunityRows || []) as DBOpportunity[]).map(toView);
+      const canonicalOpportunities = (opportunityRows || [])
+        .filter((row): row is typeof row & DBOpportunity => user ? true : hasRequiredPublicFields(row))
+        .map(toView);
       const seenOpportunityKeys = new Set(canonicalOpportunities.map(normalizeOpportunityDedupeKey));
       const feedOnlyJobs = jobPostRows
         .map(postToView)

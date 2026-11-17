@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 import { isUserEmailConfirmed } from '@/lib/authVerification';
 
-const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const RequireAuth: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 

@@ -135,8 +135,8 @@ const RsvpRow: React.FC<RsvpRowProps> = ({ rsvp, formatDate }) => (
         <span className="italic">email hidden</span>
       )}
     </div>
-    {(rsvp as any).custom_answer && (
-      <p className="text-xs text-muted-foreground italic pl-5">"{(rsvp as any).custom_answer}"</p>
+    {rsvp.custom_answer && (
+      <p className="text-xs text-muted-foreground italic pl-5">"{rsvp.custom_answer}"</p>
     )}
     <div className="flex items-center gap-1 text-xs text-muted-foreground pl-5">
       <Clock className="w-3 h-3" />

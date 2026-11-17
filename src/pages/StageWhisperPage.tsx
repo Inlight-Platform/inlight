@@ -32,6 +32,7 @@ const EMPTY_FILTERS: FilterState = {
   borough: [],
   accessibility: []
 };
+type DeleteTable = 'nyc_shows' | 'film_metrics' | 'user_films' | 'user_music_shows';
 interface FilmMetric {
   id: string;
   title: string;
@@ -94,7 +95,7 @@ const StageWhisperPage: React.FC = () => {
   const [musicTab, setMusicTab] = useState<'concerts' | 'cabarets'>('concerts');
   const [archiveMode, setArchiveMode] = useState(false);
   const [selectedFilm, setSelectedFilm] = useState<FilmMetric | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; table: string; label: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; table: DeleteTable; label: string } | null>(null);
   const [targetShowId, setTargetShowId] = useState<string | null>(null);
   const [targetFilmId, setTargetFilmId] = useState<string | null>(null);
 
@@ -112,8 +113,8 @@ const StageWhisperPage: React.FC = () => {
   }, []);
 
   const adminDeleteMutation = useMutation({
-    mutationFn: async ({ id, table }: { id: string; table: string }) => {
-      const { error } = await supabase.from(table as any).delete().eq('id', id);
+    mutationFn: async ({ id, table }: { id: string; table: DeleteTable }) => {
+      const { error } = await supabase.from(table).delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -352,7 +353,7 @@ const StageWhisperPage: React.FC = () => {
     return `$${amount}`;
   };
   // Reset archive mode when switching tabs
-  const handleTabSwitch = (setter: Function, value: any) => {
+  const handleTabSwitch = <T,>(setter: (value: T) => void, value: T) => {
     setter(value);
     setArchiveMode(false);
   };
@@ -414,7 +415,7 @@ const StageWhisperPage: React.FC = () => {
           </div>
 
           {/* Industry Tabs */}
-          <Tabs value={industryTab} onValueChange={v => handleTabSwitch(setIndustryTab, v)} className="mb-4">
+          <Tabs value={industryTab} onValueChange={v => { if (v === 'theatre' || v === 'film' || v === 'music') handleTabSwitch(setIndustryTab, v); }} className="mb-4">
             <TabsList className="grid w-full max-w-md grid-cols-3 mx-auto">
               <TabsTrigger value="theatre" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
                 <Theater className="w-4 h-4" />
@@ -643,7 +644,7 @@ const StageWhisperPage: React.FC = () => {
                             </div>}
                           {/* Save Button */}
                           {user && <button
-                            onClick={(e) => { e.stopPropagation(); isFilmSaved(film.id) ? unsaveFilm(film.id) : saveFilm(film.id); }}
+                            onClick={(e) => { e.stopPropagation(); if (isFilmSaved(film.id)) unsaveFilm(film.id); else saveFilm(film.id); }}
                             className={`absolute top-2 left-2 p-2 rounded-full backdrop-blur-sm transition-all duration-200 ${isFilmSaved(film.id) ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-black/50 text-white hover:bg-primary hover:text-primary-foreground'}`}
                           >
                             <Heart className={`w-4 h-4 ${isFilmSaved(film.id) ? 'fill-current' : ''}`} />

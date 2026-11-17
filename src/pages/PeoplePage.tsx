@@ -297,11 +297,7 @@ const PeoplePage: React.FC = () => {
   const { data: departments = [], isLoading: departmentsLoading } = useQuery({
     queryKey: ['listed-departments'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('groups')
-        .select('id, slug, name, description')
-        .eq('is_listed', true)
-        .order('name');
+      const { data, error } = await supabase.rpc('get_discoverable_groups');
       if (error) throw error;
       return (data || []) as Department[];
     },

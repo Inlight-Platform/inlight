@@ -16,6 +16,8 @@ const { mockViewer } = vi.hoisted(() => ({
   mockViewer: { user: { id: 'viewer' } as { id: string } | null },
 }));
 
+const { projectFilters } = vi.hoisted(() => ({ projectFilters: [] as string[] }));
+
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ user: mockViewer.user, loading: false }),
 }));
@@ -154,7 +156,24 @@ vi.mock('@/integrations/supabase/client', () => {
     supabase: {
       from: (table: string) => {
         const resolve = () => Promise.resolve({ data: resultFor(table), error: null });
-        const chain: any = {
+        type MockChain = {
+          select: () => MockChain;
+          not: () => MockChain;
+          neq: () => MockChain;
+          order: () => MockChain;
+          limit: typeof resolve;
+          in: () => MockChain;
+          eq: () => MockChain;
+          or: (filter: string) => MockChain;
+          maybeSingle: () => Promise<{ data: null; error: null }>;
+          update: () => MockChain;
+          insert: () => MockChain;
+          delete: () => MockChain;
+          then?: (...args: Parameters<Promise<unknown>['then']>) => Promise<unknown>;
+          catch?: (...args: Parameters<Promise<unknown>['catch']>) => Promise<unknown>;
+          finally?: (...args: Parameters<Promise<unknown>['finally']>) => Promise<unknown>;
+        };
+        const chain: MockChain = {
           select: vi.fn(() => chain),
           not: vi.fn(() => chain),
           neq: vi.fn(() => chain),
@@ -162,7 +181,10 @@ vi.mock('@/integrations/supabase/client', () => {
           limit: vi.fn(resolve),
           in: vi.fn(() => chain),
           eq: vi.fn(() => chain),
-          or: vi.fn(() => chain),
+          or: vi.fn((filter: string) => {
+            if (table === 'projects_browse') projectFilters.push(filter);
+            return chain;
+          }),
           maybeSingle: vi.fn(async () => ({ data: null, error: null })),
           update: vi.fn(() => chain),
           insert: vi.fn(() => chain),
@@ -205,6 +227,14 @@ describe('FeedPage (filtered posts)', () => {
     mockMyGroups.length = 0;
     mockGroupAuthorLookupError.current = false;
     mockViewer.user = { id: 'viewer' };
+    projectFilters.length = 0;
+  });
+
+  it('includes legacy null visibility while excluding group projects in the feed query', async () => {
+    const FeedPage = (await import('@/pages/FeedPage')).default;
+    renderFeed(<FeedPage />);
+    expect(await screen.findByText('Public Project Teaser')).toBeDefined();
+    expect(projectFilters).toContain('visibility.is.null,visibility.neq.group');
   });
 
   it('shows public project teasers without a creator for signed-out visitors', async () => {

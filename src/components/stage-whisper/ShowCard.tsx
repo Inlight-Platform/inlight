@@ -26,6 +26,7 @@ export interface Show {
   show_times: string | null;
   submitted_by?: string | null;
   is_owner?: boolean | null;
+  is_anonymous?: boolean | null;
   badges?: string[] | null;
 }
 

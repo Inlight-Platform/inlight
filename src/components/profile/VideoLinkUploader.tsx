@@ -11,6 +11,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { errorMessage } from '@/lib/errorMessage';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -64,8 +65,8 @@ export const VideoLinkUploader: React.FC<VideoLinkUploaderProps> = ({ userId, on
       // Invalidate to refresh the media list
       await queryClient.invalidateQueries({ queryKey: ['user-media', userId] });
       onComplete?.();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to add video link');
+    } catch (error) {
+      toast.error(errorMessage(error, 'Failed to add video link'));
     } finally {
       setSaving(false);
     }

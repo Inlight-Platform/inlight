@@ -839,7 +839,7 @@ const OpportunitiesPage: React.FC = () => {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      const { data: applicationRows, error } = await (supabase as any)
+      const { data: applicationRows, error } = await supabase
         .rpc('get_my_role_applications_for_jobs');
 
       if (error) throw error;

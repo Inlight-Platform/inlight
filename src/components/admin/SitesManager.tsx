@@ -29,7 +29,7 @@ const SitesManager: React.FC = () => {
         .eq('is_active', true);
       if (error) throw error;
       const map: Record<string, number> = {};
-      (data || []).forEach((r: any) => {
+      (data || []).forEach((r) => {
         map[r.program_slug] = (map[r.program_slug] || 0) + 1;
       });
       return map;

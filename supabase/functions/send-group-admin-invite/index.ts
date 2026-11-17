@@ -14,6 +14,7 @@ type AdminInvite = {
   email: string;
   status: string;
   existing_user: boolean;
+  account_exists?: boolean;
   token?: string;
   group_name: string;
   group_slug: string;
@@ -136,7 +137,13 @@ Deno.serve(async (req) => {
 
     const siteUrl = getSiteUrl();
     const returnTo = `/groups/${invite.group_slug}`;
-    const inviteUrl = `${siteUrl}/auth?mode=signup&invite=${encodeURIComponent(invite.token)}&returnTo=${encodeURIComponent(returnTo)}`;
+    const inviteUrl = invite.account_exists
+      ? `${siteUrl}/auth?invite=${encodeURIComponent(invite.token)}&returnTo=${encodeURIComponent(returnTo)}`
+      : `${siteUrl}/auth?mode=signup&invite=${encodeURIComponent(invite.token)}&returnTo=${encodeURIComponent(returnTo)}`;
+    const instructions = invite.account_exists
+      ? "Confirm the email address on your existing account, then sign in."
+      : "Create your account and confirm your email address.";
+    const actionLabel = invite.account_exists ? "Sign in" : "Create your account";
     const subject = `You're invited to administer ${invite.group_name} on Inlight`;
     const noteHtml = personalNote
       ? `<p style="margin:16px 0;padding:12px 14px;background:#f6f1e8;border-radius:8px;color:#3d3327;">${escapeHtml(personalNote)}</p>`
@@ -146,7 +153,8 @@ Deno.serve(async (req) => {
         <h1 style="font-size:28px;line-height:1.2;margin:0 0 12px;">Administer ${escapeHtml(invite.group_name)} on Inlight</h1>
         <p style="margin:0 0 16px;">You've been invited to manage this department portal.</p>
         ${noteHtml}
-        <p style="margin:24px 0;"><a href="${escapeHtml(inviteUrl)}" style="display:inline-block;background:#171717;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;">Create your account</a></p>
+        <p>${escapeHtml(instructions)}</p>
+        <p style="margin:24px 0;"><a href="${escapeHtml(inviteUrl)}" style="display:inline-block;background:#171717;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;">${escapeHtml(actionLabel)}</a></p>
         <p style="font-size:13px;color:#666;margin:24px 0 0;">If the button does not work, paste this link into your browser:<br>${escapeHtml(inviteUrl)}</p>
       </div>`;
     const text = [
@@ -155,7 +163,8 @@ Deno.serve(async (req) => {
       "You've been invited to manage this department portal.",
       personalNote,
       "",
-      `Create your account: ${inviteUrl}`,
+      instructions,
+      `${actionLabel}: ${inviteUrl}`,
     ].filter(Boolean).join("\n");
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
 

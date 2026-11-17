@@ -13,6 +13,7 @@ import NewGroupMessageDialog from '@/components/messages/NewGroupMessageDialog';
 import SharedItemCard, { parseSharedItem, SharedItemData } from '@/components/messages/SharedItemCard';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { Show } from '@/components/stage-whisper/ShowCard';
 import { ShowDetailSheet } from '@/components/stage-whisper/ShowDetailSheet';
 import { FilmDetailSheet } from '@/components/stage-whisper/FilmDetailSheet';
@@ -22,6 +23,14 @@ import { OpportunityView } from '@/hooks/useOpportunities';
 import { useSavedShows } from '@/hooks/useSavedShows';
 import { useSavedFilms } from '@/hooks/useSavedFilms';
 import { useMinimizedChat } from '@/hooks/useMinimizedChat';
+
+const getLiveSkills = (row: Tables<'opportunities'>): string[] => {
+  const skills: unknown = Reflect.get(row, 'skills');
+  return Array.isArray(skills) &&
+    Array.from(skills).every((skill: unknown) => typeof skill === 'string')
+    ? skills
+    : [];
+};
 
 type ChatType = 'dm' | 'group';
 
@@ -33,7 +42,14 @@ const MessagesPage: React.FC = () => {
   const { minimize } = useMinimizedChat();
 
   // Read origin route from navigation state
-  const originRoute = (location.state as any)?.originRoute as string | undefined;
+  const routeState: unknown = location.state;
+  const originRoute =
+    typeof routeState === 'object' &&
+    routeState !== null &&
+    'originRoute' in routeState &&
+    typeof routeState.originRoute === 'string'
+      ? routeState.originRoute
+      : undefined;
 
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [chatType, setChatType] = useState<ChatType>('dm');
@@ -57,7 +73,7 @@ const MessagesPage: React.FC = () => {
     enabled: !!detailShowId,
   });
 
-  const { data: detailFilm } = useQuery<any | null>({
+  const { data: detailFilm } = useQuery({
     queryKey: ['msg-detail-film', detailFilmId],
     queryFn: async () => {
       if (!detailFilmId) return null;
@@ -79,7 +95,7 @@ const MessagesPage: React.FC = () => {
           company: data.company || undefined, location: data.location || 'Remote',
           isRemote: data.is_remote, compensation: data.compensation || undefined,
           experienceLevel: data.experience_level, roles: data.roles || [],
-          skills: (data as any).skills || [], requirements: data.requirements || [],
+          skills: getLiveSkills(data), requirements: data.requirements || [],
           deadline: data.deadline || undefined, startDate: data.start_date || undefined,
           duration: data.duration || undefined, tags: data.tags || [],
           createdAt: data.created_at, isFeatured: data.is_featured,

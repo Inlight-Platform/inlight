@@ -13,6 +13,7 @@ import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 import { toast } from 'sonner';
 import { Loader2, Plus, Upload, Trash2, Eye, EyeOff } from 'lucide-react';
 import { compressImage, isCompressibleImage } from '@/lib/imageCompression';
+import { errorMessage } from '@/lib/errorMessage';
 
 
 /* ─── Inline Auth Form ─── */
@@ -51,8 +52,8 @@ const InlineAuth: React.FC<{ programSlug: string; programName: string }> = ({ pr
         const { error } = await signIn(email, password);
         if (error) throw error;
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Authentication failed');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Authentication failed'));
     } finally {
       setLoading(false);
     }
@@ -212,8 +213,8 @@ const AddProfileDialog: React.FC<{
       const { data: urlData } = supabase.storage.from('profile-media').getPublicUrl(path);
       setHeadshotUrl(urlData.publicUrl);
       toast.success('Headshot uploaded');
-    } catch (err: any) {
-      toast.error(err.message || 'Upload failed');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Upload failed'));
     } finally {
       setUploading(false);
     }
@@ -410,8 +411,8 @@ const AdminAddProfileDialog: React.FC<{
       const { data: urlData } = supabase.storage.from('profile-media').getPublicUrl(path);
       setHeadshotUrl(urlData.publicUrl);
       toast.success('Headshot uploaded');
-    } catch (err: any) {
-      toast.error(err.message || 'Upload failed');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Upload failed'));
     } finally {
       setUploading(false);
     }
@@ -444,8 +445,8 @@ const AdminAddProfileDialog: React.FC<{
       onOpenChange(false);
       // Force refetch
       window.location.reload();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to add profile');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Failed to add profile'));
     } finally {
       setSaving(false);
     }
@@ -562,8 +563,8 @@ const ShowcaseJoinPage: React.FC = () => {
       toast.success(`Deleted ${deleteTarget.first_name} ${deleteTarget.last_name}'s profile`);
       setDeleteTarget(null);
       window.location.reload();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete profile');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Failed to delete profile'));
     }
   };
 

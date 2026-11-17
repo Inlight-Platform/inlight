@@ -5,8 +5,10 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Bookmark, BookmarkCheck, FolderKanban, Theater, Briefcase, BookOpen, ExternalLink, MessageSquare, Loader2, ChevronLeft, Film, User, Users } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { buildSharedItemMessage } from '@/components/messages/SharedItemCard';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json, Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedShows } from '@/hooks/useSavedShows';
 import { useSavedFilms } from '@/hooks/useSavedFilms';
@@ -54,14 +56,15 @@ interface FilmMetric {
   date: string;
 }
 
-const ShareDialog: React.FC<{
+export const ShareDialog: React.FC<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   itemTitle: string;
   itemUrl?: string;
   itemType: string;
   imageUrl?: string;
-}> = ({ open, onOpenChange, itemTitle, itemUrl, itemType, imageUrl }) => {
+  projectId?: string;
+}> = ({ open, onOpenChange, itemTitle, itemUrl, itemType, imageUrl, projectId }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -86,7 +89,7 @@ const ShareDialog: React.FC<{
   });
 
   const q = search.toLowerCase();
-  const filteredConnections = connections.filter((c: any) =>
+  const filteredConnections = connections.filter((c) =>
     !search || c.display_name?.toLowerCase().includes(q)
   );
   const filteredGroups = groupChats.filter(gc =>
@@ -98,6 +101,7 @@ const ShareDialog: React.FC<{
     title: itemTitle,
     url: itemUrl,
     image_url: imageUrl,
+    ...(itemType === 'Project' ? { project_id: projectId } : {}),
   });
 
   const handleShare = async (receiverId: string, receiverName: string) => {
@@ -111,8 +115,8 @@ const ShareDialog: React.FC<{
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast.success(`Shared with ${receiverName}!`);
       onOpenChange(false);
-    } catch {
-      toast.error('Failed to share');
+    } catch (error) {
+      toast.error(error instanceof Error && error.message === 'A valid project ID is required to share a project.' ? error.message : 'Failed to share');
     } finally {
       setSending(false);
     }
@@ -133,8 +137,8 @@ const ShareDialog: React.FC<{
       queryClient.invalidateQueries({ queryKey: ['group-chats'] });
       toast.success(`Shared to ${groupName}!`);
       onOpenChange(false);
-    } catch {
-      toast.error('Failed to share');
+    } catch (error) {
+      toast.error(error instanceof Error && error.message === 'A valid project ID is required to share a project.' ? error.message : 'Failed to share');
     } finally {
       setSending(false);
     }
@@ -164,7 +168,7 @@ const ShareDialog: React.FC<{
                   {filteredGroups.length > 0 && (
                     <p className="text-xs font-medium text-muted-foreground px-2 pb-1">People</p>
                   )}
-                  {filteredConnections.map((c: any) => (
+                  {filteredConnections.map((c) => (
                     <button
                       key={c.user_id}
                       onClick={() => handleShare(c.user_id, c.display_name || 'User')}
@@ -173,7 +177,7 @@ const ShareDialog: React.FC<{
                     >
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={c.avatar_url || undefined} />
-                        <AvatarFallback>{c.display_name?.[0] || 'U'}</AvatarFallback>
+                        <AvatarFallback aria-hidden="true">{c.display_name?.[0] || 'U'}</AvatarFallback>
                       </Avatar>
                       <span className="text-sm font-medium">{c.display_name || 'Unknown'}</span>
                     </button>
@@ -208,6 +212,20 @@ const ShareDialog: React.FC<{
   );
 };
 
+const getLiveSkills = (row: Tables<'opportunities'>): string[] => {
+  const skills: unknown = Reflect.get(row, 'skills');
+  return Array.isArray(skills) &&
+    Array.from(skills).every((skill: unknown) => typeof skill === 'string')
+    ? skills
+    : [];
+};
+
+const getMetadataString = (metadata: Json | null, key: string): string | undefined => {
+  if (metadata === null || typeof metadata !== 'object' || Array.isArray(metadata)) return undefined;
+  const value = metadata[key];
+  return typeof value === 'string' ? value : undefined;
+};
+
 const MySavesPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -223,6 +241,7 @@ const MySavesPage: React.FC = () => {
     url?: string;
     type: string;
     imageUrl?: string;
+    projectId?: string;
   }>({ open: false, title: '', type: '' });
 
   const [detailShow, setDetailShow] = useState<Show | null>(null);
@@ -323,13 +342,13 @@ const MySavesPage: React.FC = () => {
   });
 
   // Build lookup maps: id → live data, title → live data
-  const liveById = new Map(liveOpportunityData.map((o: any) => [o.id, o]));
-  const liveByTitle = new Map(liveOpportunityData.map((o: any) => [o.title, o]));
+  const liveById = new Map(liveOpportunityData.map((o): [string, typeof o] => [o.id, o]));
+  const liveByTitle = new Map(liveOpportunityData.map((o): [string, typeof o] => [o.title, o]));
 
   const getLiveRow = (item: SavedItem) =>
     (item.item_id ? liveById.get(item.item_id) : null) ?? liveByTitle.get(item.item_title) ?? null;
 
-  const buildViewFromLive = (row: any): OpportunityView => ({
+  const buildViewFromLive = (row: Tables<'opportunities'>): OpportunityView => ({
     id: row.id,
     title: row.title,
     description: row.description || '',
@@ -342,7 +361,7 @@ const MySavesPage: React.FC = () => {
     compensation: row.compensation || undefined,
     experienceLevel: row.experience_level || 'any',
     roles: row.roles || [],
-    skills: (row as any).skills || [],
+    skills: getLiveSkills(row),
     requirements: row.requirements || [],
     deadline: row.deadline || undefined,
     startDate: row.start_date || undefined,
@@ -364,26 +383,26 @@ const MySavesPage: React.FC = () => {
     return {
       id: item.item_id || item.id,
       title: item.item_title,
-      description: (item.item_metadata?.description as string) || '',
-      type: (item.item_metadata?.type as string) || 'job',
-      status: (item.item_metadata?.status as string) || 'open',
+      description: getMetadataString(item.item_metadata, 'description') || '',
+      type: getMetadataString(item.item_metadata, 'type') || 'job',
+      status: getMetadataString(item.item_metadata, 'status') || 'open',
       postedBy: '',
-      company: item.item_metadata?.company as string | undefined,
-      location: (item.item_metadata?.location as string) || '',
+      company: getMetadataString(item.item_metadata, 'company'),
+      location: getMetadataString(item.item_metadata, 'location') || '',
       isRemote: false,
-      compensation: item.item_metadata?.compensation as string | undefined,
-      experienceLevel: (item.item_metadata?.experienceLevel as string) || '',
+      compensation: getMetadataString(item.item_metadata, 'compensation'),
+      experienceLevel: getMetadataString(item.item_metadata, 'experienceLevel') || '',
       roles: [],
       skills: [],
       requirements: [],
-      deadline: (item.item_metadata?.deadline as string) || undefined,
+      deadline: getMetadataString(item.item_metadata, 'deadline') || undefined,
       tags: [],
-      createdAt: (item.item_metadata?.created_at as string) || item.saved_at,
+      createdAt: getMetadataString(item.item_metadata, 'created_at') || item.saved_at,
       isFeatured: false,
-      actionType: (item.item_metadata?.action_type as string) || 'apply',
-      imageUrl: (item.item_metadata?.image_url as string) || undefined,
-      linkUrl: (item.item_metadata?.link_url as string) || undefined,
-      linkTitle: (item.item_metadata?.link_title as string) || undefined,
+      actionType: getMetadataString(item.item_metadata, 'action_type') || 'apply',
+      imageUrl: getMetadataString(item.item_metadata, 'image_url') || undefined,
+      linkUrl: getMetadataString(item.item_metadata, 'link_url') || undefined,
+      linkTitle: getMetadataString(item.item_metadata, 'link_title') || undefined,
       source: 'opportunity' as const,
       applicants: [],
     };
@@ -393,8 +412,8 @@ const MySavesPage: React.FC = () => {
     const live = (item.item_id ? liveById.get(item.item_id) : null) ?? liveByTitle.get(item.item_title);
     if (live) return { deadline: live.deadline, status: live.status };
     return {
-      deadline: (item.item_metadata?.deadline as string | undefined) ?? null,
-      status: (item.item_metadata?.status as string | undefined) ?? null,
+      deadline: getMetadataString(item.item_metadata, 'deadline') ?? null,
+      status: getMetadataString(item.item_metadata, 'status') ?? null,
     };
   };
 
@@ -551,7 +570,7 @@ const MySavesPage: React.FC = () => {
                         <div className="flex items-center justify-between">
                           {project.category && <Badge variant="secondary" className="text-xs">{project.category}</Badge>}
                           <div className="flex gap-1">
-                            <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: project.title, url: projectPath(project), type: 'Project', imageUrl: project.header_image_url || project.main_image_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
+                            <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: project.title, url: projectPath(project), type: 'Project', projectId: project.id, imageUrl: project.header_image_url || project.main_image_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
                               <MessageSquare className="w-4 h-4 text-muted-foreground" />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); unsaveProject(project.id); }} className="p-1.5 rounded-full hover:bg-accent">
@@ -713,9 +732,9 @@ const MySavesPage: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {savedPeople.map(item => {
-                    const avatarUrl = item.item_metadata?.avatar_url as string | undefined;
-                    const headline = item.item_metadata?.headline as string | undefined;
-                    const location = item.item_metadata?.location as string | undefined;
+                    const avatarUrl = getMetadataString(item.item_metadata, 'avatar_url');
+                    const headline = getMetadataString(item.item_metadata, 'headline');
+                    const location = getMetadataString(item.item_metadata, 'location');
                     return (
                       <Card
                         key={item.id}
@@ -771,11 +790,11 @@ const MySavesPage: React.FC = () => {
                             <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                           )}
                         </div>
-                        {item.item_metadata?.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{item.item_metadata.description}</p>
+                        {getMetadataString(item.item_metadata, 'description') && (
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{getMetadataString(item.item_metadata, 'description')}</p>
                         )}
-                        {item.item_metadata?.category && (
-                          <Badge variant="secondary" className="text-xs mb-2">{item.item_metadata.category}</Badge>
+                        {getMetadataString(item.item_metadata, 'category') && (
+                          <Badge variant="secondary" className="text-xs mb-2">{getMetadataString(item.item_metadata, 'category')}</Badge>
                         )}
                         <div className="flex items-center justify-end gap-1 mt-2">
                           <button onClick={(e) => { e.stopPropagation(); setShareDialog({ open: true, title: item.item_title, url: item.item_url || undefined, type: 'Resource' }); }} className="p-1.5 rounded-full hover:bg-accent">
@@ -832,7 +851,7 @@ const MySavesPage: React.FC = () => {
                             onClick={async () => {
                               const live = getLiveRow(item);
                               if (live) { setDetailJobView(buildViewFromLive(live)); return; }
-                              let freshRow: any = null;
+                              let freshRow: Tables<'opportunities'> | null = null;
                               if (item.item_id) {
                                 const { data } = await supabase.from('opportunities').select('*').eq('id', item.item_id).maybeSingle();
                                 freshRow = data;
@@ -862,15 +881,15 @@ const MySavesPage: React.FC = () => {
                           >
                             <CardContent className="p-4">
                               <h3 className="font-semibold mb-1">{item.item_title}</h3>
-                              {item.item_metadata?.company && (
-                                <p className="text-sm text-muted-foreground mb-1">{item.item_metadata.company}</p>
+                              {getMetadataString(item.item_metadata, 'company') && (
+                                <p className="text-sm text-muted-foreground mb-1">{getMetadataString(item.item_metadata, 'company')}</p>
                               )}
-                              {item.item_metadata?.description && (
-                                <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{item.item_metadata.description}</p>
+                              {getMetadataString(item.item_metadata, 'description') && (
+                                <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{getMetadataString(item.item_metadata, 'description')}</p>
                               )}
                               <div className="flex flex-wrap gap-1 mb-2">
-                                {item.item_metadata?.type && <Badge variant="secondary" className="text-xs">{item.item_metadata.type}</Badge>}
-                                {item.item_metadata?.location && <Badge variant="outline" className="text-xs">{item.item_metadata.location}</Badge>}
+                                {getMetadataString(item.item_metadata, 'type') && <Badge variant="secondary" className="text-xs">{getMetadataString(item.item_metadata, 'type')}</Badge>}
+                                {getMetadataString(item.item_metadata, 'location') && <Badge variant="outline" className="text-xs">{getMetadataString(item.item_metadata, 'location')}</Badge>}
                               </div>
                               <div className="flex items-center justify-end gap-1">
                                 <button onClick={(e) => { e.stopPropagation(); const live = getLiveRow(item); const jobId = live?.id || item.item_id; setShareDialog({ open: true, title: item.item_title, type: 'Job', url: jobId ? `/opportunities?jobId=${jobId}` : undefined, imageUrl: live?.image_url || undefined }); }} className="p-1.5 rounded-full hover:bg-accent">
@@ -943,12 +962,13 @@ const MySavesPage: React.FC = () => {
         itemUrl={shareDialog.url}
         itemType={shareDialog.type}
         imageUrl={shareDialog.imageUrl}
+        projectId={shareDialog.projectId}
       />
     </div>
   );
 };
 
-const EmptyCategory: React.FC<{ icon: React.ComponentType<any>; label: string }> = ({ icon: Icon, label }) => (
+const EmptyCategory: React.FC<{ icon: LucideIcon; label: string }> = ({ icon: Icon, label }) => (
   <div className="text-center py-12">
     <Icon className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
     <p className="text-muted-foreground">No saved {label} yet</p>

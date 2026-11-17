@@ -41,7 +41,7 @@ export function useTour() {
       setHasCompleted(completed);
       localStorage.setItem(LS_KEY, completed ? '1' : '0');
 
-      const { data: facultyGroups } = await (supabase.rpc as any)('get_my_faculty_group');
+      const { data: facultyGroups } = await supabase.rpc('get_my_faculty_group');
       const isFaculty = Array.isArray(facultyGroups) && facultyGroups.length > 0;
 
       if (isFaculty) {

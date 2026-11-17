@@ -124,6 +124,8 @@ interface FeedItemProps {
   deleteActionLabel?: string;
   deleteDialogTitle?: string;
   deleteDialogDescription?: string;
+  deleteDialogConfirmLabel?: string;
+  deleteDialogPendingLabel?: string;
   deleteSuccessMessage?: string;
   canOpenEventDashboardOverride?: boolean;
 }
@@ -144,6 +146,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   deleteActionLabel = 'Delete',
   deleteDialogTitle,
   deleteDialogDescription,
+  deleteDialogConfirmLabel,
+  deleteDialogPendingLabel,
   deleteSuccessMessage,
   canOpenEventDashboardOverride = false,
 }) => {
@@ -197,7 +201,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({
   const { data: ticketAttendees = [] } = useQuery({
     queryKey: ['event-ticket-attendees', item.id, user?.id],
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)('get_public_event_ticket_attendees', {
+      const { data, error } = await supabase.rpc('get_public_event_ticket_attendees', {
         target_event_id: item.id,
       });
       if (error) throw error;
@@ -836,10 +840,14 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         )}
 
         {/* Visibility badge for non-public posts */}
-        {item.visibility && item.visibility !== 'public' && (item.type === 'post' || item.type === 'job' || item.type === 'event' || item.type === 'project') && (
+        {(item.visibility || item.type === 'project') && item.visibility !== 'public' && (item.type === 'post' || item.type === 'job' || item.type === 'event' || item.type === 'project') && (
           <div className="mb-3">
             <Badge variant="outline" className="text-xs gap-1">
-              {item.visibility === 'network' ? (
+              {item.type === 'project' && !item.visibility ? (
+                <><Lock className="h-3 w-3" /> Legacy audience</>
+              ) : item.visibility === 'private' ? (
+                <><Lock className="h-3 w-3" /> Private</>
+              ) : item.visibility === 'network' ? (
                 <><Users className="h-3 w-3" /> Network Only</>
               ) : item.visibility === 'group' ? (
                 <><Lock className="h-3 w-3" /> Group Only</>
@@ -1324,6 +1332,8 @@ export const FeedItem: React.FC<FeedItemProps> = ({
         onConfirm={handleDelete}
         title={deleteDialogTitle || `Delete this ${item.type === 'job' ? 'job post' : item.type}?`}
         description={deleteDialogDescription || `This will permanently delete this ${item.type}. This action cannot be undone.`}
+        confirmLabel={deleteDialogConfirmLabel}
+        pendingLabel={deleteDialogPendingLabel}
         isPending={deleteMutation.isPending}
       />
 

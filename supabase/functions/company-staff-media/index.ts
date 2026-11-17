@@ -19,7 +19,7 @@ function sanitizeFileName(name: string) {
   return (name || "company-image")
     .trim()
     .normalize("NFKD")
-    .replace(/[^\w.\-]+/g, "-")
+    .replace(/[^\w.-]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 120) || "company-image";

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js';
+import type { OpportunityBrowseDatabase } from '@/integrations/supabase/opportunityBrowseTypes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,6 +30,20 @@ import {
 import { Building2, Loader2, ExternalLink, CheckCircle2, XCircle, Copy, RefreshCw, UserPlus, Mail, Trash2, Plus, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+
+type RequesterProfile = OpportunityBrowseDatabase['public']['Functions']['get_company_requester_profiles']['Returns'][number];
+
+type ApproveCompanyResponse = {
+  error?: string;
+  approval_email_sent?: boolean;
+} | null;
+
+type DenyCompanyResponse = {
+  error?: string;
+  denial_email_sent?: boolean;
+} | null;
+
+type StaffLinkEmailResponse = { error?: string } | null;
 
 interface RequestRow {
   id: string;
@@ -77,25 +93,47 @@ interface StaffAccessRow {
 }
 
 const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
-  const context = (error as any)?.context;
-  if (context && typeof context.json === 'function') {
-    try {
-      const body = await context.clone().json();
-      const detailMessage = body?.details?.message || body?.details?.error || body?.details?.name;
-      if (body?.error && detailMessage) {
-        return `${body.error}: ${detailMessage}`;
-      }
-      return body?.error || body?.message || detailMessage || fallback;
-    } catch {
-      try {
-        const text = await context.clone().text();
-        if (text) return text;
-      } catch {
-        // Fall through to the normal Supabase error message.
+  const readField = (value: unknown, key: string): unknown => {
+    if (typeof value !== 'object' || value === null) return undefined;
+    return Reflect.get(value, key);
+  };
+  const readString = (value: unknown, key: string): string | undefined => {
+    const field = readField(value, key);
+    return typeof field === 'string' && field ? field : undefined;
+  };
+
+  try {
+    if (error instanceof FunctionsHttpError || error instanceof FunctionsRelayError) {
+      const context: unknown = error.context;
+      if (context instanceof Response && typeof context.json === 'function') {
+        try {
+          const body: unknown = await context.clone().json();
+          const details = readField(body, 'details');
+          const detailMessage = readString(details, 'message') ||
+            readString(details, 'error') ||
+            readString(details, 'name');
+          const bodyError = readString(body, 'error');
+          if (bodyError && detailMessage) {
+            return `${bodyError}: ${detailMessage}`;
+          }
+          return bodyError || readString(body, 'message') || detailMessage || fallback;
+        } catch {
+          try {
+            const text = await context.clone().text();
+            if (text) return text;
+          } catch {
+            // Fall through to the normal Supabase error message.
+          }
+        }
       }
     }
+    if (error instanceof Error && typeof error.message === 'string' && error.message) {
+      return error.message;
+    }
+  } catch {
+    return fallback;
   }
-  return (error as any)?.message || fallback;
+  return fallback;
 };
 
 const INITIAL_COMPANY_PAGE_COUNT = 4;
@@ -130,17 +168,17 @@ const CompanyRequestsManager: React.FC = () => {
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      const userIds = Array.from(new Set((reqs || []).map((r: any) => r.requester_id)));
-      let profileMap = new Map<string, any>();
+      const userIds = Array.from(new Set((reqs || []).map((r) => r.requester_id)));
+      let profileMap = new Map<string, RequesterProfile>();
       if (userIds.length) {
-        const { data: profiles, error: profilesError } = await (supabase.rpc as any)(
+        const { data: profiles, error: profilesError } = await supabase.rpc(
           'get_company_requester_profiles',
           { _user_ids: userIds }
         );
         if (profilesError) throw profilesError;
-        profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+        profileMap = new Map((profiles || []).map((p): [string, RequesterProfile] => [p.user_id, p]));
       }
-      return (reqs || []).map((r: any) => ({ ...r, profile: profileMap.get(r.requester_id) })) as RequestRow[];
+      return (reqs || []).map((r) => ({ ...r, profile: profileMap.get(r.requester_id) })) as RequestRow[];
     },
   });
 
@@ -159,25 +197,25 @@ const CompanyRequestsManager: React.FC = () => {
   const { data: staffAccessRows = [], isLoading: staffAccessLoading } = useQuery({
     queryKey: ['admin-company-staff-access'],
     queryFn: async () => {
-      const { data: rows, error } = await (supabase as any)
+      const { data: rows, error } = await supabase
         .from('company_staff_access')
         .select('id, company_id, email, staff_name, created_at, last_used_at, expires_at, revoked_at')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (rows || []) as StaffAccessRow[];
+      return rows || [];
     },
   });
 
   const approveMut = useMutation({
     mutationFn: async ({ id, adminNotes }: { id: string; adminNotes: string }) => {
-      const { data, error } = await supabase.functions.invoke('approve-company-account', {
+      const { data, error } = await supabase.functions.invoke<ApproveCompanyResponse>('approve-company-account', {
         body: { request_id: id, admin_notes: adminNotes || null },
       });
       if (error) throw new Error(await getFunctionErrorMessage(error, 'Failed to approve company account'));
-      if ((data as any)?.error) throw new Error((data as any).error);
+      if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: (result: any) => {
+    onSuccess: (result) => {
       if (result?.approval_email_sent === false) {
         toast.warning('Company account created, but the approval email was not sent');
       } else {
@@ -186,19 +224,19 @@ const CompanyRequestsManager: React.FC = () => {
       qc.invalidateQueries({ queryKey: ['admin-company-requests'] });
       reset();
     },
-    onError: (e: any) => toast.error(e.message || 'Failed to approve'),
+    onError: (e) => toast.error(e.message || 'Failed to approve'),
   });
 
   const denyMut = useMutation({
     mutationFn: async ({ id, adminNotes }: { id: string; adminNotes: string }) => {
-      const { data, error } = await supabase.functions.invoke('deny-company-account', {
+      const { data, error } = await supabase.functions.invoke<DenyCompanyResponse>('deny-company-account', {
         body: { request_id: id, admin_notes: adminNotes || null },
       });
       if (error) throw new Error(await getFunctionErrorMessage(error, 'Failed to deny company account request'));
-      if ((data as any)?.error) throw new Error((data as any).error);
+      if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: (result: any) => {
+    onSuccess: (result) => {
       if (result?.denial_email_sent === false) {
         toast.warning('Request denied, but the denial email was not sent');
       } else {
@@ -207,7 +245,7 @@ const CompanyRequestsManager: React.FC = () => {
       qc.invalidateQueries({ queryKey: ['admin-company-requests'] });
       reset();
     },
-    onError: (e: any) => toast.error(e.message || 'Failed to deny'),
+    onError: (e) => toast.error(e.message || 'Failed to deny'),
   });
 
   const createCompanyMut = useMutation({
@@ -219,7 +257,7 @@ const CompanyRequestsManager: React.FC = () => {
         }))
         .filter((staff) => staff.email);
 
-      const { data, error } = await (supabase.rpc as any)('admin_create_company_page', {
+      const { data, error } = await supabase.rpc('admin_create_company_page', {
         _name: companyName.trim(),
         _description: companyDescription.trim() || null,
         _website_url: companyWebsite.trim() || null,
@@ -254,7 +292,7 @@ const CompanyRequestsManager: React.FC = () => {
       qc.invalidateQueries({ queryKey: ['admin-company-staff-access'] });
       qc.invalidateQueries({ queryKey: ['admin-company-requests'] });
     },
-    onError: (e: any) => toast.error(e?.message || 'Failed to create company page'),
+    onError: (e) => toast.error(e?.message || 'Failed to create company page'),
   });
 
   const createStaffAccessMut = useMutation({
@@ -263,7 +301,7 @@ const CompanyRequestsManager: React.FC = () => {
       const cleanName = staffName?.trim() || '';
       if (!cleanEmail) throw new Error('Staff email is required');
 
-      const { data, error } = await (supabase.rpc as any)('add_company_staff_access', {
+      const { data, error } = await supabase.rpc('add_company_staff_access', {
         _company_id: companyId,
         _email: cleanEmail,
         _staff_name: cleanName || null,
@@ -271,7 +309,7 @@ const CompanyRequestsManager: React.FC = () => {
       });
       if (error) throw error;
 
-      const row = (data || [])[0] as { access_id: string; access_company_id: string; access_email: string; access_staff_name?: string | null; token: string } | undefined;
+      const row = (data || [])[0];
       if (!row?.token) throw new Error('No edit token returned');
 
       return {
@@ -292,12 +330,12 @@ const CompanyRequestsManager: React.FC = () => {
       setStaffNameByCompany((current) => ({ ...current, [companyId]: '' }));
       qc.invalidateQueries({ queryKey: ['admin-company-staff-access'] });
     },
-    onError: (e: any) => toast.error(e?.message || 'Failed to generate staff link'),
+    onError: (e) => toast.error(e?.message || 'Failed to generate staff link'),
   });
 
   const sendStaffLinkEmailMut = useMutation({
     mutationFn: async ({ invite, companyName }: { invite: StaffInviteLink; companyName: string }) => {
-      const { data, error } = await supabase.functions.invoke('send-company-staff-link', {
+      const { data, error } = await supabase.functions.invoke<StaffLinkEmailResponse>('send-company-staff-link', {
         body: {
           email: invite.email,
           staffName: invite.staffName || null,
@@ -306,11 +344,11 @@ const CompanyRequestsManager: React.FC = () => {
         },
       });
       if (error) throw new Error(await getFunctionErrorMessage(error, 'Failed to send staff edit link email'));
-      if ((data as any)?.error) throw new Error((data as any).error);
+      if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: () => toast.success('Staff edit link emailed'),
-    onError: (e: any) => toast.error(e?.message || 'Failed to send email'),
+    onError: (e) => toast.error(e?.message || 'Failed to send email'),
   });
 
   const deleteCompanyMut = useMutation({
@@ -329,7 +367,7 @@ const CompanyRequestsManager: React.FC = () => {
       qc.invalidateQueries({ queryKey: ['admin-company-staff-access'] });
       qc.invalidateQueries({ queryKey: ['admin-company-requests'] });
     },
-    onError: (e: any) => toast.error(e?.message || 'Failed to delete company page'),
+    onError: (e) => toast.error(e?.message || 'Failed to delete company page'),
   });
 
   const deleteReviewedRequestMut = useMutation({
@@ -346,7 +384,7 @@ const CompanyRequestsManager: React.FC = () => {
       setDeletingRequestId(null);
       qc.invalidateQueries({ queryKey: ['admin-company-requests'] });
     },
-    onError: (e: any) => toast.error(e?.message || 'Failed to remove reviewed request'),
+    onError: (e) => toast.error(e?.message || 'Failed to remove reviewed request'),
   });
 
   const reset = () => {

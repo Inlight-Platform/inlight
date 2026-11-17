@@ -42,7 +42,7 @@ export const useSavedShows = () => {
       queryClient.invalidateQueries({ queryKey: ['my-saved-shows'] });
       toast.success('Added to your show list');
     },
-    onError: (error: any, _showId, context) => {
+    onError: (error, _showId, context) => {
       if (context?.previous !== undefined) {
         queryClient.setQueryData(['saved-show-ids', user?.id], context.previous);
       }
@@ -55,7 +55,7 @@ export const useSavedShows = () => {
   const unsaveMutation = useMutation({
     mutationFn: async (showId: string) => {
       if (!user?.id) throw new Error('Must be logged in');
-      const { error } = await (supabase.rpc as any)('remove_saved_show', { p_show_id: showId });
+      const { error } = await supabase.rpc('remove_saved_show', { p_show_id: showId });
       if (error) throw error;
     },
     onMutate: async (showId) => {

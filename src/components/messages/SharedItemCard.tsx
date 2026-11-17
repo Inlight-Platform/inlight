@@ -9,7 +9,11 @@ export interface SharedItemData {
   title: string;
   url?: string;
   image_url?: string;
+  project_id?: string;
 }
+
+const isProjectId = (value: unknown): value is string =>
+  typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 // Prefix used to identify shared item messages
 export const SHARED_ITEM_PREFIX = '__SHARED_ITEM__';
@@ -23,13 +27,19 @@ export function parseSharedItem(content: string | null | undefined): SharedItemD
     const endIdx = trimmed.lastIndexOf(SHARED_ITEM_SUFFIX);
     if (endIdx === -1) return null;
     const jsonStr = trimmed.slice(SHARED_ITEM_PREFIX.length, endIdx);
-    return JSON.parse(jsonStr);
+    const data = JSON.parse(jsonStr);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+    if (data.type === 'Project' && data.project_id !== undefined && !isProjectId(data.project_id)) return null;
+    return data;
   } catch {
     return null;
   }
 }
 
 export function buildSharedItemMessage(data: SharedItemData): string {
+  if (data.type === 'Project' && !isProjectId(data.project_id)) {
+    throw new Error('A valid project ID is required to share a project.');
+  }
   return `${SHARED_ITEM_PREFIX}${JSON.stringify(data)}${SHARED_ITEM_SUFFIX}`;
 }
 

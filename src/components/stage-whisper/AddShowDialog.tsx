@@ -5,6 +5,7 @@ import { CalendarIcon, Plus, Loader2, ImagePlus, X, EyeOff } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { errorMessage } from '@/lib/errorMessage';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -163,9 +164,9 @@ export const AddShowDialog: React.FC<AddShowDialogProps> = ({ trigger, category 
         .getPublicUrl(fileName);
       
       return urlData.publicUrl;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Poster upload failed:', error);
-      toast.error('Poster upload failed: ' + (error?.message || 'Unknown error'));
+      toast.error('Poster upload failed: ' + errorMessage(error, 'Unknown error'));
       return null;
     } finally {
       setUploadingPoster(false);

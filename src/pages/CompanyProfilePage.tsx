@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { safeBack } from '@/lib/safeBack';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, skipToken } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { errorMessage } from '@/lib/errorMessage';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useCompanyFollows, Company } from '@/hooks/useCompanyFollows';
@@ -58,7 +59,7 @@ const sanitizeStorageFileName = (name: string) => {
   const trimmed = name.trim() || fallback;
   return trimmed
     .normalize('NFKD')
-    .replace(/[^\w.\-]+/g, '-')
+    .replace(/[^\w.-]+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 120) || fallback;
@@ -103,7 +104,11 @@ const uploadStaffCompanyMedia = async (
   kind: 'logo' | 'cover' | 'photo',
 ) => {
   const fileBase64 = await blobToBase64(blob);
-  const { data, error } = await supabase.functions.invoke('company-staff-media', {
+  const { data, error } = await supabase.functions.invoke<{
+    error?: string;
+    publicUrl?: string;
+    photoId?: string | null;
+  } | null>('company-staff-media', {
     body: {
       token,
       kind,
@@ -113,7 +118,7 @@ const uploadStaffCompanyMedia = async (
     },
   });
   if (error) throw error;
-  if ((data as any)?.error) throw new Error((data as any).error);
+  if (data?.error) throw new Error(data.error);
   return data as { publicUrl: string; photoId?: string | null };
 };
 
@@ -313,8 +318,8 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void; acces
       const url = await uploadImage(file, 'logo');
       setLogoUrl(url);
       toast.success('Logo uploaded');
-    } catch (err: any) {
-      toast.error(err.message || 'Logo upload failed');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Logo upload failed'));
     } finally {
       setLogoUploading(false);
     }
@@ -344,8 +349,8 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void; acces
       const url = await uploadImage(file, 'cover');
       setCoverUrl(url);
       toast.success('Cover uploaded');
-    } catch (err: any) {
-      toast.error(err.message || 'Cover upload failed');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Cover upload failed'));
     } finally {
       setCoverUploading(false);
     }
@@ -355,7 +360,7 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void; acces
     mutationFn: async () => {
       const cleanedFacts = funFacts.map(f => f.trim()).filter(Boolean);
       if (accessToken) {
-        const { error } = await (supabase.rpc as any)('update_company_with_staff_token', {
+        const { error } = await supabase.rpc('update_company_with_staff_token', {
           _token: accessToken,
           _name: name,
           _description: description || null,
@@ -400,7 +405,7 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void; acces
       onSaved();
       setOpen(false);
     },
-    onError: (e: any) => toast.error(e?.message || 'Failed to update company'),
+    onError: (e) => toast.error(e?.message || 'Failed to update company'),
   });
 
   return (
@@ -579,8 +584,8 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void; acces
           setCoverUploading(true);
           try {
             await uploadCroppedCover(blob);
-          } catch (err: any) {
-            toast.error(err.message || 'Cover crop failed');
+          } catch (err) {
+            toast.error(errorMessage(err, 'Cover crop failed'));
             throw err;
           } finally {
             setCoverUploading(false);
@@ -602,8 +607,8 @@ const EditCompanyDialog: React.FC<{ company: Company; onSaved: () => void; acces
           setLogoUploading(true);
           try {
             await uploadCroppedLogo(blob);
-          } catch (err: any) {
-            toast.error(err.message || 'Logo crop failed');
+          } catch (err) {
+            toast.error(errorMessage(err, 'Logo crop failed'));
             throw err;
           } finally {
             setLogoUploading(false);
@@ -662,7 +667,7 @@ const AddProjectDialog: React.FC<{ companyId: string; status: 'active' | 'archiv
 
       const normalizedLinkUrl = linkUrl.trim();
       if (accessToken) {
-        const { data, error } = await (supabase.rpc as any)('create_company_project_with_staff_token', {
+        const { data, error } = await supabase.rpc('create_company_project_with_staff_token', {
           _token: accessToken,
           _title: title.trim(),
           _description: description.trim() || null,
@@ -675,7 +680,7 @@ const AddProjectDialog: React.FC<{ companyId: string; status: 'active' | 'archiv
           _link_url: normalizedLinkUrl || null,
         });
         if (error) throw error;
-        return { id: data as string };
+        return { id: data };
       }
 
       if (!user?.id) throw new Error('You need to be signed in to add a company project.');
@@ -922,13 +927,13 @@ const CompanyProfilePage: React.FC = () => {
 
   const { data: staffAccess, isLoading: staffAccessLoading, isError: staffAccessError } = useQuery({
     queryKey: ['company-staff-access', staffToken],
-    queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)('validate_company_staff_access', {
+    queryFn: staffToken ? async () => {
+      const { data, error } = await supabase.rpc('validate_company_staff_access', {
         _token: staffToken,
       });
       if (error) throw error;
-      return (data || [])[0] as { company_id: string; email: string; staff_name: string | null } | undefined;
-    },
+      return (data || [])[0];
+    } : skipToken,
     enabled: !!staffToken,
     retry: false,
   });
@@ -1070,8 +1075,8 @@ const CompanyProfilePage: React.FC = () => {
       if (insertError) throw insertError;
       toast.success('Photo uploaded!');
       refetchPhotos();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to upload photo');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Failed to upload photo'));
     } finally {
       setUploadingPhoto(false);
       if (photoInputRef.current) photoInputRef.current.value = '';
@@ -1081,7 +1086,7 @@ const CompanyProfilePage: React.FC = () => {
   const deletePhotoMutation = useMutation({
     mutationFn: async (photoId: string) => {
       if (staffToken) {
-        const { error } = await (supabase.rpc as any)('delete_company_photo_with_staff_token', {
+        const { error } = await supabase.rpc('delete_company_photo_with_staff_token', {
           _token: staffToken,
           _photo_id: photoId,
         });
@@ -1333,7 +1338,7 @@ const CompanyProfilePage: React.FC = () => {
                 <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">Owner</span>
               </div>
             )}
-            {invitedStaff.map((staff: any) => {
+            {invitedStaff.map((staff) => {
               const displayName = staff.staff_name || staff.email;
               return (
                 <div key={`${staff.email}-${displayName}`} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">

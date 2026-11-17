@@ -54,6 +54,18 @@ const AuthConfirmPage: React.FC = () => {
         return;
       }
 
+      const inviteMarker = (() => {
+        try {
+          const value = localStorage.getItem('inlight_group_invite_confirm_return_to');
+          if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return { value, path: null };
+          const url = new URL(value, window.location.origin);
+          if (url.origin !== window.location.origin || !/^\/groups\/[^/]+$/.test(url.pathname)) return { value, path: null };
+          return { value, path: `${url.pathname}${url.search}${url.hash}` };
+        } catch {
+          return { value: null, path: null };
+        }
+      })();
+
       const { error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: otpType,
@@ -67,10 +79,18 @@ const AuthConfirmPage: React.FC = () => {
         return;
       }
 
+      try {
+        if (inviteMarker.value !== null && localStorage.getItem('inlight_group_invite_confirm_return_to') === inviteMarker.value) {
+          localStorage.removeItem('inlight_group_invite_confirm_return_to');
+        }
+      } catch {
+        // The captured destination remains available for this navigation.
+      }
       setState('success');
       setMessage('Your email is verified. Taking you to Inlight...');
       window.setTimeout(() => {
-        navigate('/feed', { replace: true });
+        const params = inviteMarker.path ? new URLSearchParams({ returnTo: inviteMarker.path }) : null;
+        navigate(params ? `/auth?${params.toString()}` : '/feed', { replace: true });
       }, 1200);
     };
 
@@ -122,7 +142,7 @@ const AuthConfirmPage: React.FC = () => {
 
             {showSignInButton && (
               <Button asChild className="mt-5 !h-12 w-full !rounded-xl !bg-foreground !text-background hover:!bg-foreground/90">
-                <Link to="/auth">{state === 'success' ? 'Continue to Sign In' : 'Back to Sign In'}</Link>
+                <Link to="/auth?mode=signin">{state === 'success' ? 'Continue to Sign In' : 'Back to Sign In'}</Link>
               </Button>
             )}
           </div>

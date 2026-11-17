@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
@@ -12,7 +13,7 @@ interface SavedItem {
   item_id: string | null;
   item_title: string;
   item_url: string | null;
-  item_metadata: Record<string, any>;
+  item_metadata: Json | null;
   saved_at: string;
 }
 
@@ -21,7 +22,7 @@ interface SaveItemInput {
   item_id?: string;
   item_title: string;
   item_url?: string;
-  item_metadata?: Record<string, any>;
+  item_metadata?: Record<string, Json | undefined>;
 }
 
 export const useSavedItems = () => {

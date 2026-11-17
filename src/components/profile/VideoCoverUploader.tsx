@@ -9,6 +9,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { errorMessage } from '@/lib/errorMessage';
 import { toast } from 'sonner';
 import { compressImage } from '@/lib/imageCompression';
 
@@ -80,8 +81,8 @@ export const VideoCoverUploader: React.FC<VideoCoverUploaderProps> = ({
       toast.success('Cover image updated!');
       onUpdate();
       setOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to upload cover');
+    } catch (error) {
+      toast.error(errorMessage(error, 'Failed to upload cover'));
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -104,8 +105,8 @@ export const VideoCoverUploader: React.FC<VideoCoverUploaderProps> = ({
       setPreviewUrl(null);
       onUpdate();
       setOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to remove cover');
+    } catch (error) {
+      toast.error(errorMessage(error, 'Failed to remove cover'));
     } finally {
       setUploading(false);
     }

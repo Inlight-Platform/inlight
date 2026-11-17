@@ -44,7 +44,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
 
   const acceptMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await (supabase as any).rpc('accept_project_invitation', {
+      const { error } = await supabase.rpc('accept_project_invitation', {
         _invitation_id: invitation.id,
       });
 

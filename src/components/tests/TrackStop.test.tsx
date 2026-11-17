@@ -15,7 +15,7 @@ beforeAll(() => {
     disconnect() {}
   });
 });
-afterAll(() => vi.unstubAllGlobals());
+afterAll(() => { vi.unstubAllGlobals(); });
 
 describe('TrackStop attribution', () => {
   it('renders each real post with its matching author and identity details', () => {

@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { formatSignInErrorMessage } from '@/lib/authPolicy';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthRestoreState, readAuthRestore, readAuthReturnTo, saveAuthReturnTo } from '@/lib/authRestore';
-import { isUserEmailConfirmed } from '@/lib/authVerification';
+import { emailNotConfirmedMessage, isUserEmailConfirmed } from '@/lib/authVerification';
 import { claimStoredInvites, hasStoredInviteTokens, storeInviteTokens } from '@/lib/inviteClaims';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset' | 'confirm';
@@ -274,6 +274,8 @@ const AuthPage: React.FC = () => {
   const [displayName, setDisplayName] = useState(routeState.displayName || '');
   const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
+  const [resendState, setResendState] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
   const [showSignupPasswordChecklist, setShowSignupPasswordChecklist] = useState(false);
   
   const {
@@ -400,11 +402,16 @@ const AuthPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setUnconfirmedEmail(null);
+    setResendState('idle');
     saveAuthReturnTo(redirectPath);
 
     const { error } = await signIn(email, password);
 
     if (error) {
+      if (('code' in error && error.code === 'email_not_confirmed') || error.message === emailNotConfirmedMessage) {
+        setUnconfirmedEmail(email.trim().toLowerCase());
+      }
       toast.error(formatSignInErrorMessage(error.message));
       setIsLoading(false);
     } else {
@@ -420,6 +427,11 @@ const AuthPage: React.FC = () => {
         return;
       }
       if (await redirectToClaimedInviteProject()) {
+        return;
+      }
+
+      if (inviteToken && returnToParam) {
+        navigate(returnToParam, redirectOptions);
         return;
       }
 
@@ -445,6 +457,21 @@ const AuthPage: React.FC = () => {
         });
         navigate(redirectPath, redirectOptions);
       }
+    }
+  };
+
+  const resendConfirmation = async () => {
+    if (!unconfirmedEmail || resendState === 'pending') return;
+    setResendState('pending');
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: unconfirmedEmail,
+        options: { emailRedirectTo: window.location.origin + '/auth/confirm' },
+      });
+      setResendState(error ? 'error' : 'success');
+    } catch {
+      setResendState('error');
     }
   };
 
@@ -476,6 +503,15 @@ const AuthPage: React.FC = () => {
       }
 
       saveAuthReturnTo(redirectPath);
+      try {
+        if (inviteToken && returnToParam) {
+          localStorage.setItem('inlight_group_invite_confirm_return_to', returnToParam);
+        } else {
+          localStorage.removeItem('inlight_group_invite_confirm_return_to');
+        }
+      } catch {
+        // Signup can proceed when browser storage is unavailable.
+      }
       const { data, error } = await signUp(email, password, displayName, inviteToken, creditInviteToken, authRedirectTo);
 
       if (error) {
@@ -839,6 +875,16 @@ const AuthPage: React.FC = () => {
               'Sign in'
             )}
           </Button>
+          {unconfirmedEmail && (
+            <div className="space-y-2 text-center text-sm" aria-live="polite">
+              <p>Confirmation needed for {unconfirmedEmail}.</p>
+              <button type="button" className="text-accent-blue hover:underline" onClick={resendConfirmation} disabled={resendState === 'pending'}>
+                {resendState === 'pending' ? 'Sending confirmation email...' : 'Resend confirmation email'}
+              </button>
+              {resendState === 'success' && <p>Confirmation email sent. Check your inbox.</p>}
+              {resendState === 'error' && <p role="alert">Could not resend the confirmation email. Please try again.</p>}
+            </div>
+          )}
           <button
             type="button"
             className="w-full text-center text-sm text-accent-blue hover:underline"

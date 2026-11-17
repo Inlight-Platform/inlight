@@ -45,6 +45,15 @@ type LandingEvent = {
   image_url: string | null;
 };
 
+const isLandingEvent = (event: {
+  id: string;
+  title: string | null;
+  event_date: string | null;
+  location: string | null;
+  event_type: string | null;
+  image_url: string | null;
+}): event is LandingEvent => event.title !== null && event.event_date !== null;
+
 type LandingProject = {
   id: string;
   title: string;
@@ -121,14 +130,14 @@ async function loadLandingPreviewData(): Promise<LandingPreviewData> {
       .not("display_name", "is", null)
       .order("activity_score", { ascending: false, nullsFirst: false })
       .limit(24),
-    (supabase as any)
+    supabase
       .from("events_public_browse")
       .select("id, title, event_date, location, event_type, image_url")
       .eq("visibility", "public")
       .gte("event_date", today)
       .order("event_date", { ascending: true })
       .limit(8),
-    (supabase as any)
+    supabase
       .from("events_public_browse")
       .select("id, title, event_date, location, event_type, image_url")
       .eq("visibility", "public")
@@ -162,8 +171,8 @@ async function loadLandingPreviewData(): Promise<LandingPreviewData> {
     }));
 
   const profileMap = new Map(profiles.map((profile) => [profile.user_id, profile]));
-  const upcomingEvents = upcomingEventsResult.data || [];
-  const pastEvents = pastEventsResult.data || [];
+  const upcomingEvents = (upcomingEventsResult.data || []).filter(isLandingEvent);
+  const pastEvents = (pastEventsResult.data || []).filter(isLandingEvent);
   const eventRows = upcomingEvents.length >= 5
     ? upcomingEvents.slice(0, 5)
     : [
@@ -307,7 +316,7 @@ export function EventsStop({ progress }: { progress: MotionValue<number> }) {
   const cardOpacity = useTransform(progress, [0, 0.3, 0.8, 1], [0, 1, 1, 0]);
   const { data, isLoading } = useLandingPreviewData();
 
-  const events = data?.events.length
+  const events: Array<{ id?: string; day: string; date: string; title: string; tag: string; loc: string; img: string; month: string; week: string; isPlaceholder: boolean }> = data?.events.length
     ? data.events.slice(0, 5).map((event, index) => ({
         id: event.id,
         day: formatEventDay(event.event_date),
@@ -439,11 +448,9 @@ export function ProjectsStop({ progress }: { progress: MotionValue<number> }) {
     [0, 0.5, 1],
     isMobile ? [120, 0, 0] : [120, 0, -80],
   );
-  const x = useTransform(
-    progress,
-    isMobile ? [0, 0.4, 0.9, 1] : [0, 0.5, 1],
-    isMobile ? ["0%", "0%", "-58%", "-58%"] : [200, 0, -150],
-  );
+  const mobileX = useTransform(progress, [0, 0.4, 0.9, 1], ["0%", "0%", "-58%", "-58%"]);
+  const desktopX = useTransform(progress, [0, 0.5, 1], [200, 0, -150]);
+  const x = isMobile ? mobileX : desktopX;
   const { data, isLoading } = useLandingPreviewData();
 
   const projects = data?.projects.length
@@ -637,11 +644,9 @@ export function NetworkStop({ progress }: { progress: MotionValue<number> }) {
 export function TrackStop({ progress }: { progress: MotionValue<number> }) {
   const isMobile = useIsMobile();
   const opacity = useTransform(progress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
-  const x = useTransform(
-    progress,
-    isMobile ? [0, 0.4, 0.9, 1] : [0, 0.5, 1],
-    isMobile ? ["0%", "0%", "-62%", "-62%"] : [200, 0, -150],
-  );
+  const mobileX = useTransform(progress, [0, 0.4, 0.9, 1], ["0%", "0%", "-62%", "-62%"]);
+  const desktopX = useTransform(progress, [0, 0.5, 1], [200, 0, -150]);
+  const x = isMobile ? mobileX : desktopX;
   const { data, isLoading } = useLandingPreviewData();
 
   const publicUpdates = data?.posts.length

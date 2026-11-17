@@ -49,7 +49,8 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, isFollowing, onFollo
           className="w-full rounded-full"
           onClick={(e) => {
             e.stopPropagation();
-            isFollowing ? onUnfollow(company.id) : onFollow(company.id);
+            if (isFollowing) onUnfollow(company.id);
+            else onFollow(company.id);
           }}
         >
           {isFollowing ? 'Following' : 'Follow'}

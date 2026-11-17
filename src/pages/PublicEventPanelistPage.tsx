@@ -30,16 +30,6 @@ type EventPanelist = {
   public_slug: string;
 };
 
-type EventSummary = {
-  id: string;
-  title: string | null;
-  description: string | null;
-  event_date: string | null;
-  event_type: string | null;
-  image_url: string | null;
-  location: string | null;
-};
-
 const resolveEventUuid = (eventId?: string) => {
   if (!eventId) return null;
   if (isUuid(eventId)) return eventId;
@@ -90,7 +80,7 @@ const PublicEventPanelistPage = () => {
       const panelist = (panelistRows?.[0] || null) as EventPanelist | null;
       if (!panelist) return null;
 
-      const { data: event } = await (supabase as any)
+      const { data: event } = await supabase
         .from('events_public_browse')
         .select('id, title, description, event_date, event_type, image_url, location')
         .eq('id', panelist.event_id)
@@ -98,7 +88,7 @@ const PublicEventPanelistPage = () => {
 
       return {
         panelist,
-        event: event as EventSummary | null,
+        event,
       };
     },
     enabled: !!panelistSlug,

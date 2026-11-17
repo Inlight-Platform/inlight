@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { errorMessage } from '@/lib/errorMessage';
+import type { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +40,7 @@ const CATEGORY_LABELS: Record<ShowCategory, string> = {
 const BroadwayShowsManager: React.FC<ShowsManagerProps> = ({ category }) => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingShow, setEditingShow] = useState<any>(null);
+  const [editingShow, setEditingShow] = useState<Tables<'nyc_shows'> | null>(null);
   const [uploading, setUploading] = useState(false);
   const [newTip, setNewTip] = useState({ tip_type: 'seating', content: '' });
   const [activeTab, setActiveTab] = useState('details');
@@ -228,7 +230,7 @@ const BroadwayShowsManager: React.FC<ShowsManagerProps> = ({ category }) => {
     setBadgeInput('');
   };
 
-  const handleEdit = (show: any) => {
+  const handleEdit = (show: Tables<'nyc_shows'>) => {
     setEditingShow(show);
     setFormData({
       title: show.title || '',
@@ -278,8 +280,8 @@ const BroadwayShowsManager: React.FC<ShowsManagerProps> = ({ category }) => {
 
       setFormData({ ...formData, poster_url: urlData.publicUrl });
       toast.success('Cover photo uploaded!');
-    } catch (error: any) {
-      toast.error('Failed to upload image: ' + error.message);
+    } catch (error: unknown) {
+      toast.error('Failed to upload image: ' + errorMessage(error, 'Unknown error'));
     } finally {
       setUploading(false);
       if (fileInputRef.current) {

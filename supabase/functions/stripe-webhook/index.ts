@@ -67,8 +67,6 @@ serve(async (req) => {
 
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
 
-    let event: Stripe.Event;
-
     if (!webhookSecret) {
       console.error("[STRIPE-WEBHOOK] Missing STRIPE_WEBHOOK_SECRET");
       return new Response(JSON.stringify({ error: "Webhook secret is not configured" }), {
@@ -84,7 +82,7 @@ serve(async (req) => {
       });
     }
 
-    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
+    const event: Stripe.Event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
 
     console.log(`[STRIPE-WEBHOOK] Event type: ${event.type}`);
 

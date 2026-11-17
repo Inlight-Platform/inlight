@@ -85,7 +85,7 @@ interface GroupAuditionSignup {
   timeslot_id: string;
   user_id: string;
   created_at: string;
-  profile?: ProfilePreview;
+  profile?: Omit<ProfilePreview, 'user_id'> & { user_id: string | null };
 }
 
 interface AuditionTimeslotDraft {
@@ -178,6 +178,10 @@ const GroupAdminDashboardPage: React.FC = () => {
   const invalidateGroupDashboard = () => {
     queryClient.invalidateQueries({ queryKey: ['group-dashboard-members', group?.id] });
     queryClient.invalidateQueries({ queryKey: ['group-dashboard-admins', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-admins', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-members', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-active-member-count', group?.id] });
+    queryClient.invalidateQueries({ queryKey: ['group-active-admin-user-ids', group?.id] });
     queryClient.invalidateQueries({ queryKey: ['group-dashboard-resources', group?.id] });
     queryClient.invalidateQueries({ queryKey: ['group-resources', group?.id] });
     queryClient.invalidateQueries({ queryKey: ['group-dashboard-insights', group?.id] });
@@ -217,7 +221,7 @@ const GroupAdminDashboardPage: React.FC = () => {
     },
   });
 
-  const { data: groupAdmins = [] } = useQuery<GroupAdmin[]>({
+  const { data: groupAdmins = [], isLoading: adminsLoading, isError: adminsError } = useQuery<GroupAdmin[]>({
     queryKey: ['group-dashboard-admins', group?.id],
     enabled: !!group?.id && isScopedAdmin,
     queryFn: async () => {
@@ -276,13 +280,13 @@ const GroupAdminDashboardPage: React.FC = () => {
     queryKey: ['group-dashboard-auditions', group?.id],
     enabled: !!group?.id && isScopedAdmin,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('group_auditions')
         .select('id, title, description, materials, is_published, created_at, group_audition_timeslots(id, starts_at, ends_at, capacity)')
         .eq('group_id', group!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []) as GroupAudition[];
+      return data || [];
     },
   });
 
@@ -291,14 +295,14 @@ const GroupAdminDashboardPage: React.FC = () => {
     enabled: !!group?.id && isScopedAdmin && auditions.length > 0,
     queryFn: async () => {
       const auditionIds = auditions.map((audition) => audition.id);
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('group_audition_signups')
         .select('id, audition_id, timeslot_id, user_id, created_at')
         .in('audition_id', auditionIds)
         .order('created_at', { ascending: true });
       if (error) throw error;
 
-      const signups = (data || []) as GroupAuditionSignup[];
+      const signups = data || [];
       const userIds = [...new Set(signups.map((signup) => signup.user_id))];
       if (userIds.length === 0) return signups;
 
@@ -363,6 +367,7 @@ const GroupAdminDashboardPage: React.FC = () => {
     [groupInvites],
   );
   const activeAdminCount = groupAdmins.filter((admin) => admin.status === 'active').length;
+  const activeAdminUserIdSet = new Set(groupAdmins.filter((admin) => admin.status === 'active' && admin.user_id).map((admin) => admin.user_id));
   const parsedMemberInviteEmails = useMemo(
     () => parseBulkEmails(memberInviteEmails),
     [memberInviteEmails],
@@ -381,7 +386,10 @@ const GroupAdminDashboardPage: React.FC = () => {
   });
 
   const removeMember = useMutation({
-    mutationFn: async ({ id }: { id: string; action: 'remove' | 'deny' }) => {
+    mutationFn: async ({ id, action }: { id: string; action: 'remove' | 'deny' }) => {
+      const member = members.find((row) => row.id === id);
+      if (action === 'remove' && (adminsLoading || adminsError || !member)) throw new Error('Admin status is unavailable. Try again.');
+      if (action === 'remove' && member && activeAdminUserIdSet.has(member.user_id)) throw new Error('Remove admin powers first.');
       const { error } = await supabase.from('group_members').delete().eq('id', id);
       if (error) throw error;
     },
@@ -446,9 +454,10 @@ const GroupAdminDashboardPage: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      const wasPending = adminPendingRemoval?.status === 'pending';
       setAdminPendingRemoval(null);
       invalidateGroupDashboard();
-      toast.success('Group admin removed');
+      toast.success(wasPending ? 'Admin invitation cancelled' : 'Admin powers removed');
     },
     onError: (error) => toast.error(errorMessage(error, 'Failed to remove admin')),
   });
@@ -572,7 +581,7 @@ const GroupAdminDashboardPage: React.FC = () => {
         };
       });
 
-      const { error } = await (supabase as any).rpc('create_group_audition', {
+      const { error } = await supabase.rpc('create_group_audition', {
         _group_id: group.id,
         _title: auditionTitle.trim(),
         _description: auditionDescription.trim(),
@@ -598,7 +607,7 @@ const GroupAdminDashboardPage: React.FC = () => {
     mutationFn: async (audition: GroupAudition) => {
       if (!group) throw new Error('Group not ready');
       const isPublished = !audition.is_published;
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('group_auditions')
         .update({ is_published: isPublished, updated_at: new Date().toISOString() })
         .eq('id', audition.id)
@@ -1176,19 +1185,21 @@ const GroupAdminDashboardPage: React.FC = () => {
               <div className="space-y-2">
                 {groupAdmins.map((admin) => {
                   const displayName = admin.profile?.display_name || admin.email || 'Pending admin';
-                  const canRemove = activeAdminCount > 1;
+                  const isPending = admin.status === 'pending';
+                  const canRemove = isPending || activeAdminCount > 1;
                   return (
                     <div key={admin.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
                       <PersonRow profile={admin.profile} fallback={displayName} secondary={admin.email || admin.status} />
+                      <Badge variant={isPending ? 'outline' : 'secondary'}>{isPending ? 'Pending' : 'Active'}</Badge>
                       <Button
                         size="sm"
                         variant="ghost"
                         className="text-destructive"
                         disabled={!canRemove || removeAdmin.isPending}
-                        title={canRemove ? 'Remove admin' : 'A group must have at least one active admin'}
+                        title={isPending ? 'Cancel admin invite' : canRemove ? 'Remove admin powers' : 'A group must have at least one active admin'}
                         onClick={() => setAdminPendingRemoval(admin)}
                       >
-                        Remove
+                        {isPending ? 'Cancel invite' : 'Remove'}
                       </Button>
                     </div>
                   );
@@ -1314,12 +1325,15 @@ const GroupAdminDashboardPage: React.FC = () => {
                         className="flex items-center justify-between gap-3 border-t px-3 py-3 first:border-t-0"
                       >
                         <PersonRow profile={member.profile} fallback="Member" secondary="Active member" />
+                        {activeAdminUserIdSet.has(member.user_id) && <Badge variant="secondary">Admin</Badge>}
+                        {activeAdminUserIdSet.has(member.user_id) && <span className="text-xs text-muted-foreground">Remove admin powers first.</span>}
                         {member.user_id !== user?.id && (
                           <Button
                             size="sm"
                             variant="ghost"
                             className="text-destructive"
-                            disabled={removeMember.isPending}
+                            disabled={removeMember.isPending || adminsLoading || adminsError || activeAdminUserIdSet.has(member.user_id)}
+                            title={activeAdminUserIdSet.has(member.user_id) ? 'Remove admin powers first.' : adminsLoading || adminsError ? 'Admin status is unavailable.' : 'Remove member'}
                             onClick={() => removeMember.mutate({ id: member.id, action: 'remove' })}
                           >
                             <Trash2 className="mr-1 h-4 w-4" />
@@ -1393,10 +1407,12 @@ const GroupAdminDashboardPage: React.FC = () => {
         onConfirm={() => {
           if (adminPendingRemoval) removeAdmin.mutate(adminPendingRemoval.id);
         }}
-        title="Remove group admin?"
-        description={`This removes ${
+        title={adminPendingRemoval?.status === 'pending' ? 'Cancel admin invite?' : 'Remove admin powers?'}
+        description={adminPendingRemoval?.status === 'pending' ? `This cancels the admin invitation for ${
           adminPendingRemoval?.profile?.display_name || adminPendingRemoval?.email || 'this person'
-        } from the ${group.name} admin list.`}
+        }.` : `This removes admin powers from ${
+          adminPendingRemoval?.profile?.display_name || adminPendingRemoval?.email || 'this person'
+        } in ${group.name}. Active admins remain group members; removing membership is separate.`}
         isPending={removeAdmin.isPending}
       />
       <DeleteConfirmDialog

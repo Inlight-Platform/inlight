@@ -1,10 +1,22 @@
-import { describe, it, vi, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { beforeEach, describe, it, vi, expect } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { projectPath } from '@/lib/publicPaths';
 
-const projectLookups = vi.hoisted(() => ({ filters: [] as Array<{ column: string; value: string }> }));
+const projectLookups = vi.hoisted(() => ({
+  filters: [] as Array<{ column: string; value: string }>,
+  visibility: 'private',
+  rpc: vi.fn(),
+  projectUpdates: vi.fn(),
+}));
+
+beforeEach(() => {
+  projectLookups.filters = [];
+  projectLookups.visibility = 'private';
+  projectLookups.rpc.mockClear();
+  projectLookups.projectUpdates.mockClear();
+});
 
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 'creator1' }, loading: false }),
@@ -57,10 +69,11 @@ vi.mock('@/integrations/supabase/client', () => {
     description: null,
     creator_id: 'creator1',
     is_public: false,
+    visibility: 'private',
     status: 'planning',
     created_at: '2026-01-01T00:00:00Z',
   };
-  const tableRows: Record<string, any[]> = {
+  const tableRows: Record<string, Record<string, unknown>[]> = {
     projects: [project],
     projects_browse: [{
       id: project.id,
@@ -70,6 +83,7 @@ vi.mock('@/integrations/supabase/client', () => {
       status: project.status,
       created_at: project.created_at,
       slug: project.slug,
+      visibility: project.visibility,
     }, {
       ...project,
       id: 'e6f08864-03ac-4fc4-9926-9b0281eabb83',
@@ -94,12 +108,30 @@ vi.mock('@/integrations/supabase/client', () => {
   return {
     supabase: {
       from: (table: string) => {
-        let updatePayload: any = null;
+        let updatePayload: Record<string, unknown> | null = null;
         const filters: Array<{ column: string; value: string }> = [];
-        const rows = () => (tableRows[table] || []).filter((row) => filters.every(({ column, value }) => row[column] === value));
-        const chain: any = {
+        const rows = () => (tableRows[table] || [])
+          .filter((row) => filters.every(({ column, value }) => row[column] === value))
+          .map((row) => table === 'projects_browse' && row.id === project.id
+            ? { ...row, visibility: projectLookups.visibility }
+            : row);
+        type MockRow = Record<string, unknown>;
+        type MockChain = {
+          select: () => MockChain;
+          update: (payload: MockRow) => MockChain;
+          insert: () => MockChain;
+          delete: () => MockChain;
+          order: () => Promise<{ data: MockRow[]; error: null }>;
+          in: () => Promise<{ data: MockRow[]; error: null }>;
+          eq: (column: string, value: string) => MockChain;
+          single: () => Promise<{ data: MockRow | null; error: Error | null }>;
+          maybeSingle: () => Promise<{ data: MockRow | null; error: null }>;
+          then: (resolve: (value: { data: MockRow[]; error: null }) => void) => void;
+        };
+        const chain: MockChain = {
           select: vi.fn(() => chain),
-          update: vi.fn((payload: any) => {
+          update: vi.fn((payload: MockRow) => {
+            if (table === 'projects') projectLookups.projectUpdates(payload);
             updatePayload = payload;
             return chain;
           }),
@@ -114,7 +146,7 @@ vi.mock('@/integrations/supabase/client', () => {
           }),
           single: vi.fn(async () => ({ data: rows()[0] || null, error: rows().length === 1 ? null : new Error('Project not found') })),
           maybeSingle: vi.fn(async () => ({ data: rows()[0] || null, error: null })),
-          then: (resolve: any) => resolve({ data: updatePayload ? [{ ...project, ...updatePayload }] : rows(), error: null }),
+          then: (resolve: (value: { data: MockRow[]; error: null }) => void) => resolve({ data: updatePayload ? [{ ...project, ...updatePayload }] : rows(), error: null }),
         };
         return chain;
       },
@@ -124,12 +156,20 @@ vi.mock('@/integrations/supabase/client', () => {
           getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'https://example.com/image.jpg' } })),
         }),
       },
-      rpc: vi.fn(async (name: string) => ({
-        data: name === 'get_project_member_details'
-          ? [{ is_public: project.is_public }]
-          : null,
-        error: null,
-      })),
+      rpc: projectLookups.rpc.mockImplementation(async (
+        name: string,
+        args?: { target_project_id?: string; target_audience?: string },
+      ) => {
+        if (name === 'set_project_audience' && args?.target_project_id === project.id && args.target_audience === 'public') {
+          projectLookups.visibility = 'public';
+        }
+        return {
+          data: name === 'get_project_member_details'
+            ? [{ is_public: projectLookups.visibility === 'public' }]
+            : null,
+          error: null,
+        };
+      }),
     },
   };
 });
@@ -140,7 +180,7 @@ const renderProject = async (path = '/projects/proj1') => {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
-  return render(
+  const rendered = render(
     <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={queryClient}>
         <Routes>
@@ -149,6 +189,7 @@ const renderProject = async (path = '/projects/proj1') => {
       </QueryClientProvider>
     </MemoryRouter>
   );
+  return { ...rendered, queryClient };
 };
 
 describe('ProjectDetailPage (public toggle)', () => {
@@ -173,14 +214,30 @@ describe('ProjectDetailPage (public toggle)', () => {
     expect(screen.queryByText('New project owned by current user')).toBeNull();
   });
 
-  it('fetches project by id and toggles is_public', async () => {
-    await renderProject();
+  it('fetches the project and saves a public audience', async () => {
+    const { queryClient } = await renderProject();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    try {
+      const audience = await screen.findByRole('button', { name: /^private$/i });
+      fireEvent.keyDown(audience, { key: 'ArrowDown' });
+      fireEvent.click(await screen.findByRole('menuitem', { name: /everyone/i }));
 
-    // Example: find toggle and click it
-    const toggle = await screen.findByRole('button', { name: /private/i });
-    fireEvent.click(toggle);
-
-    // Expect that UI reflects change (implementation-specific)
-    expect(await screen.findByText(/private/i)).toBeDefined();
+      await waitFor(() => expect(projectLookups.rpc).toHaveBeenCalledWith(
+        'set_project_audience',
+        {
+          target_project_id: 'proj1',
+          target_audience: 'public',
+          target_group_id: null,
+          target_recipient_ids: [],
+        },
+      ));
+      await waitFor(() => expect(invalidate).toHaveBeenCalledWith({
+        queryKey: ['project', 'proj1'],
+      }));
+      expect(await screen.findByRole('button', { name: /^everyone$/i })).toBeDefined();
+      expect(projectLookups.projectUpdates).not.toHaveBeenCalled();
+    } finally {
+      invalidate.mockRestore();
+    }
   });
 });

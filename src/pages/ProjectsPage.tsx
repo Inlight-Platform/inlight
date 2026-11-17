@@ -77,7 +77,8 @@ const ProjectsPage: React.FC = () => {
             .in('user_id', creatorIds)
         : { data: [] };
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = new Map<string, { user_id: string; display_name: string | null; avatar_url: string | null }>();
+      profiles?.forEach((profile) => profileMap.set(profile.user_id, profile));
 
       return data.map(project => ({
         ...project,

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { OpportunityBrowseDatabase } from '@/integrations/supabase/opportunityBrowseTypes';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,22 @@ interface OpenRole {
   projectDeadline: string | null;
   createdAt: string;
 }
+
+type PublicRoleRow =
+  OpportunityBrowseDatabase['public']['Views']['project_roles_public_browse']['Row'];
+
+const hasRequiredPublicRoleFields = (
+  role: PublicRoleRow,
+): role is PublicRoleRow & {
+  role_name: string;
+  project_id: string;
+  project_title: string;
+  created_at: string;
+} =>
+  role.role_name !== null &&
+  role.project_id !== null &&
+  role.project_title !== null &&
+  role.created_at !== null;
 
 export const OpenRolesFeed: React.FC<{
   prependOpportunities?: OpportunityView[];
@@ -131,28 +148,21 @@ export const OpenRolesFeed: React.FC<{
     queryKey: ['open-roles-feed', user?.id],
     queryFn: async () => {
       if (!user) {
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from('project_roles_public_browse')
           .select('id, role_name, project_id, project_title, project_deadline, created_at')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        return (data || []).map((role: {
-          id: string;
-          role_name: string;
-          project_id: string;
-          project_title: string;
-          project_deadline: string | null;
-          created_at: string;
-        }) => ({
+        return (data || []).filter(hasRequiredPublicRoleFields).map((role) => ({
           roleId: role.id,
           roleName: role.role_name,
           projectId: role.project_id,
           projectTitle: role.project_title,
           projectDeadline: role.project_deadline,
           createdAt: role.created_at,
-        } as OpenRole));
+        }));
       }
 
       const { data: openRoles, error } = await supabase

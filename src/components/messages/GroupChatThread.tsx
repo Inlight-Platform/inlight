@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useGroupChats } from '@/hooks/useGroupChats';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { Show } from '@/components/stage-whisper/ShowCard';
 import { ShowDetailSheet } from '@/components/stage-whisper/ShowDetailSheet';
 import { FilmDetailSheet } from '@/components/stage-whisper/FilmDetailSheet';
@@ -17,6 +18,14 @@ import ApplicationDialog from '@/components/opportunities/ApplicationDialog';
 import { OpportunityView } from '@/hooks/useOpportunities';
 import { useSavedShows } from '@/hooks/useSavedShows';
 import { useSavedFilms } from '@/hooks/useSavedFilms';
+
+const getLiveSkills = (row: Tables<'opportunities'>): string[] => {
+  const skills: unknown = Reflect.get(row, 'skills');
+  return Array.isArray(skills) &&
+    Array.from(skills).every((skill: unknown) => typeof skill === 'string')
+    ? skills
+    : [];
+};
 
 interface GroupChatThreadProps {
   groupChatId: string;
@@ -49,7 +58,7 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
     enabled: !!detailShowId,
   });
 
-  const { data: detailFilm } = useQuery<any | null>({
+  const { data: detailFilm } = useQuery({
     queryKey: ['gc-detail-film', detailFilmId],
     queryFn: async () => {
       if (!detailFilmId) return null;
@@ -71,7 +80,7 @@ const GroupChatThread: React.FC<GroupChatThreadProps> = ({ groupChatId, groupNam
           company: data.company || undefined, location: data.location || 'Remote',
           isRemote: data.is_remote, compensation: data.compensation || undefined,
           experienceLevel: data.experience_level, roles: data.roles || [],
-          skills: (data as any).skills || [], requirements: data.requirements || [],
+          skills: getLiveSkills(data), requirements: data.requirements || [],
           deadline: data.deadline || undefined, startDate: data.start_date || undefined,
           duration: data.duration || undefined, tags: data.tags || [],
           createdAt: data.created_at, isFeatured: data.is_featured,

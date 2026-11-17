@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@4.0.0";
 
 const corsHeaders = {
@@ -32,6 +32,36 @@ function escapeHtml(value: string) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function isRecordObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getJoinedProjectTitle(value: unknown): string | undefined {
+  return isRecordObject(value) && typeof value.title === "string"
+    ? value.title
+    : undefined;
+}
+
+function isBranchDataMalformed(type: string, d: Record<string, unknown>): boolean {
+  const malformedString = (value: unknown) => Boolean(value) && typeof value !== "string";
+  switch (type) {
+    case "message":
+    case "connection_request":
+      return malformedString(d.sender_id);
+    case "application":
+      return [d.applicant_id, d.project_id, d.role_id, d.application_id].some(malformedString);
+    case "invitation":
+      return [d.sender_id, d.role_id, d.role_name, d.project_title, d.project_id].some(malformedString);
+    case "application_accepted":
+      return [d.sender_id, d.project_id, d.role_name, d.project_title].some(malformedString);
+    case "job_match":
+      return malformedString(d.opportunity_id) || malformedString(d.opportunity_title) ||
+        (Boolean(d.matched_roles) && (!Array.isArray(d.matched_roles) || !d.matched_roles.every((role: unknown) => typeof role === "string")));
+    default:
+      return false;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -105,7 +135,8 @@ Deno.serve(async (req) => {
     const notificationType = record.type || "notification";
     const title = String(record.title || "New Notification");
     const body = String(record.body || "");
-    const data = record.data || {};
+    const rawData: unknown = record.data || {};
+    const data: Record<string, unknown> = isRecordObject(rawData) ? rawData : {};
 
     console.log("[send-notification-email] Notification type:", notificationType, "| title:", title);
 
@@ -161,18 +192,21 @@ Deno.serve(async (req) => {
 
 // --- Email content builders ---
 
+type NotificationClient = SupabaseClient;
+
 async function buildEmailContent(
-  supabase: any,
+  supabase: NotificationClient,
   notificationType: string,
   title: string,
   body: string,
-  data: any,
+  data: Record<string, unknown>,
   siteUrl: string
 ): Promise<{ emailSubject: string; emailBody: string }> {
   let emailSubject = title;
   let emailBody = "";
+  const malformed = isBranchDataMalformed(notificationType, data);
 
-  if (notificationType === "message" && data.sender_id) {
+  if (!malformed && notificationType === "message" && typeof data.sender_id === "string" && data.sender_id) {
     const senderName = await getDisplayName(supabase, data.sender_id);
     const isSharedItem = body && body.startsWith("Shared: ");
     const threadUrl = `${siteUrl}/notifications?tab=messages&thread=${data.sender_id}`;
@@ -191,12 +225,12 @@ async function buildEmailContent(
         <a href="${threadUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View</a>
       `;
     }
-  } else if (notificationType === "application" && data.applicant_id && data.project_id) {
+  } else if (!malformed && notificationType === "application" && typeof data.applicant_id === "string" && data.applicant_id && typeof data.project_id === "string" && data.project_id) {
     const applicantName = await getDisplayName(supabase, data.applicant_id);
     let roleName = "a role";
     let projectTitle = "your project";
 
-    if (data.role_id) {
+    if (typeof data.role_id === "string" && data.role_id) {
       const { data: roleData } = await supabase
         .from("project_roles")
         .select("role_name, projects(title)")
@@ -204,7 +238,7 @@ async function buildEmailContent(
         .single();
       if (roleData) {
         roleName = roleData.role_name || roleName;
-        projectTitle = (roleData.projects as any)?.title || projectTitle;
+        projectTitle = getJoinedProjectTitle(roleData.projects) || projectTitle;
       }
     }
 
@@ -214,7 +248,7 @@ async function buildEmailContent(
       <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${escapeHtml(applicantName)} applied for ${escapeHtml(roleName)} in ${escapeHtml(projectTitle)}!</h2>
       <a href="${reviewUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Review</a>
     `;
-  } else if (notificationType === "connection_request" && data.sender_id) {
+  } else if (!malformed && notificationType === "connection_request" && typeof data.sender_id === "string" && data.sender_id) {
     const senderName = await getDisplayName(supabase, data.sender_id);
     emailSubject = `${senderName} wants to connect with you!`;
     const profileUrl = `${siteUrl}/profile/${data.sender_id}`;
@@ -222,12 +256,12 @@ async function buildEmailContent(
       <h2 style="margin:0 0 12px;color:#1a1a2e;font-size:18px;font-weight:600;">${escapeHtml(senderName)} wants to connect with you!</h2>
       <a href="${profileUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
     `;
-  } else if (notificationType === "invitation" && data.sender_id) {
-    let roleName = data.role_name || "a role";
-    let projectTitle = data.project_title || "a project";
-    let projectId = data.project_id || "";
+  } else if (!malformed && notificationType === "invitation" && typeof data.sender_id === "string" && data.sender_id) {
+    let roleName = typeof data.role_name === "string" ? data.role_name || "a role" : "a role";
+    let projectTitle = typeof data.project_title === "string" ? data.project_title || "a project" : "a project";
+    let projectId = typeof data.project_id === "string" ? data.project_id || "" : "";
 
-    if (data.role_id) {
+    if (typeof data.role_id === "string" && data.role_id) {
       const { data: roleData } = await supabase
         .from("project_roles")
         .select("role_name, project_id, projects(title)")
@@ -235,7 +269,7 @@ async function buildEmailContent(
         .single();
       if (roleData) {
         roleName = roleData.role_name || roleName;
-        projectTitle = (roleData.projects as any)?.title || projectTitle;
+        projectTitle = getJoinedProjectTitle(roleData.projects) || projectTitle;
         projectId = roleData.project_id || "";
       }
     }
@@ -251,10 +285,10 @@ async function buildEmailContent(
       <p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${escapeHtml(creatorName)} has invited you to join <strong>${escapeHtml(projectTitle)}</strong> as <strong>${escapeHtml(roleName)}</strong>.</p>
       <a href="${projectUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">View Invitation</a>
     `;
-  } else if (notificationType === "application_accepted" && data.sender_id && data.project_id) {
+  } else if (!malformed && notificationType === "application_accepted" && typeof data.sender_id === "string" && data.sender_id && typeof data.project_id === "string" && data.project_id) {
     const senderName = await getDisplayName(supabase, data.sender_id);
-    const roleName = data.role_name || "a role";
-    const projectTitle = data.project_title || "a project";
+    const roleName = typeof data.role_name === "string" ? data.role_name || "a role" : "a role";
+    const projectTitle = typeof data.project_title === "string" ? data.project_title || "a project" : "a project";
     const projectUrl = `${siteUrl}/projects/${data.project_id}`;
 
     emailSubject = `CONGRATULATIONS! You've just been hired!`;
@@ -264,9 +298,9 @@ async function buildEmailContent(
       <p style="margin:0 0 24px;color:#4a4a68;font-size:14px;line-height:1.6;">${escapeHtml(senderName)} has offered you the role of <strong>${escapeHtml(roleName)}</strong> on <strong>${escapeHtml(projectTitle)}</strong>.</p>
       <a href="${projectUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;">Respond</a>
     `;
-  } else if (notificationType === "job_match" && data.opportunity_id) {
-    const opportunityTitle = data.opportunity_title || "a new opportunity";
-    const matchedRoles = data.matched_roles || [];
+  } else if (!malformed && notificationType === "job_match" && typeof data.opportunity_id === "string" && data.opportunity_id) {
+    const opportunityTitle = typeof data.opportunity_title === "string" ? data.opportunity_title || "a new opportunity" : "a new opportunity";
+    const matchedRoles = Array.isArray(data.matched_roles) ? data.matched_roles : [];
     const matchText = matchedRoles.length > 0
       ? `matching your skills: <strong>${matchedRoles.join(", ")}</strong>`
       : "matching your skillset";
@@ -289,7 +323,7 @@ async function buildEmailContent(
   return { emailSubject, emailBody };
 }
 
-async function getDisplayName(supabase: any, userId: string): Promise<string> {
+async function getDisplayName(supabase: NotificationClient, userId: string): Promise<string> {
   const { data } = await supabase
     .from("profiles")
     .select("display_name, email")
@@ -312,7 +346,7 @@ async function getDisplayName(supabase: any, userId: string): Promise<string> {
 }
 
 async function getProjectCreatorDisplayName(
-  supabase: any,
+  supabase: NotificationClient,
   projectId: string,
   fallbackUserId: string
 ): Promise<string> {

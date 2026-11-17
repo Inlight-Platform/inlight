@@ -85,7 +85,7 @@ export const EditShowDialog: React.FC<EditShowDialogProps> = ({ show, trigger, o
   const [showTimes, setShowTimes] = useState(show.show_times || '');
   const [officialUrl, setOfficialUrl] = useState(show.official_url || '');
   const [rushPolicy, setRushPolicy] = useState(show.rush_policy || '');
-  const [isAnonymous, setIsAnonymous] = useState((show as any).is_anonymous || false);
+  const [isAnonymous, setIsAnonymous] = useState(show.is_anonymous || false);
   const [teammates, setTeammates] = useState<Teammate[]>([]);
 
   // Poster image state
@@ -136,7 +136,7 @@ export const EditShowDialog: React.FC<EditShowDialogProps> = ({ show, trigger, o
     setShowTimes(show.show_times || '');
     setOfficialUrl(show.official_url || '');
     setRushPolicy(show.rush_policy || '');
-    setIsAnonymous((show as any).is_anonymous || false);
+    setIsAnonymous(show.is_anonymous || false);
     setPosterPreview(show.poster_url || null);
     setPosterFile(null);
   }, [show]);
@@ -201,7 +201,7 @@ export const EditShowDialog: React.FC<EditShowDialogProps> = ({ show, trigger, o
         .getPublicUrl(fileName);
 
       return urlData.publicUrl;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Poster upload failed:', error);
       return null;
     } finally {

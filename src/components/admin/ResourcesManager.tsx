@@ -102,7 +102,7 @@ const ResourcesManager: React.FC = () => {
       toast.success(editingId ? 'Resource updated' : 'Resource created');
       resetForm();
     },
-    onError: (e: any) => toast.error('Failed: ' + e.message),
+    onError: (e) => toast.error('Failed: ' + e.message),
   });
 
   const deleteMutation = useMutation({
@@ -115,7 +115,7 @@ const ResourcesManager: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['public-resources'] });
       toast.success('Resource deleted');
     },
-    onError: (e: any) => toast.error('Failed: ' + e.message),
+    onError: (e) => toast.error('Failed: ' + e.message),
   });
 
   const toggleActiveMutation = useMutation({
@@ -130,7 +130,7 @@ const ResourcesManager: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-resources'] });
       queryClient.invalidateQueries({ queryKey: ['public-resources'] });
     },
-    onError: (e: any) => toast.error('Failed: ' + e.message),
+    onError: (e) => toast.error('Failed: ' + e.message),
   });
 
   const resetForm = () => {

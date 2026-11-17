@@ -42,15 +42,15 @@ export const useShowcaseByProgram = (programSlug: string | undefined) => {
       if (error) throw error;
 
       // Fetch profile data for each user
-      const userIds = data.map((p: any) => p.user_id);
+      const userIds = data.map((p) => p.user_id);
       const { data: profiles } = await supabase
         .from('profiles_public')
         .select('user_id, display_name, stage_name, avatar_url, role, skills, graduation_year')
         .in('user_id', userIds);
 
-      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+      const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
 
-      return data.map((sp: any) => ({
+      return data.map((sp) => ({
         ...sp,
         ...(profileMap.get(sp.user_id) || {}),
       })) as ShowcaseProfile[];
@@ -106,7 +106,7 @@ export const useMyShowcaseProfile = () => {
           user_id: user.id,
           ...profile,
           updated_at: new Date().toISOString(),
-        } as any, { onConflict: 'user_id,program_slug' })
+        }, { onConflict: 'user_id,program_slug' })
         .select()
         .single();
 
@@ -118,7 +118,7 @@ export const useMyShowcaseProfile = () => {
       queryClient.invalidateQueries({ queryKey: ['showcase'] });
       toast.success('Showcase profile updated');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || 'Failed to update showcase profile');
     },
   });
@@ -136,7 +136,7 @@ export const useMyShowcaseProfile = () => {
       queryClient.invalidateQueries({ queryKey: ['showcase'] });
       toast.success('Profile deleted');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || 'Failed to delete profile');
     },
   });
