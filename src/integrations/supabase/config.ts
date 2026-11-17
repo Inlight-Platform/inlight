@@ -61,7 +61,7 @@ export const SUPABASE_URL = resolveLockedSupabaseUrl(envSupabaseUrl);
 
 export const SUPABASE_PUBLISHABLE_KEY = isSandboxMode
   ? envPublishableKey
-  : envPublishableKey || LOCKED_SUPABASE_PUBLISHABLE_KEY;
+  : LOCKED_SUPABASE_PUBLISHABLE_KEY;
 
 if (isSandboxMode && !SUPABASE_PUBLISHABLE_KEY) {
   throw new Error('Sandbox mode requires VITE_SUPABASE_PUBLISHABLE_KEY from the local Supabase stack.');
