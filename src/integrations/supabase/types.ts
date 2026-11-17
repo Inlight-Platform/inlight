@@ -3613,6 +3613,10 @@ export type Database = {
         Args: { _group_id: string }
         Returns: string
       }
+      get_discoverable_groups: {
+        Args: never
+        Returns: { id: string; slug: string; name: string; description: string | null }[]
+      }
       get_my_groups: {
         Args: never
         Returns: {

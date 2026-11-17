@@ -4,6 +4,32 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FeedItem, FeedItemData } from '@/components/feed/FeedItem';
 import { useAuth } from '@/hooks/useAuth';
+import type { Database, Json } from '@/integrations/supabase/types';
+import type { OpportunityBrowseDatabase } from '@/integrations/supabase/opportunityBrowseTypes';
+
+type PublicPost = OpportunityBrowseDatabase['public']['Functions']['get_public_profile_posts']['Returns'][number];
+type PublicEvent = OpportunityBrowseDatabase['public']['Functions']['get_public_profile_events']['Returns'][number];
+type PrivatePost = Database['public']['Tables']['posts']['Row'];
+type PrivateEvent = Database['public']['Tables']['events']['Row'];
+type ReadyPost = PublicPost & { content: string; created_at: string };
+type ReadyEvent = PublicEvent & { title: string; event_date: string; created_at: string };
+
+const hasPublicPostFields = (post: PublicPost): post is ReadyPost =>
+  !!post?.id && post.content !== null && post.created_at !== null;
+const hasPublicEventFields = (event: PublicEvent): event is ReadyEvent =>
+  !!event?.id && event.title !== null && event.event_date !== null && event.created_at !== null;
+
+const imagePositions = (value: Json | null): FeedItemData['image_positions'] => {
+  if (!Array.isArray(value)) return null;
+  return value.map((position) => {
+    if (!position || typeof position !== 'object' || Array.isArray(position)) return {};
+    return {
+      x: typeof position.x === 'number' ? position.x : null,
+      y: typeof position.y === 'number' ? position.y : null,
+      zoom: typeof position.zoom === 'number' ? position.zoom : null,
+    };
+  });
+};
 
 interface UserPostsProps {
   userId: string;
@@ -17,20 +43,25 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
     queryKey: ['user-posts', userId, user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
       // Fetch regular posts
-      const { data: postsData, error: postsError } = user
-        ? await supabase
-            .from('posts')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-        : await (supabase as any).rpc('get_public_profile_posts', { _user_id: userId });
-
-      if (postsError) throw postsError;
+      let privatePosts: PrivatePost[] = [];
+      let publicPosts: PublicPost[] = [];
+      if (user) {
+        const { data, error } = await supabase.from('posts').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+        if (error) throw error;
+        privatePosts = data || [];
+      } else {
+        const { data, error } = await supabase.rpc('get_public_profile_posts', { _user_id: userId });
+        if (error) throw error;
+        publicPosts = data || [];
+      }
 
       // Fetch events by this user
-      let eventsResult;
+      let privateEvents: PrivateEvent[] = [];
+      let publicEvents: PublicEvent[] = [];
       if (!user) {
-        eventsResult = await (supabase as any).rpc('get_public_profile_events', { _user_id: userId });
+        const { data, error } = await supabase.rpc('get_public_profile_events', { _user_id: userId });
+        if (error) throw error;
+        publicEvents = data || [];
       } else {
         let eventsQuery = supabase
           .from('events')
@@ -40,12 +71,10 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
         if (user.id !== userId) {
           eventsQuery = eventsQuery.in('visibility', ['public', 'network', 'specific']);
         }
-        eventsResult = await eventsQuery;
+        const { data, error } = await eventsQuery;
+        if (error) throw error;
+        privateEvents = data || [];
       }
-
-      const { data: eventsData, error: eventsError } = eventsResult;
-
-      if (eventsError) throw eventsError;
 
       // Fetch open roles from user's projects
       const { data: openRolesData, error: openRolesError } = user
@@ -83,17 +112,17 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
         : { data: null };
 
       // Transform posts to FeedItemData format
-      const transformedPosts: FeedItemData[] = (postsData || []).filter((post: any) => !!post?.id).map((post: any) => ({
+      const mapPost = (post: ReadyPost | PrivatePost, authorId: string): FeedItemData => ({
         id: post.id,
         type: post.link_url?.includes('job') || post.content?.toLowerCase().includes('hiring') ? 'job' : 'post',
-        user_id: post.user_id || '',
+        user_id: authorId,
         content: post.content,
         image_url: post.image_url,
         image_urls: post.image_urls,
         image_position_x: post.image_position_x,
         image_position_y: post.image_position_y,
         image_zoom: post.image_zoom,
-        image_positions: post.image_positions,
+        image_positions: imagePositions(post.image_positions),
         link_url: post.link_url,
         link_title: post.link_title,
         created_at: post.created_at,
@@ -101,34 +130,40 @@ export const UserPosts: React.FC<UserPostsProps> = ({ userId }) => {
           display_name: profile.display_name,
           avatar_url: profile.avatar_url,
         } : undefined,
-      }));
+      });
+      const transformedPosts = user
+        ? privatePosts.filter((post) => !!post?.id).map((post) => mapPost(post, post.user_id || ''))
+        : publicPosts.filter(hasPublicPostFields).map((post) => mapPost(post, ''));
 
       // Transform events to FeedItemData format
-      const transformedEvents: FeedItemData[] = (eventsData || []).filter((event: any) => !!event?.id).map((event: any) => ({
+      const mapEvent = (event: ReadyEvent | PrivateEvent, authorId: string): FeedItemData => ({
         id: event.id,
         type: 'event' as const,
-        user_id: event.user_id || '',
+        user_id: authorId,
         title: event.title,
-        description: event.description,
-        content: event.description,
+        description: event.description ?? undefined,
+        content: event.description ?? undefined,
         image_url: event.image_url,
-        image_urls: (event as any).image_urls ?? (event.image_url ? [event.image_url] : undefined),
+        image_urls: event.image_urls ?? (event.image_url ? [event.image_url] : undefined),
         image_position_x: event.image_position_x,
         image_position_y: event.image_position_y,
         image_zoom: event.image_zoom,
-        image_positions: (event as any).image_positions,
+        image_positions: imagePositions(event.image_positions),
         link_url: event.link_url,
         link_title: event.link_title,
         event_date: event.event_date,
-        location: event.location,
-        event_type: event.event_type,
+        location: event.location ?? undefined,
+        event_type: event.event_type ?? undefined,
         visibility: event.visibility,
         created_at: event.created_at,
         creator_profile: profile ? {
           display_name: profile.display_name,
           avatar_url: profile.avatar_url,
         } : undefined,
-      }));
+      });
+      const transformedEvents = user
+        ? privateEvents.filter((event) => !!event?.id).map((event) => mapEvent(event, event.user_id || ''))
+        : publicEvents.filter(hasPublicEventFields).map((event) => mapEvent(event, ''));
 
       // Transform open roles to FeedItemData format
       const transformedOpenRoles: FeedItemData[] = userOpenRoles.map((role) => ({

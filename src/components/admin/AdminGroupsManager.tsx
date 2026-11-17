@@ -32,9 +32,11 @@ type AdminGroupRow = {
 };
 
 type CreateGroupResult = {
-  group: AdminGroupRow;
-  inviteEmailError: string | null;
+  group: Pick<AdminGroupRow, 'id' | 'name' | 'slug'>;
+  results: AdminResult[];
 };
+
+type AdminResult = { email: string; outcome: string; status?: string | null; error?: string; delivery?: string };
 
 type GroupFormState = {
   name: string;
@@ -70,32 +72,20 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return message || fallback;
 };
 
-const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
-  const context = (error as { context?: { text?: () => Promise<string> } })?.context;
-
-  if (context?.text) {
-    try {
-      const text = await context.text();
-      if (text.trim()) return text.trim();
-    } catch {
-      // Fall back to the Supabase error message below.
-    }
-  }
-
-  return (error as { message?: string })?.message || fallback;
-};
-
 const AdminGroupsManager: React.FC = () => {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<AdminGroupRow | null>(null);
   const [form, setForm] = useState<GroupFormState>(emptyForm);
   const [slugTouched, setSlugTouched] = useState(false);
+  const [adminResults, setAdminResults] = useState<AdminResult[]>([]);
+  const [addingGroup, setAddingGroup] = useState<AdminGroupRow | null>(null);
+  const [addEmail, setAddEmail] = useState('');
 
   const { data: groups = [], isLoading, isError, error } = useQuery({
     queryKey: ['admin-groups'],
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)('admin_list_groups');
+      const { data, error } = await supabase.rpc('admin_list_groups');
       if (error) throw error;
       return (data || []) as AdminGroupRow[];
     },
@@ -131,42 +121,48 @@ const AdminGroupsManager: React.FC = () => {
     setForm((current) => ({ ...current, slug: normalizeSlug(slug) }));
   };
 
+  const deliverInvite = async (group: Pick<AdminGroupRow, 'id' | 'name' | 'slug'>, result: AdminResult): Promise<AdminResult> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-group-admin-invite', {
+        body: { groupId: group.id, email: result.email, note: `You've been invited to administer ${group.name} on Inlight.` },
+      });
+      if (error || !data?.invite) return { ...result, delivery: 'Delivery outcome unknown; check before retrying.' };
+      const status = data.invite.status as string;
+      const delivery = data.email?.notRequired ? 'Email not required' : data.email?.sent
+        ? 'Invitation email sent' : 'Invitation email failed';
+      return { ...result, status, delivery };
+    } catch {
+      return { ...result, delivery: 'Delivery outcome unknown; check before retrying.' };
+    }
+  };
+
   const createGroup = useMutation({
     mutationFn: async () => {
-      const initialAdminEmail = form.initialAdminEmail.trim().toLowerCase();
-      const { data, error } = await (supabase.rpc as any)('admin_create_group', {
+      const emails = form.initialAdminEmail.split(/[\n,;]+/).map((email) => email.trim()).filter(Boolean);
+      if (!emails.some((email) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) {
+        setAdminResults(emails.map((email) => ({ email, outcome: 'invalid' })));
+        throw new Error('At least one valid admin email is required');
+      }
+      const { data, error } = await supabase.rpc('admin_create_group_with_admins', {
         _name: form.name.trim(),
         _slug: normalizeSlug(form.slug),
         _description: form.description.trim() || null,
-        _initial_admin_email: initialAdminEmail,
+        _admin_emails: emails,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code) throw error;
+        throw new Error('Creation outcome unknown; check the department list before retrying.');
+      }
 
-      const group = data as AdminGroupRow;
-      const { error: inviteError } = await supabase.functions.invoke('send-platform-invite', {
-        body: {
-          email: initialAdminEmail,
-          note: `You've been invited to administer ${group.name} on Inlight.`,
-        },
-      });
-
-      return {
-        group,
-        inviteEmailError: inviteError
-          ? await getFunctionErrorMessage(inviteError, 'Failed to send invite email')
-          : null,
-      } satisfies CreateGroupResult;
+      const { group, results } = data;
+      const delivered = await Promise.all(results.map((result) => result.outcome === 'assigned' && result.status === 'pending'
+        ? deliverInvite(group, result) : Promise.resolve(result.outcome === 'assigned' ? { ...result, delivery: 'Email not required' } : result)));
+      return { group, results: delivered } satisfies CreateGroupResult;
     },
     onSuccess: (result) => {
-      toast.success(
-        result.inviteEmailError
-          ? 'Department portal created, but the invite email could not be sent'
-          : 'Department portal created and invite email sent',
-      );
-      if (result.inviteEmailError) {
-        toast.error(result.inviteEmailError);
-      }
+      setAdminResults(result.results);
+      toast.success('Department portal created; see admin results below');
       queryClient.invalidateQueries({ queryKey: ['admin-groups'] });
       queryClient.invalidateQueries({ queryKey: ['my-groups'] });
       resetCreateForm();
@@ -174,11 +170,26 @@ const AdminGroupsManager: React.FC = () => {
     onError: (e) => toast.error(getErrorMessage(e, 'Failed to create department portal')),
   });
 
+  const addAdmin = useMutation({
+    mutationFn: async () => {
+      if (!addingGroup) throw new Error('Group is required');
+      const email = addEmail.trim().toLowerCase();
+      const { data, error } = await supabase.functions.invoke('send-group-admin-invite', {
+        body: { groupId: addingGroup.id, email, note: `You've been invited to administer ${addingGroup.name} on Inlight.` },
+      });
+      if (error || !data?.invite) return { email, outcome: 'unknown', delivery: 'Assignment and delivery outcomes unknown; check before retrying.' } as AdminResult;
+      return { email, outcome: 'assigned', status: data.invite.status,
+        delivery: data.email?.notRequired ? 'Email not required' : data.email?.sent ? 'Invitation email sent' : 'Invitation email failed' } as AdminResult;
+    },
+    onSuccess: (result) => { setAdminResults([result]); setAddingGroup(null); setAddEmail(''); queryClient.invalidateQueries({ queryKey: ['admin-groups'] }); },
+    onError: (error) => toast.error(getErrorMessage(error, 'Failed to add admin')),
+  });
+
   const updateGroup = useMutation({
     mutationFn: async () => {
       if (!editingGroup) throw new Error('Group is required');
 
-      const { data, error } = await (supabase.rpc as any)('admin_update_group', {
+      const { data, error } = await supabase.rpc('admin_update_group', {
         _group_id: editingGroup.id,
         _name: form.name.trim(),
         _slug: normalizeSlug(form.slug),
@@ -186,7 +197,7 @@ const AdminGroupsManager: React.FC = () => {
       });
 
       if (error) throw error;
-      return data as AdminGroupRow;
+      return data;
     },
     onSuccess: () => {
       toast.success('Department portal updated');
@@ -242,7 +253,7 @@ const AdminGroupsManager: React.FC = () => {
               <DialogHeader>
                 <DialogTitle>Create Department Portal</DialogTitle>
                 <DialogDescription>
-                  Add a department shell and assign its first scoped admin.
+                  Add a department shell and assign its admins.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateSubmit} className="space-y-4">
@@ -253,17 +264,16 @@ const AdminGroupsManager: React.FC = () => {
                   onDescriptionChange={(description) => setForm((current) => ({ ...current, description }))}
                 />
                 <div className="space-y-2">
-                  <Label htmlFor="initial-admin-email">Initial admin email *</Label>
-                  <Input
+                  <Label htmlFor="initial-admin-email">Admin emails *</Label>
+                  <Textarea
                     id="initial-admin-email"
-                    type="email"
                     value={form.initialAdminEmail}
                     onChange={(event) => setForm((current) => ({ ...current, initialAdminEmail: event.target.value }))}
-                    placeholder="admin@school.edu"
+                    placeholder="admin@school.edu, another@school.edu"
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    This gives the department its first scoped admin for handoff.
+                    Separate addresses with commas or new lines.
                   </p>
                 </div>
                 <Button type="submit" className="w-full" disabled={createGroup.isPending}>
@@ -332,6 +342,7 @@ const AdminGroupsManager: React.FC = () => {
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </Button>
+                          <Button variant="outline" size="sm" onClick={() => setAddingGroup(group)}>Add admin</Button>
                           <Button variant="ghost" size="icon" asChild>
                             <Link to={`/groups/${group.slug}`} aria-label={`Open ${group.name}`}>
                               <ExternalLink className="h-4 w-4" />
@@ -347,6 +358,25 @@ const AdminGroupsManager: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {adminResults.length > 0 && <Card><CardHeader><CardTitle>Admin results</CardTitle></CardHeader><CardContent>
+        <ul>{adminResults.map((result, index) => <li key={`${result.email}-${index}`}>
+          {result.email || '(empty)'}: {result.outcome === 'assigned' ? `Assignment ${result.status}` : result.outcome}
+          {result.error ? ` — ${result.error}` : ''}{result.delivery ? ` — ${result.delivery}` : ''}
+        </li>)}</ul>
+      </CardContent></Card>}
+
+      <Dialog open={!!addingGroup} onOpenChange={(open) => { if (!open) setAddingGroup(null); }}>
+        <DialogContent><DialogHeader><DialogTitle>Add admin to {addingGroup?.name}</DialogTitle>
+          <DialogDescription>Enter the email address of the person you want to add as a department admin.</DialogDescription>
+        </DialogHeader>
+          <form onSubmit={(event) => { event.preventDefault(); addAdmin.mutate(); }}>
+            <Label htmlFor="add-admin-email">Admin email</Label>
+            <Input id="add-admin-email" type="email" value={addEmail} onChange={(event) => setAddEmail(event.target.value)} required />
+            <Button type="submit" disabled={addAdmin.isPending}>Add admin</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!editingGroup} onOpenChange={(open) => { if (!open) resetEditForm(); }}>
         <DialogContent className="max-w-lg">

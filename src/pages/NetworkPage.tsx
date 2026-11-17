@@ -108,7 +108,7 @@ const NetworkPage: React.FC = () => {
   });
 
   const filteredConnections = useMemo(() => {
-    let filtered = connectionProfiles.filter((profile) =>
+    const filtered = connectionProfiles.filter((profile) =>
       (profile.display_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (profile.role || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (profile.location || '').toLowerCase().includes(searchQuery.toLowerCase())

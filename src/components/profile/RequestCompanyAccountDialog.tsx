@@ -142,7 +142,7 @@ export const RequestCompanyAccountDialog: React.FC<Props> = ({ trigger }) => {
       resetForm();
       queryClient.invalidateQueries({ queryKey: ['company-account-requests', user?.id] });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       if (err instanceof z.ZodError) {
         toast.error(err.issues[0]?.message || 'Invalid input');
       } else {

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
+import { errorMessage } from '@/lib/errorMessage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +17,13 @@ import { Plus, Trash2, Edit, Film, Tv, Upload, X, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 type ContentType = 'theatres' | 'streaming';
+
+type FilmContentItem =
+  Pick<Tables<'streaming_content'>, 'id' | 'title' | 'poster_url' | 'rating'> &
+  Partial<Pick<Tables<'film_metrics'>, 'studio' | 'date' | 'ticket_url'>> &
+  Partial<Pick<Tables<'streaming_content'>,
+    'content_type' | 'platform' | 'description' | 'genre' | 'release_year' | 'watch_url'
+  >>;
 
 interface FilmContentManagerProps {
   contentType: ContentType;
@@ -44,7 +53,7 @@ const GENRES = [
 const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<Pick<Tables<'film_metrics'>, 'id' | 'title'> | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
@@ -64,7 +73,7 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
   // Form state for streaming
   const [streamingForm, setStreamingForm] = useState({
     title: '',
-    content_type: 'movie' as 'movie' | 'tv',
+    content_type: 'movie',
     platform: 'Netflix',
     description: '',
     poster_url: '',
@@ -115,7 +124,7 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
         date: data.date,
         weekend_gross: 0,
         total_gross: 0,
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -135,7 +144,7 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
         rating: data.rating,
         poster_url: data.poster_url || null,
         date: data.date,
-      } as any).eq('id', id);
+      }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -226,7 +235,7 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
     setIsDialogOpen(false);
   };
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: FilmContentItem) => {
     setEditingItem(item);
     if (isTheatres) {
       setTheatreForm({
@@ -282,8 +291,8 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
         setStreamingForm({ ...streamingForm, poster_url: urlData.publicUrl });
       }
       toast.success('Poster uploaded!');
-    } catch (error: any) {
-      toast.error('Failed to upload image: ' + error.message);
+    } catch (error: unknown) {
+      toast.error('Failed to upload image: ' + errorMessage(error, 'Unknown error'));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -568,7 +577,7 @@ const FilmContentManager: React.FC<FilmContentManagerProps> = ({ contentType }) 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item: any) => (
+              {items.map((item: FilmContentItem) => (
                 <TableRow key={item.id}>
                   <TableCell>
                     {item.poster_url ? (

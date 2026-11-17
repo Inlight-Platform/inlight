@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { errorMessage } from '@/lib/errorMessage';
 import { toast } from 'sonner';
 
 interface UploadProgress {
@@ -72,9 +73,9 @@ export const useProjectPhotoUpload = () => {
         id: photoRecord.id,
         image_url: urlData.publicUrl,
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Upload error:', error);
-      toast.error(error.message || 'Failed to upload photo');
+      toast.error(errorMessage(error, 'Failed to upload photo'));
       return null;
     } finally {
       setUploading(false);

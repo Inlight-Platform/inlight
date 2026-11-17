@@ -14,8 +14,8 @@ interface FilmMetric {
   week_change: number;
   rating: number;
   weeks_in_release: number;
-  poster_url?: string;
-  ticket_url?: string;
+  poster_url?: string | null;
+  ticket_url?: string | null;
   date: string;
 }
 

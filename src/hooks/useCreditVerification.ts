@@ -52,7 +52,7 @@ export function useCreditVouches(creditId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ['credits'] });
       toast.success('Vouched for this credit!');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       if (error.message?.includes('duplicate')) {
         toast.error('You already vouched for this credit');
       } else {
@@ -128,7 +128,7 @@ export function useVerificationRequests() {
       queryClient.invalidateQueries({ queryKey: ['my-verification-requests', user?.id] });
       toast.success('Verification request submitted!');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || 'Failed to submit request');
     },
   });
@@ -221,7 +221,7 @@ export function useAdminVerificationRequests() {
       queryClient.invalidateQueries({ queryKey: ['credits'] });
       toast.success('Request approved and credit verified!');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || 'Failed to approve request');
     },
   });
@@ -248,7 +248,7 @@ export function useAdminVerificationRequests() {
       queryClient.invalidateQueries({ queryKey: ['admin-verification-requests'] });
       toast.success('Request denied');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || 'Failed to deny request');
     },
   });

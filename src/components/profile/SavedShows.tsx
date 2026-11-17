@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { errorMessage } from '@/lib/errorMessage';
 
 interface SavedShowsProps {
   userId: string;
@@ -24,7 +25,7 @@ interface WatchlistRow {
   show_id: string;
   title: string;
   venue: string;
-  borough: string;
+  borough: string | null;
   show_type: string;
   poster_url: string | null;
   run_start: string | null;
@@ -141,9 +142,9 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
   const { data: rawSaves = [], isLoading } = useQuery({
     queryKey: ['saved-shows-profile', userId],
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)('get_profile_watchlist', { p_user_id: userId });
+      const { data, error } = await supabase.rpc('get_profile_watchlist', { p_user_id: userId });
       if (error) throw error;
-      return (data ?? []) as WatchlistRow[];
+      return data ?? [];
     },
     enabled: !!userId,
   });
@@ -162,7 +163,7 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
           .eq('user_id', user.id);
         if (error) throw error;
       } else {
-        const { error } = await (supabase.rpc as any)('remove_saved_show', { p_show_id: showId });
+        const { error } = await supabase.rpc('remove_saved_show', { p_show_id: showId });
         if (error) throw error;
       }
     },
@@ -193,7 +194,7 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
 
   const togglePublicMutation = useMutation({
     mutationFn: async (value: boolean) => {
-      const { error } = await (supabase.rpc as any)('set_watchlist_public', { value });
+      const { error } = await supabase.rpc('set_watchlist_public', { value });
       if (error) throw error;
     },
     onMutate: (value) => { setIsPublic(value); },
@@ -201,9 +202,9 @@ export const SavedShows: React.FC<SavedShowsProps> = ({
       toast.success(value ? 'Watchlist is now public' : 'Watchlist is now private');
       queryClient.invalidateQueries({ queryKey: ['watchlist-public', userId] });
     },
-    onError: (err: any, value) => {
+    onError: (err: unknown, value) => {
       setIsPublic(!value);
-      toast.error(err?.message || 'Failed to update privacy');
+      toast.error(errorMessage(err, 'Failed to update privacy'));
     },
   });
 

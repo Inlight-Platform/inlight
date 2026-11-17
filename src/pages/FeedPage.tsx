@@ -29,6 +29,7 @@ import { getFeedItemDestination } from '@/lib/feedDestinations';
 import { clearAuthRestore, readAuthRestore } from '@/lib/authRestore';
 import { eventIdentifier as publicEventIdentifier, eventPath, identifierFallbackUuid, projectPath } from '@/lib/publicPaths';
 import type { Database } from '@/integrations/supabase/types';
+import type { OpportunityBrowseDatabase } from '@/integrations/supabase/opportunityBrowseTypes';
 
 type NetworkFilter = 'all' | '1st';
 type BaseContentFilter = 'all' | 'you' | 'events' | 'projects' | 'updates';
@@ -50,6 +51,49 @@ type ProjectCategory = typeof PROJECT_CATEGORIES[number]['value'];
 const BASE_CONTENT_FILTERS: BaseContentFilter[] = ['all', 'you', 'events', 'projects', 'updates'];
 type EventRow = Database['public']['Tables']['events']['Row'];
 type BrowseEventRow = Omit<EventRow, 'user_id'> & { user_id?: string | null };
+type PublicPostSource =
+  OpportunityBrowseDatabase['public']['Views']['posts_public_browse']['Row'];
+type PublicFeedPost = {
+  [K in keyof PublicPostSource]:
+    K extends 'id' | 'visibility' ? PublicPostSource[K] : PublicPostSource[K] | null;
+};
+type CompletePublicFeedPost = PublicFeedPost & {
+  content: string;
+  created_at: string;
+};
+
+const hasRequiredPublicPostFields = (
+  post: PublicFeedPost,
+): post is CompletePublicFeedPost =>
+  post.content !== null && post.created_at !== null;
+
+type PublicEventRow =
+  OpportunityBrowseDatabase['public']['Views']['events_public_browse']['Row'];
+type CompletePublicEvent = PublicEventRow & {
+  title: string;
+  event_date: string;
+  created_at: string;
+  is_paid: boolean;
+};
+
+const hasRequiredPublicEventFields = (event: PublicEventRow): event is CompletePublicEvent =>
+  event.title !== null &&
+  event.event_date !== null &&
+  event.created_at !== null &&
+  event.is_paid !== null &&
+  (!event.is_paid || (event.currency !== null && event.currency !== ''));
+
+const eventImagePositions = (value: EventRow['image_positions']): FeedItemData['image_positions'] => {
+  if (!Array.isArray(value)) return null;
+  return value.map((position) => {
+    if (!position || typeof position !== 'object' || Array.isArray(position)) return {};
+    return {
+      x: typeof position.x === 'number' ? position.x : null,
+      y: typeof position.y === 'number' ? position.y : null,
+      zoom: typeof position.zoom === 'number' ? position.zoom : null,
+    };
+  });
+};
 
 const mapEventToFeedItem = (
   event: BrowseEventRow,
@@ -63,7 +107,7 @@ const mapEventToFeedItem = (
   description: event.description,
   image_url: event.image_url,
   image_urls: event.image_urls ?? (event.image_url ? [event.image_url] : undefined),
-  image_positions: event.image_positions,
+  image_positions: eventImagePositions(event.image_positions),
   link_url: event.link_url,
   link_title: event.link_title,
   created_at: event.created_at,
@@ -82,6 +126,36 @@ const mapEventToFeedItem = (
   image_position_y: event.image_position_y,
   image_zoom: event.image_zoom,
   creator_profile: creatorProfile,
+});
+
+const mapPublicEventToFeedItem = (event: CompletePublicEvent): FeedItemData => ({
+  id: event.id,
+  slug: event.slug,
+  type: 'event',
+  user_id: '',
+  title: event.title,
+  description: event.description ?? undefined,
+  image_url: event.image_url,
+  image_urls: event.image_urls ?? (event.image_url ? [event.image_url] : undefined),
+  image_positions: eventImagePositions(event.image_positions),
+  link_url: event.link_url,
+  link_title: event.link_title,
+  created_at: event.created_at,
+  event_date: event.event_date,
+  location: event.location ?? undefined,
+  event_type: event.event_type ?? undefined,
+  is_paid: event.is_paid,
+  price: event.price,
+  currency: event.currency,
+  stripe_price_id: event.stripe_price_id,
+  payment_link_url: event.payment_link_url,
+  visibility: event.visibility,
+  author_identity: undefined,
+  author_group_id: undefined,
+  image_position_x: event.image_position_x,
+  image_position_y: event.image_position_y,
+  image_zoom: event.image_zoom,
+  creator_profile: undefined,
 });
 
 const fetchPublicProfileMap = async (userIds: string[]) => {
@@ -397,7 +471,29 @@ const FeedPage: React.FC = () => {
   const { data: posts = [], isLoading: postsLoading } = useQuery({
     queryKey: ['feed-posts', user?.id ? 'authenticated' : 'visitor'],
     queryFn: async () => {
-      let query = (user ? supabase.from('posts') : (supabase as any).from('posts_public_browse'))
+      if (!user) {
+        const { data, error } = await supabase
+          .from('posts_public_browse')
+          .select('*')
+          .not('content', 'like', '🎯%')
+          .neq('visibility', 'group')
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (error) throw error;
+
+        const publicPosts: PublicFeedPost[] = data;
+        return publicPosts.filter(hasRequiredPublicPostFields).map((post) => ({
+          ...post,
+          type: 'post' as const,
+          user_id: '',
+          visibility: post.visibility,
+          image_zoom: post.image_zoom ?? 1,
+          image_positions: eventImagePositions(post.image_positions),
+          creator_profile: undefined,
+        }));
+      }
+
+      const query = supabase.from('posts')
         .select('*')
         .not('content', 'like', '🎯%')
         .neq('visibility', 'group')
@@ -417,12 +513,13 @@ const FeedPage: React.FC = () => {
           )
         : new Map();
 
-      return data.map((post: any) => ({
+      return data.map((post) => ({
         ...post,
         type: 'post' as const,
         user_id: post.user_id || '',
         visibility: post.visibility,
         image_zoom: post.image_zoom ?? 1,
+        image_positions: eventImagePositions(post.image_positions),
         creator_profile: post.author_identity === 'group' && post.author_group_id
           ? groupProfileMap.get(post.author_group_id)
           : profileMap.get(post.user_id)
@@ -441,7 +538,7 @@ const FeedPage: React.FC = () => {
       const query = supabase
         .from('projects_browse')
         .select('*')
-        .neq('visibility', 'group')
+        .or('visibility.is.null,visibility.neq.group')
         .order('created_at', { ascending: false });
 
       const { data, error } = await query.limit(100);
@@ -477,20 +574,27 @@ const FeedPage: React.FC = () => {
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['feed-events', user?.id || 'visitor'],
     queryFn: async () => {
-      let query = (user ? supabase.from('events') : (supabase as any).from('events_public_browse'))
-        .select('*')
-        .neq('visibility', 'group')
-        .order('event_date', { ascending: true });
-
       if (!user) {
-        query = query.eq('visibility', 'public');
-      } else {
-        query = query.or(
-          `visibility.in.(public,network,specific),user_id.eq.${user.id}`,
+        const { data, error } = await supabase
+          .from('events_public_browse')
+          .select('*')
+          .neq('visibility', 'group')
+          .order('event_date', { ascending: true })
+          .eq('visibility', 'public')
+          .limit(100);
+        if (error) throw error;
+        return sortEventsBySchedule(
+          data.filter(hasRequiredPublicEventFields).map(mapPublicEventToFeedItem)
         );
       }
 
-      const { data, error } = await query.limit(100);
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .neq('visibility', 'group')
+        .order('event_date', { ascending: true })
+        .or(`visibility.in.(public,network,specific),user_id.eq.${user.id}`)
+        .limit(100);
       if (error) throw error;
 
       const profileMap = user
@@ -504,12 +608,13 @@ const FeedPage: React.FC = () => {
           )
         : new Map();
 
-      return sortEventsBySchedule(data.map((event) => mapEventToFeedItem(
+      const mappedEvents: FeedItemData[] = data.map((event: BrowseEventRow) => mapEventToFeedItem(
         event,
         event.author_identity === 'group' && event.author_group_id
           ? groupProfileMap.get(event.author_group_id)
           : profileMap.get(event.user_id)
-      )));
+      ));
+      return sortEventsBySchedule(mappedEvents);
     },
     placeholderData: keepPreviousData,
     retry: 1,
@@ -523,7 +628,19 @@ const FeedPage: React.FC = () => {
       if (!routeEventIdentifier) return null;
 
       const fallbackEventId = identifierFallbackUuid(routeEventIdentifier);
-      let query = (user ? supabase.from('events') : (supabase as any).from('events_public_browse')).select('*');
+      if (!user) {
+        let query = supabase.from('events_public_browse').select('*');
+        query = fallbackEventId
+          ? query.eq('id', fallbackEventId)
+          : query.eq('slug', routeEventIdentifier);
+        const { data, error } = await query.maybeSingle();
+        if (error) throw error;
+        return data && hasRequiredPublicEventFields(data)
+          ? mapPublicEventToFeedItem(data)
+          : null;
+      }
+
+      let query = supabase.from('events').select('*');
       query = fallbackEventId
         ? query.eq('id', fallbackEventId)
         : query.eq('slug', routeEventIdentifier);

@@ -140,7 +140,7 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
   const { data: submitterProfile } = useQuery({
     queryKey: ['show-submitter', show?.submitted_by],
     queryFn: async () => {
-      if (!show?.submitted_by || (show as any).is_anonymous) return null;
+      if (!show?.submitted_by || show.is_anonymous) return null;
       
       const { data } = await supabase
         .from('profiles_public')
@@ -150,7 +150,7 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
 
       return data;
     },
-    enabled: !!show?.submitted_by && !(show as any).is_anonymous && isOpen,
+    enabled: !!show?.submitted_by && !show.is_anonymous && isOpen,
   });
 
   // Fetch user's votes
@@ -349,11 +349,11 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
             <div className="bg-muted/50 rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Users className="w-4 h-4" />
-                {(show as any).is_anonymous ? 'Team' : 'Posted by'}
+                {show.is_anonymous ? 'Team' : 'Posted by'}
               </div>
               
               {/* Submitter (if not anonymous) */}
-              {submitterProfile && !(show as any).is_anonymous && (
+              {submitterProfile && !show.is_anonymous && (
                 <button
                   onClick={() => navigate(`/profile/${submitterProfile.user_id}`)}
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent transition-colors w-full text-left"
@@ -370,7 +370,7 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
               )}
 
               {/* Anonymous indicator */}
-              {(show as any).is_anonymous && (
+              {show.is_anonymous && (
                 <div className="flex items-center gap-2 p-2 text-muted-foreground">
                   <EyeOff className="w-4 h-4" />
                   <span className="text-sm">Posted anonymously</span>
@@ -380,7 +380,7 @@ export const ShowDetailSheet: React.FC<ShowDetailSheetProps> = ({
               {/* Teammates */}
               {teammates.length > 0 && (
                 <div className="space-y-2">
-                  {!((show as any).is_anonymous && !submitterProfile) && teammates.length > 0 && (
+                  {!(show.is_anonymous && !submitterProfile) && teammates.length > 0 && (
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Team Members</p>
                   )}
                   <div className="flex flex-wrap gap-2">

@@ -104,9 +104,7 @@ export function useEventRsvps(eventId: string, options: UseEventRsvpsOptions = {
         is_anonymous: isAnonymous,
       };
 
-      const eventRsvpsTable = supabase.from('event_rsvps') as ReturnType<typeof supabase.from> & {
-        insert: (values: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
-      };
+      const eventRsvpsTable = supabase.from('event_rsvps');
 
       const { error } = await eventRsvpsTable.insert(insertPayload);
       if (error && /is_anonymous|anonymous_event_rsvps|schema cache|column/i.test(error.message)) {

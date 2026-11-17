@@ -16,6 +16,8 @@ interface DeleteConfirmDialogProps {
   onConfirm: () => void;
   title?: string;
   description?: string;
+  confirmLabel?: string;
+  pendingLabel?: string;
   isPending?: boolean;
 }
 
@@ -25,6 +27,8 @@ export const DeleteConfirmDialog: React.FC<DeleteConfirmDialogProps> = ({
   onConfirm,
   title = 'Delete this item?',
   description = 'This action cannot be undone. This will permanently delete this item.',
+  confirmLabel = 'Delete',
+  pendingLabel = 'Deleting...',
   isPending = false,
 }) => {
   return (
@@ -41,7 +45,7 @@ export const DeleteConfirmDialog: React.FC<DeleteConfirmDialogProps> = ({
             disabled={isPending}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isPending ? 'Deleting...' : 'Delete'}
+            {isPending ? pendingLabel : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

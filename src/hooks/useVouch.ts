@@ -75,7 +75,7 @@ export const useVouch = (targetUserId: string | undefined) => {
       queryClient.invalidateQueries({ queryKey: ['vouch-count', targetUserId] });
       toast.success('Vouched! Your endorsement helps this person stand out.');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       if (error.message?.includes('duplicate')) {
         toast.error('You already vouched for this person');
       } else {

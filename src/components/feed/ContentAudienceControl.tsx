@@ -37,38 +37,42 @@ export const ContentAudienceControl = ({ contentType, contentId, visibility, com
   const current: ContentAudience = ['public', 'network', 'specific', 'group'].includes(visibility || '')
     ? visibility as ContentAudience
     : 'private';
-  const selected = baseOptions.find((option) => option.value === current) || baseOptions[0];
+  const selected = contentType === 'project' && visibility == null
+    ? { value: 'private' as const, label: 'Legacy audience', description: 'Existing audience', icon: Lock }
+    : current === 'group'
+      ? { value: 'group' as const, label: 'Group Only', description: 'Department members only', icon: Lock }
+      : baseOptions.find((option) => option.value === current) || baseOptions[0];
   const SelectedIcon = selected.icon;
   const eligibleGroups = myGroups.filter((group) => group.is_faculty || group.members_can_post);
 
   const mutation = useMutation({
     mutationFn: async ({ audience, groupId, recipients = [] }: { audience: ContentAudience; groupId?: string; recipients?: SelectedUser[] }) => {
-      const recipientTable = contentType === 'event' ? 'event_recipients' : 'project_recipients';
-      const recipientColumn = contentType === 'event' ? 'event_id' : 'project_id';
-      const groupTable = contentType === 'event' ? 'event_groups' : 'project_groups';
-      const groupContentColumn = contentType === 'event' ? 'event_id' : 'project_id';
-
-      const { error: recipientDeleteError } = await supabase.from(recipientTable).delete().eq(recipientColumn, contentId);
+      if (contentType === 'project') {
+        const { error } = await supabase.rpc('set_project_audience' as never, {
+          target_project_id: contentId,
+          target_audience: audience,
+          target_group_id: groupId || null,
+          target_recipient_ids: recipients.map((recipient) => recipient.user_id),
+        } as never);
+        if (error) throw error;
+        return;
+      }
+      const { error: recipientDeleteError } = await supabase.from('event_recipients').delete().eq('event_id', contentId);
       if (recipientDeleteError) throw recipientDeleteError;
-      const { error: groupDeleteError } = await supabase.from(groupTable).delete().eq(groupContentColumn, contentId);
+      const { error: groupDeleteError } = await supabase.from('event_groups').delete().eq('event_id', contentId);
       if (groupDeleteError) throw groupDeleteError;
 
-      if (contentType === 'event') {
-        const { error } = await supabase.from('events').update({ visibility: audience }).eq('id', contentId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('projects').update({ visibility: audience, is_public: audience === 'public' }).eq('id', contentId);
-        if (error) throw error;
-      }
+      const { error: visibilityError } = await supabase.from('events').update({ visibility: audience }).eq('id', contentId);
+      if (visibilityError) throw visibilityError;
 
       if (audience === 'specific' && recipients.length) {
-        const { error } = await supabase.from(recipientTable).insert(
-          recipients.map((recipient) => ({ [recipientColumn]: contentId, recipient_id: recipient.user_id })),
+        const { error } = await supabase.from('event_recipients').insert(
+          recipients.map((recipient) => ({ event_id: contentId, recipient_id: recipient.user_id })),
         );
         if (error) throw error;
       }
       if (audience === 'group' && groupId) {
-        const { error } = await supabase.from(groupTable).insert({ [groupContentColumn]: contentId, group_id: groupId });
+        const { error } = await supabase.from('event_groups').insert({ event_id: contentId, group_id: groupId });
         if (error) throw error;
       }
     },
@@ -104,7 +108,7 @@ export const ContentAudienceControl = ({ contentType, contentId, visibility, com
             return (
               <DropdownMenuItem key={option.value} onSelect={() => option.value === 'specific' ? setSpecificOpen(true) : mutation.mutate({ audience: option.value })} className="gap-3">
                 <Icon className="h-4 w-4" />
-                <div><p className="font-medium">{option.label}</p><p className="text-xs text-muted-foreground">{option.description}</p></div>
+                <div><p className="font-medium">{option.label}</p><p className="text-xs text-muted-foreground">{contentType === 'project' && option.value === 'private' ? 'You and project collaborators' : option.description}</p></div>
               </DropdownMenuItem>
             );
           })}

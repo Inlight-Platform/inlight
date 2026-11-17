@@ -14,9 +14,14 @@ export interface MyGroup {
 /** Groups the current user belongs to or can administer. */
 export const useMyGroups = () => {
   const { user } = useAuth();
+  return useMyGroupsForUser(user?.id);
+};
+
+/** Same membership query, using the ordinary page's existing auth identity. */
+export const useMyGroupsForUser = (userId?: string) => {
   return useQuery({
-    queryKey: ['my-groups', user?.id],
-    enabled: !!user?.id,
+    queryKey: ['my-groups', userId],
+    enabled: !!userId,
     queryFn: async (): Promise<MyGroup[]> => {
       const { data, error } = await supabase.rpc('get_my_groups');
       if (error) {

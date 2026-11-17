@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -433,7 +434,7 @@ const PlatformInvitesManager: React.FC = () => {
 const IndustryHighlightsManager: React.FC = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingHighlight, setEditingHighlight] = useState<any>(null);
+  const [editingHighlight, setEditingHighlight] = useState<Tables<'industry_highlights'> | null>(null);
   const [formData, setFormData] = useState({
     content: '',
     category: 'general',
@@ -502,7 +503,7 @@ const IndustryHighlightsManager: React.FC = () => {
     setIsDialogOpen(false);
   };
 
-  const handleEdit = (highlight: any) => {
+  const handleEdit = (highlight: Tables<'industry_highlights'>) => {
     setEditingHighlight(highlight);
     setFormData({
       content: highlight.content,
@@ -685,7 +686,7 @@ const PhotosManager: React.FC = () => {
                 )}
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center gap-2 p-2">
                   <p className="text-white text-xs text-center line-clamp-2">{post.content}</p>
-                  <p className="text-white/70 text-xs">{(post.studios as any)?.name}</p>
+                  <p className="text-white/70 text-xs">{post.studios?.name}</p>
                   <Button
                     size="sm"
                     variant="destructive"

@@ -106,7 +106,7 @@ const AffiliationRequestsManager: React.FC = () => {
         .eq('id', id);
       if (error) throw error;
 
-      await (supabase.rpc as any)('notify_affiliation_reviewed', {
+      await supabase.rpc('notify_affiliation_reviewed', {
         p_user_id: userId,
         p_action: action === 'approve' ? 'approved' : 'denied',
         p_name: name,

@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { Loader2, Upload, Trash2, ExternalLink, Film, FileText, Camera } from 'lucide-react';
 import { compressImage, isCompressibleImage } from '@/lib/imageCompression';
+import { errorMessage } from '@/lib/errorMessage';
 
 const ShowcaseSettings: React.FC = () => {
   const { user } = useAuth();
@@ -64,8 +65,8 @@ const ShowcaseSettings: React.FC = () => {
       else setResumeUrl(urlData.publicUrl);
 
       toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} uploaded`);
-    } catch (err: any) {
-      toast.error(err.message || 'Upload failed');
+    } catch (err: unknown) {
+      toast.error(errorMessage(err, 'Upload failed'));
     } finally {
       setUploading(null);
     }

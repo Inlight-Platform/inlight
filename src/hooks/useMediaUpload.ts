@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { compressImage, isCompressibleImage } from '@/lib/imageCompression';
+import { errorMessage } from '@/lib/errorMessage';
 
 type MediaType = 'photo' | 'video' | 'audio' | 'document';
 type Visibility = 'public' | 'connections' | 'private';
@@ -111,9 +112,9 @@ export const useMediaUpload = () => {
         ...mediaRecord,
         url: urlData.publicUrl,
       } as UploadedMedia;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Upload error:', error);
-      toast.error(error.message || 'Failed to upload file');
+      toast.error(errorMessage(error, 'Failed to upload file'));
       return null;
     } finally {
       setUploading(false);
@@ -144,9 +145,9 @@ export const useMediaUpload = () => {
 
       toast.success('File deleted successfully!');
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Delete error:', error);
-      toast.error(error.message || 'Failed to delete file');
+      toast.error(errorMessage(error, 'Failed to delete file'));
       return false;
     }
   };
@@ -165,9 +166,9 @@ export const useMediaUpload = () => {
       
       toast.success('Visibility updated!');
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Update error:', error);
-      toast.error(error.message || 'Failed to update visibility');
+      toast.error(errorMessage(error, 'Failed to update visibility'));
       return false;
     }
   };

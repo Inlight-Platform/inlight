@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, BookOpen, CalendarClock, ExternalLink, Users, Trash2, Globe, Lock, Shield, MailPlus, MessageSquare, MoreHorizontal, SlidersHorizontal, Check, Plus, LayoutGrid, Rows, Calendar, FolderKanban, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useGroupBySlug, useMyGroups } from '@/hooks/useGroups';
+import { useGroupBySlug, useMyGroupsForUser } from '@/hooks/useGroups';
+import type { User as AuthUser } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -92,7 +93,7 @@ interface GroupAuditionAvailability {
   timeslot_id: string;
   booked_count: number;
   capacity: number;
-  is_my_timeslot: boolean;
+  is_my_timeslot: boolean | null;
 }
 
 interface GroupPost {
@@ -150,8 +151,83 @@ const getErrorMessage = (error: unknown, fallback: string) =>
 type GroupPageTab = 'all' | 'events' | 'projects' | 'services' | 'auditions' | 'members' | 'resources';
 const GROUP_CONTENT_TABS: GroupPageTab[] = ['all', 'events', 'projects', 'services'];
 
+async function checkGroupPageAccess(groupId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('group_page_visible_to_caller', { _group_id: groupId });
+  if (error) throw error;
+  return data === true;
+}
+
+type CheckGroupPageAccess = (groupId: string) => Promise<unknown>;
+
+type Props = {
+  userId: string | null;
+  groupId: string;
+  groupSlug: string;
+  checkAccess: CheckGroupPageAccess;
+  children: React.ReactNode;
+};
+
+const unavailable = (
+  <div className="p-12 text-center text-muted-foreground">Group not found or not currently available.</div>
+);
+
+/** The key resets both the decision and content only for an identity/group change.
+ * Item-detail URL changes deliberately do not reset the removal cleanup ref.
+ */
+function GroupPageAccess(props: Props) {
+  const attemptKey = JSON.stringify([props.userId, props.groupId, props.groupSlug]);
+  return <AccessAttempt key={attemptKey} {...props} />;
+}
+
+function AccessAttempt({ groupId, checkAccess, children }: Props) {
+  const [decision, setDecision] = useState<'pending' | 'allow' | 'deny'>('pending');
+
+  useEffect(() => {
+    let current = true;
+    // Starting in a microtask also catches a synchronous resolver exception.
+    void Promise.resolve()
+      .then(() => current ? checkAccess(groupId) : false)
+      .then(
+        (value) => { if (current) setDecision(value === true ? 'allow' : 'deny'); },
+        () => { if (current) setDecision('deny'); },
+      );
+    return () => { current = false; };
+  }, [groupId, checkAccess]);
+
+  if (decision === 'pending') {
+    return <div className="p-12 text-center text-muted-foreground">Loading group...</div>;
+  }
+  return decision === 'allow' ? <>{children}</> : unavailable;
+}
+
+type ResolvedGroup = NonNullable<ReturnType<typeof useGroupBySlug>['data']>;
+
 const GroupPage: React.FC = () => {
-  const { slug, postIdentifier, eventIdentifier, projectIdentifier } = useParams<{
+  const { slug } = useParams<{ slug: string }>();
+  const { user, loading: authLoading } = useAuth();
+  const { data: group, isLoading: groupLoading, isError: groupError } = useGroupBySlug(slug);
+
+  if (authLoading || groupLoading) {
+    return <div className="p-12 text-center text-muted-foreground">Loading group...</div>;
+  }
+  if (groupError || !group || group.slug !== slug) {
+    return <div className="p-12 text-center text-muted-foreground">Group not found or not currently available.</div>;
+  }
+
+  return (
+    <GroupPageAccess
+      userId={user?.id ?? null}
+      groupId={group.id}
+      groupSlug={group.slug}
+      checkAccess={checkGroupPageAccess}
+    >
+      <GroupPageContent group={group} user={user} />
+    </GroupPageAccess>
+  );
+};
+
+const GroupPageContent: React.FC<{ group: ResolvedGroup; user: AuthUser | null }> = ({ group, user }) => {
+  const { postIdentifier, eventIdentifier, projectIdentifier } = useParams<{
     slug: string;
     postIdentifier?: string;
     eventIdentifier?: string;
@@ -159,10 +235,8 @@ const GroupPage: React.FC = () => {
   }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data: group, isLoading: groupLoading } = useGroupBySlug(slug);
-  const { data: myGroups = [], isLoading: myGroupsLoading } = useMyGroups();
+  const { data: myGroups = [], isLoading: myGroupsLoading } = useMyGroupsForUser(user?.id);
   const { data: currentUserProfile } = useQuery({
     queryKey: ['group-page-current-user-profile', user?.id],
     enabled: !!user?.id,
@@ -229,7 +303,7 @@ const GroupPage: React.FC = () => {
   });
 
   // Scoped group admins
-  const { data: groupAdmins = [] } = useQuery<GroupAdmin[]>({
+  const { data: groupAdmins = [], isLoading: groupAdminsLoading, isError: groupAdminsError } = useQuery<GroupAdmin[]>({
     queryKey: ['group-admins', group?.id],
     enabled: !!group?.id && isFaculty,
     queryFn: async () => {
@@ -413,14 +487,14 @@ const GroupPage: React.FC = () => {
     queryKey: ['group-auditions', group?.id],
     enabled: !!group?.id && canViewPrivateGroup,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('group_auditions')
         .select('id, title, description, materials, is_published, created_at, group_audition_timeslots(id, starts_at, ends_at, capacity)')
         .eq('group_id', group!.id)
         .eq('is_published', true)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []) as GroupAudition[];
+      return data || [];
     },
   });
 
@@ -428,15 +502,15 @@ const GroupPage: React.FC = () => {
     queryKey: ['group-audition-availability', group?.id, user?.id],
     enabled: !!group?.id && !!user?.id && canViewPrivateGroup,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc('get_group_audition_availability', {
+      const { data, error } = await supabase.rpc('get_group_audition_availability', {
         _group_id: group!.id,
       });
       if (error) throw error;
-      return (data || []) as GroupAuditionAvailability[];
+      return data || [];
     },
   });
 
-  const { data: activeAdminUserIds = [] } = useQuery<string[]>({
+  const { data: activeAdminUserIds = [], isLoading: adminIdsLoading, isError: adminIdsError } = useQuery<string[]>({
     queryKey: ['group-active-admin-user-ids', group?.id],
     enabled: !!group?.id && canViewPrivateGroup,
     queryFn: async () => {
@@ -448,7 +522,11 @@ const GroupPage: React.FC = () => {
     },
   });
 
-  const activeAdminUserIdSet = new Set(activeAdminUserIds);
+  const activeAdminUserIdSet = new Set([
+    ...activeAdminUserIds,
+    ...groupAdmins.filter((admin) => admin.status === 'active' && admin.user_id).map((admin) => admin.user_id!),
+  ]);
+  const adminStatusUnavailable = adminIdsLoading || adminIdsError || (isFaculty && (groupAdminsLoading || groupAdminsError));
   const isAdminAuthored = (authorIdentity: string | undefined, authorGroupId: string | null | undefined, userId: string) =>
     (authorIdentity === 'group' && authorGroupId === group?.id) || activeAdminUserIdSet.has(userId);
 
@@ -475,6 +553,7 @@ const GroupPage: React.FC = () => {
 
   const [postPendingRemoval, setPostPendingRemoval] = useState<GroupPost | null>(null);
   const [selectedItem, setSelectedItem] = useState<FeedItemData | null>(null);
+  const pendingProjectRemovalRef = useRef<{ groupId: string; id: string } | null>(null);
   const [postFilter, setPostFilter] = useState<'all' | 'admin'>('all');
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [historyView, setHistoryView] = useState<'grid' | 'list'>('grid');
@@ -486,7 +565,7 @@ const GroupPage: React.FC = () => {
   });
   const bookAuditionTimeslot = useMutation({
     mutationFn: async ({ auditionId, timeslotId }: { auditionId: string; timeslotId: string }) => {
-      const { error } = await (supabase as any).rpc('book_group_audition_timeslot', {
+      const { error } = await supabase.rpc('book_group_audition_timeslot', {
         _audition_id: auditionId,
         _timeslot_id: timeslotId,
       });
@@ -522,6 +601,10 @@ const GroupPage: React.FC = () => {
 
   const removeMember = useMutation({
     mutationFn: async (id: string) => {
+      const member = members.find((row) => row.id === id);
+      if (!member) throw new Error('Member is unavailable. Try again.');
+      if (member.status === 'active' && adminStatusUnavailable) throw new Error('Admin status is unavailable. Try again.');
+      if (member.status === 'active' && activeAdminUserIdSet.has(member.user_id)) throw new Error('Remove admin powers first.');
       const { error } = await supabase.from('group_members').delete().eq('id', id);
       if (error) throw error;
     },
@@ -584,6 +667,9 @@ const GroupPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['group-admins', group?.id] });
       queryClient.invalidateQueries({ queryKey: ['group-members', group?.id] });
       queryClient.invalidateQueries({ queryKey: ['group-active-member-count', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['group-dashboard-members', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['group-dashboard-admins', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['group-active-admin-user-ids', group?.id] });
       queryClient.invalidateQueries({ queryKey: ['my-groups'] });
       if (result.invite.existing_user) {
         toast.success('Group admin added');
@@ -604,10 +690,17 @@ const GroupPage: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      const wasPending = adminPendingRemoval?.status === 'pending';
       setAdminPendingRemoval(null);
       queryClient.invalidateQueries({ queryKey: ['group-admins', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['group-dashboard-admins', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['group-members', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['group-dashboard-members', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['group-active-member-count', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['group-active-admin-user-ids', group?.id] });
+      queryClient.invalidateQueries({ queryKey: ['my-scoped-admin-groups'] });
       queryClient.invalidateQueries({ queryKey: ['my-groups'] });
-      toast.success('Group admin removed');
+      toast.success(wasPending ? 'Admin invitation cancelled' : 'Group admin removed');
     },
     onError: (error) => toast.error(getErrorMessage(error, 'Failed to remove admin')),
   });
@@ -635,7 +728,20 @@ const GroupPage: React.FC = () => {
   useEffect(() => {
     const identifier = postIdentifier || eventIdentifier || projectIdentifier;
     const expectedType = postIdentifier ? 'post' : eventIdentifier ? 'event' : projectIdentifier ? 'project' : null;
-    if (!identifier || selectedItem?.type === expectedType) return;
+
+    if (!identifier) {
+      const pending = pendingProjectRemovalRef.current;
+      if (pending && group) {
+        if (pending.groupId !== group.id) {
+          pendingProjectRemovalRef.current = null;
+        } else if (selectedItem?.type === 'project' && selectedItem.id === pending.id) {
+          setSelectedItem(null);
+        } else if (selectedItem === null) {
+          pendingProjectRemovalRef.current = null;
+        }
+      }
+      return;
+    }
 
     const fullId = identifierFallbackUuid(identifier);
     const shortId = fullId ? null : identifierFallbackShortId(identifier);
@@ -647,6 +753,23 @@ const GroupPage: React.FC = () => {
           : false
     );
 
+    const pending = pendingProjectRemovalRef.current;
+    if (pending && group) {
+      if (
+        pending.groupId !== group.id ||
+        !projectIdentifier ||
+        !matchesIdentifier(pending)
+      ) {
+        pendingProjectRemovalRef.current = null;
+      } else {
+        if (selectedItem?.type === 'project') setSelectedItem(null);
+        navigate(`/groups/${group.slug}`, { replace: true });
+        return;
+      }
+    }
+
+    if (selectedItem?.type === expectedType) return;
+
     if (postIdentifier) {
       const post = posts.find(matchesIdentifier);
       if (post) setSelectedItem(mapGroupPostToFeedItem(post));
@@ -655,13 +778,13 @@ const GroupPage: React.FC = () => {
 
     const item = (eventIdentifier ? events : projects).find(matchesIdentifier);
     if (item) setSelectedItem(item);
-  }, [eventIdentifier, events, postIdentifier, posts, projectIdentifier, projects, selectedItem?.type]);
+  }, [eventIdentifier, events, postIdentifier, posts, projectIdentifier, projects, selectedItem?.id, selectedItem?.type, group?.id, group?.slug, navigate]);
 
-  if (groupLoading || myGroupsLoading) {
+  if (myGroupsLoading) {
     return <div className="p-12 text-center text-muted-foreground">Loading group…</div>;
   }
   if (!group) {
-    return <div className="p-12 text-center text-muted-foreground">Group not found.</div>;
+    return <div className="p-12 text-center text-muted-foreground">Group not found or not currently available.</div>;
   }
 
   const activeMembers = members.filter((member) => member.status === 'active');
@@ -707,7 +830,7 @@ const GroupPage: React.FC = () => {
 
     const destination = getFeedItemDestination(item);
     if (destination?.kind === 'internal') {
-      navigate(destination.to, { state: { returnTo } });
+      navigate(destination.to, { state: { returnTo: `${location.pathname}${location.search}${location.hash}` } });
     } else if (destination?.kind === 'external') {
       window.open(destination.url, '_blank', 'noopener,noreferrer');
     }
@@ -722,6 +845,9 @@ const GroupPage: React.FC = () => {
       target_content_id: item.id,
     } as never);
     if (error) throw error;
+    if (item.type === 'project') {
+      pendingProjectRemovalRef.current = { groupId: group.id, id: item.id };
+    }
   };
   const routeState = location.state as { returnTo?: string } | null;
   const handleBack = () => {
@@ -897,9 +1023,13 @@ const GroupPage: React.FC = () => {
                 deleteDialogTitle={(entry.item.type === 'event' || entry.item.type === 'project')
                   ? `Remove this ${entry.item.type} from ${group.name}?`
                   : undefined}
-                deleteDialogDescription={(entry.item.type === 'event' || entry.item.type === 'project')
+                deleteDialogDescription={entry.item.type === 'project'
+                  ? `This removes the project from ${group.name}'s feed. Its creator, project members, and invitees keep their access.`
+                  : entry.item.type === 'event'
                   ? `This removes the ${entry.item.type} from ${group.name} and makes it private to its creator.`
                   : undefined}
+                deleteDialogConfirmLabel={entry.item.type === 'project' ? 'Remove' : undefined}
+                deleteDialogPendingLabel={entry.item.type === 'project' ? 'Removing...' : undefined}
                 deleteSuccessMessage={(entry.item.type === 'event' || entry.item.type === 'project')
                   ? `${entry.item.type === 'event' ? 'Event' : 'Project'} removed from ${group.name}`
                   : undefined}
@@ -1160,7 +1290,8 @@ const GroupPage: React.FC = () => {
                   ) : (
                     groupAdmins.map((admin) => {
                       const displayName = admin.profile?.display_name || admin.email || 'Pending admin';
-                      const canRemove = groupAdmins.length > 1;
+                      const isPending = admin.status === 'pending';
+                      const canRemove = isPending || groupAdmins.filter((row) => row.status === 'active').length > 1;
 
                       return (
                         <div key={admin.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
@@ -1174,6 +1305,7 @@ const GroupPage: React.FC = () => {
                               {admin.email && (
                                 <p className="truncate text-xs text-muted-foreground">{admin.email}</p>
                               )}
+                              <Badge variant={isPending ? 'outline' : 'secondary'}>{isPending ? 'Pending' : 'Active'}</Badge>
                             </div>
                           </div>
                           <Button
@@ -1181,10 +1313,10 @@ const GroupPage: React.FC = () => {
                             variant="ghost"
                             className="text-destructive"
                             disabled={!canRemove || removeAdmin.isPending}
-                            title={canRemove ? 'Remove admin' : 'A group must have at least one admin'}
+                            title={isPending ? 'Cancel admin invite' : canRemove ? 'Remove admin powers' : 'A group must have at least one active admin'}
                             onClick={() => setAdminPendingRemoval(admin)}
                           >
-                            Remove
+                            {isPending ? 'Cancel invite' : 'Remove'}
                           </Button>
                         </div>
                       );
@@ -1271,7 +1403,9 @@ const GroupPage: React.FC = () => {
                         <AvatarFallback>{m.profile?.display_name?.[0] || 'U'}</AvatarFallback>
                       </Avatar>
                       <span className="text-sm font-medium">{m.profile?.display_name || 'Unknown'}</span>
+                      {activeAdminUserIdSet.has(m.user_id) && <Badge variant="secondary">Admin</Badge>}
                     </button>
+                    {isFaculty && activeAdminUserIdSet.has(m.user_id) && <span className="text-xs text-muted-foreground">Remove admin powers first.</span>}
                     {m.user_id !== user?.id && (
                       <div className="flex items-center gap-1">
                         <Tooltip>
@@ -1302,7 +1436,8 @@ const GroupPage: React.FC = () => {
                             variant="ghost"
                             className="text-destructive h-7 w-7"
                             aria-label={`Remove ${m.profile?.display_name || 'member'}`}
-                            title="Remove member"
+                            disabled={removeMember.isPending || adminStatusUnavailable || activeAdminUserIdSet.has(m.user_id)}
+                            title={activeAdminUserIdSet.has(m.user_id) ? 'Remove admin powers first.' : adminStatusUnavailable ? 'Admin status is unavailable.' : 'Remove member'}
                             onClick={() => {
                               if (confirm('Remove this member?')) removeMember.mutate(m.id);
                             }}
@@ -1369,9 +1504,13 @@ const GroupPage: React.FC = () => {
                 deleteDialogTitle={(selectedItem.type === 'event' || selectedItem.type === 'project')
                   ? `Remove this ${selectedItem.type} from ${group.name}?`
                   : undefined}
-                deleteDialogDescription={(selectedItem.type === 'event' || selectedItem.type === 'project')
+                deleteDialogDescription={selectedItem.type === 'project'
+                  ? `This removes the project from ${group.name}'s feed. Its creator, project members, and invitees keep their access.`
+                  : selectedItem.type === 'event'
                   ? `This removes the ${selectedItem.type} from ${group.name} and makes it private to its creator.`
                   : undefined}
+                deleteDialogConfirmLabel={selectedItem.type === 'project' ? 'Remove' : undefined}
+                deleteDialogPendingLabel={selectedItem.type === 'project' ? 'Removing...' : undefined}
                 deleteSuccessMessage={(selectedItem.type === 'event' || selectedItem.type === 'project')
                   ? `${selectedItem.type === 'event' ? 'Event' : 'Project'} removed from ${group.name}`
                   : undefined}
@@ -1413,8 +1552,10 @@ const GroupPage: React.FC = () => {
             removeAdmin.mutate(adminPendingRemoval.id);
           }
         }}
-        title="Remove group admin?"
-        description={`This will remove ${
+        title={adminPendingRemoval?.status === 'pending' ? 'Cancel admin invite?' : 'Remove group admin?'}
+        description={adminPendingRemoval?.status === 'pending' ? `This cancels the admin invitation for ${
+          adminPendingRemoval?.profile?.display_name || adminPendingRemoval?.email || 'this person'
+        }.` : `This will remove ${
           adminPendingRemoval?.profile?.display_name || adminPendingRemoval?.email || 'this person'
         } as an admin for ${group.name}. They will no longer be able to manage this group.`}
         isPending={removeAdmin.isPending}

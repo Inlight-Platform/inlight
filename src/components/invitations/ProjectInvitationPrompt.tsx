@@ -65,7 +65,7 @@ export const ProjectInvitationPrompt: React.FC<ProjectInvitationPromptProps> = (
     mutationFn: async () => {
       if (!invitation) return;
 
-      const { error } = await (supabase as any).rpc('accept_project_invitation', {
+      const { error } = await supabase.rpc('accept_project_invitation', {
         _invitation_id: invitation.id,
       });
 

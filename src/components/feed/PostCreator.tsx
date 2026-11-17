@@ -287,7 +287,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
         // Tag to a group for group visibility
         if (visibility === 'group' && selectedGroupId && postData) {
           const { error: gErr } = await supabase
-            .from('post_groups' as never)
+            .from('post_groups')
             .insert({ post_id: postData.id, group_id: selectedGroupId });
           if (gErr) throw gErr;
         }
@@ -336,7 +336,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
 
         if (eventVisibility === 'group' && selectedGroupId && eventData) {
           const { error: gErr } = await supabase
-            .from('event_groups' as never)
+            .from('event_groups')
             .insert({ event_id: eventData.id, group_id: selectedGroupId });
           if (gErr) throw gErr;
         }
@@ -384,7 +384,7 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
         // Tag to a group for group visibility
         if (visibility === 'group' && selectedGroupId && jobData) {
           const { error: gErr } = await supabase
-            .from('post_groups' as never)
+            .from('post_groups')
             .insert({ post_id: jobData.id, group_id: selectedGroupId });
           if (gErr) throw gErr;
         }

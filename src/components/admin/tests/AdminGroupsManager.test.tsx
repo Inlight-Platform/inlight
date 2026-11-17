@@ -1,249 +1,75 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminGroupsManager from '../AdminGroupsManager';
 
-const mocks = vi.hoisted(() => ({
-  rpc: vi.fn(),
-  functionsInvoke: vi.fn(),
-  toastSuccess: vi.fn(),
-  toastError: vi.fn(),
-}));
-
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    rpc: mocks.rpc,
-    functions: {
-      invoke: mocks.functionsInvoke,
-    },
-  },
-}));
-
-vi.mock('sonner', () => ({
-  toast: {
-    success: mocks.toastSuccess,
-    error: mocks.toastError,
-  },
-}));
-
-const renderManager = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-
-  return render(
-    <MemoryRouter>
-      <QueryClientProvider client={queryClient}>
-        <AdminGroupsManager />
-      </QueryClientProvider>
-    </MemoryRouter>,
-  );
-};
-
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), invoke: vi.fn(), success: vi.fn(), error: vi.fn() }));
+vi.mock('@/integrations/supabase/client', () => ({ supabase: { rpc: mocks.rpc, functions: { invoke: mocks.invoke } } }));
+vi.mock('sonner', () => ({ toast: { success: mocks.success, error: mocks.error } }));
+const group = { id: 'group-id', name: 'School', slug: 'school', description: null, active_member_count: 0, active_admin_count: 1, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' };
+function renderManager() {
+  return render(<MemoryRouter><QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}><AdminGroupsManager /></QueryClientProvider></MemoryRouter>);
+}
+function openCreate(emails: string) {
+  fireEvent.click(screen.getByRole('button', { name: /new group/i }));
+  fireEvent.change(screen.getByLabelText(/^name/i), { target: { value: 'School' } });
+  fireEvent.change(screen.getByLabelText(/admin emails/i), { target: { value: emails } });
+  fireEvent.click(screen.getByRole('button', { name: /create group/i }));
+}
 describe('AdminGroupsManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.functionsInvoke.mockResolvedValue({ data: { invite: { email: 'ryan@adler.edu' } }, error: null });
+    mocks.rpc.mockImplementation(async (name: string) => name === 'admin_list_groups' ? { data: [group], error: null } : { data: null, error: null });
   });
-
-  it('creates a department portal with an initial admin and refreshes the groups list', async () => {
-    mocks.rpc
-      .mockResolvedValueOnce({
-        data: [
-          {
-            id: 'strasberg-id',
-            slug: 'strasberg',
-            name: 'Strasberg',
-            description: 'A private space for the Strasberg cohort and faculty.',
-            active_member_count: 2,
-            active_admin_count: 1,
-            created_at: '2026-08-01T12:00:00.000Z',
-            updated_at: '2026-08-01T12:00:00.000Z',
-          },
-        ],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: {
-          id: 'adler-id',
-          slug: 'stella-adler',
-          name: 'Stella Adler Studio',
-          description: 'A private space for Adler students.',
-        },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [
-          {
-            id: 'adler-id',
-            slug: 'stella-adler',
-            name: 'Stella Adler',
-            description: 'A private space for Adler students.',
-            active_member_count: 0,
-            active_admin_count: 1,
-            created_at: '2026-08-21T12:00:00.000Z',
-            updated_at: '2026-08-21T12:00:00.000Z',
-          },
-        ],
-        error: null,
-      });
-
-    renderManager();
-
-    expect(await screen.findByText('Strasberg')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /new group/i }));
-    fireEvent.change(screen.getByLabelText(/name/i), {
-      target: { value: 'Stella Adler' },
-    });
-    fireEvent.change(screen.getByLabelText(/description/i), {
-      target: { value: 'A private space for Adler students.' },
-    });
-    fireEvent.change(screen.getByLabelText(/initial admin email/i), {
-      target: { value: 'Ryan@Adler.edu' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /create group/i }));
-
-    await waitFor(() => {
-      expect(mocks.rpc).toHaveBeenCalledWith('admin_create_group', {
-        _name: 'Stella Adler',
-        _slug: 'stella-adler',
-        _description: 'A private space for Adler students.',
-        _initial_admin_email: 'ryan@adler.edu',
-      });
-    });
-
-    await waitFor(() => {
-      expect(mocks.functionsInvoke).toHaveBeenCalledWith('send-platform-invite', {
-        body: {
-          email: 'ryan@adler.edu',
-          note: "You've been invited to administer Stella Adler Studio on Inlight.",
-        },
-      });
-    });
-
-    expect(mocks.toastSuccess).toHaveBeenCalledWith('Department portal created and invite email sent');
-    expect(await screen.findByText('Stella Adler')).toBeInTheDocument();
-    expect(screen.getByText('/stella-adler')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
+  it('shows each committed assignment, invalid entry, duplicate and delivery failure', async () => {
+    mocks.rpc.mockImplementation(async (name: string) => name === 'admin_list_groups' ? { data: [group], error: null } : { data: { group, results: [
+      { email: 'active@example.edu', outcome: 'assigned', status: 'active' },
+      { email: 'pending@example.edu', outcome: 'assigned', status: 'pending' },
+      { email: 'bad', outcome: 'invalid' }, { email: 'pending@example.edu', outcome: 'duplicate' },
+      { email: 'fail@example.edu', outcome: 'failed', error: 'Assignment failed' },
+    ] }, error: null });
+    mocks.invoke.mockResolvedValue({ data: { invite: { status: 'pending' }, email: { sent: false } }, error: null });
+    renderManager(); await screen.findByText('School');
+    openCreate('active@example.edu, pending@example.edu, bad, pending@example.edu, fail@example.edu');
+    expect(await screen.findByText(/pending@example.edu: Assignment pending — Invitation email failed/i)).toBeInTheDocument();
+    expect(screen.getByText(/bad: invalid/i)).toBeInTheDocument();
+    expect(screen.getByText(/pending@example.edu: duplicate/i)).toBeInTheDocument();
+    expect(screen.getByText(/fail@example.edu: failed/i)).toBeInTheDocument();
+    expect(mocks.invoke).toHaveBeenCalledTimes(1);
   });
-
-  it('keeps the created group visible when the invite email fails', async () => {
-    mocks.functionsInvoke.mockResolvedValueOnce({
-      data: null,
-      error: { message: 'Missing RESEND_API_KEY' },
-    });
-    mocks.rpc
-      .mockResolvedValueOnce({
-        data: [],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: {
-          id: 'adler-id',
-          slug: 'stella-adler',
-          name: 'Stella Adler Studio',
-          description: 'A private space for Adler students.',
-        },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [
-          {
-            id: 'adler-id',
-            slug: 'stella-adler',
-            name: 'Stella Adler',
-            description: 'A private space for Adler students.',
-            active_member_count: 0,
-            active_admin_count: 0,
-            created_at: '2026-08-21T12:00:00.000Z',
-            updated_at: '2026-08-21T12:00:00.000Z',
-          },
-        ],
-        error: null,
-      });
-
-    renderManager();
-
-    expect(await screen.findByText('No department portals yet')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /new group/i }));
-    fireEvent.change(screen.getByLabelText(/name/i), {
-      target: { value: 'Stella Adler' },
-    });
-    fireEvent.change(screen.getByLabelText(/initial admin email/i), {
-      target: { value: 'Ryan@Adler.edu' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /create group/i }));
-
-    await waitFor(() => {
-      expect(mocks.toastSuccess).toHaveBeenCalledWith(
-        'Department portal created, but the invite email could not be sent',
-      );
-    });
-
-    expect(mocks.toastError).toHaveBeenCalledWith('Missing RESEND_API_KEY');
-    expect(await screen.findByText('Stella Adler')).toBeInTheDocument();
+  it('reports a no-valid-address rejection', async () => {
+    mocks.rpc.mockImplementation(async (name: string) => name === 'admin_list_groups' ? { data: [group], error: null } : { data: null, error: { message: 'At least one valid admin email is required' } });
+    renderManager(); await screen.findByText('School'); openCreate('invalid');
+    await waitFor(() => expect(mocks.error).toHaveBeenCalledWith('At least one valid admin email is required'));
+    expect(mocks.invoke).not.toHaveBeenCalled();
   });
-
-  it('shows an error state when groups cannot be loaded', async () => {
-    mocks.rpc.mockResolvedValueOnce({
-      data: null,
-      error: { message: 'Admin only' },
-    });
-
+  it('adds from the platform group list and reports unknown transport outcome', async () => {
+    mocks.invoke.mockResolvedValue({ data: null, error: { message: 'network' } });
+    renderManager(); await screen.findByText('School');
+    fireEvent.click(screen.getByRole('button', { name: /^add admin$/i }));
+    fireEvent.change(screen.getByLabelText(/^admin email$/i), { target: { value: 'person@example.edu' } });
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^add admin$/i }));
+    expect(await screen.findByText(/assignment and delivery outcomes unknown/i)).toBeInTheDocument();
+    expect(mocks.invoke).toHaveBeenCalledWith('send-group-admin-invite', expect.objectContaining({ body: expect.objectContaining({ groupId: 'group-id' }) }));
+  });
+  it('uses the latest active status when a pending recipient confirms before delivery', async () => {
+    mocks.rpc.mockImplementation(async (name: string) => name === 'admin_list_groups' ? { data: [group], error: null } : { data: { group, results: [{ email: 'person@example.edu', outcome: 'assigned', status: 'pending' }] }, error: null });
+    mocks.invoke.mockResolvedValue({ data: { invite: { status: 'active' }, email: { sent: false, notRequired: true } }, error: null });
+    renderManager(); await screen.findByText('School'); openCreate('person@example.edu');
+    expect(await screen.findByText(/person@example.edu: Assignment active — Email not required/i)).toBeInTheDocument();
+  });
+  it('shows the group-list loading error', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { message: 'Admin only' } });
     renderManager();
-
     expect(await screen.findByText('Admin only')).toBeInTheDocument();
   });
-
-  it('shows a friendly toast when a group slug already exists', async () => {
-    mocks.rpc
-      .mockResolvedValueOnce({
-        data: [
-          {
-            id: 'adler-id',
-            slug: 'stella-adler',
-            name: 'Stella Adler',
-            description: 'A private space for Adler students.',
-            active_member_count: 0,
-            active_admin_count: 1,
-            created_at: '2026-08-21T12:00:00.000Z',
-            updated_at: '2026-08-21T12:00:00.000Z',
-          },
-        ],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: null,
-        error: {
-          code: '23505',
-          message: 'duplicate key value violates unique constraint "groups_slug_key"',
-        },
-      });
-
-    renderManager();
-
-    expect(await screen.findByText('Stella Adler')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /new group/i }));
-    fireEvent.change(screen.getByLabelText(/name/i), {
-      target: { value: 'Stella Adler' },
-    });
-    fireEvent.change(screen.getByLabelText(/initial admin email/i), {
-      target: { value: 'admin@adler.edu' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /create group/i }));
-
-    await waitFor(() => {
-      expect(mocks.toastError).toHaveBeenCalledWith(
-        'That group URL slug is already in use. Choose a different slug.',
-      );
-    });
+  it('explains a duplicate group slug', async () => {
+    mocks.rpc.mockImplementation(async (name: string) => name === 'admin_list_groups'
+      ? { data: [group], error: null }
+      : { data: null, error: { code: '23505', message: 'duplicate key groups_slug_key' } });
+    renderManager(); await screen.findByText('School'); openCreate('person@example.edu');
+    await waitFor(() => expect(mocks.error).toHaveBeenCalledWith('That group URL slug is already in use. Choose a different slug.'));
   });
 });

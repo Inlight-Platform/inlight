@@ -57,7 +57,7 @@ vi.mock('@/integrations/supabase/client', () => {
             error: null,
           })),
           maybeSingle: vi.fn(async () => ({
-            data: table === 'events' ? event : null,
+            data: table === 'events_public_browse' ? event : null,
             error: null,
           })),
         };

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { errorMessage } from '@/lib/errorMessage';
 import { SUPABASE_URL } from '@/integrations/supabase/config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,7 +120,7 @@ interface MediaItem {
 }
 
 const ChangePasswordCard: React.FC = () => {
-  return _ChangePasswordCardImpl();
+  return useChangePasswordCard();
 };
 
 const AppearanceCard: React.FC = () => {
@@ -161,7 +162,7 @@ const AppearanceCard: React.FC = () => {
   );
 };
 
-const _ChangePasswordCardImpl = () => {
+const useChangePasswordCard = () => {
   const { updatePassword } = useAuth();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -545,8 +546,8 @@ const ProfileSettingsPage: React.FC = () => {
 
       queryClient.invalidateQueries({ queryKey: ['profile', ownerId] });
       toast.success('Avatar updated!');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to upload avatar');
+    } catch (error) {
+      toast.error(errorMessage(error, 'Failed to upload avatar'));
     } finally {
       setUploadingAvatar(false);
     }

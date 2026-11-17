@@ -32,7 +32,18 @@ vi.mock('@/integrations/supabase/client', () => ({
         return [];
       };
 
-      const chain: any = {
+      type MockChain = {
+        select: () => MockChain;
+        eq: () => MockChain;
+        in: () => Promise<{ data: unknown[]; error: null }>;
+        order: () => Promise<{ data: unknown[]; error: null }>;
+        single: () => Promise<{ data: unknown; error: null }>;
+        maybeSingle: () => Promise<{ data: unknown; error: null }>;
+        insert: () => Promise<{ error: null }>;
+        update: () => MockChain;
+        then: (resolve: (value: { data: unknown[]; error: null }) => void) => void;
+      };
+      const chain: MockChain = {
         select: vi.fn(() => chain),
         eq: vi.fn(() => chain),
         in: vi.fn(async () => ({ data: rowsForTable(), error: null })),

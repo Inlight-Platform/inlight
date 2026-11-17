@@ -36,7 +36,7 @@ const PlanSelectionPage: React.FC = () => {
       if (data?.url) {
         window.location.href = data.url;
       }
-    } catch (err: any) {
+    } catch (err) {
       toast.error('Failed to start checkout. Please try again.');
       console.error(err);
     } finally {
@@ -49,7 +49,7 @@ const PlanSelectionPage: React.FC = () => {
     try {
       // plan_type defaults to 'free'; no client-side update needed.
       navigate('/feed', { replace: true });
-    } catch (err: any) {
+    } catch (err) {
       toast.error('Something went wrong.');
       console.error(err);
     } finally {

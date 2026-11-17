@@ -33,9 +33,9 @@ const PublicCompanyProjectPage: React.FC = () => {
       if (error) throw error;
       const ids = (mem || []).map(m => m.user_id);
       if (ids.length === 0) return [];
-      const { data: profiles, error: pErr } = await (supabase.rpc as any)('get_public_profiles', { _user_ids: ids });
+      const { data: profiles, error: pErr } = await supabase.rpc('get_public_profiles', { _user_ids: ids });
       if (pErr) throw pErr;
-      return (mem || []).map(m => ({ ...m, profile: (profiles || []).find((p: any) => p.user_id === m.user_id) }));
+      return (mem || []).map(m => ({ ...m, profile: (profiles || []).find((p) => p.user_id === m.user_id) }));
     },
     enabled: !!projectId && !!user,
   });
@@ -83,7 +83,7 @@ const PublicCompanyProjectPage: React.FC = () => {
           <section>
             <h2 className="text-lg font-display font-semibold mb-3">Team</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {members.map((m: any) => m.profile && (
+              {members.map((m) => m.profile && (
                 <Link
                   key={m.user_id}
                   to={`/c/${companyId}/staff/${m.user_id}`}

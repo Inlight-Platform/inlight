@@ -275,17 +275,17 @@ const ResourcesPage: React.FC = () => {
     })),
   ];
 
-  const resourceSource = (dbResources && dbResources.length > 0 ? dbResources : fallbackResources) as any[];
+  const resourceSource: Array<{ name: string; description: string; url: string; category: string; industry: string; is_education: boolean; education_type?: string | null }> = dbResources && dbResources.length > 0 ? dbResources : fallbackResources;
 
   // Resources for the current industry tab (non-education entries).
   // 'both' industry rows show up in Theatre and Film.
   const currentResources: ResourceItem[] = resourceSource
-    .filter((r: any) => !r.is_education)
-    .filter((r: any) =>
+    .filter((r) => !r.is_education)
+    .filter((r) =>
       r.industry === activeTab ||
       (r.industry === 'both' && activeTab !== 'music')
     )
-    .map((r: any) => ({
+    .map((r) => ({
       name: r.name,
       description: r.description ?? '',
       url: r.url,
@@ -294,8 +294,8 @@ const ResourcesPage: React.FC = () => {
 
   // Education programs sourced from DB.
   const dbEducation: EducationProgram[] = resourceSource
-    .filter((r: any) => r.is_education)
-    .map((r: any) => ({
+    .filter((r) => r.is_education)
+    .map((r) => ({
       name: r.name,
       description: r.description ?? '',
       url: r.url,

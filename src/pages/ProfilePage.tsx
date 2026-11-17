@@ -97,6 +97,8 @@ const ManageGroupButton: React.FC = () => {
 import { AddAttendedDialog } from "@/components/profile/AddAttendedDialog";
 import { SavedProjects } from "@/components/profile/SavedProjects";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+import { errorMessage } from "@/lib/errorMessage";
 import { PostCreator, PostType } from "@/components/feed/PostCreator";
 import { GradYearDialog } from "@/components/profile/GradYearDialog";
 import { toast } from "sonner";
@@ -120,6 +122,7 @@ import inlightLogo from "@/assets/inlight-logo.jpeg";
 type MediaType = "photo" | "video" | "audio" | "document";
 type MediaVisibility = "public" | "connections" | "private";
 type ProfileSectionKey = "materials" | "credits" | "attended" | "projects" | "posts" | "skills" | "savedShows";
+type EditableProfileField = "display_name" | "stage_name" | "location" | "role" | "bio" | "instagram_url" | "website_url" | "badges" | "skills";
 
 interface MediaItem {
   id: string;
@@ -453,7 +456,7 @@ const ProfilePage: React.FC = () => {
         .select("watchlist_public")
         .eq("user_id", resolvedUserId!)
         .maybeSingle();
-      return (data as any)?.watchlist_public ?? false;
+      return data?.watchlist_public ?? false;
     },
     enabled: isOwnProfile && !!resolvedUserId && !!authUser?.id,
   });
@@ -465,9 +468,9 @@ const ProfilePage: React.FC = () => {
   const { data: savedShowsForExpand = [] } = useQuery({
     queryKey: ['saved-shows-profile', resolvedUserId],
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)('get_profile_watchlist', { p_user_id: resolvedUserId });
+      const { data, error } = await supabase.rpc('get_profile_watchlist', { p_user_id: resolvedUserId });
       if (error) throw error;
-      return (data ?? []) as any[];
+      return data ?? [];
     },
     enabled: (isOwnProfile && !!authUser?.id) || (!isOwnProfile && watchlistPublic && !!resolvedUserId),
   });
@@ -566,10 +569,10 @@ const ProfilePage: React.FC = () => {
           : Promise.resolve({ data: [] as Array<{ project_id: string | null }> }),
         user
           ? supabase.from("posts").select("id").eq("user_id", resolvedUserId).limit(1)
-          : (supabase as any).rpc("get_public_profile_posts", { _user_id: resolvedUserId }),
+          : supabase.rpc("get_public_profile_posts", { _user_id: resolvedUserId }),
         (() => {
           if (!user) {
-            return (supabase as any).rpc("get_public_profile_events", { _user_id: resolvedUserId });
+            return supabase.rpc("get_public_profile_events", { _user_id: resolvedUserId });
           }
           let query = supabase.from("events").select("id").eq("user_id", resolvedUserId).limit(1);
           if (!isOwnProfile) {
@@ -717,6 +720,7 @@ const ProfilePage: React.FC = () => {
       attended: false,
       projects: false,
       posts: false,
+      skills: false,
       savedShows: false,
     };
     setMaterialsOpen(false);
@@ -812,8 +816,8 @@ const ProfilePage: React.FC = () => {
 
       await queryClient.invalidateQueries({ queryKey: ["profile", ownerId] });
       toast.success("Avatar updated!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to upload avatar");
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to upload avatar"));
     } finally {
       setUploadingAvatar(false);
     }
@@ -870,8 +874,8 @@ const ProfilePage: React.FC = () => {
 
       await queryClient.invalidateQueries({ queryKey: ["profile", ownerId] });
       toast.success("Cover image updated!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to upload cover");
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to upload cover"));
     } finally {
       setUploadingCover(false);
     }
@@ -888,7 +892,10 @@ const ProfilePage: React.FC = () => {
   };
 
   // Profile field save handlers with validation
-  const saveProfileField = async (field: string, value: string | string[] | null) => {
+  const saveProfileField = async <K extends EditableProfileField>(
+    field: K,
+    value: Exclude<Database["public"]["Tables"]["profiles"]["Update"][K], undefined>,
+  ) => {
     if (!authUser?.id) return false;
 
     // Validate string fields against length limits
@@ -899,15 +906,15 @@ const ProfilePage: React.FC = () => {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ [field]: value } as any)
+        .update({ [field]: value })
         .eq("user_id", authUser.id);
 
       if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: ["profile", authUser.id] });
       toast.success("Profile updated!");
       return true;
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update profile");
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to update profile"));
       return false;
     }
   };
@@ -1021,8 +1028,8 @@ const ProfilePage: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: ["profile", authUser.id] });
       toast.success("Graduation year updated!");
       return true;
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update graduation year");
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to update graduation year"));
       return false;
     }
   };
@@ -1040,8 +1047,8 @@ const ProfilePage: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: ["profile", authUser.id] });
       toast.success("Graduation year cleared");
       return true;
-    } catch (error: any) {
-      toast.error(error.message || "Failed to clear graduation year");
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to clear graduation year"));
       return false;
     }
   };
@@ -1202,8 +1209,8 @@ const ProfilePage: React.FC = () => {
       setCreditYear("");
       setCreditCompany("");
       setAddCreditOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to add credit");
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to add credit"));
     }
   };
 
@@ -1218,8 +1225,8 @@ const ProfilePage: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: ["credits", authUser.id] });
       toast.success("Credit updated!");
       setEditingCreditId(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update credit");
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to update credit"));
     }
   };
 
@@ -1233,8 +1240,8 @@ const ProfilePage: React.FC = () => {
 
       await queryClient.invalidateQueries({ queryKey: ["credits", authUser.id] });
       toast.success("Credit deleted!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete credit");
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to delete credit"));
     }
   };
 
@@ -1475,7 +1482,9 @@ const ProfilePage: React.FC = () => {
                                   label =
                                     new URL(href).host.replace(/^www\./, "") +
                                     new URL(href).pathname.replace(/\/$/, "");
-                                } catch {}
+                                } catch {
+                                  label = displayWebsite;
+                                }
                                 return (
                                   <a
                                     key="web"

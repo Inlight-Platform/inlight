@@ -12,7 +12,16 @@ vi.mock('@/integrations/supabase/client', () => ({
     from: vi.fn((table: string) => {
       expect(table).toBe('credits');
 
-      const chain: any = {
+      type MockChain = {
+        select: () => MockChain;
+        eq: (column: string, value: string) => MockChain;
+        ilike: () => MockChain;
+        maybeSingle: () => Promise<{ data: { id: string } | null; error: null }>;
+        update: (payload: unknown) => MockChain;
+        insert: (payload: unknown) => Promise<{ error: null }>;
+        then: (resolve: (value: { error: null }) => void) => void;
+      };
+      const chain: MockChain = {
         select: vi.fn(() => chain),
         eq: vi.fn((column: string, value: string) => {
           tableMocks.eqMock(column, value);

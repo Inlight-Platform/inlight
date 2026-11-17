@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { X, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { errorMessage } from '@/lib/errorMessage';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ProjectImageCropper } from './ProjectImageCropper';
@@ -187,9 +188,9 @@ export const ProjectHeaderImageUploader: React.FC<ProjectHeaderImageUploaderProp
 
       onImageUploaded(urlData.publicUrl);
       toast.success('Header image uploaded!');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Upload failed:', error);
-      toast.error(error.message || 'Failed to upload image');
+      toast.error(errorMessage(error, 'Failed to upload image'));
     } finally {
       setUploading(false);
       setUploadStatus('');

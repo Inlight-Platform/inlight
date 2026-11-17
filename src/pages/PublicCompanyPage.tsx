@@ -302,7 +302,7 @@ const PublicCompanyPage: React.FC = () => {
             <h2 className="text-lg font-display font-semibold">Photos</h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {photos.map((ph: any) => (
+            {photos.map((ph) => (
               <a key={ph.id} href={ph.image_url} target="_blank" rel="noopener noreferrer" className="block aspect-square overflow-hidden rounded-xl bg-muted">
                 <img src={ph.image_url} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform" />
               </a>
