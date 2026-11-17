@@ -164,6 +164,9 @@ export const PostCreator: React.FC<PostCreatorProps> = ({
   // Update postType when defaultPostType changes (for when dialog reopens with different type)
   useEffect(() => {
     setPostType(!JOBS_ENABLED && defaultPostType === 'job' ? 'update' : defaultPostType);
+  }, [defaultPostType]);
+
+  useEffect(() => {
     if (defaultPostType === 'project') {
       openProjectCreator();
     }
