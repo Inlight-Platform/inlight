@@ -15,6 +15,7 @@ vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'member' } }) 
 vi.mock('@/hooks/useGroups', () => ({
   useGroupBySlug: () => ({ data: { id: 'g1', slug: 'school', name: 'School', faculty_owner_id: null, is_listed: true, members_can_post: false }, isLoading: false }),
   useMyGroups: () => ({ data: state.member ? [{ id: 'g1', is_faculty: false }] : [], isLoading: false }),
+  useMyGroupsForUser: () => ({ data: state.member ? [{ id: 'g1', is_faculty: false }] : [], isLoading: false }),
   useMyScopedAdminGroups: () => ({ data: state.admin ? [{ id: 'g1', slug: 'school', name: 'School' }] : [], isLoading: false }),
 }));
 vi.mock('sonner', () => ({ toast: { success: state.success, error: state.error, warning: vi.fn() } }));
@@ -54,7 +55,9 @@ afterAll(() => { vi.unstubAllGlobals(); });
 beforeEach(() => {
   state.member = true; state.admin = true; state.availability = []; state.bookError = null;
   state.rpc.mockReset(); state.success.mockReset(); state.error.mockReset();
-  state.rpc.mockImplementation(async (name: string) => name === 'get_group_audition_availability'
+  state.rpc.mockImplementation(async (name: string) => name === 'group_page_visible_to_caller'
+    ? { data: true, error: null }
+    : name === 'get_group_audition_availability'
     ? { data: state.availability, error: null }
     : { data: name === 'book_group_audition_timeslot' ? 'signup-1' : [], error: name === 'book_group_audition_timeslot' ? state.bookError : null });
 });

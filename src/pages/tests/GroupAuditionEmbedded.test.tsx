@@ -16,13 +16,16 @@ vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'member' } }) 
 vi.mock('@/hooks/useGroups', () => ({
   useGroupBySlug: () => ({ data: { id: 'g1', slug: 'school', name: 'School', faculty_owner_id: null, is_listed: true, members_can_post: false }, isLoading: false }),
   useMyGroups: () => ({ data: [{ id: 'g1', is_faculty: false }], isLoading: false }),
+  useMyGroupsForUser: () => ({ data: [{ id: 'g1', is_faculty: false }], isLoading: false }),
   useMyScopedAdminGroups: () => ({ data: [{ id: 'g1', slug: 'school', name: 'School' }], isLoading: false }),
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }));
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     rpc: async (name: string) => ({
-      data: name === 'get_group_audition_availability'
+      data: name === 'group_page_visible_to_caller'
+        ? true
+        : name === 'get_group_audition_availability'
         ? [{ audition_id: 'audition-1', timeslot_id: 'slot-1', booked_count: 1, capacity: 3, is_my_timeslot: false }]
         : [],
       error: null,
